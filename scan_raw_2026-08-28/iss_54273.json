@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54273",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54273/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54273/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54273/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54273",
+  "id": 5282450861,
+  "node_id": "I_kwDOI7xefs8AAAABOtvNrQ",
+  "number": 54273,
+  "title": "[Bug]: Kimi-K3 parsers miss channel terminators - tool calls silently dropped, message terminator leaked into streamed content",
+  "user": {
+    "login": "Deaxu",
+    "id": 116658892,
+    "node_id": "U_kgDOBvQSzA",
+    "avatar_url": "https://avatars.githubusercontent.com/u/116658892?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Deaxu",
+    "html_url": "https://github.com/Deaxu",
+    "followers_url": "https://api.github.com/users/Deaxu/followers",
+    "following_url": "https://api.github.com/users/Deaxu/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Deaxu/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Deaxu/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Deaxu/subscriptions",
+    "organizations_url": "https://api.github.com/users/Deaxu/orgs",
+    "repos_url": "https://api.github.com/users/Deaxu/repos",
+    "events_url": "https://api.github.com/users/Deaxu/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Deaxu/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 11639749480,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7aA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/kimi",
+      "name": "kimi",
+      "color": "78d0bd",
+      "default": false,
+      "description": null
+    },
+    {
+      "id": 11639749575,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7xw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/k3",
+      "name": "k3",
+      "color": "e429eb",
+      "default": false,
+      "description": null
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-28T21:33:40Z",
+  "updated_at": "2026-08-28T21:33:50Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\nBoth defects are in pure-Python parser logic, so the reproduction below needs only the tokenizer — no GPU and no model weights.\n\n- vLLM: reproduced against current `main`, and against the `0.26.1rc1` dev build we run in production.\n- Model: `moonshotai/Kimi-K3`, served with `--reasoning-parser kimi_k3 --tool-call-parser kimi_k3 --enable-auto-tool-choice`.\n\n### 🐛 Describe the bug\n\nThe Kimi-K3 parsers assume that `<|close|>think<|sep|>` is the only way the think channel can end, and that `<|close|>response<|sep|>` / `<|open|>tools<|sep|>` are the only bounds for streamed response text. In practice the model also:\n\n- leaves the think channel by opening a downstream channel directly, without emitting `<|close|>think<|sep|>`, and\n- terminates a plain answer with `<|close|>message<|sep|>` and no preceding `<|close|>response<|sep|>`.\n\nTwo independent defects follow.\n\n#### 1. `is_reasoning_end()` never returns `True` when the model skips `<|close|>think<|sep|>`\n\n[`is_reasoning_end()`](https://github.com/vllm-project/vllm/blob/main/vllm/reasoning/kimi_k3_reasoning_parser.py#L157-L171) only compares the think-open and think-close markers. When the model goes straight from the think channel into `<|open|>tools<|sep|>`, the gate stays `False` for the rest of the turn.\n\n`DelegatingParser` only hands deltas to the tool parser once reasoning has ended, so on those turns the tool call is never parsed. It surfaces as `finish_reason: \"stop\"` with zero output tokens, or as raw XTML in visible content. This happens intermittently on tool-calling turns in an agentic workload.\n\n`is_reasoning_end_streaming()` inherits the same assumption.\n\n#### 2. The streaming path leaks `<|close|>message<|sep|>` into content\n\n`_strip_response_content()` (non-streaming) removes the terminator:\n\nhttps://github.com/vllm-project/vllm/blob/main/vllm/tool_parsers/kimi_k3_tool_parser.py#L261\n\nbut `_extract_response_content()` (streaming) does not consider it — neither as a sendable bound:\n\nhttps://github.com/vllm-project/vllm/blob/main/vllm/tool_parsers/kimi_k3_tool_parser.py#L289\n\nnor in the partial-marker holdback:\n\nhttps://github.com/vllm-project/vllm/blob/main/vllm/tool_parsers/kimi_k3_tool_parser.py#L294-L296\n\nSo an answer ending in `<|close|>message<|sep|>` streams the terminator to the client, while the same generation over the non-streaming path does not. The two paths disagree on the same output.\n\n### Reproduction\n\n```python\nimport importlib.util, inspect, sys\nfrom transformers import AutoTokenizer\n\n# vllm/reasoning/kimi_k3_reasoning_parser.py and\n# vllm/tool_parsers/kimi_k3_tool_parser.py from main\nRP_PATH = \"vllm/reasoning/kimi_k3_reasoning_parser.py\"\nTP_PATH = \"vllm/tool_parsers/kimi_k3_tool_parser.py\"\n\ntok = AutoTokenizer.from_pretrained(\"moonshotai/Kimi-K3\", trust_remote_code=True)\n\ndef load(path, name, suffix):\n    spec = importlib.util.spec_from_file_location(name, path)\n    m = importlib.util.module_from_spec(spec)\n    sys.modules[name] = m\n    spec.loader.exec_module(m)\n    for n, o in vars(m).items():\n        if inspect.isclass(o) and n.endswith(suffix) and o.__module__ == name:\n            return o\n\nE = lambda s: tok.encode(s, add_special_tokens=False)\n\n# --- 1. reasoning end -------------------------------------------------------\nrp = load(RP_PATH, \"rp\", \"ReasoningParser\")(tok)\n\nskipped_close = (\n    E(\"<|open|>think<|sep|>\") + E(\"I should read the file.\")\n    + E(\"<|open|>tools<|sep|>\") + E('{\"name\":\"read_file\"}')\n)\nnormal = (\n    E(\"<|open|>think<|sep|>\") + E(\"I should read the file.\")\n    + E(\"<|close|>think<|sep|>\") + E(\"answer\")\n)\n\nprint(\"skipped close ->\", rp.is_reasoning_end(skipped_close), \"(expected True)\")\nprint(\"normal        ->\", rp.is_reasoning_end(normal), \"(expected True)\")\n\n# --- 2. streamed terminator -------------------------------------------------\nTP = load(TP_PATH, \"tp\", \"ToolParser\")\ntext = \"<|open|>response<|sep|>Indexes speed up lookups.<|close|>message<|sep|>\"\n\nprint(\"streaming     ->\", repr(TP(tok)._extract_response_content(text)))\nprint(\"non-streaming ->\", repr(TP(tok)._strip_response_content(\n    \"Indexes speed up lookups.<|close|>message<|sep|>\")))\n```\n\nOutput on `main`:\n\n```\nskipped close -> False (expected True)\nnormal        -> True (expected True)\nstreaming     -> 'Indexes speed up lookups.<|close|>message<|sep|>'\nnon-streaming -> 'Indexes speed up lookups.'\n```\n\n### Suggested fix\n\n1. **Reasoning parser.** Treat `<|open|>tools<|sep|>`, `<|open|>response<|sep|>`, `<|close|>response<|sep|>` and `<|close|>message<|sep|>` as implicit reasoning-end markers in `is_reasoning_end()` and `is_reasoning_end_streaming()`. The scan has to start after the current `<|open|>think<|sep|>`, otherwise a previous turn's channels — which the chat template keeps in the prompt — end the current turn's reasoning immediately.\n\n   Those markers also need to be held back by the partial-marker logic in the streaming text path. Emitting a partial marker as reasoning breaks the `startswith` check in `extract_reasoning_streaming`, and the whole reasoning is then re-emitted — which reads to the user as the model repeating itself.\n\n2. **Tool parser.** Add `<|close|>message<|sep|>` to the `candidates` bound and to the `_partial_tag_overlap` set in `_extract_response_content()`, so the streaming path matches `_strip_response_content()`.\n\nWe have been running a local patch along these lines since 2026-08-25 and it has been stable. Happy to send it as a PR if that would be useful.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54273/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54273/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

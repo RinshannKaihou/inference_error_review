@@ -1,0 +1,4 @@
+35434	2026-08-19T02:54:21Z	open	PR	[CPU] Fix wrongly causal-masked bidirectional attention
+35305	2026-08-18T09:26:09Z	closed	PR	[Kimi-K3] Fix "wrong grids" crash in DP-sharded vision preprocessing
+35285	2026-08-18T07:32:13Z	open	PR	[Docs] Fix stale env-var defaults: SGLANG_SANITIZE_NAN_LOGITS, SGLANG_MORI_*, SWA eviction interval; drop 2 removed vars
+35274	2026-08-18T07:03:36Z	open	PR	fix: exclude NaN-producing autotune config for DSA Triton prefill on ROCm

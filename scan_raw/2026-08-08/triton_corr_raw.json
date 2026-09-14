@@ -1,0 +1,175 @@
+{
+  "total_count": 2,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/11186",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/11186/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/11186/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/11186/events",
+      "html_url": "https://github.com/triton-lang/triton/pull/11186",
+      "id": 5074092293,
+      "node_id": "PR_kwDOAWaHXs77Onzo",
+      "number": 11186,
+      "title": "Fix incorrect reordering in OptimizeThreadLocality",
+      "user": {
+        "login": "neildhar",
+        "id": 4301777,
+        "node_id": "MDQ6VXNlcjQzMDE3Nzc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4301777?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/neildhar",
+        "html_url": "https://github.com/neildhar",
+        "followers_url": "https://api.github.com/users/neildhar/followers",
+        "following_url": "https://api.github.com/users/neildhar/following{/other_user}",
+        "gists_url": "https://api.github.com/users/neildhar/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/neildhar/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/neildhar/subscriptions",
+        "organizations_url": "https://api.github.com/users/neildhar/orgs",
+        "repos_url": "https://api.github.com/users/neildhar/repos",
+        "events_url": "https://api.github.com/users/neildhar/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/neildhar/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-05T18:40:23Z",
+      "updated_at": "2026-08-05T21:22:43Z",
+      "closed_at": "2026-08-05T21:22:41Z",
+      "assignee": null,
+      "author_association": "COLLABORATOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "draft": false,
+      "pull_request": {
+        "url": "https://api.github.com/repos/triton-lang/triton/pulls/11186",
+        "html_url": "https://github.com/triton-lang/triton/pull/11186",
+        "diff_url": "https://github.com/triton-lang/triton/pull/11186.diff",
+        "patch_url": "https://github.com/triton-lang/triton/pull/11186.patch",
+        "merged_at": "2026-08-05T21:22:41Z"
+      },
+      "body": "\nOptimizeThreadLocality can miscompile because it introduces a\ncan_reorder reshape which may reorder elements outside the reduction\ndimension as well.\n\nTo avoid this, use an explicit reshape+permute sequence to construct the\ntensor such that we can still do the intra-thread reduction in the loop.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/11186/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 1,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/11186/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/11153",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/11153/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/11153/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/11153/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/11153",
+      "id": 5048324838,
+      "node_id": "I_kwDOAWaHXs8AAAABLOdS5g",
+      "number": 11153,
+      "title": "Interpreter and GPU disagree: valid  kernel silently returns wrong result when compiled",
+      "user": {
+        "login": "O1iveira7",
+        "id": 43122508,
+        "node_id": "MDQ6VXNlcjQzMTIyNTA4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/43122508?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/O1iveira7",
+        "html_url": "https://github.com/O1iveira7",
+        "followers_url": "https://api.github.com/users/O1iveira7/followers",
+        "following_url": "https://api.github.com/users/O1iveira7/following{/other_user}",
+        "gists_url": "https://api.github.com/users/O1iveira7/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/O1iveira7/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/O1iveira7/subscriptions",
+        "organizations_url": "https://api.github.com/users/O1iveira7/orgs",
+        "repos_url": "https://api.github.com/users/O1iveira7/repos",
+        "events_url": "https://api.github.com/users/O1iveira7/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/O1iveira7/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 3,
+      "created_at": "2026-08-03T09:28:09Z",
+      "updated_at": "2026-08-08T06:21:56Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\nWe ran the *same* kernel two ways — under Triton's interpreter and as a normally compiled GPU kernel — and got **different results for the same source and inputs** ( 3 runs each):\n\n> The kernel computes y = A @ x. For A = ones(4, 4) (a 4×4 all-ones matrix) and x = ones(4) (a length-4 all-ones vector), the expected output is y = [4, 4, 4, 4].\n```\n  reference OK: original == A@x == [4.0, 4.0, 4.0, 4.0]\n\n  GPU (compiled), run 0: y=[2.0, 4.0, 4.0, 4.0] MISMATCH\n  GPU (compiled), run 1: y=[2.0, 4.0, 4.0, 4.0] MISMATCH\n  GPU (compiled), run 2: y=[2.0, 4.0, 4.0, 4.0] MISMATCH\n\n  Interpreter, run 0:     y=[4.0, 4.0, 4.0, 4.0] OK\n  Interpreter, run 1:     y=[4.0, 4.0, 4.0, 4.0] OK\n  Interpreter, run 2:     y=[4.0, 4.0, 4.0, 4.0] OK\n```\nWe also tested a semantically equivalent kernel, which produced the expected results.\n\n## Reproducer\n```import torch\nimport triton\nimport triton.language as tl\n\n\n# ---------------------------------------------------------------- original\n@triton.jit\ndef fma_kernel_original(a_ptr, x_ptr, y_ptr, M, N, BLOCK_SIZE: tl.constexpr):\n    pid = tl.program_id(axis=0)\n    num_programs = tl.num_programs(axis=0)\n    offset = tl.arange(0, BLOCK_SIZE)\n    mask = offset < N\n\n    row = tl.load(a_ptr + pid * N + offset, mask=mask, other=0.0)\n    x = tl.load(x_ptr + offset, mask=mask, other=0.0)\n    dot = tl.sum(row * x, axis=0)\n    tl.store(y_ptr + pid, dot)\n    return\n\n\ndef solve_original(\n    A: torch.Tensor, x: torch.Tensor, y: torch.Tensor, M: int, N: int, nnz: int\n):\n    BLOCK_SIZE = triton.next_power_of_2(N)\n    fma_kernel_original[(M, 1, 1)](A, x, y, M, N, BLOCK_SIZE=BLOCK_SIZE)\n    return y\n\n\n# --------------------------------------------------------------------------\n@triton.jit\ndef fma_kernel(\n    _fz_switch_ptr,\n    _fz_switch_output_ptr,\n    a_ptr,\n    x_ptr,\n    y_ptr,\n    M,\n    N,\n    BLOCK_SIZE: tl.constexpr,\n):\n    opaque_values = tl.load(_fz_switch_ptr + tl.arange(0, 2))\n    opaque_zero, opaque_one = tl.split(opaque_values)\n    opaque_true = opaque_zero < opaque_one\n    opaque_false = opaque_zero > opaque_one\n    if opaque_true:\n        _fz_live_add_value = opaque_zero + opaque_one\n        _fz_live_sub_value = opaque_one - opaque_zero\n        _fz_live_mul_value = (_fz_live_add_value + 1) * (_fz_live_sub_value + 1)\n        _fz_live_float_value = _fz_live_mul_value.to(tl.float32)\n        _fz_live_div_value = _fz_live_float_value / (opaque_one + 1)\n        _fz_live_row_value = tl.expand_dims(\n            opaque_values + _fz_live_div_value, 0\n        ) * tl.full((1, 2), opaque_one, tl.float32)\n        _fz_live_transposed_value = tl.trans(_fz_live_row_value)\n        _fz_live_sin_value = tl.sin(_fz_live_transposed_value)\n        _fz_live_cos_value = tl.cos(_fz_live_sin_value)\n        tl.store(\n            _fz_switch_output_ptr + tl.arange(0, 2),\n            tl.ravel(_fz_live_cos_value),\n            mask=(tl.program_id(axis=0) == 0),\n        )\n    pid = tl.program_id(axis=0)\n    if opaque_true:\n        _fz_live_add_value_1 = opaque_zero + opaque_one\n        _fz_live_sub_value_1 = opaque_one - opaque_zero\n        _fz_live_mul_value_1 = (_fz_live_add_value_1 + 1) * (_fz_live_sub_value_1 + 1)\n        _fz_live_float_value_1 = _fz_live_mul_value_1.to(tl.float32)\n        _fz_live_div_value_1 = _fz_live_float_value_1 / (opaque_one + 1)\n        _fz_live_row_value_1 = tl.expand_dims(opaque_values + _fz_live_div_value_1, 0)\n        _fz_live_transposed_value_1 = tl.trans(_fz_live_row_value_1)\n        _fz_live_sin_value_1 = tl.sin(_fz_live_transposed_value_1)\n        _fz_live_cos_value_1 = tl.cos(_fz_live_sin_value_1)\n        tl.store(\n            _fz_switch_output_ptr + tl.arange(0, 2),\n            tl.ravel(_fz_live_cos_value_1),\n            mask=tl.program_id(axis=0) == 0,\n        )\n    num_programs = tl.num_programs(axis=0)\n    offset = tl.arange(0, BLOCK_SIZE)\n    if opaque_false:\n        add_value = opaque_zero + opaque_one\n        sub_value = opaque_one - opaque_zero\n        mul_value = (add_value + 1) * (sub_value + 1)\n        float_value = mul_value.to(tl.float32)\n        div_value = float_value / (opaque_one + 1)\n        row_value = tl.expand_dims(opaque_values + div_value, 0)\n        transposed_value = tl.trans(row_value)\n        sin_value = tl.sin(transposed_value)\n        cos_value = tl.cos(sin_value)\n        tl.store(\n            _fz_switch_output_ptr + tl.arange(0, 2),\n            tl.ravel(cos_value),\n            mask=tl.program_id(axis=0) == 0,\n        )\n        return\n    mask = offset < N\n    if opaque_true:\n        _fz_live_add_value_2 = opaque_zero + opaque_one\n        _fz_live_sub_value_2 = opaque_one - opaque_zero\n        _fz_live_mul_value_2 = (_fz_live_add_value_2 + 1) * (_fz_live_sub_value_2 + 1)\n        _fz_live_float_value_2 = _fz_live_mul_value_2.to(tl.float32)\n        _fz_live_div_value_2 = _fz_live_float_value_2 / (opaque_one + 1)\n        _fz_live_row_value_2 = tl.expand_dims(opaque_values + _fz_live_div_value_2, 0)\n        _fz_live_transposed_value_2 = tl.trans(_fz_live_row_value_2)\n        _fz_live_sin_value_2 = tl.sin(_fz_live_transposed_value_2)\n        _fz_live_cos_value_2 = tl.cos(_fz_live_sin_value_2)\n        tl.store(\n            _fz_switch_output_ptr + tl.arange(0, 2),\n            tl.ravel(_fz_live_cos_value_2),\n            mask=tl.program_id(axis=0) == 0,\n        )\n\n    row = tl.load(a_ptr + pid * N + offset, mask=mask, other=0.0)\n    x = tl.load(x_ptr + offset, mask=mask, other=0.0)\n\n    dot = tl.sum(row * x, axis=0)\n    tl.store(y_ptr + pid, dot)\n\n\ndef solve(A: torch.Tensor, x: torch.Tensor, y: torch.Tensor, M: int, N: int, nnz: int):\n    _fz_device = next(\n        (\n            _fz_value.device\n            for _fz_value in (A, x, y, M, N, nnz)\n            if isinstance(_fz_value, torch.Tensor)\n        )\n    )\n    _fz_switch_ptr = torch.tensor([0, 1], dtype=torch.int32, device=_fz_device)\n    _fz_switch_output_ptr = torch.empty(2, dtype=torch.float32, device=_fz_device)\n    BLOCK_SIZE = triton.next_power_of_2(N)\n    fma_kernel[M, 1, 1](\n        _fz_switch_ptr, _fz_switch_output_ptr, A, x, y, M, N, BLOCK_SIZE=BLOCK_SIZE\n    )\n    return y\n\n\n# ------------------------------------------------------------------ run\nif __name__ == \"__main__\":\n    RUNS = 3\n    A = torch.ones(4, 4, dtype=torch.float32, device=\"cuda\")\n    x = torch.ones(4, dtype=torch.float32, device=\"cuda\")\n    M = N = 4\n    expected = (A @ x).cpu()\n\n    y = torch.full((M,), -1.0, dtype=torch.float32, device=\"cuda\")\n    solve_original(A, x, y, M, N, M)\n    torch.cuda.synchronize()\n    if not torch.allclose(y.cpu(), expected):\n        print(f\"reference check failed: original output {y.cpu().tolist()}\")\n        raise SystemExit(2)\n    print(f\"reference OK: original == A@x == {expected.tolist()}\")\n\n    mismatches = 0\n    for i in range(RUNS):\n        y = torch.full((M,), -1.0, dtype=torch.float32, device=\"cuda\")\n        solve(A, x, y, M, N, M)\n        torch.cuda.synchronize()\n        ok = torch.allclose(y.cpu(), expected)\n        mismatches += 0 if ok else 1\n        print(\n            f\"variant run {i}: y={y.cpu().tolist()} {'OK' if ok else 'MISMATCH (expected %s)' % expected.tolist()}\"\n        )\n    raise SystemExit(0 if mismatches == 0 else 1)\n\n```\n\n### Environment details\n\n- Triton: `3.7.0`\n- PyTorch: `2.12.0+cu130`\n- CUDA runtime: `13.0`（WSL2）\n- GPU: NVIDIA GeForce RTX 3070（arch 86，warp_size 32）\n- Python: `3.12.3`",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/11153/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/11153/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

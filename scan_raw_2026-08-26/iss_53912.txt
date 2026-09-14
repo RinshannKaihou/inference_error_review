@@ -1,0 +1,71 @@
+[Bug]: prefix caching + MTP still corrupts output on hybrid Mamba/GDN models in v0.28.0 (#43559 closed but unfixed)
+STATE: open
+BODY:
+### Your current environment
+
+<details>
+<summary>The output of <code>python collect_env.py</code></summary>
+
+```text
+==============================
+        System Info
+==============================
+OS                           : Ubuntu 24.04.4 LTS (x86_64)
+GCC version                  : (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Libc version                 : glibc-2.39
+
+==============================
+       PyTorch Info
+==============================
+PyTorch version              : 2.13.0+cu130
+Is debug build               : False
+CUDA used to build PyTorch   : 13.0
+ROCM used to build PyTorch   : N/A
+
+==============================
+      Python Environment
+==============================
+Python version               : 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0] (64-bit runtime)
+Python platform              : Linux-6.8.0-1010-gcp-x86_64-with-glibc2.39
+
+==============================
+       CUDA / GPU Info
+==============================
+Is CUDA available            : True
+CUDA runtime version         : 12.0.140
+GPU models and configuration :
+GPU 0-7: NVIDIA H100 80GB HBM3   (single GPU used for this report, TP=1)
+Nvidia driver version        : 580.173.02
+
+==============================
+          CPU Info
+==============================
+Architecture:                x86_64
+Model name:                  Intel(R) Xeon(R) Platinum 8481C CPU @ 2.70GHz
+CPU(s):                      208
+Hypervisor vendor:           KVM
+
+==============================
+         vLLM Info
+==============================
+vLLM Version                 : 0.28.0
+vLLM Build Flags:
+  CUDA Archs: Not Set; ROCm: Disabled; XPU: Disabled
+GPU Topology: NV18 all-to-all (8x H100 SXM), TP=1 used
+
+Relevant packages:
+  vllm==0.28.0
+  torch==2.13.0
+  transformers==5.15.1
+  flashinfer-python==0.6.16.post3
+  compressed-tensors==0.17.0
+  xgrammar==0.2.3
+```
+
+</details>
+
+### 🐛 Describe the bug
+
+**Summary.** `--enable-prefix-caching` together with MTP speculative decoding still corrupts output on hybrid (GDN/Mamba) Qwen3.5-class models in **v0.28.0**. A small fraction of responses degenerate into repeated punctuation (`!!!!…`) or come back empty. This is the same failure as #43559, which was closed as completed on 2026-08-06 — the merged scheduler-side fix (#51113) does not cover it, and the cache-manager-side fixes (#43650, #48375) are still open.
+
+**Model.** Qwen3.5-architecture dense 27B VLM (`Qwen3_5ForConditionalGeneration`, hybrid: Gated DeltaNet linear-attention layers + full attention every 4th layer, vision tower), FP8 W8A8 compressed-tensors (`FP8_DYNAMIC`), with an MTP head present in the checkpo

@@ -1,0 +1,1100 @@
+{
+  "total_count": 19,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53951",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53951/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53951/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53951/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53951",
+      "id": 5261467719,
+      "node_id": "I_kwDOI7xefs8AAAABOZugRw",
+      "number": 53951,
+      "title": "[Bug]: SWA store-skip starves eagle groups by one block — offloaded KV can never be loaded back",
+      "user": {
+        "login": "michalzxc",
+        "id": 1896427,
+        "node_id": "MDQ6VXNlcjE4OTY0Mjc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1896427?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/michalzxc",
+        "html_url": "https://github.com/michalzxc",
+        "followers_url": "https://api.github.com/users/michalzxc/followers",
+        "following_url": "https://api.github.com/users/michalzxc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/michalzxc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/michalzxc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/michalzxc/subscriptions",
+        "organizations_url": "https://api.github.com/users/michalzxc/orgs",
+        "repos_url": "https://api.github.com/users/michalzxc/repos",
+        "events_url": "https://api.github.com/users/michalzxc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/michalzxc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 6915642480,
+          "node_id": "LA_kwDOI7xefs8AAAABnDRUcA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/speculative-decoding",
+          "name": "speculative-decoding",
+          "color": "6A493C",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-26T21:07:10Z",
+      "updated_at": "2026-08-26T21:34:11Z",
+      "closed_at": "2026-08-26T21:34:11Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "\n## Summary\n\n`OffloadingConnectorScheduler` skips storing sliding-window blocks that it\nbelieves can never serve a load hit, keeping only the trailing `tail =\nsliding_window_size_in_blocks` blocks of each alignment segment. For an **eagle**\n(speculative-decode) group the lookup asks for **`tail + 1`** consecutive blocks,\nbecause the trailing block holds unverified tokens and is discarded afterwards.\n\nThe writer stores `tail`; the reader needs `tail + 1`. **A qualifying run cannot\nexist**, so an eagle SWA group returns 0 hits for every request, forever, and\n`if num_hit_blocks == 0: return 0` propagates that to the whole request.\n\nNet effect on a spec-decode model: KV is written to the offload tier\nindefinitely and **never read back**. No error, no warning, no crash — the\ncounters just show bytes out and zero bytes in.\n\n## Version\n\n`0.25.2.dev0+g752a3a504` (anemll `dspark-vllm-gx10` fork of vLLM), 2× NVIDIA DGX\nSpark (GB10), TP=2 over RoCE. Model `deepseek-ai/DeepSeek-V4-Flash-0731`\n(5 KV-cache groups: 1 full-attention + 4 sliding-window, one of which is eagle).\nThe relevant code is unmodified from upstream `main`.\n\n## The two lines\n\n**Store side** — `_build_store_jobs`:\n\n```python\nalignment_block_count = group_config.alignment_block_count\ntail = group_config.sliding_window_size_in_blocks\n...\n    # Skip SWA blocks that can never serve a load hit:\n    # within each full-attention alignment segment, only the\n    # trailing `tail` blocks are reachable by\n    # _sliding_window_lookup. For DeepSeek V4 with 100K\n    # tokens this reduces SWA stores by ~78%.\n    if alignment_block_count is not None:\n        abs_block_idx = start_block_idx + key_idx\n        pos_in_segment = abs_block_idx % alignment_block_count\n        if pos_in_segment < alignment_block_count - tail:\n            continue\n```\n\n**Lookup side** — `_lookup`:\n\n```python\nrequired_window = sliding_window_size_in_blocks\nif is_eagle_unverified:\n    required_window += 1\nnum_hit_blocks = self._sliding_window_lookup(offload_keys, required_window, ...)\n...\nif is_eagle_unverified:\n    num_hit_blocks -= 1        # discard the volatile trailing block\n```\n\nThe comment states the invariant the optimisation depends on — *\"only the\ntrailing `tail` blocks are reachable by `_sliding_window_lookup`\"* — and the\neagle `+1` breaks it. Both lines are individually correct; they are wrong\ntogether, which is why nothing fails loudly.\n\n## Observed\n\nFor this model `_alignment_block_count` computes\n`per_segment = alignment_tokens // offloaded_block_size = 256 // 64 = 4`, and\nreturns it because `sliding_window_size_in_blocks (2) < 4`.\n\nInstrumenting `_sliding_window_lookup` to record the verdict for every key it\nscans, plus `os.path.exists` on the tier's own `FileMapper` path for the same\nkeys:\n\n```\nGROUPDIAG swa nkeys=129 need_run=3 scanned=129 longest_run=2\n          verdicts={'MI': 67, 'HI': 62}\nlookup   (from last key backwards): MI MI HI MI MI HI HI MI MI HI HI MI ...\non-disk  (same keys, same order):   -- -- D  -- -- D  D  -- -- D  D  -- ...\non_disk_total = 62/129   vs   lookup_HI = 62\n```\n\n- the on-disk pattern is period-4 `DD--`, exactly `tail/alignment = 2/4`;\n- `on_disk == lookup_HI` exactly (62 = 62), so the lookup is reporting truthfully;\n- `longest_run = 2` against `need_run = 3` — **structurally unsatisfiable**.\n\nA sibling non-eagle SWA group with the same window hits in full\n(`nkeys=128 -> 128`) while the eagle group returns `0`.\n\nThis is invariant under everything that might look like a race: an explicit\n120 s idle settle between eviction and re-request, synchronous fs existence\nchecks, and synchronously draining in-flight promotions all leave it unchanged.\n\n## Reproducer\n\nAny model with `speculative_config` set (so `is_eagle_group` is true for some\ngroup) **and** a sliding-window KV group whose `sliding_window_size_in_blocks <\nalignment_tokens // offloaded_block_size`, so `alignment_block_count` is not\n`None`. Enable `OffloadingConnector` with any secondary tier, send a prompt long\nenough to evict, re-send it: `kv_offload_total_bytes_total{transfer_type=\n\"CPU_to_GPU\"}` stays at 0 while `GPU_to_CPU` grows without bound.\n\nModels without spec-decode never take the `+1` branch and restore normally —\nQwen3-0.6B on the identical build, hardware and connector restores 6.61 GB.\n\n## Fix\n\nMake the writer agree with the reader:\n\n```python\ntail = group_config.sliding_window_size_in_blocks\nif tail is not None and group_config.is_eagle_group:\n    tail += 1\n```\n\n**Verified.** As a runtime patch we cleared `alignment_block_count` for eagle\ngroups (a superset of the above — it stores every block for that group, and so\ncannot manufacture a hit that should not exist):\n\n```\nbefore:  _sliding_window_lookup nkeys=1013 -> 0      every run, always\nafter:   _sliding_window_lookup nkeys=992  -> 992\n         _sliding_window_lookup nkeys=2016 -> 1984\n         _lookup -> 7936                             first real hit\n\nCPU_to_GPU: 0 bytes  ->  112,973,952 bytes\nreplay wall time: 34.6s (= cold prefill)  ->  31.3s\n```\n\nThe diagnostic that fires whenever any group returns 0 did not fire once after\nthe change.\n\n## Scope of that verification, stated plainly\n\nThe **defect** does not depend on any of the caveats below. It rests on the\nstore side alone: `on_disk_total = 62/129` against `lookup_HI = 62` exactly, in a\nperiod-4 `DD--` pattern matching `alignment_block_count = 256 // 64 = 4` with\n`tail = 2`, and an eagle lookup that requires 3 consecutive blocks where at most\n2 can exist. That is a code path that cannot satisfy its own reader, evidenced by\nfiles on disk.\n\nThe **fix verification** carries four limits, and we would rather state them than\nhave a maintainer find them:\n\n1. **The one-line fix above has not itself been run on hardware.** Every restore\n   we measured used the superset (clearing `alignment_block_count` for eagle\n   groups). The minimal form is what we propose because it preserves the saving,\n   but its on-hardware behaviour is inferred, not observed.\n2. **We cannot show those bytes came from disk.** The engine exposes only\n   `transfer_type` `CPU_to_GPU` and `GPU_to_CPU`; there is no disk label. So\n   `CPU_to_GPU = 113 MB` cannot distinguish `disk -> CPU tier -> GPU` from\n   `CPU tier -> GPU`. For an NVMe cache that distinction is the whole point.\n3. **The restore is not reliable.** Four runs restored exactly 112,973,952 bytes;\n   a fifth, with the same fix armed, restored **nothing** after four more 65k\n   prefills were added (`GPU_to_CPU` 27.22 -> 32.32 GB). That is consistent with\n   restores only succeeding while the block is still in the 1 GiB CPU tier.\n4. **Correctness is unestablished.** Output-text comparison cannot work here: the\n   model uses `draft_sample_method: probabilistic`, and three identical\n   `temperature=0` requests to an unmodified engine returned three different\n   completions. A logprob-based check is in place but has not yet produced a\n   verdict on a run that actually restored.\n\nAlso unresolved and probably separate: 205 of 223 lookups still deferred and the\nsingle hit covered 7,936 of 65,010 prompt tokens (~12%), capped by the\nfull-attention group matching only the first 32 of 253 blocks.\n\nWe are happy to test a candidate patch on this hardware.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53951/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53951/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53943",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53943/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53943/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53943/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53943",
+      "id": 5260573001,
+      "node_id": "I_kwDOI7xefs8AAAABOY35SQ",
+      "number": 53943,
+      "title": "[Bug]: GLM-5.3-Flash on ROCm (gfx950): SparseAttnIndexerKpool.forward_hip() missing gate_score — platform guard hides a fixable gap",
+      "user": {
+        "login": "stefanskiasan",
+        "id": 69960390,
+        "node_id": "MDQ6VXNlcjY5OTYwMzkw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/69960390?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/stefanskiasan",
+        "html_url": "https://github.com/stefanskiasan",
+        "followers_url": "https://api.github.com/users/stefanskiasan/followers",
+        "following_url": "https://api.github.com/users/stefanskiasan/following{/other_user}",
+        "gists_url": "https://api.github.com/users/stefanskiasan/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/stefanskiasan/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/stefanskiasan/subscriptions",
+        "organizations_url": "https://api.github.com/users/stefanskiasan/orgs",
+        "repos_url": "https://api.github.com/users/stefanskiasan/repos",
+        "events_url": "https://api.github.com/users/stefanskiasan/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/stefanskiasan/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 6114440385,
+          "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+          "name": "rocm",
+          "color": "B60205",
+          "default": false,
+          "description": "Related to AMD ROCm"
+        },
+        {
+          "id": 11777491380,
+          "node_id": "LA_kwDOI7xefs8AAAACvf5BtA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/glm",
+          "name": "glm",
+          "color": "1faf8d",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 7,
+      "created_at": "2026-08-26T19:10:09Z",
+      "updated_at": "2026-08-26T22:25:30Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\n```\nHardware   : 8x AMD Instinct MI350X (gfx950)\nROCm       : 7.2.3\ntorch      : 2.12.0\nvLLM       : 0.26.1rc1.dev716+g933876c38.rocm723\n             (built from PR #53906 \"add GLM-5.3-Flash support\", VLLM_TARGET_DEVICE=rocm,\n              PYTORCH_ROCM_ARCH=gfx950)\nModel      : local snapshot of zai-org/GLM-5.3-Flash (FP8, 62 safetensors)\n```\n\n### 🐛 Describe the bug\n\nWe built PR #53906 for ROCm to see where AMD support for GLM-5.3-Flash actually stands. Summary: **the platform guard is not the real blocker — a stale `forward_hip()` is.** Sharing the details in case they save someone a cycle.\n\n#### 1. The build itself is clean\n\n`VLLM_TARGET_DEVICE=rocm` with `PYTORCH_ROCM_ARCH=gfx950` completes with `rc=0`. Both `Glm5NextForCausalLM` and `Glm5NextForConditionalGeneration` register, and `current_platform` reports `rocm`.\n\n#### 2. The guard rejects ROCm at import time\n\n`vllm/models/glm5next/__init__.py`:\n\n```python\nif current_platform.is_rocm() or current_platform.is_xpu():\n    raise NotImplementedError(\n        \"GLM-5.3-Flash currently supports NVIDIA SM90 and above only.\")\n```\n\nThis fires before any model code executes. Worth noting what sits underneath it: grepping `vllm/models/glm5next/` for `flashinfer|tilelang|trtllm|flashmla` returns **zero** hits, and the only kernels there are `@triton.jit` (`ops/fused_eh_norm.py`, `ops/kpool_compress.py`). So the guard looks precautionary rather than load-bearing.\n\n#### 3. With the guard removed, weight loading succeeds\n\n```\nINFO [default_loader.py:430] Loading weights took 61.57 seconds\n```\n\nServed with `--tensor-parallel-size 8 --kv-cache-dtype fp8 --max-model-len 131072 --max-num-seqs 64 --gpu-memory-utilization 0.85 --trust-remote-code`.\n\n#### 4. The actual blocker\n\n```\nRuntimeError: Worker failed with error\n'SparseAttnIndexerKpool.forward_hip() got an unexpected keyword argument 'gate_score''\n```\n\nIn `vllm/model_executor/layers/sparse_attn_indexer_kpool.py` the three dispatch paths have diverged:\n\n```python\ndef forward_native(self, hidden_states, q_quant, k, weights, *, ...)   # keyword-only args incl. gate_score\ndef forward_cuda(self,   hidden_states, q_quant, k, weights, *, ...)   # keyword-only args incl. gate_score\ndef forward_hip(self,    hidden_states, q_quant, k, weights):          # stops at weights\n```\n\n`forward_hip` is not a stub — it dispatches to `torch.ops.vllm.rocm_aiter_sparse_attn_indexer`. It simply predates this PR's indexer changes. It also still carries:\n\n```python\nassert not self.use_fp4_cache, \"AMD platform doesn't support fp4 cache yet\"\n```\n\n#### What this suggests\n\nAMD enablement here looks less like \"port the model\" and more like \"teach the existing AITER indexer path about `gate_score` / kpool\". Whether that is a signature passthrough or genuine kernel work inside AITER is the part we cannot judge from the outside — that is really a question for whoever owns `rocm_aiter_sparse_attn_indexer`.\n\nWe are happy to run diagnostics or test patches on this node; ROCm turnaround for us is quick.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the docs and chat about the error!\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53943/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53943/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53932",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53932/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53932/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53932/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53932",
+      "id": 5260279967,
+      "node_id": "I_kwDOI7xefs8AAAABOYmAnw",
+      "number": 53932,
+      "title": "[CI Failure]: (H200) Rust Frontend OpenAI Coverage — WireLogprobs rejects 5-field LogprobsTensors",
+      "user": {
+        "login": "jungjiyu",
+        "id": 142137932,
+        "node_id": "U_kgDOCHjaTA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/142137932?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jungjiyu",
+        "html_url": "https://github.com/jungjiyu",
+        "followers_url": "https://api.github.com/users/jungjiyu/followers",
+        "following_url": "https://api.github.com/users/jungjiyu/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jungjiyu/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jungjiyu/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jungjiyu/subscriptions",
+        "organizations_url": "https://api.github.com/users/jungjiyu/orgs",
+        "repos_url": "https://api.github.com/users/jungjiyu/repos",
+        "events_url": "https://api.github.com/users/jungjiyu/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jungjiyu/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 8645622010,
+          "node_id": "LA_kwDOI7xefs8AAAACA1G4-g",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/ci-failure",
+          "name": "ci-failure",
+          "color": "b60205",
+          "default": false,
+          "description": "Issue about an unexpected test failure in CI"
+        },
+        {
+          "id": 11025346078,
+          "node_id": "LA_kwDOI7xefs8AAAACkSluHg",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/rust",
+          "name": "rust",
+          "color": "a83c09",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 3,
+      "created_at": "2026-08-26T18:34:49Z",
+      "updated_at": "2026-08-26T19:00:07Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Name of failing test\n\ntests/v1/sample/test_logprobs_e2e.py::test_prompt_logprobs_e2e_server\n\n### Basic information\n\n- [ ] Flaky test\n- [x] Can reproduce locally\n- [ ] Caused by external libraries (e.g. bug in `transformers`)\n\n### 🧪 Describe the failing test\n\n```text\nFAILED v1/sample/test_logprobs_e2e.py::test_prompt_logprobs_e2e_server - aiohttp.client_exceptions.ClientResponseError: 500, message='Internal Server Error', url='http://127.0.0.1:45199/v1/completions'\n```\n\nBuild: https://buildkite.com/vllm/ci/builds/85619 — the job failed on all 4 attempts.\n\nIn this run, lm-eval remained at 0/9501 while the observed `/v1/completions` requests returned HTTP 500; the six preceding pytest commands in the same job passed.\n\n**Root cause:** #52242 grew Python's `LogprobsTensors` from 4 to 5 positional fields by adding `cu_num_generated_tokens_tensor`, but the Rust mirror `WireLogprobs` still has 4 fields under `Deserialize_tuple`. Every post-#52242 `LogprobsTensors` payload decoded by `WireLogprobs` therefore fails with:\n\n```text\nmessagepack decode failed for ...EngineCoreOutputs:\narray had incorrect length, expected 4\n```\n\nI reproduced the same decode failure locally in the Rust protocol layer without a GPU. A fix with regression coverage is ready.\n\n<details>\n<summary>Details: schema mismatch, failure path, and CI gap</summary>\n\n**Schema mismatch.** Python (`vllm/v1/outputs.py`, after #52242):\n\n```python\nclass LogprobsTensors(NamedTuple):\n    logprob_token_ids: torch.Tensor\n    logprobs: torch.Tensor\n    selected_token_ranks: torch.Tensor\n    cu_num_generated_tokens: list[int] | None = None\n    cu_num_generated_tokens_tensor: torch.Tensor | None = None\n```\n\nRust (`rust/src/engine-core-client/src/protocol/logprobs/wire.rs`):\n\n```rust\n#[derive(Debug, Clone, PartialEq, Serialize_tuple, Deserialize_tuple)]\npub struct WireLogprobs {\n    pub logprob_token_ids: WireNdArray,\n    pub logprobs: WireNdArray,\n    pub token_ranks: WireNdArray,\n    #[serde(default)]\n    pub cu_num_generated_tokens: Option<Vec<usize>>,\n}\n```\n\nBecause `LogprobsTensors` is serialized positionally, the added field is emitted even when `None`, producing a 5-element payload while Rust expects 4.\n\nThe failing job log contains the corresponding 5-element inner tuple:\n\n```text\n(RustFrontend) WARNING [transport.rs] failed to decode output message\n  error=messagepack decode failed for ...::EngineCoreOutputs:\n  array had incorrect length, expected 4; value fallback:\n  [... [\"int64\",[2,3],...], [\"float32\",[2,3],...],\n       [\"int64\",[2],...], nil, nil ...]\n```\n\n#52242's diff touches 10 files, none under `rust/`. `LogprobsLists` remains 4 fields and is unaffected.\n\n**Failure path.** The transport loop forwards decode errors downstream, but `run_output_dispatcher_loop` propagates the error with `?`, terminating the dispatcher. Subsequent completion requests then fail with HTTP 500.\n\n**Scope.** I also checked the other Rust tuple types that decode Python output; `WireLogprobs` was the only field-count mismatch.\n\n**Why no test caught it.** The wire shape is duplicated across the Python definition, Rust `WireLogprobs`, and `rust/src/engine-core-client/src/tests/python_compat.py`. #52242 updated only the Python definition; the fixture still encodes a 4-element tuple.\n\nThe Rust cargo test area only lists Rust paths in `source_file_dependencies`, so the Python-only #52242 change did not trigger that suite.\n\n</details>\n\n**Potential follow-ups:**\n\n1. Add a Python/Rust wire-schema guard or generate `python_compat.py` fixtures from the real vLLM classes.\n2. Add the relevant Python wire-definition paths to the Rust cargo job's `source_file_dependencies`.\n\n### 📝 History of failing test\n\nObserved while investigating an unrelated CI failure on PR #52545 (build 85619, Aug 26); the job failed on all 4 attempts there.\n\nThe regression was introduced by #52242 (`d5cadcee8641a9fcec15facb5a9157d157daa207`, merged Aug 25).\n\nVerified still unfixed on `main` as of Aug 27 (`wire.rs` has no `cu_num_generated_tokens_tensor` field), confirming that the schema mismatch is not specific to PR #52545.\n\nI did not bisect Buildkite history; the culprit was identified from the source diff.\n\n### CC List.\n\n@therealnaveenkamal  @BugenZhao  @njhill ",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53932/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53932/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53912",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53912/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53912/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53912/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53912",
+      "id": 5258583211,
+      "node_id": "I_kwDOI7xefs8AAAABOW-cqw",
+      "number": 53912,
+      "title": "[Bug]: prefix caching + MTP still corrupts output on hybrid Mamba/GDN models in v0.28.0 (#43559 closed but unfixed)",
+      "user": {
+        "login": "ionut-anghelina",
+        "id": 184096981,
+        "node_id": "U_kgDOCvkY1Q",
+        "avatar_url": "https://avatars.githubusercontent.com/u/184096981?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ionut-anghelina",
+        "html_url": "https://github.com/ionut-anghelina",
+        "followers_url": "https://api.github.com/users/ionut-anghelina/followers",
+        "following_url": "https://api.github.com/users/ionut-anghelina/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ionut-anghelina/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ionut-anghelina/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ionut-anghelina/subscriptions",
+        "organizations_url": "https://api.github.com/users/ionut-anghelina/orgs",
+        "repos_url": "https://api.github.com/users/ionut-anghelina/repos",
+        "events_url": "https://api.github.com/users/ionut-anghelina/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ionut-anghelina/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-26T15:05:25Z",
+      "updated_at": "2026-08-26T17:04:08Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\n<details>\n<summary>The output of <code>python collect_env.py</code></summary>\n\n```text\n==============================\n        System Info\n==============================\nOS                           : Ubuntu 24.04.4 LTS (x86_64)\nGCC version                  : (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nLibc version                 : glibc-2.39\n\n==============================\n       PyTorch Info\n==============================\nPyTorch version              : 2.13.0+cu130\nIs debug build               : False\nCUDA used to build PyTorch   : 13.0\nROCM used to build PyTorch   : N/A\n\n==============================\n      Python Environment\n==============================\nPython version               : 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0] (64-bit runtime)\nPython platform              : Linux-6.8.0-1010-gcp-x86_64-with-glibc2.39\n\n==============================\n       CUDA / GPU Info\n==============================\nIs CUDA available            : True\nCUDA runtime version         : 12.0.140\nGPU models and configuration :\nGPU 0-7: NVIDIA H100 80GB HBM3   (single GPU used for this report, TP=1)\nNvidia driver version        : 580.173.02\n\n==============================\n          CPU Info\n==============================\nArchitecture:                x86_64\nModel name:                  Intel(R) Xeon(R) Platinum 8481C CPU @ 2.70GHz\nCPU(s):                      208\nHypervisor vendor:           KVM\n\n==============================\n         vLLM Info\n==============================\nvLLM Version                 : 0.28.0\nvLLM Build Flags:\n  CUDA Archs: Not Set; ROCm: Disabled; XPU: Disabled\nGPU Topology: NV18 all-to-all (8x H100 SXM), TP=1 used\n\nRelevant packages:\n  vllm==0.28.0\n  torch==2.13.0\n  transformers==5.15.1\n  flashinfer-python==0.6.16.post3\n  compressed-tensors==0.17.0\n  xgrammar==0.2.3\n```\n\n</details>\n\n### 🐛 Describe the bug\n\n**Summary.** `--enable-prefix-caching` together with MTP speculative decoding still corrupts output on hybrid (GDN/Mamba) Qwen3.5-class models in **v0.28.0**. A small fraction of responses degenerate into repeated punctuation (`!!!!…`) or come back empty. This is the same failure as #43559, which was closed as completed on 2026-08-06 — the merged scheduler-side fix (#51113) does not cover it, and the cache-manager-side fixes (#43650, #48375) are still open.\n\n**Model.** Qwen3.5-architecture dense 27B VLM (`Qwen3_5ForConditionalGeneration`, hybrid: Gated DeltaNet linear-attention layers + full attention every 4th layer, vision tower), FP8 W8A8 compressed-tensors (`FP8_DYNAMIC`), with an MTP head present in the checkpoint (`Qwen3_5MTP` resolves at startup). TP=1, single H100.\n\n**Server command** (paths redacted):\n\n```bash\nexport VLLM_NO_USAGE_STATS=1\nexport VLLM_USE_FLASHINFER_SAMPLER=0\n\nvllm serve <QWEN3_5_27B_FP8_WITH_MTP_HEAD> \\\n  --served-model-name path-mini \\\n  --port 8000 \\\n  --max-model-len 62768 \\\n  --max-num-seqs 32 \\\n  --gpu-memory-utilization 0.95 \\\n  --enable-chunked-prefill \\\n  --limit-mm-per-prompt.image 10 \\\n  --enable-prefix-caching \\\n  --mamba-cache-mode align \\\n  --speculative-config '{\"method\": \"mtp\", \"num_speculative_tokens\": 2}'\n```\n\nStartup confirms the configuration: `Resolved architecture: Qwen3_5MTP`, `enable_prefix_caching=True`, `num_spec_tokens=2`, `GPU KV cache size: 576,637 tokens`, attention block size 800 (forced up to match the mamba page size), async scheduling enabled (default).\n\n**Workload.** Multi-step GUI-agent traces: each request is a conversation of prior steps plus 1–3 screenshots (sliding 2-image history), ~4k–12k prompt tokens, ~20–100 output tokens, `temperature=0`, client concurrency up to 32. Consecutive steps of the same episode share a long prefix, so prefix-cache hit rate climbs through a run.\n\n**Observed.**\n\n| vLLM | prefix caching | MTP | final prefix-cache hit rate | malformed responses |\n|---|---|---|---|---|\n| 0.26.0 | on | k=2 | 27.5% | 25 / 2,636 (0.95%) |\n| **0.28.0** | **on** | **k=2** | **31.7%** | **4 / 495 (0.81%)** |\n| 0.28.0 | on | k=2, `--kv-cache-dtype fp8` | ~10% (see note) | 0 / 1,135 |\n\nMalformed = response is a run of repeated `!` characters, or empty content. `finish_reason` is normal; no HTTP 5xx, no crash, no traceback — the engine stays healthy and every other response in the same run is correct.\n\nTwo observations that point at the prefix cache rather than at MTP alone:\n\n1. **Rate tracks cache hit rate.** Corruption appears only once the prefix cache starts hitting, and scales with the hit rate.\n2. **`--kv-cache-dtype fp8` appears to avoid it, but only by destroying the cache.** With fp8 KV, vLLM raises the attention block size 800 → 1600 (`platforms/interface.py`, so that one attention page covers one mamba page). Our requests share ~1,700 tokens of prefix, so at a 1600-token matching unit almost nothing is reusable: hit rate collapses from 31.7% to ~10%, and malformed responses go to 0/1,135. That is consistent with reduced exposure, not with fp8 fixing the underlying defect. (For the same reason `--block-size 800` cannot be used to compensate: the value is derived and only ever raised.)\n\n**Suspected cause** (already described in #43650 / #48375): `MambaManager.find_longest_cache_hit` in `vllm/v1/core/single_type_kv_cache_manager.py` accepts `drop_eagle_block` and never acts on it, so the final matched block — which can hold recurrent state written over draft positions that verification later rejected — stays reachable through the prefix cache and is reused by subsequent requests sharing that prefix. `FullAttentionManager` drops that block. In v0.28.0 the caller (`kv_cache_coordinator.py`) additionally skips the eagle margin for `MambaSpec` with the comment *\"its finder never drops\"*, i.e. caller and manager disagree about who is responsible.\n\nApplying **#43650** (6 lines, `max_num_blocks -= 1` when `use_eagle`) on top of v0.28.0 starts cleanly and shows no regression on an unrelated accuracy check (100 grounding requests at concurrency 32: 76% vs 75% unpatched, identical coordinate error, 0 malformed). Other users report it resolving the symptom outright (#43650: 18/39 → 39/39 on a private benchmark; `content: null` at ~1-in-8 fixed completely).\n\n**Expected.** `--enable-prefix-caching` + MTP on a hybrid Mamba/GDN model should be either correct or explicitly rejected at startup, not silently corrupting a fraction of responses.\n\n**Notes / questions**\n\n- Was #43559 closed by #51113 intentionally? #51113 fixes chunk alignment on the write path; the reports above (and this one) are about block dropping on the cache-read path, which neither #51113 nor #46384 appears to cover.\n- If #43650 is considered too blunt because a hybrid block can be 1k+ tokens, would a narrower fix be acceptable — e.g. dropping the trailing block only when that block actually contains unverified draft positions?\n- Happy to run any specific probe on this configuration; we can reproduce on demand with the workload above.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53912/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53912/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53888",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53888/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53888/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53888/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53888",
+      "id": 5256863696,
+      "node_id": "I_kwDOI7xefs8AAAABOVVf0A",
+      "number": 53888,
+      "title": "Sleep level=1 wake silently corrupts LoRA state (NemotronH NVFP4/Marlin, TP=2, WSL2): fixed-seed generation diverges after wake, adapter stops applying, no error raised",
+      "user": {
+        "login": "john-broadway",
+        "id": 271895126,
+        "node_id": "U_kgDOEDTKVg",
+        "avatar_url": "https://avatars.githubusercontent.com/u/271895126?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/john-broadway",
+        "html_url": "https://github.com/john-broadway",
+        "followers_url": "https://api.github.com/users/john-broadway/followers",
+        "following_url": "https://api.github.com/users/john-broadway/following{/other_user}",
+        "gists_url": "https://api.github.com/users/john-broadway/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/john-broadway/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/john-broadway/subscriptions",
+        "organizations_url": "https://api.github.com/users/john-broadway/orgs",
+        "repos_url": "https://api.github.com/users/john-broadway/repos",
+        "events_url": "https://api.github.com/users/john-broadway/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/john-broadway/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-26T12:14:55Z",
+      "updated_at": "2026-08-26T12:14:55Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "\n## Environment\n\n- vLLM 0.27.1, `vllm/vllm-openai` image digest `sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967` (created 2026-08-11)\n- Model: `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (`NemotronHForCausalLM`), served weight-only FP4 via the Marlin fallback on SM89\n- `--tensor-parallel-size 2` on 2x RTX 4090, `--enable-lora --max-lora-rank 16 --lora-modules` (one adapter), `--enforce-eager --no-enable-prefix-caching --enable-sleep-mode`, `VLLM_SERVER_DEV_MODE=1`\n- Docker inside WSL2 (kernel 6.18.33.1, driver 610.88, Windows 11 26220). WSL2 may be load-bearing; happy to run diagnostics.\n\n## What happens\n\nProbe design: fixed-seed generation recorded before sleep, compared token-for-token after wake, with the adapter unchanged.\n\n- `POST /sleep?level=1`: clean. `is_sleeping` reports true, VRAM actually frees (cards settle to 1.7GB + 0.9GB).\n- `POST /wake_up`: the engine comes back answering, but corrupted. One GPU restores about 3GB lighter than its pre-sleep residency, the LoRA adapter silently stops applying (base and adapter routes return the same tokens), and both routes diverge from their own pre-sleep fixed-seed baselines. Both models answered questions that were not asked. No error, no log line, HTTP 200 throughout.\n\nLevel 2 behaves per its contract (discard weights, wake needs a re-push; wake without one generates from uninitialized weights). The bug report is level 1 only: state that claims to be restored, is not, and nothing fails loudly.\n\n## Why it matters\n\nAny adapter-swap RL loop or serve-train alternation that trusts level-1 sleep gets a silently wrong policy after the first cycle. Our workaround is a full engine stop/start between phases, which also makes the adapter swap a clean `--lora-modules` load. A wake that cannot restore state should fail loudly instead of serving corrupted weights.\n\n## Repro sketch\n\n1. Serve the NVFP4 checkpoint TP=2 with one LoRA adapter and sleep mode enabled.\n2. Record fixed-seed completions for base and adapter routes.\n3. `POST /sleep?level=1`, confirm `is_sleeping`, `POST /wake_up`.\n4. Re-run the fixed-seed completions and compare bytes; check per-GPU residency against pre-sleep.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53888/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53888/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53887",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53887/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53887/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53887/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53887",
+      "id": 5256840387,
+      "node_id": "I_kwDOI7xefs8AAAABOVUEww",
+      "number": 53887,
+      "title": "[Bug]: MTP draft allocates a second full vocab embedding, OOMing a 27B INT4 target that the baseline fits",
+      "user": {
+        "login": "thc1006",
+        "id": 84045975,
+        "node_id": "MDQ6VXNlcjg0MDQ1OTc1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/84045975?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/thc1006",
+        "html_url": "https://github.com/thc1006",
+        "followers_url": "https://api.github.com/users/thc1006/followers",
+        "following_url": "https://api.github.com/users/thc1006/following{/other_user}",
+        "gists_url": "https://api.github.com/users/thc1006/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/thc1006/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/thc1006/subscriptions",
+        "organizations_url": "https://api.github.com/users/thc1006/orgs",
+        "repos_url": "https://api.github.com/users/thc1006/repos",
+        "events_url": "https://api.github.com/users/thc1006/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/thc1006/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-26T12:12:10Z",
+      "updated_at": "2026-08-26T16:13:40Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\n<details>\n<summary>Environment</summary>\n\n```text\nvLLM:     0.27.1 (pip, isolated venv)\ntorch:    2.13.0+cu130, CUDA 13.0\nGPU:      NVIDIA GeForce RTX 3090, 24 GiB (23.56 GiB usable), sm_86\nDriver:   610.43.02\nOS:       Debian 13, kernel 6.12.101+deb13-amd64\nPython:   3.13.5\nModel:    RedHatAI/Qwen3.8-27B-INT4 (compressed-tensors, ships model_mtp.safetensors)\n          model_type qwen3_5, vocab_size 248320, hidden_size 5120,\n          tie_word_embeddings false\n```\n</details>\n\n### 🐛 Describe the bug\n\nServing `RedHatAI/Qwen3.8-27B-INT4` **without** speculative decoding works: the model loads,\n`Available KV cache memory: 1.38 GiB`, `GPU KV cache size: 16,384 tokens`, and requests complete\nnormally. Adding `--speculative-config '{\"method\":\"mtp\",\"num_speculative_tokens\":1}'` fails during\nweight loading, 0.12 GiB short:\n\n```\nERROR ... [gpu_model_runner.py:5403] Failed to load model - not enough GPU memory.\ntorch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.37 GiB.\nGPU 0 has a total capacity of 23.56 GiB of which 2.25 GiB is free.\n```\n\nThe 2.37 GiB request is a **second copy of the target's vocabulary embedding**.\n\n#### Where it comes from\n\nThe failing allocation is not in a decoder layer:\n\n```\nvllm/model_executor/layers/vocab_parallel_embedding.py:325  __init__\nvllm/model_executor/layers/vocab_parallel_embedding.py:50   create_weights\n```\n\n`vocab_parallel_embedding.py:50` is `UnquantizedEmbeddingMethod`, and the size matches exactly:\n\n```\nvocab_size 248320 x hidden_size 5120 x 2 bytes (bf16) = 2.37 GiB\n```\n\n`qwen3_5_mtp.py:82` builds that buffer unconditionally:\n\n```python\nself.embed_tokens = VocabParallelEmbedding(self.vocab_size, config.hidden_size)\n```\n\nBut the checkpoint ships no MTP embedding. `model.safetensors.index.json` lists 15 MTP tensors --\n`mtp.fc`, `mtp.layers.0.*`, `mtp.pre_fc_norm_embedding` -- and no `mtp.embed_tokens` or\n`mtp.lm_head`. What fills the buffer is the **target's** embedding, remapped by the draft's own\nloader (`qwen3_5_mtp.py:307`):\n\n```python\nelif any(key in name for key in [\"embed_tokens\", \"lm_head\"]):\n    if \"embed_tokens\" in name:\n        name = name.replace(\"language_model.\", \"\")\n```\n\nSo the draft shares the target's embedding in *weights* and duplicates it in *memory*: the same\n2.37 GiB tensor is resident twice, and the copy is what pushes this configuration over the edge.\n\nThe same file already aliases in the other direction when the config allows it, so aliasing is an\nexpected pattern here rather than an exotic one:\n\n```python\nif config.tie_word_embeddings:\n    self.lm_head = self.model.embed_tokens\n```\n\n`tie_word_embeddings` is `false` for this checkpoint, so that branch is not taken.\n\nThis is not specific to Qwen: `deepseek_mtp.py`, `mimo_mtp.py` and `qwen3_next_mtp.py` all build\n`self.embed_tokens = VocabParallelEmbedding(...)` the same way. I have only measured the Qwen3.5\npath.\n\n#### Reproduce\n\n```bash\n# works\nvllm serve RedHatAI/Qwen3.8-27B-INT4 \\\n  --max-model-len 8192 --no-enable-prefix-caching --max-num-seqs 1 \\\n  --gpu-memory-utilization 0.95 --no-enable-log-requests\n\n# OOMs during weight loading\nvllm serve RedHatAI/Qwen3.8-27B-INT4 \\\n  --max-model-len 8192 --no-enable-prefix-caching --max-num-seqs 1 \\\n  --gpu-memory-utilization 0.95 --no-enable-log-requests \\\n  --speculative-config '{\"method\":\"mtp\",\"num_speculative_tokens\":1}'\n```\n\n#### What I ruled out\n\nSix attempts, and the \"free\" figure is byte-identical in every one, because none of these touches\nthe allocation that fails:\n\n| attempt | free at failure | requested |\n|---|---|---|\n| `--gpu-memory-utilization 0.90` | 2.25 GiB | 2.37 GiB |\n| `--gpu-memory-utilization 0.95` | 2.25 GiB | 2.37 GiB |\n| `0.95 --enforce-eager` | 2.25 GiB | 2.37 GiB |\n| `0.95` + speculative `max_model_len: 2048` | 2.25 GiB | 2.37 GiB |\n| `0.95` + speculative `quantization: compressed-tensors` | 2.25 GiB | 2.37 GiB |\n| `0.95` + **PR #49553 applied locally** | 2.25 GiB | 2.37 GiB |\n\n`gpu_memory_utilization` sizes the KV pool, `enforce_eager` controls graph capture, and\n`max_model_len` sizes the draft context -- all of them after the weights load. The error is\n`Failed to load model`.\n\nThe decoder layers are **not** falling back to unquantized; the log carries\n`[compressed_tensors_wNa16.py:137] Using MarlinLinearKernel for CompressedTensorsWNA16`.\n\n#### Why this is not #49552 / #49553\n\n[#49552](https://github.com/vllm-project/vllm/issues/49552) and its fix\n[#49553](https://github.com/vllm-project/vllm/pull/49553) describe MTP decoder layers silently\nresolving to Unquantized because INC/AutoRound `block_name_to_quantize` prefixes are not mapped\nfrom HF names to vLLM names for the draft. That is a different path: this checkpoint is\ncompressed-tensors, its MTP decoder layers quantize correctly, and the failing allocation is an\nembedding, which is never quantized either way.\n\nI applied #49553's one-line change to my install and re-ran: the OOM is unchanged. Tested rather\nthan assumed, since the symptoms are adjacent.\n\nI also searched open issues and PRs for MTP plus memory. The 15 results are all a different\nfailure -- KV-cache **over**-allocation from a negative CUDA-graph estimate\n([#44740](https://github.com/vllm-project/vllm/issues/44740) and relatives), whose workaround is\nto *lower* utilization. Nothing there is a load-time OOM on the draft.\n\n#### What a fix might look like\n\nI have not sent a patch because I am not sure which is wanted, and both touch shared code:\n\n1. Alias the draft's `embed_tokens` to the target's when the draft has no embedding of its own in\n   the checkpoint, the way `lm_head` is aliased under `tie_word_embeddings`.\n2. Do not construct `VocabParallelEmbedding` in the MTP module at all when the checkpoint carries\n   no `mtp.embed_tokens`, and let the loader point at the target's.\n\nEither would return 2.37 GiB on this configuration, which is more than the KV cache the baseline\narm ends up with (1.38 GiB). Happy to test a patch on this hardware.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the\n      bottom right corner of the documentation page, which can answer lots of frequently asked\n      questions.\n\n---",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53887/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53887/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53850",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53850/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53850/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53850/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53850",
+      "id": 5254171501,
+      "node_id": "I_kwDOI7xefs8AAAABOSxLbQ",
+      "number": 53850,
+      "title": "[Bug]: Bare asserts in DeepseekVLV2/DeepseekOCR processors return HTTP 500 (should be 400) and silently corrupt input under `python -O`",
+      "user": {
+        "login": "adisivaprasad",
+        "id": 254348101,
+        "node_id": "U_kgDODykLRQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/254348101?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/adisivaprasad",
+        "html_url": "https://github.com/adisivaprasad",
+        "followers_url": "https://api.github.com/users/adisivaprasad/followers",
+        "following_url": "https://api.github.com/users/adisivaprasad/following{/other_user}",
+        "gists_url": "https://api.github.com/users/adisivaprasad/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/adisivaprasad/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/adisivaprasad/subscriptions",
+        "organizations_url": "https://api.github.com/users/adisivaprasad/orgs",
+        "repos_url": "https://api.github.com/users/adisivaprasad/repos",
+        "events_url": "https://api.github.com/users/adisivaprasad/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/adisivaprasad/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-26T06:50:06Z",
+      "updated_at": "2026-08-26T09:10:56Z",
+      "closed_at": "2026-08-26T09:10:56Z",
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\nvLLM `main` (b1fbbc2). Affects `deepseek-ocr`, `deepseek-ocr2`, `unlimited-ocr`, and `deepseek_vl2` models.\n\n### 🐛 Describe the bug\n\n`vllm/transformers_utils/processors/deepseek_vl2.py` and `vllm/transformers_utils/processors/deepseek_ocr.py` validate user-facing multimodal input with bare `assert` statements:\n\n- `deepseek_vl2.py:206` — `assert prompt is not None and images is not None`\n- `deepseek_vl2.py:313` — `assert conversation.count(self.image_token) == len(images)`\n- `deepseek_ocr.py:253` — `assert prompt is not None and images is not None`\n- `deepseek_ocr.py:314` — `assert conversation.count(self.image_token) == len(images)`\n\nThis is the same class of bug fixed for the DeepSeek V3.2 encoder in #32884 and for the V4 encoder in #53747, but it still exists in the multimodal processors.\n\nTwo consequences:\n\n1. **Wrong HTTP status.** `AssertionError` is neither `ValueError` nor `VLLMError`, so `create_error_response` falls through to its `else` branch and returns HTTP 500 instead of HTTP 400 for malformed user input.\n2. **Silent input corruption under `python -O`.** When CPython is run with `-O`, `assert` statements are removed entirely. The image-count check at `tokenize_with_images` is the only guard for the `zip(text_splits, images)` + separate `text_splits[-1]` handling:\n   - `text_splits = conversation.split(self.image_token)` yields `N+1` segments for `N` image tokens.\n   - The loop pairs the first `N` segments with `N` images; `text_splits[-1]` (trailing text) is processed after the loop.\n   - If the counts mismatch and the assert is gone, text segments are silently dropped or duplicated and images are misaligned — corrupting the token sequence with no error.\n\n### Reproduction\n\n```python\nfrom PIL import Image\nfrom transformers import AutoTokenizer\nfrom vllm.transformers_utils.processors.deepseek_ocr import DeepseekOCRProcessor\n\ntok = AutoTokenizer.from_pretrained(\"deepseek-ai/DeepSeek-OCR\")\nproc = DeepseekOCRProcessor(tokenizer=tok)\n\nimg = Image.new(\"RGB\", (100, 100), color=\"red\")\n\n# Image-count mismatch: 2 <image> tokens, 1 image.\ntry:\n    proc(prompt=\"<image> and <image>\", images=[img])\nexcept AssertionError as e:\n    print(\"AssertionError (-> HTTP 500):\", e)\n```\n\nRunning the same snippet under `python -O` produces no error and silently emits a corrupted token sequence (the middle text segment is dropped).\n\n### Expected behaviour\n\nRaise `ValueError` (-> HTTP 400) with a clear message, matching #32884 / #53747, and survive `python -O`.\n\n### Suggested fix\n\nConvert the four bare asserts to `ValueError` with descriptive messages, e.g.:\n\n```python\nif prompt is None or images is None:\n    raise ValueError(\"prompt and images must be used at the same time.\")\n...\nnum_image_tokens = conversation.count(self.image_token)\nif num_image_tokens != len(images):\n    raise ValueError(\n        f\"Number of {self.image_token!r} tokens in prompt ({num_image_tokens}) \"\n        f\"does not match number of images ({len(images)}).\"\n    )\n```\n\n### Before submitting a new issue\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/).",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53850/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53850/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53836",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53836/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53836/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53836/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53836",
+      "id": 5253516188,
+      "node_id": "I_kwDOI7xefs8AAAABOSJLnA",
+      "number": 53836,
+      "title": "[Bug]: NVIDIA DGX Spark vllms and gemma 4 26B won't work",
+      "user": {
+        "login": "raymondlo84",
+        "id": 1720147,
+        "node_id": "MDQ6VXNlcjE3MjAxNDc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1720147?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/raymondlo84",
+        "html_url": "https://github.com/raymondlo84",
+        "followers_url": "https://api.github.com/users/raymondlo84/followers",
+        "following_url": "https://api.github.com/users/raymondlo84/following{/other_user}",
+        "gists_url": "https://api.github.com/users/raymondlo84/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/raymondlo84/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/raymondlo84/subscriptions",
+        "organizations_url": "https://api.github.com/users/raymondlo84/orgs",
+        "repos_url": "https://api.github.com/users/raymondlo84/repos",
+        "events_url": "https://api.github.com/users/raymondlo84/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/raymondlo84/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 5135047172,
+          "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": "Something isn't working"
+        },
+        {
+          "id": 9543357705,
+          "node_id": "LA_kwDOI7xefs8AAAACONQVCQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/nvidia",
+          "name": "nvidia",
+          "color": "76B900",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-26T05:01:35Z",
+      "updated_at": "2026-08-26T05:02:58Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\n<details>\n<summary>The output of <code>python collect_env.py</code></summary>\n\n```text\n(vllm) raymondlo84@spark-ray:~/spark_serving/vllm$ python collect_env.py\n/home/raymondlo84/spark_serving/vllm/vllm/__init__.py:7: RuntimeWarning: Failed to read commit hash:\nNo module named 'vllm._version'\n  from .version import __version__, __version_tuple__  # isort:skip\nTraceback (most recent call last):\n  File \"/home/raymondlo84/spark_serving/vllm/collect_env.py\", line 20, in <module>\n    from vllm.envs import environment_variables\n  File \"/home/raymondlo84/spark_serving/vllm/vllm/__init__.py\", line 14, in <module>\n    import vllm.env_override  # noqa: F401\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/raymondlo84/spark_serving/vllm/vllm/env_override.py\", line 90, in <module>\n    from vllm.utils.torch_utils import is_torch_equal, is_torch_equal_or_newer\n  File \"/home/raymondlo84/spark_serving/vllm/vllm/utils/torch_utils.py\", line 74, in <module>\n    PIN_MEMORY = is_pin_memory_available()\n  File \"/home/raymondlo84/spark_serving/vllm/vllm/utils/platform_utils.py\", line 45, in is_pin_memory_available\n    from vllm.platforms import current_platform\n  File \"/home/raymondlo84/spark_serving/vllm/vllm/platforms/__init__.py\", line 294, in __getattr__\n    _current_platform = resolve_obj_by_qualname(platform_cls_qualname)()\n                        ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/raymondlo84/spark_serving/vllm/vllm/utils/import_utils.py\", line 109, in resolve_obj_by_qualname\n    module = importlib.import_module(module_name)\n  File \"/home/raymondlo84/.local/share/uv/python/cpython-3.13.11-linux-aarch64-gnu/lib/python3.13/importlib/__init__.py\", line 88, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/raymondlo84/spark_serving/vllm/vllm/platforms/cuda.py\", line 23, in <module>\n    import vllm._C_stable_libtorch  # noqa\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nModuleNotFoundError: No module named 'vllm._C_stable_libtorch'\n\n```\n\n</details>\n\n\n### 🐛 Describe the bug\n(vllm) raymondlo84@spark-ray:~/spark_serving/vllm$ vllm serve nvidia/Gemma-4-26B-A4B-NVFP4   --kv-cache-dtype fp8   --gpu-memory-utilization 0.8   --max-num-seqs 8   --load-format fastsafetensors   --enable-prefix-caching   --max-num-batched-tokens 8192   --tensor-parallel-size 1   --enable-auto-tool-choice   --tool-call-parser gemma4   --chat-template examples/tool_chat_template_gemma4.jinja   --reasoning-parser gemma4   --speculative-config '{\"model\":\"google/gemma-4-26B-A4B-it-assistant\",\"num_speculative_tokens\":4}'\n(APIServer pid=4108793) INFO 08-25 22:02:31 [api_utils.py:345] \n(APIServer pid=4108793) INFO 08-25 22:02:31 [api_utils.py:345]        █     █     █▄   ▄█\n(APIServer pid=4108793) INFO 08-25 22:02:31 [api_utils.py:345]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.27.1\n(APIServer pid=4108793) INFO 08-25 22:02:31 [api_utils.py:345]   █▄█▀ █     █     █     █  model   nvidia/Gemma-4-26B-A4B-NVFP4\n(APIServer pid=4108793) INFO 08-25 22:02:31 [api_utils.py:345]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀\n(APIServer pid=4108793) INFO 08-25 22:02:31 [api_utils.py:345] \n(APIServer pid=4108793) INFO 08-25 22:02:31 [api_utils.py:273] non-default args: {'model_tag': 'nvidia/Gemma-4-26B-A4B-NVFP4', 'chat_template': 'examples/tool_chat_template_gemma4.jinja', 'enable_auto_tool_choice': True, 'tool_call_parser': 'gemma4', 'model': 'nvidia/Gemma-4-26B-A4B-NVFP4', 'load_format': 'fastsafetensors', 'reasoning_parser': 'gemma4', 'gpu_memory_utilization': 0.8, 'kv_cache_dtype': 'fp8', 'enable_prefix_caching': True, 'max_num_batched_tokens': 8192, 'max_num_seqs': 8, 'speculative_config': {'model': 'google/gemma-4-26B-A4B-it-assistant', 'num_speculative_tokens': 4}}\n(APIServer pid=4108793) Traceback (most recent call last):\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/bin/vllm\", line 10, in <module>\n(APIServer pid=4108793)     sys.exit(main())\n(APIServer pid=4108793)              ~~~~^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/entrypoints/cli/main.py\", line 97, in main\n(APIServer pid=4108793)     args.dispatch_function(args)\n(APIServer pid=4108793)     ~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/entrypoints/cli/serve.py\", line 152, in cmd\n(APIServer pid=4108793)     uvloop.run(run_server(args))\n(APIServer pid=4108793)     ~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/uvloop/__init__.py\", line 96, in run\n(APIServer pid=4108793)     return __asyncio.run(\n(APIServer pid=4108793)            ~~~~~~~~~~~~~^\n(APIServer pid=4108793)         wrapper(),\n(APIServer pid=4108793)         ^^^^^^^^^^\n(APIServer pid=4108793)     ...<2 lines>...\n(APIServer pid=4108793)         **run_kwargs\n(APIServer pid=4108793)         ^^^^^^^^^^^^\n(APIServer pid=4108793)     )\n(APIServer pid=4108793)     ^\n(APIServer pid=4108793)   File \"/home/raymondlo84/.local/share/uv/python/cpython-3.13.11-linux-aarch64-gnu/lib/python3.13/asyncio/runners.py\", line 195, in run\n(APIServer pid=4108793)     return runner.run(main)\n(APIServer pid=4108793)            ~~~~~~~~~~^^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/.local/share/uv/python/cpython-3.13.11-linux-aarch64-gnu/lib/python3.13/asyncio/runners.py\", line 118, in run\n(APIServer pid=4108793)     return self._loop.run_until_complete(task)\n(APIServer pid=4108793)            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n(APIServer pid=4108793)   File \"uvloop/loop.pyx\", line 1518, in uvloop.loop.Loop.run_until_complete\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/uvloop/__init__.py\", line 48, in wrapper\n(APIServer pid=4108793)     return await main\n(APIServer pid=4108793)            ^^^^^^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/entrypoints/openai/api_server.py\", line 764, in run_server\n(APIServer pid=4108793)     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/entrypoints/openai/api_server.py\", line 778, in run_server_worker\n(APIServer pid=4108793)     async with build_async_engine_client(\n(APIServer pid=4108793)                ~~~~~~~~~~~~~~~~~~~~~~~~~^\n(APIServer pid=4108793)         args,\n(APIServer pid=4108793)         ^^^^^\n(APIServer pid=4108793)         client_config=client_config,\n(APIServer pid=4108793)         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)     ) as engine_client:\n(APIServer pid=4108793)     ^\n(APIServer pid=4108793)   File \"/home/raymondlo84/.local/share/uv/python/cpython-3.13.11-linux-aarch64-gnu/lib/python3.13/contextlib.py\", line 214, in __aenter__\n(APIServer pid=4108793)     return await anext(self.gen)\n(APIServer pid=4108793)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/entrypoints/openai/api_server.py\", line 132, in build_async_engine_client\n(APIServer pid=4108793)     async with build_async_engine_client_from_engine_args(\n(APIServer pid=4108793)                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n(APIServer pid=4108793)         engine_args,\n(APIServer pid=4108793)         ^^^^^^^^^^^^\n(APIServer pid=4108793)         usage_context=usage_context,\n(APIServer pid=4108793)         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)         client_config=client_config,\n(APIServer pid=4108793)         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)     ) as engine:\n(APIServer pid=4108793)     ^\n(APIServer pid=4108793)   File \"/home/raymondlo84/.local/share/uv/python/cpython-3.13.11-linux-aarch64-gnu/lib/python3.13/contextlib.py\", line 214, in __aenter__\n(APIServer pid=4108793)     return await anext(self.gen)\n(APIServer pid=4108793)            ^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/entrypoints/openai/api_server.py\", line 156, in build_async_engine_client_from_engine_args\n(APIServer pid=4108793)     vllm_config = engine_args.create_engine_config(usage_context=usage_context)\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/engine/arg_utils.py\", line 1929, in create_engine_config\n(APIServer pid=4108793)     model_config = self.create_model_config()\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/engine/arg_utils.py\", line 1686, in create_model_config\n(APIServer pid=4108793)     return ModelConfig(\n(APIServer pid=4108793)         model=self.model,\n(APIServer pid=4108793)     ...<63 lines>...\n(APIServer pid=4108793)         renderer_num_workers=self.renderer_num_workers,\n(APIServer pid=4108793)     )\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/pydantic/_internal/_dataclasses.py\", line 121, in __init__\n(APIServer pid=4108793)     s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)\n(APIServer pid=4108793)     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/config/model.py\", line 595, in __post_init__\n(APIServer pid=4108793)     self.model_arch_config = self.get_model_arch_config()\n(APIServer pid=4108793)                              ~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/config/model.py\", line 856, in get_model_arch_config\n(APIServer pid=4108793)     return convertor.convert(\n(APIServer pid=4108793)            ~~~~~~~~~~~~~~~~~^\n(APIServer pid=4108793)         supports_multimodal=self._supports_multimodal_for_mm_prefix()\n(APIServer pid=4108793)         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(APIServer pid=4108793)     )\n(APIServer pid=4108793)     ^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/transformers_utils/model_arch_config_convertor.py\", line 378, in convert\n(APIServer pid=4108793)     head_size=self.get_head_size(),\n(APIServer pid=4108793)               ~~~~~~~~~~~~~~~~~~^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/vllm/transformers_utils/model_arch_config_convertor.py\", line 608, in get_head_size\n(APIServer pid=4108793)     head_dim = getattr(self.hf_text_config, \"head_dim\", 0)\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py\", line 482, in __getattribute__\n(APIServer pid=4108793)     return super().__getattribute__(key)\n(APIServer pid=4108793)            ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n(APIServer pid=4108793)   File \"/home/raymondlo84/spark_serving/vllm/.venv/lib/python3.13/site-packages/transformers/integrations/heterogeneity/configuration_utils.py\", line 298, in __getattribute__\n(APIServer pid=4108793)     raise AmbiguousGlobalPerLayerAttributeError(\n(APIServer pid=4108793)     ...<5 lines>...\n(APIServer pid=4108793)     )\n(APIServer pid=4108793) transformers.integrations.heterogeneity.configuration_utils.AmbiguousGlobalPerLayerAttributeError: 'head_dim' is a per-layer attribute and may vary across layers. Access it via the individual layer configs instead (e.g. config.per_layer_config[i].head_dim). To read the global config value from config.head_dim anyway, set `allow_global_per_layer_attribute_access` to `True` on the config. Warning: only do this if the caller can safely handle heterogeneous configs; code that assumes a homogeneous model may use the global value incorrectly.\n\nThe example is not working\nhttps://recipes.vllm.ai/Google/gemma-4-26B-A4B-it?variant=nvidia_nvfp4&hardware=dgx_spark_gb10&features=tool_calling%2Creasoning%2Cspec_decoding\n\n\nvllm serve nvidia/Gemma-4-26B-A4B-NVFP4   --kv-cache-dtype fp8   --gpu-memory-utilization 0.8   --max-num-seqs 8   --load-format fastsafetensors   --enable-prefix-caching   --max-num-batched-tokens 8192   --tensor-parallel-size 1   --enable-auto-tool-choice   --tool-call-parser gemma4   --chat-template examples/tool_chat_template_gemma4.jinja   --reasoning-parser gemma4   --speculative-config '{\"model\":\"google/gemma-4-26B-A4B-it-assistant\",\"num_speculative_tokens\":4}'\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53836/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53836/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53831",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53831",
+      "id": 5253005618,
+      "node_id": "I_kwDOI7xefs8AAAABORqBMg",
+      "number": 53831,
+      "title": "[Bug]: DeepSeek-V4-Flash tool_choice=auto silently drops tool calls at deep reasoning_effort (xhigh/max) — distinct from #41132/#51914",
+      "user": {
+        "login": "shreshth-tahoe",
+        "id": 150284442,
+        "node_id": "U_kgDOCPUomg",
+        "avatar_url": "https://avatars.githubusercontent.com/u/150284442?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shreshth-tahoe",
+        "html_url": "https://github.com/shreshth-tahoe",
+        "followers_url": "https://api.github.com/users/shreshth-tahoe/followers",
+        "following_url": "https://api.github.com/users/shreshth-tahoe/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shreshth-tahoe/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shreshth-tahoe/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shreshth-tahoe/subscriptions",
+        "organizations_url": "https://api.github.com/users/shreshth-tahoe/orgs",
+        "repos_url": "https://api.github.com/users/shreshth-tahoe/repos",
+        "events_url": "https://api.github.com/users/shreshth-tahoe/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shreshth-tahoe/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 8746007475,
+          "node_id": "LA_kwDOI7xefs8AAAACCU17sw",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/deepseek",
+          "name": "deepseek",
+          "color": "1995FE",
+          "default": false,
+          "description": "Related to DeepSeek models"
+        },
+        {
+          "id": 10799676958,
+          "node_id": "LA_kwDOI7xefs8AAAACg7X-Hg",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/DSv4",
+          "name": "DSv4",
+          "color": "be3bfa",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-26T03:27:39Z",
+      "updated_at": "2026-08-26T03:49:49Z",
+      "closed_at": "2026-08-26T03:49:49Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Summary\n\nWith `--enable-auto-tool-choice --tool-call-parser deepseek_v4 --reasoning-parser deepseek_v4` on DeepSeek-V4-Flash-0731, requests with `tool_choice=\"auto\"` and a **deep** reasoning-effort tier (`xhigh`/`max`) return `finish_reason=\"stop\"` with **empty `content` and no `tool_calls`** at a high rate — the model reasons about which tool to call, then emits nothing further. This reproduces on live traffic, not just synthetic probing, and is fully gated by two independent, cleanly-separable variables: reasoning-effort tier and `tool_choice`.\n\nThis is not the DSML-markup-leak bug in #51914/#48931/#49117 (no malformed/partial DSML wrapper appears in `content` in most failures — `content` is `null` or whitespace-only) and not #41132/PR #41199 (that was `response_format=json_object` + thinking leaking into the `reasoning` field; already fixed and present in the version below). This looks like a related-but-distinct interaction: the reasoning→action decoding boundary isn't being handled for the *tool-calling* grammar the way it apparently was for the *structured-output* grammar.\n\n### Environment\n\n- vLLM: `0.26.1rc1.dev132+ga4e3552ec`\n- Model: `deepseek-ai/DeepSeek-V4-Flash-0731`, served as `deepseek-v4-flash-0731`\n- Hardware: 2x B200 (sm_100), `--data-parallel-size 2 --enable-expert-parallel`\n- Serve flags (abbreviated to the relevant ones):\n  ```\n  --enable-auto-tool-choice --reasoning-parser deepseek_v4 --tool-call-parser deepseek_v4\n  --kv-cache-dtype fp8 --attention-config '{\"use_fp4_indexer_cache\": true}'\n  --speculative-config '{\"method\":\"dspark\",\"num_speculative_tokens\":7,\"draft_sample_method\":\"greedy\"}'\n  ```\n  Speculative decoding (DSpark) is enabled. I have **not** isolated whether disabling it changes the failure rate — that requires a restart I haven't done yet. Flagging as an open variable, not a ruled-out one.\n\n### Reproduction\n\n```python\nimport json, urllib.request\n\nURL = \"http://<endpoint>/v1/chat/completions\"\nTOOLS = [{\"type\": \"function\", \"function\": {\n    \"name\": \"run_shell\", \"description\": \"Run a shell command.\",\n    \"parameters\": {\"type\": \"object\", \"properties\": {\"command\": {\"type\": \"string\"}}, \"required\": [\"command\"]},\n}}]\nMSG = [{\"role\": \"user\", \"content\": \"List the files in the current directory using a tool call. Do not describe it in prose, just call the tool.\"}]\n\ndef call(effort, tool_choice):\n    body = {\n        \"model\": \"deepseek-v4-flash-0731\", \"messages\": MSG, \"tools\": TOOLS,\n        \"tool_choice\": tool_choice, \"temperature\": 1.0, \"top_p\": 1.0,\n        \"reasoning_effort\": effort, \"max_tokens\": 2048, \"stream\": False,\n    }\n    req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={\"Content-Type\": \"application/json\"})\n    with urllib.request.urlopen(req, timeout=60) as r:\n        d = json.load(r)\n    msg = d[\"choices\"][0][\"message\"]\n    return d[\"choices\"][0][\"finish_reason\"], msg.get(\"content\"), msg.get(\"tool_calls\")\n```\n\n### Results (isolated, N=20-25 per cell, non-streaming)\n\n| `reasoning_effort` | `tool_choice` | clean tool_calls | failure mode |\n|---|---|---|---|\n| `low` (shallow tier) | `auto` | 20/20 (100%) | — |\n| `max` (deep tier) | `auto` | ~40-50% (varies with background load; as low as ~20% under concurrent traffic, up to ~50% isolated) | `finish_reason=stop`, `content` empty/null, `tool_calls: null` |\n| `max` (deep tier) | `required` | 25/25 (100%) | — |\n\nA representative failing response:\n\n```json\n{\"finish_reason\": \"stop\", \"content\": \"\\n\\n\", \"tool_calls\": null}\n```\n\nOthers in the same batch returned `content: null` with populated `reasoning`/`reasoning_content` (the model correctly decided to call `run_shell`, described its plan in the reasoning trace, then stopped instead of emitting the DSML block):\n\n```json\n{\n  \"finish_reason\": \"stop\",\n  \"content\": null,\n  \"reasoning\": \"The user wants me to list the files in the current directory using a tool call. I'll use the run_shell tool with the `ls` command.\",\n  \"tool_calls\": null\n}\n```\n\nThis is not truncation: `max_tokens=2048` was never close to being hit. Failing completions run **8-43 `completion_tokens`**; clean completions on the identical prompt run **46-88**. The model is sampling an early stop right at the reasoning→action boundary, not being cut off after a longer generation.\n\n`temperature`/`top_p` do not appear to move this meaningfully — an interleaved, load-controlled comparison (`top_p=1.0` vs `0.95`, same reasoning effort, alternating single calls) gave 17% vs 25% clean over n=12 each, well within noise given background load variance, and far smaller than the effort/tool_choice effect sizes above.\n\n### What I'd like to know\n\n- Is this a known, already-tracked variant of #41132's fix, or a distinct gap (structured-output grammar got the reasoning-aware fix in #41199, tool-calling's constrained-decoding path apparently didn't)?\n- Is `--enable-auto-tool-choice`'s decoding path for this model unconstrained (relies on the model spontaneously emitting DSML markup) as opposed to `tool_choice=required`'s grammar-constrained path? If so, is there a lighter-weight fix than full grammar constraints — e.g. suppressing EOS immediately after the reasoning-close token when tools are offered and `tool_choice=auto`?\n- Any known interaction with DSpark speculative decoding here specifically (as opposed to the DSML-wrapper-corruption reports in #51914)?\n\nHappy to run additional repros (streaming vs non-streaming, DSpark on/off, other tool schemas) against our endpoint if useful.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53822",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53822/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53822/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53822/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53822",
+      "id": 5252750328,
+      "node_id": "I_kwDOI7xefs8AAAABORab-A",
+      "number": 53822,
+      "title": "[Bug]: XPU TP>1 consumes host RAM equal to total VRAM; workers are never isolated to their own device",
+      "user": {
+        "login": "greglechin",
+        "id": 250111336,
+        "node_id": "U_kgDODuhlaA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/250111336?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/greglechin",
+        "html_url": "https://github.com/greglechin",
+        "followers_url": "https://api.github.com/users/greglechin/followers",
+        "following_url": "https://api.github.com/users/greglechin/following{/other_user}",
+        "gists_url": "https://api.github.com/users/greglechin/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/greglechin/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/greglechin/subscriptions",
+        "organizations_url": "https://api.github.com/users/greglechin/orgs",
+        "repos_url": "https://api.github.com/users/greglechin/repos",
+        "events_url": "https://api.github.com/users/greglechin/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/greglechin/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 5135047172,
+          "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": "Something isn't working"
+        },
+        {
+          "id": 6775085627,
+          "node_id": "LA_kwDOI7xefs8AAAABk9OaOw",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/intel-gpu",
+          "name": "intel-gpu",
+          "color": "D4C5F9",
+          "default": false,
+          "description": "Related to Intel GPU"
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-08-26T02:42:58Z",
+      "updated_at": "2026-08-26T04:23:15Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\nCollected 2026-08-26 inside the serving container. No credentials present in the\nenvironment dump.\n\n<details>\n<summary>The output of <code>python collect_env.py</code></summary>\n\n```text\n==============================\n        System Info\n==============================\nOS                           : Ubuntu 24.04.4 LTS (x86_64)\nGCC version                  : (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nClang version                : Could not collect\nCMake version                : version 4.4.2\nLibc version                 : glibc-2.39\n\n==============================\n       PyTorch Info\n==============================\nPyTorch version              : 2.13.0+xpu\nIs debug build               : False\nCUDA used to build PyTorch   : None\nROCM used to build PyTorch   : N/A\nXPU used to build PyTorch    : 20260000\n\n==============================\n      Python Environment\n==============================\nPython version               : 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0] (64-bit runtime)\nPython platform              : Linux-7.0.14-8-pve-x86_64-with-glibc2.39\n\n==============================\n      Intel XPU / GPU Info\n==============================\nIs XPU available             : True\nXPU runtime version          : 20260000\nIntel GPU models             :\nGPU 0: Intel(R) Arc(TM) Pro B70 Graphics\nGPU 1: Intel(R) Arc(TM) Pro B70 Graphics\n\n--Compile time--\noneAPI compiler version      : 2026.1.1\nSYCL compiler build          : 2026.1.1.20260724\noneCCL version               : Could not collect\n\n--Runtime--\nIntel Graphics Compiler (IGC): 2.38.2\nIntel GMM (libigdgmm)        : 22.10.0\nLevel Zero loader version    : 1.32.0\nLevel Zero driver version    : 26.27.39122.11-0\nvLLM XPU kernels version     : 0.1.dev1+g95d80c7a1\n\n==============================\n          CPU Info\n==============================\nArchitecture:                            x86_64\nCPU(s):                                  12\nVendor ID:                               AuthenticAMD\nModel name:                              AMD Ryzen 5 5600 6-Core Processor\nThread(s) per core:                      2\nCore(s) per socket:                      6\nSocket(s):                               1\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-11\n\n(full lscpu output trimmed for length; available on request)\n\n==============================\nVersions of relevant libraries\n==============================\n[pip3] numpy==2.3.5\n[pip3] pyzmq==27.1.0\n[pip3] sentence-transformers==5.7.0\n[pip3] torch==2.13.0+xpu\n[pip3] torchaudio==2.11.0+xpu\n[pip3] torchcodec==0.16.0+cpu\n[pip3] torchvision==0.28.0+xpu\n[pip3] transformers==5.15.0\n[pip3] triton==3.7.2+xpu\n[pip3] triton-xpu==3.7.2\n[conda] Could not collect\n\n==============================\n         vLLM Info\n==============================\nROCM Version                 : Could not collect\nvLLM Version                 : 0.1.dev1+g5a4c8d992.d20260820 (git sha: 5a4c8d992, date: 20260820)\nvLLM Build Flags:\n  CUDA Archs: Not Set; ROCm: Disabled; XPU: Enabled\nGPU Topology:\n  Could not collect\n\n==============================\n     Environment Variables\n==============================\nLD_LIBRARY_PATH=/tmp/ucx_install/lib:/opt/venv/lib:/opt/intel/oneapi/ccl/latest/lib:/opt/intel/oneapi/mpi/latest/lib:/opt/intel/oneapi/tcm/1.5/lib:/opt/intel/oneapi/umf/1.1/lib:/opt/intel/oneapi/compiler/2026.1/lib:/opt/intel/oneapi/compiler/2026.1/opt/compiler/lib:/usr/local/lib\nVLLM_WORKER_MULTIPROC_METHOD=spawn\nVLLM_XPU_ENABLE_XPU_GRAPH=1\nVLLM_DISABLE_COMPILE_CACHE=1\nCCL_ATL_TRANSPORT=ofi\nVLLM_TARGET_DEVICE=xpu\nPYTORCH_NVML_BASED_CUDA_CHECK=1\nTORCHINDUCTOR_COMPILE_THREADS=1\nTORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor_root\n```\n\n</details>\n\nTwo entries there are relevant to the report rather than incidental:\n\n- `VLLM_WORKER_MULTIPROC_METHOD=spawn` — XPU forces spawn\n  (`vllm/platforms/xpu.py`), which is why the mask has to be set in the parent.\n- `VLLM_DISABLE_COMPILE_CACHE=1` — set deliberately, as a workaround for the\n  third bug below.\n\n### 🐛 Describe the bug\n\n### Summary\n\nOn Intel discrete GPUs, a SYCL context spanning more than one device gives every\ndevice allocation a 1:1 host-memory mirror through the kernel driver's GTT\n([intel/compute-runtime#980](https://github.com/intel/compute-runtime/issues/980)).\nThe mirror is charged to the kernel, so it is invisible to `free`, `ps`,\n`VmRSS`, and cgroup accounting.\n\nvLLM runs TP workers as separate processes and is therefore already positioned\nto avoid this — but each worker inherits a view of every card and builds a\nmulti-device context for hardware it never allocates on.\n\n`XPUPlatform` already declares the right knob:\n\n```python\ndevice_control_env_var: str = \"ZE_AFFINITY_MASK\"   # vllm/platforms/xpu.py\n```\n\nand `Platform.logical_device_id_to_visible_device_id()` resolves a masked\nworker's card to its visible ordinal. **Nothing ever sets it per worker.**\n`WorkerProc.worker_main` applies `assigned_physical_gpu_ids` and\n`set_worker_net_device`, then leaves the mask to the inherited environment.\n\n### Measured on 2x Arc Pro B70 (32 GB, Xe2), TP=2\n\nQwen3.8-27B GPTQ int4, fp16 KV, MTP=3. Two server instances per arm, three\nbenchmark runs each.\n\n| | isolation off | isolation on |\n|---|---:|---:|\n| GTT, summed across cards | 64.9 GiB | **0.2 GiB** |\n| host swap in use | 6.9 GiB, rising | 3.9 GiB, draining |\n| decode, tg256 @ c1 | 48.94 t/s | **56.81 t/s** |\n| prefill, pp4096 | 2320 | **2391** |\n\nIn a full serving configuration, GTT went **68.2 → 21.5 GiB**; the remainder is\na host-memory KV offload pool that is legitimately mapped into both cards.\n\nDecode improves because collectives stage through host memory on hardware\nwithout peer-to-peer, and the host was swapping. Backing out the base step rate\n(`t/s ÷ mean acceptance length`) gives **18.9 → 30.0 steps/s**.\n\n### Proposed fix\n\nExport `ZE_AFFINITY_MASK` for the worker's own device in the **parent**, around\n`proc.start()` in `make_worker_process()`.\n\nIt cannot be set inside the child: XPU workers are spawned, and platform\ndetection touches the accelerator during the child's imports, before\n`worker_main` runs. `device_id_to_physical_device_id()` already honours an\nexisting mask, so this composes with an outer selection\n(`ZE_AFFINITY_MASK=2,3` plus TP=2 yields `2` and `3`) rather than fighting it.\n\n### A second bug this exposes\n\n`vllm/v1/worker/xpu_worker.py` indexes torch by `local_rank` directly:\n\n```python\nself.device = torch.device(f\"xpu:{self.local_rank}\")\n```\n\n`gpu_worker.py` translates through `logical_device_id_to_visible_device_id()`\nfirst. The XPU worker therefore breaks as soon as the visible set is narrowed —\n**independently of this proposal, anyone setting `ZE_AFFINITY_MASK` per rank\nhits it today**:\n\n```\nRuntimeError: The device index is out of range. It must be in [0, 1), but got 1.\n```\n\nThe two `visible_device_count` assertions in `init_device` have the same\nproblem. Note also that `torch.xpu.device_count()` still reports every physical\ndevice under a narrowing selector, so isolation has to be detected from the mask\nstring rather than from the device count.\n\n### A third: the compile cache does not key on the device ordinal\n\nIsolation changes what ordinal each worker sees, so an AOT cache built under one\nsetting is silently wrong under the other. One direction fails outright:\n\n```\nRuntimeError: Expected all tensors to be on the same device, but got mat2 is on\nxpu:1, different from other tensors on xpu:0\n  .../torch_compile_cache/torch_aot_compile/84220a7a.../inductor_cache/...\n```\n\nThe other direction loads without complaint and produces a degraded drafter —\ncorrect output, MTP acceptance collapsing to 1.02 (25 accepted of 1029 drafts).\nHappy to split this into its own issue.\n\n### Verification\n\n- oneCCL initialises normally with one card per rank\n- all correctness cases `finish=stop`; needle retrieval returns the expected\n  answer with **identical output at 7K / 27K / 94K** prompt tokens\n- prefill 2391 ± 1.07 over four runs\n\n### One open issue, stated plainly\n\nMTP mean acceptance length drops **2.584 → 1.892** under isolation, replicated\nacross two server instances per arm. Per-position degradation is uniform\n(0.46 / 0.44 / 0.40), which rules out lost state or context handling — that\nwould spare position 0 and collapse the tail.\n\nEliminated: `LOCAL_RANK` still advertising the logical rank (tested; made it\nslightly worse); drafter-specific device or collective code\n(`llm_base_proposer.py` has neither, and runs the draft model through the same\nTP layers as the target). A numerics explanation could not be tested — cross-arm\nlogprob differences of ~5e-3 sit inside a ~4e-3 **same-config, restart-to-restart**\ndifference on this hardware.\n\nNet it is still a clear gain — +16% decode and ~47 GiB of host RAM — but the\ncause is unknown and I would rather flag it than bury it. Pointers to where the\ndrafter could pick up a device dependency would be very welcome.\n\n### Related\n\n- **Root cause, filed upstream:** [intel/compute-runtime#980](https://github.com/intel/compute-runtime/issues/980)\n- [ggml-org/llama.cpp#22116](https://github.com/ggml-org/llama.cpp/issues/22116) — same behaviour via SYCL on the same hardware\n\nHappy to open a PR — the change is ~15 lines across the two files, and I have\nthe patch and measurements already.\n\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53822/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53822/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53786",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53786/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53786/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53786/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53786",
+      "id": 5250163685,
+      "node_id": "I_kwDOI7xefs8AAAABOO8j5Q",
+      "number": 53786,
+      "title": "[Feature][KV cache] Support fine-grained prefix hits for sliding-window groups",
+      "user": {
+        "login": "Suppressor72",
+        "id": 65858775,
+        "node_id": "MDQ6VXNlcjY1ODU4Nzc1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/65858775?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Suppressor72",
+        "html_url": "https://github.com/Suppressor72",
+        "followers_url": "https://api.github.com/users/Suppressor72/followers",
+        "following_url": "https://api.github.com/users/Suppressor72/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Suppressor72/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Suppressor72/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Suppressor72/subscriptions",
+        "organizations_url": "https://api.github.com/users/Suppressor72/orgs",
+        "repos_url": "https://api.github.com/users/Suppressor72/repos",
+        "events_url": "https://api.github.com/users/Suppressor72/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Suppressor72/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-25T20:12:00Z",
+      "updated_at": "2026-08-25T20:46:23Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Motivation\n\nMulti-turn agent workloads re-send a large stable prefix every turn, so prefix-cache quality dominates TTFT. We run a Qwen3.5-class hybrid (16 full-attention + 48 linear/GDN layers) with a DFlash2 speculative draft whose 5 layers are all `sliding_attention` (`sliding_window=2048`), and measured reuse capped far below what the fine-grained path would allow — because the sliding-window manager disables fine-grained hits for the shared lookup boundary.\n\n## Precise behavior (source of both `0.26.1rc1.dev926+gb05ae5dc0` and current `main`, verified 2026-08-25)\n\nIn a hybrid coordinator using fine-grained align-mode Mamba hits, any coarser cache group whose manager lacks fine-grained lookup disables fine-grained hits for the shared lookup boundary ([`kv_cache_coordinator.py`](https://github.com/vllm-project/vllm/blob/main/vllm/v1/core/kv_cache_coordinator.py), the `enable_partial_hash_hits` gating): `SlidingWindowManager` sets `supports_fine_grained_hash_lookup = False` and its block size differs from the hash unit, so `--prefix-match-unit 16` is accepted and then disabled with a single boot warning —\n\n```\nWARNING [kv_cache_coordinator.py] Disabling fine-grained prefix-cache hits\nbecause these KV cache managers require block-aligned lookups:\nSlidingWindowManager.\n```\n\n— a warning-only fallback that is easy to miss. The SWA lookup itself asserts *\"Fine-grained partial hits are not supported for sliding window now\"*, which reads as an acknowledged TODO.\n\nIn our layout the sliding-window group exists **only because of the spec-decode draft**; the target has zero windowed layers, and its full-attention and Mamba managers both support fine-grained lookup.\n\n### Observed effect (our stack; environment below)\n\nIdentical immediate replay (same prompt, same `cache_salt`, single-request `/metrics` windows, deterministic across repeats):\n\n| prompt tokens | cached-hit tokens | fraction |\n|---:|---:|---:|\n| 1517 | 0 | 0.00 |\n| 2484 | 0 | 0.00 |\n| 4187 | 1648 | 0.39 |\n| 6130 | 3296 | 0.54 |\n| 8285 | 6592 | 0.80 |\n| 9766 | 6592 | 0.68 |\n| 10228 | 8240 | 0.81 |\n| 14572 | 11536 | 0.79 |\n\nUsable replay = `(floor((N-1)/1648) - 1) * 1648` **on this specific configuration** (model, quantization, block-size resolution, sparse-retention default, EAGLE/dflash config — a different quant resolved the mamba-page block bump to 1600 instead of 1648). Real two-turn agent sessions reproduce the law exactly (6/6 reps matching the prediction to 4 decimals). Prefix caching works and helps (TTFT 2.24 s → 0.81 s warm at 9.8k tokens) — it is capped well below what fine-grained hits should allow. We have not tested whether SWA fine-grained support alone lifts the cap under EAGLE: per #52371, FA fine hits + Mamba + EAGLE can still reconcile down a whole physical Mamba block, so Mamba boundary checkpoints (#53614) may also be required.\n\n## Ask\n\n1. Implement fine-grained (partial) prefix hits for sliding-window groups — completing the acknowledged TODO. We're happy to contribute; the design questions below are exactly where we'd want maintainer direction first:\n   - mapping fine candidate boundaries to the physical block run covering the window (null padding that preserves physical block-table indices);\n   - EAGLE drop semantics when the block list is physical;\n   - retention: keeping every physical block needed to reconstruct a registered fine boundary's window.\n2. Related: under interleaved-session memory pressure, one evicted tail block invalidates an entire SWA hit (#48435). Fine-grained SWA retention should be designed with that failure mode in mind.\n\n## Alternatives considered\n\n- Disabling speculative decoding removes the windowed draft group and lifts the veto (trade-off: decode throughput).\n- A non-windowed draft, if compatible, same effect.\n- Accepting the coarse ceiling (current state; documented in our ops notes).\n- We looked for a coordinator-level bypass (excluding the draft group from the veto or from lookup) and concluded it is unsound without per-group computed-token boundaries — the coordinator's single shared `num_local_computed_tokens` would claim draft KV that does not exist.\n\n## Reproduction (CPU, manager-level)\n\nGPU-free reproduction of the veto and assertion (source-deterministic): construct a hybrid `kv_cache_config` with FullAttention + SlidingWindow + align-mode Mamba groups, instantiate `KVCacheCoordinator` with `hash_block_size=16`, and observe (a) the \"Disabling fine-grained prefix-cache hits … SlidingWindowManager\" warning with `enable_partial_hash_hits == False`, and (b) `SlidingWindowManager.find_longest_cache_hit` raising \"does not support fine-grained (partial) cache hits\" when `alignment_tokens < block_size`. Single-file script (stdlib + vllm import) plus the full calibration/sweep harness and logs available on request or as a follow-up comment. (The serving-level numbers above used a private model stack; environment below.)\n\n## Environment\n\n- vLLM: `0.26.1rc1.dev926+gb05ae5dc0` (nightly wheel); `main` checked 2026-08-25 for the veto + assertion (present).\n- Target: Qwen3.5-class hybrid, FP8, 16 full-attention + 48 linear/GDN layers; draft: DFlash2, 5 × `sliding_attention`, window 2048.\n- `--enable-prefix-caching --kv-cache-dtype fp8 --tensor-parallel-size 2 --max-num-batched-tokens 8192`; mamba cache mode auto-`align` (boot log); attention block size auto-bumped 16 → 1648 by the mamba page-size rule (boot log).\n- GPUs: 2× RTX 5090; driver/CUDA details available (`nvidia-smi` dump on request).\n\n## Related\n\n- #53504 (our earlier report: Mamba retention replay-boundary misses on this hybrid — the sparse-retention side of the same mechanics)\n- #53670 (our earlier report: EAGLE last-block drop costing one 1648-token block per hit — the drop side)\n- #52371 (pinned mamba align+EAGLE prefix-cache defects — the reconciliation limitation above)\n- #53614 + #52959 (Mamba internal checkpoints / partial prefix caching with spec decoding — possible prerequisite substrate)\n- #48435 (hybrid-SWA reuse collapse under interleaved-session eviction — adjacent retention/pressure failure, distinct issue)\n- #51250, #45238 (hybrid prefix-caching effectiveness reports)\n\n---\n\n*Disclosure: this issue was drafted with AI assistance and reviewed adversarially (Codex CLI); measurements and source citations verified by the author.*\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53786/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53786/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53777",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53777/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53777/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53777/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53777",
+      "id": 5249595482,
+      "node_id": "I_kwDOI7xefs8AAAABOOZ4Wg",
+      "number": 53777,
+      "title": "[Bug] DFlash2 spec decode + xgrammar: deterministic \"Failed to advance FSM\" on json_object grammar (same draft token every time)",
+      "user": {
+        "login": "rickysos",
+        "id": 11861877,
+        "node_id": "MDQ6VXNlcjExODYxODc3",
+        "avatar_url": "https://avatars.githubusercontent.com/u/11861877?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/rickysos",
+        "html_url": "https://github.com/rickysos",
+        "followers_url": "https://api.github.com/users/rickysos/followers",
+        "following_url": "https://api.github.com/users/rickysos/following{/other_user}",
+        "gists_url": "https://api.github.com/users/rickysos/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/rickysos/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/rickysos/subscriptions",
+        "organizations_url": "https://api.github.com/users/rickysos/orgs",
+        "repos_url": "https://api.github.com/users/rickysos/repos",
+        "events_url": "https://api.github.com/users/rickysos/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/rickysos/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-08-25T19:11:03Z",
+      "updated_at": "2026-08-25T19:39:49Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "# [Bug] DFlash2 spec decode + xgrammar: deterministic \"Failed to advance FSM\" on json_object grammar (always the same draft token)\n\n## Summary\n\nWith a DFlash2 speculative drafter (merged via #52816) and structured-output grammar\n(`response_format: {\"type\": \"json_object\"}`), the engine repeatedly logs:\n\n```\nERROR ... [backend_xgrammar.py:168] Failed to advance FSM for request <id> for tokens 271. Please file an issue.\n```\n\nThe failure is **deterministic**: every observed failure is on the same draft token (271 in our\nbuild) under the json_object grammar. The request always recovers (HTTP 200, output is valid JSON),\nso this is a draft-vs-grammar interaction bug rather than corruption — but it retries the failing\ndraft position (we saw up to 7 retry waves for a single request) and spams ERROR-level logs.\n\n## Environment\n\n- vLLM: `0.26.1rc1.dev1045+g3406ec1da` (main, includes merged #52816 \"DFlash2: local convolution + candidate selector\")\n- Model: Qwen3.8-27B-FP8 (hybrid GDN + full-attention architecture, FP8 Marlin)\n- Draft: DFlash2 (2B draft model), `--speculative-config '{\"method\":\"dflash\",\"model\":\"/dflash2-draft\",\"num_speculative_tokens\":7}'`\n- Hardware: 2× H100 80GB (TP=2), CUDA 13\n- Other relevant flags: `--kv-cache-dtype fp8 --enable-prefix-caching --enable-chunked-prefill --async-scheduling --reasoning-parser qwen3` (none believed relevant; happy to bisect if useful)\n\n## Repro\n\nMinimal reproduction — any prompt that makes the model draft token 271 (or whichever token the\nFSM rejects) under a json_object grammar. Our verbatim trigger (reproduced 3/3 in a tight loop):\n\n```bash\ncurl localhost:8000/v1/chat/completions -d '{\n  \"model\": \"<served-model-name>\",\n  \"messages\": [{\"role\":\"user\",\"content\":\"Output a JSON config object for a CI job with keys \\\"name\\\" (string), \\\"region\\\" (string, one of us-east-1 or eu-west-1), \\\"retries\\\" (integer 1-3), and \\\"env\\\" (object with a KEY=VALUE pair). No prose, JSON only.\"}],\n  \"response_format\": {\"type\": \"json_object\"},\n  \"max_tokens\": 500,\n  \"temperature\": 0\n}'\n```\n\nEach of the 3 requests produced 2 FSM errors (one per retry at the same position); the model\ndrafted `\\\"region\\\": \\\"us-east-1\\\"` in every run, which is where the failure lands. 20 errors total\nover ~7h of mixed traffic, always \\\"for tokens 271\\\".\n\nEquivalent offline:\n\n```python\nfrom vllm import LLM, SamplingParams\n\nllm = LLM(\n    model=\"<target>\",\n    speculative_config={\"method\": \"dflash\", \"model\": \"<dflash2-draft>\", \"num_speculative_tokens\": 7},\n)\nllm.chat(\n    messages=[{\"role\": \"user\", \"content\": \"Output a JSON config object for a CI job with keys \\\"name\\\" (string), \\\"region\\\" (string), \\\"retries\\\" (integer 1-3), and \\\"env\\\" (object). No prose, JSON only.\"}],\n    sampling_params=SamplingParams(temperature=0.0, max_tokens=500),\n)\n# with grammar enabled via response_format json_object\n```\n\n## Expected behavior\n\nDraft tokens that violate the active grammar should be masked/scored as invalid by the\nspec-decode acceptance path (as the non-speculative grammar path does), so the FSM is never\npresented a token it cannot accept. At minimum the error should not be retry-looped at ERROR level.\n\n## Actual behavior\n\n- `Failed to advance FSM ... for tokens 271` logged per draft step that proposes the token (up to 7× per request observed in production traffic)\n- Request completes successfully with valid JSON — no data corruption observed\n- The same workload with `tools` (function-calling grammar) produced **zero** FSM errors across 14 requests; the failure is specific to the json_object grammar shape in our runs\n\n## Questions for maintainers\n\n1. Is the DFlash2 drafter supposed to run its candidate selection under the grammar's allowed-token mask? If so, the mask appears not to be applied on this path.\n2. Is the FSM-advance failure path expected to silently re-draft, or should acceptance of that draft position be rejected earlier?\n\nHappy to provide full request/response logs, the engine config dump, or a bisect run.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53777/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53777/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

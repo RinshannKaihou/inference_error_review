@@ -1,0 +1,32 @@
+TOTAL: 49
+
+- #51206 [open] 2026-08-05T22:21:22Z [Bugfix][Sampler] Honor per-request seeds in partially-seeded CPU batches
+  https://github.com/vllm-project/vllm/pull/51206
+  labels: bug
+- #51205 [open] 2026-08-05T22:09:29Z [Bug]:  Inkling-Small-NVFP4 wont start on 2 H200 GPUs.
+  https://github.com/vllm-project/vllm/issues/51205
+  labels: bug, quantization
+- #51203 [open] 2026-08-05T21:52:01Z [Bugfix][MiniMax-M3] Keep FP8 query allocation stable across CUDA graph replay
+  https://github.com/vllm-project/vllm/pull/51203
+  labels: bug, nvidia
+- #51200 [open] 2026-08-05T21:07:40Z [Bug]: `MiniMAXGemmaRMSNorm` unconditionally calls FlashInfer CUDA kernels, breaking MiniMax-M3 on every non-CUDA platform
+  https://github.com/vllm-project/vllm/issues/51200
+  labels: bug, intel-gpu
+- #51192 [open] 2026-08-05T19:55:38Z [Dependency]: Bump torchvision to a release containing the CVE-2026-65918 fix
+  https://github.com/vllm-project/vllm/issues/51192
+  labels: bug
+- #51191 [open] 2026-08-05T19:33:34Z [Bugfix] compressed-tensors: allow format=dense sparsity_config to load (backport #51189 to v0.26.0)
+  https://github.com/vllm-project/vllm/pull/51191
+  labels: bug, quantization
+- #51190 [open] 2026-08-05T19:27:58Z [Bugfix] compressed-tensors: allow format=dense sparsity_config to load (backport #51189 to v0.24.0)
+  https://github.com/vllm-project/vllm/pull/51190
+  labels: bug, quantization
+- #51189 [open] 2026-08-05T18:17:18Z [Bugfix] compressed-tensors: allow format=dense sparsity_config to load
+  https://github.com/vllm-project/vllm/pull/51189
+  labels: bug, quantization
+- #51182 [open] 2026-08-05T17:22:31Z [Bugfix] [Build] Fix DeepGEMM SM90 paged mqa `prefix_sum` out of range
+  https://github.com/vllm-project/vllm/pull/51182
+  labels: bug, ci/build
+- #51181 [open] 2026-08-05T16:33:30Z [Bug]: DeepSeekV4 DSpark CUDA graph capture failure on H100
+  https://github.com/vllm-project/vllm/issues/51181
+  labels: bug

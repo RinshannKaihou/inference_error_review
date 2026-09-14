@@ -1,0 +1,12 @@
+https://github.com/vllm-project/vllm/issues/53951	[Bug]: SWA store-skip starves eagle groups by one block — offloaded KV can never be loaded back	closed	speculative-decoding	2026-08-26T21:07:10Z
+https://github.com/vllm-project/vllm/issues/53943	[Bug]: GLM-5.3-Flash on ROCm (gfx950): SparseAttnIndexerKpool.forward_hip() missing gate_score — platform guard hides a fixable gap	open	rocm,glm	2026-08-26T19:10:09Z
+https://github.com/vllm-project/vllm/issues/53932	[CI Failure]: (H200) Rust Frontend OpenAI Coverage — WireLogprobs rejects 5-field LogprobsTensors	open	ci-failure,rust	2026-08-26T18:34:49Z
+https://github.com/vllm-project/vllm/issues/53912	[Bug]: prefix caching + MTP still corrupts output on hybrid Mamba/GDN models in v0.28.0 (#43559 closed but unfixed)	open		2026-08-26T15:05:25Z
+https://github.com/vllm-project/vllm/issues/53888	Sleep level=1 wake silently corrupts LoRA state (NemotronH NVFP4/Marlin, TP=2, WSL2): fixed-seed generation diverges after wake, adapter stops applying, no error raised	open		2026-08-26T12:14:55Z
+https://github.com/vllm-project/vllm/issues/53887	[Bug]: MTP draft allocates a second full vocab embedding, OOMing a 27B INT4 target that the baseline fits	open	quantization	2026-08-26T12:12:10Z
+https://github.com/vllm-project/vllm/issues/53850	[Bug]: Bare asserts in DeepseekVLV2/DeepseekOCR processors return HTTP 500 (should be 400) and silently corrupt input under `python -O`	closed		2026-08-26T06:50:06Z
+https://github.com/vllm-project/vllm/issues/53836	[Bug]: NVIDIA DGX Spark vllms and gemma 4 26B won't work	open	bug,nvidia	2026-08-26T05:01:35Z
+https://github.com/vllm-project/vllm/issues/53831	[Bug]: DeepSeek-V4-Flash tool_choice=auto silently drops tool calls at deep reasoning_effort (xhigh/max) — distinct from #41132/#51914	closed	deepseek,DSv4	2026-08-26T03:27:39Z
+https://github.com/vllm-project/vllm/issues/53822	[Bug]: XPU TP>1 consumes host RAM equal to total VRAM; workers are never isolated to their own device	open	bug,intel-gpu	2026-08-26T02:42:58Z
+https://github.com/vllm-project/vllm/issues/53786	[Feature][KV cache] Support fine-grained prefix hits for sliding-window groups	open	quantization	2026-08-25T20:12:00Z
+https://github.com/vllm-project/vllm/issues/53777	[Bug] DFlash2 spec decode + xgrammar: deterministic "Failed to advance FSM" on json_object grammar (same draft token every time)	open		2026-08-25T19:11:03Z

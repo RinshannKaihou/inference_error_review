@@ -1,0 +1,46 @@
+### 55289 [closed] ttnn.rpow_bw computes the gradient of x**base instead of base**x; NaN for every negative input
+**Component / Area:** ttnn eltwise unary backward (composite), `rpow_bw`
+
+**Issue Type:** Bad Outputs
+
+## Summary
+
+`ttnn.rpow(x, base)` is `base ** x`: the SFPU kernel says so
+([ckernel_sfpu_rpow.h#L12](https://github.com/tenstorrent/tt-metal/blob/9fa00fce13cda1538f0130695576408ff5b05665/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu/ckernel_sfpu_rpow.h#L12),
+`// ttnn.rpow(exponent, scalar_base) = pow(scalar_base, exponent)`) and the forward golden is `torch.pow(dim, input_tensor_a)`
+([unary.py#L812-L818](https://github.com/tenstorrent/tt-metal/blob/9fa00fce13cda1538f0130695576408ff5b05665/ttnn/ttnn/operations/unary.py#L812-L818)).
+
+`ttnn.rpow_bw` returns `grad * base * x**(base-1)`, which is the derivative of `x ** base`
+([unary_backward.cpp#L802-L817](https://github.com/tenstorrent/tt-metal/blob/9fa00fce13cda1538f0130695576408ff5b05665/ttnn/cpp/ttnn/operations/eltwise/unary_backward/unary_backward.cpp#L802-L817)).
+The correct derivative of `base ** x` is `base**x * ln(base)`. The two agree only at `x == 1`. Because `x**(base-1)` is
+undefined for negative `x` with a non-integer `base`, the op also forces NaN for every `x < 0`, where `base ** x` is an
+ordinary finite number.
+
+```cpp
+// unary_backward.cpp L802-817 (paraphrased)
+grad_result = zeros_like(input);
+if (exponent != 0) {
+    grad_result = grad * (pow(input, exponent - 1) * exponent);   // d/dx x^exponent
+    grad_result = where(ltz(input), NaN, grad_result);
+}
+```
+
+This is a source-level analysis with a host replay; I do not have a card. The host replay reproduces the composition in
+float32 torch; the device numbers will differ only by the usual ULP-level SFPU error, not in kind.
+
+## Observed vs expected (grad = 1, fp32)
+
+| base | x | `rpow_bw` now | correct `base**x * ln(base)` |
+|---|---|---|---|
+| 2.0 | -1.0 | **NaN** | 0.3466 |
+| 2.0 | 0.0 | 0 | 0.6931 |
+| 2.0 | 2.0 | 4.0 | 2.7726 |
+| 2.0 | 3.0 | 6.0 | 5.5452 |
+| 5.7 | 3.0 | 996.2 | 322.3 |
+| 15.2 | 2.0 | 286068 | 628.7 |
+| 15.2 | 0.5 | 0.0008 | 10.61 |
+
+## Why the tests do not catch it
+
+The registered backward golden replicates the same misreading:
+[unary_backward.py#L197-L202](https://github.com/tenstorrent/tt-metal/blob/9fa00fce13cda1538f0

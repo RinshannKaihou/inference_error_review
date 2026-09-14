@@ -1,0 +1,2 @@
+35455	2026-08-19T05:09:59Z	closed	PR	[Quant] Load compressed-tensors kv_cache_scheme scales
+35228	2026-08-18T01:57:07Z	closed	PR	[Quant] Load compressed-tensors quantized lm_head instead of value-casting it

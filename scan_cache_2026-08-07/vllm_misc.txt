@@ -1,0 +1,17 @@
+TOTAL: 38
+
+51440|[CI Test] Add specific unit test for mrv2 offloading|https://github.com/vllm-project/vllm/pull/51440|2026-08-07T20:03:48Z
+51439|[RFC]: [TieredOffloading][Performance] Tiered Lookup Resolution|https://github.com/vllm-project/vllm/issues/51439|2026-08-07T19:48:22Z
+51428|[RFC]: Programmatic Session-Aware KV Cache Management|https://github.com/vllm-project/vllm/issues/51428|2026-08-07T17:58:45Z
+51414|[Core][KVConnector] Connector "ready" state for asynchronous connector startup|https://github.com/vllm-project/vllm/pull/51414|2026-08-07T15:43:33Z
+51397|[Bugfix] Do not select Model Runner V2 when weight offloading is enabled|https://github.com/vllm-project/vllm/pull/51397|2026-08-07T12:50:49Z
+51396|[Bug]: cpu_offload_gb silently no-ops on Model Runner V2 — offloader never installed, model loads fully on-GPU with no warning|https://github.com/vllm-project/vllm/issues/51396|2026-08-07T12:50:21Z
+51362|[BugFix][Mooncake] Fix Mooncake saves from sparse Mamba block tables|https://github.com/vllm-project/vllm/pull/51362|2026-08-07T05:23:55Z
+51324|[3/N] Share HiSparse host cache across TP ranks|https://github.com/vllm-project/vllm/pull/51324|2026-08-07T00:21:14Z
+51317|[Bugfix][KV Offload] Reclaim `/dev/shm` region leak on SIGKILL|https://github.com/vllm-project/vllm/pull/51317|2026-08-06T21:58:10Z
+51270|[1/N][KV Cache] Add host-resident KV cache offloading for sparse MLA decode|https://github.com/vllm-project/vllm/pull/51270|2026-08-06T14:17:46Z
+51243|[KV Offload] Emit self-describing events for partial recurrent blocks|https://github.com/vllm-project/vllm/pull/51243|2026-08-06T08:57:46Z
+51240|[RFC][kv_offload]: Tiering Admission Policy Design|https://github.com/vllm-project/vllm/issues/51240|2026-08-06T08:30:41Z
+51232|[Rocm] Fix AITER_MLA issues for the kimik3-dspark model with Agentic workload|https://github.com/vllm-project/vllm/issues/51232|2026-08-06T07:15:13Z
+51227|[Bugfix][KV Offload] Clean up resources after initialization failure|https://github.com/vllm-project/vllm/pull/51227|2026-08-06T05:28:49Z
+51177|[CI Bug] Fix `Chunked prefill is required for mamba cache mode 'align'.`|https://github.com/vllm-project/vllm/pull/51177|2026-08-05T16:11:13Z

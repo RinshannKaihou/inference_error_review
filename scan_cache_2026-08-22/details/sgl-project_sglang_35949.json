@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/35949",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/35949/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/35949/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/35949/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/35949",
+  "id": 5220304641,
+  "node_id": "I_kwDOLCAjRs8AAAABNyeHAQ",
+  "number": 35949,
+  "title": "[Bug] Qwen 3.8 27b NVFP4 incorrect coordinate detection on image",
+  "user": {
+    "login": "kovila77",
+    "id": 46498109,
+    "node_id": "MDQ6VXNlcjQ2NDk4MTA5",
+    "avatar_url": "https://avatars.githubusercontent.com/u/46498109?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/kovila77",
+    "html_url": "https://github.com/kovila77",
+    "followers_url": "https://api.github.com/users/kovila77/followers",
+    "following_url": "https://api.github.com/users/kovila77/following{/other_user}",
+    "gists_url": "https://api.github.com/users/kovila77/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/kovila77/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/kovila77/subscriptions",
+    "organizations_url": "https://api.github.com/users/kovila77/orgs",
+    "repos_url": "https://api.github.com/users/kovila77/repos",
+    "events_url": "https://api.github.com/users/kovila77/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/kovila77/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-22T05:25:43Z",
+  "updated_at": "2026-08-22T06:20:29Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\n`RadixArk/Qwen3.8-27B-NVFP4` produces severely incorrect 2D grounding coordinates in SGLang on CUDA. (Drawing/founding incorrect coordinates)\n\nThe same checkpoint, image, and prompt are accurate in vLLM.\n\nA/B testing isolated the regression to the CUDA fused QK-RMSNorm + RoPE + output-gate path in:\n\n`python/sglang/srt/models/qwen3_5.py`\n\nCurrent CUDA dispatch:\n\n```python\nif _is_cuda and self.attn_output_gate:\n    q, k, v, gate = self.forward_prepare_cuda_fused(...)\n````\n\nForcing the native path fixes the grounding result.\n\nEvidence\n\nThe test is finding certain text on page. Same image, target text expected pixel bbox:\n\n`[618, 648, 702, 664]`\n\n| Runtime                            | Predicted pixel bbox   | Center error |    IoU |\n| ---------------------------------- | ---------------------- | -----------: | -----: |\n| SGLang fused CUDA path             | `[420, 675, 548, 694]` |     178.3 px |      0 |\n| vLLM 0.27.1                        | `[618, 645, 699, 662]` |       2.9 px | 0.7146 |\n| SGLang with native QK norm + MRoPE | `[618, 645, 699, 661]` |       3.4 px | 0.6635 |\n\nOther A/B tests did not fix the error, including changing image max/min pixels, full-attention, multimodal-attention, GDN prefill/decode, FP4 GEMM, FP8 GEMM, image processing, and deepstack paths.\n\nThis strongly implicates `forward_prepare_cuda_fused()` / `fused_qk_gemma_rmsnorm_rope_gate()` for multimodal MRoPE.\n\n### Reproduction\n\nExample server:\n\n```bash\nsglang serve \\\n  --trust-remote-code \\\n  --model-path /models/RadixArk/Qwen3.8-27B-NVFP4 \\\n  --context-length 8192 \\\n  --max-running-requests 1 \\\n  --max-total-tokens 8192 \\\n  --max-mamba-cache-size 1 \\\n  --disable-radix-cache \\\n  --disable-cuda-graph \\\n  --mem-fraction-static 0.75 \\\n  --host 0.0.0.0 \\\n  --port 30000\n```\n\nSend an image grounding request asking for the normalized `[x_min,y_min,x_max,y_max]` bbox of a known text element.\n\nWith the fused CUDA path the returned coordinates are strongly displaced horizontally. The same request is accurate in vLLM.\n\n\nWorkaround/Found solution/crutch\n\nBypass the fused CUDA preparation path for this multimodal model:\n\n```diff\n- if _is_cuda and self.attn_output_gate:\n+ if False and _is_cuda and self.attn_output_gate:\n```\n\nThis causes SGLang to use `forward_prepare_native()`, including the normal:\n\n```python\nq, k = self._apply_qk_norm(q, k)\nq, k = self.rotary_emb(positions, q, k)\n```\n\nGrounding accuracy immediately changes from 178.3 px center error / IoU 0 to 3.4 px / IoU 0.6635.\n\nA proper fix may be to disable `fused_qk_gemma_rmsnorm_rope_gate` for multimodal/MRoPE inputs until that kernel supports MRoPE correctly.\n\n## Environment\n* Docker desktop in * Windows 11 pro on WSL2\n* GPU: NVIDIA RTX 5090, SM120, 32 GB\n* CUDA: 13.0.3\n* SGLang: `lmsysorg/sglang:dev` 0.0.0.dev1+gf825d7293 Commit: f825d729363136a2d4a4b330fa694d0b37a878fa\n* FlashInfer: 0.6.17\n* Model: `RadixArk/Qwen3.8-27B-NVFP4`\n* Loaded architecture: `Qwen3_5ForConditionalGeneration`\n* Quantization: `modelopt_mixed` / NVFP4 + FP8\n* Comparison runtime: vLLM 0.27.1\n\n### Environment\n\ndocker run --rm --gpus all `\n>>   lmsysorg/sglang:dev `\n>>   python3 -m sglang.check_env\n\n==========\n== CUDA ==\n==========\n\nCUDA Version 13.0.3\n\nContainer image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.\n\nThis container image and its contents are governed by the NVIDIA Deep Learning Container License.\nBy pulling and using the container, you accept the terms and conditions of this license:\nhttps://developer.nvidia.com/ngc/nvidia-deep-learning-container-license\n\nA copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.\n\nPython: 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]\nCUDA available: True\nGPU 0: NVIDIA GeForce RTX 5090\nGPU 0 Compute Capability: 12.0\nCUDA_HOME: /usr/local/cuda\nNVCC: Cuda compilation tools, release 13.0, V13.0.88\nCUDA Driver Version: 610.88\nPyTorch: 2.13.0+cu130\nsglang: 0.0.0.dev1+gf825d7293\nsglang-kernel: 0.4.6.post1\nflashinfer_python: 0.6.17\nflashinfer_cubin: 0.6.17\nflashinfer_jit_cache: 0.6.17+cu130\ntriton: 3.7.1\ntransformers: 5.12.1\ntorchao: Module Not Found\nnumpy: 2.3.5\naiohttp: 3.14.3\nfastapi: 0.141.1\nhuggingface_hub: 1.28.0\ninteregular: 0.3.3\nmodelscope: 1.39.1\norjson: 3.12.0\noutlines: 0.1.11\npackaging: 26.3\npsutil: 7.2.2\npydantic: 2.13.4\npython-multipart: 0.0.32\npyzmq: 27.2.0\nuvicorn: 0.52.4\nuvloop: 0.22.1\nvllm: Module Not Found\nxgrammar: 0.2.1\nopenai: 2.6.1\ntiktoken: 0.14.0\nanthropic: 1.0.0\nlitellm: Module Not Found\ntorchcodec: 0.15.0+cu130\nNVIDIA Topology:\n        GPU0    CPU Affinity    NUMA Affinity   GPU NUMA ID\nGPU0     X                              N/A\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n\nHypervisor vendor:: Microsoft\nulimit soft: 1048576",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/35949/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/35949/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

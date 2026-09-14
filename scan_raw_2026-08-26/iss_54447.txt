@@ -1,0 +1,25 @@
+ttnn.ge / ttnn.le (tensor-scalar): ge/le are lane-wise complements of lt/gt, so they cannot match IEEE NaN semantics, and heaviside cannot emit NaN at all - the tensor-tensor kernels (2026) already carry the explicit NaN rejection
+STATE: open
+BODY:
+**Component / Area:** kernels
+
+The tensor-scalar comparison kernels still carry their original 2023 form. The tensor-tensor comparison kernels were rewritten in 2026 with explicit NaN rejection that the scalar kernels never received. The same public op therefore runs two different kernels depending on the overload, and only one of them can be NaN-correct:
+
+- The scalar overload `ge(Tensor, float)` reaches `calculate_unary_ge` (`ckernel_sfpu_unary_comp.h`, 2023) via `ttnn::ge_unary` and `unary_ge_tile`: [`binary.cpp:491`](https://github.com/tenstorrent/tt-metal/blob/main/ttnn/cpp/ttnn/operations/eltwise/binary/binary.cpp#L491), [`unary.cpp:274`](https://github.com/tenstorrent/tt-metal/blob/main/ttnn/cpp/ttnn/operations/eltwise/unary/unary.cpp#L274), [`comp.h:198-200`](https://github.com/tenstorrent/tt-metal/blob/main/tt_metal/hw/inc/api/compute/eltwise_unary/comp.h#L198-L200)
+- The tensor overload `ge(Tensor, Tensor)` reaches `calculate_binary_comp_fp32_weak_ordered` (`ckernel_sfpu_binary_comp.h`, 2026) through binary_ng
+
+The scalar comparison kernels are byte-identical on Wormhole and Blackhole, and heaviside's branch logic is identical on both.
+
+### The core defect needs no hardware to prove
+
+`calculate_unary_ge` and `calculate_unary_lt` evaluate the same predicate and return opposite constants ([`ckernel_sfpu_unary_comp.h:99-134`](https://github.com/tenstorrent/tt-metal/blob/main/tt_metal/hw/ckernels/wormhole_b0/metal/llk_api/llk_sfpu/ckernel_sfpu_unary_comp.h#L99-L134)):
+
+```c
+// lt:                          // ge:
+v_if(v < s) { v = 1.0f; }       v_if(v < s) { v = 0.0f; }
+v_else      { v = 0.0f; }       v_else      { v = 1.0f; }
+```
+
+So `ge(x, s) == 1.0 - lt(x, s)` holds on every lane by construction, and likewise `le(x, s) == 1.0 - gt(x, s)`. The reference (IEEE 754, torch) requires every ordered comparison with NaN to be false: `torch.lt`, `le`, `gt`, `ge` all return False on NaN; only `ne` returns True. Two ops defined as complements of each other cannot both return 0.0 on a NaN lane. Whatever truth value the SFPU assigns to `NaN < s`, exactly one member of each pair diverges from torch. That claim is independent of the hardware's compare behavior.
+
+### Ex

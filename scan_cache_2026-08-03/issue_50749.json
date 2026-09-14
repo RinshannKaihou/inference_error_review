@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/50749",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/50749/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/50749/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/50749/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/50749",
+  "id": 5043147074,
+  "node_id": "I_kwDOI7xefs8AAAABLJhRQg",
+  "number": 50749,
+  "title": "[Bug]: int8_per_token_head KV with prefix caching DISABLED corrupts the FIRST generated tokens (Gemma-4 hybrid, Triton, idle KV pool)",
+  "user": {
+    "login": "MDEVOSTATOR",
+    "id": 167540779,
+    "node_id": "U_kgDOCfx4Kw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/167540779?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/MDEVOSTATOR",
+    "html_url": "https://github.com/MDEVOSTATOR",
+    "followers_url": "https://api.github.com/users/MDEVOSTATOR/followers",
+    "following_url": "https://api.github.com/users/MDEVOSTATOR/following{/other_user}",
+    "gists_url": "https://api.github.com/users/MDEVOSTATOR/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/MDEVOSTATOR/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/MDEVOSTATOR/subscriptions",
+    "organizations_url": "https://api.github.com/users/MDEVOSTATOR/orgs",
+    "repos_url": "https://api.github.com/users/MDEVOSTATOR/repos",
+    "events_url": "https://api.github.com/users/MDEVOSTATOR/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/MDEVOSTATOR/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 9988761457,
+      "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+      "name": "quantization",
+      "color": "62bfab",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-02T15:27:22Z",
+  "updated_at": "2026-08-03T09:59:36Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Environment\n- vLLM v0.26.0, V1 engine, Model Runner V1\n- 2× RTX 3090 (Ampere/sm86), TP=2, no NVLink (`--disable-custom-all-reduce`)\n- Model: `cyankiwi/gemma-4-31B-it-AWQ-4bit` (Gemma-4 31B, hybrid attention: 50 sliding layers head_dim 256 + 10 global head_dim 512)\n- `--attention-backend=TRITON_ATTN --kv-cache-dtype=int8_per_token_head --no-enable-prefix-caching --enable-chunked-prefill --kv-sharing-fast-prefill --max-num-seqs=48 --max-model-len=16384`\n- Same rig as #49716 / #50158 / #50159 / #50702.\n\n## Summary\n\nWith `int8_per_token_head` KV **and prefix caching turned off**, the first few generated\ntokens are corrupted, while the rest of the (2–3.5k token) response is perfectly coherent\nand well-formed. This happens at **~3% KV pool utilization** — no flood, no preemptions,\nno memory pressure of any kind.\n\nThis is **not** #50702. There the corruption needs the pool pinned at ~100% with continuous\nblock eviction/reuse, and prefix caching **on**. Here the pool is nearly empty and prefix\ncaching is **off**. The only thing the two share is int8 KV.\n\nIt is also **not** quantization quality loss: the same int8 config with prefix caching\n**enabled** is clean on the same inputs (see the factorial below). Precision loss cannot\ndepend on whether a cache is enabled.\n\n## Evidence: full 2×2 factorial, n=48 per arm\n\nSame 48 request bodies in every arm (captured verbatim from our production traffic:\nsystem+user, ~4.2k chars prompt, `temperature=0.6`, `max_tokens=8800`, output is a strict\nJSON object whose first key is `dominant_theme`). Endpoint is **first-key damage**, i.e.\nthe response's first key is missing, mangled, or not `dominant_theme`.\n\n| Arm | KV dtype | prefix caching | first-key damage | of which silent | rate |\n|---|---|---|---|---|---|\n| **V1** | `int8_per_token_head` | **off** | **6 / 48** | 1 | **12.5%** |\n| V2 | `auto` (bf16) | off | 0 / 48 | 0 | 0.0% |\n| V3 | `int8_per_token_head` | on | 0 / 48 | 0 | 0.0% |\n| V4 | `auto` (bf16) | on | 0 / 48 | 0 | 0.0% |\n\nV1 vs any single control arm: Fisher exact two-tailed **p = 0.0265**.\nV1 vs the pooled controls (0/144, same run, same box, same bodies): **p = 0.00019**.\nClopper-Pearson 95% CI: V1 **4.7–25.2%**, controls **0–2.5%** (non-overlapping).\n\nAn earlier independent run with n=24 gave 4/24 = 16.7%, consistent with the above.\n\n**Only the intersection is dirty — the defect requires int8 AND no-prefix-caching together.**\n\n## Corruption signature\n\nAll damage is confined to the first ~12 bytes of the response; everything after is valid.\nFour distinct shapes observed (each from a different request):\n\n```\n{\\n: \"Развитие эмоционального интеллекта…      key name gone entirely, colon left behind\n{\\n\": \"Организация и запуск малого бизнеса…    key name gone, its CLOSING quote survived\n{\\n{\\n  \"dominant_theme\": \"Выбор и эксплуат…   stray extra brace\n{\\n  \"dominant\": \"Информационная безопасно…    key name truncated  <-- parses fine!\n```\n\nThe last shape is the **silent** variant: `json.loads` succeeds, so a consumer's schema\nlookup just silently misses the field. Any check that only counts parse failures will\nundercount this bug — and, worse, will not measure it in the control arms at all.\n\nNote the second shape: for `{\\n\": ` to be emitted, the key's contents must vanish while its\nclosing quote survives. That is hard to explain as sampling.\n\n## Repro\n\n1. Boot the config above (`int8_per_token_head` **plus** `--no-enable-prefix-caching`).\n2. Send long-ish prompts (~1.5k tokens) that force a structured output beginning with a\n   fixed key, at modest concurrency (we used 6). No flood needed; our KV pool sat at ~3%.\n3. Inspect the **first key** of each response — do not rely on `json.loads` alone, or the\n   silent variant is invisible.\n4. Flip either lever back (`--kv-cache-dtype=auto`, or drop `--no-enable-prefix-caching`)\n   and the damage disappears.\n\nWe hit this in production: enabling `--no-enable-prefix-caching` (as a workaround for\n#50702) took a consumer from ~1 such case per month to ~120 per hour, and reverting it\nreturned the rate to zero within minutes.\n\n## Hypothesis (unverified)\n\nSpeculative, offered only as a starting point. The damage is localized to the tokens\ngenerated immediately after the prompt, which suggests the boundary between prefill and\nthe first decode step — specifically the prompt's **last, partially-filled block**. With\nper-token-head int8 scales, appending the first decoded token into that partial block may\nrecompute or overwrite scales covering the prompt tokens already resident in it, so the\nearliest decode steps dequantize recent context against wrong scales and recover once\ngeneration moves into freshly allocated blocks. Prefix caching changes how that final\npartial block is allocated and handed out, which would explain why enabling it masks the\nissue.\n\nIf that is the right area, the rate should depend on whether the prompt length is a\nmultiple of the block size — we have not tested that, and are happy to.\n\n## Notes\n\nWe can run experiments on this hardware on request (the rig is dedicated and we already\nhave a captured-traffic replay harness with the first-key detector). Related: #50702\n(int8 × prefix-cache reuse at pool saturation) — different trigger, possibly the same\nunderlying scale-handling code.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/50749/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/50749/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

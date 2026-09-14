@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/18891",
+  "repository_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM",
+  "labels_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/18891/labels{/name}",
+  "comments_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/18891/comments",
+  "events_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/18891/events",
+  "html_url": "https://github.com/NVIDIA/TensorRT-LLM/issues/18891",
+  "id": 5385578003,
+  "node_id": "I_kwDOKH5No88AAAABQQFmEw",
+  "number": 18891,
+  "title": "[Bug]: Guided decoding restarts its grammar after KV-cache recomputation",
+  "user": {
+    "login": "1sgtpepper",
+    "id": 165563006,
+    "node_id": "U_kgDOCd5Kfg",
+    "avatar_url": "https://avatars.githubusercontent.com/u/165563006?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/1sgtpepper",
+    "html_url": "https://github.com/1sgtpepper",
+    "followers_url": "https://api.github.com/users/1sgtpepper/followers",
+    "following_url": "https://api.github.com/users/1sgtpepper/following{/other_user}",
+    "gists_url": "https://api.github.com/users/1sgtpepper/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/1sgtpepper/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/1sgtpepper/subscriptions",
+    "organizations_url": "https://api.github.com/users/1sgtpepper/orgs",
+    "repos_url": "https://api.github.com/users/1sgtpepper/repos",
+    "events_url": "https://api.github.com/users/1sgtpepper/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/1sgtpepper/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-09-08T10:34:04Z",
+  "updated_at": "2026-09-08T11:06:00Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## System Info\n\n- TensorRT-LLM `1.3.0rc26.dev202609050001`, source `17803f6c0cbe8d9fed3ccf46a295b867e3493d3e`.\n- The same matcher-history omission remains in main `3fed8e7103e3c549c56a5053f286bdcff9572706` and `v1.3.0rc25`; Reproduced on the development revision above; main and `v1.3.0rc25` were not executed.\n- RTX 5070 Laptop, SM120, 8 GiB, driver 610.57.04; Linux x86_64.\n- Python 3.12.3, PyTorch 2.12.0+cu130, FlashInfer 0.6.18, XGrammar 0.1.32, Transformers 5.5.4; CUDA 13.0.\n- [Environment and worker logs](https://github.com/1sgtpepper/TensorRT-LLM/actions/runs/34020490545).\n\n## Information\n\n- [ ] The official example scripts\n- [x] My own modified scripts\n\n## Tasks\n\n- [ ] An officially supported task in the `examples` folder (such as GLUE/SQuAD, ...)\n- [x] My own task or dataset (give details below)\n\n## Reproduction\n\nGuided decoding loses committed grammar progress when the `MAX_UTILIZATION` scheduler pauses a request for KV-cache recomputation.\n\nRun the following script against the TensorRT-LLM version above:\n\n```sh\ncurl -fL https://raw.githubusercontent.com/1sgtpepper/TensorRT-LLM/173a17d744f64d17f7aa62d07acab323e9f10c3a/.github/guided_worker.py -o guided_worker.py\nexport TLLM_WORKER_USE_SINGLE_PROCESS=1\nexport TLLM_DEBUG_MODE=1\npython guided_worker.py --kv-tokens 512 --output ample.json\npython guided_worker.py --kv-tokens 128 --output pressure.json\n```\n\nThe script uses the public LLM API, a one-layer Llama with random weights, a local character tokenizer and two 95-token requests constrained to `a{31}b{32}c{32}`. It downloads no weights. Overlap and CUDA graphs are disabled; the real scheduler chooses when to pause.\n\n## Expected behavior\n\nBoth requests return 31 `a` tokens, 32 `b` tokens and 32 `c` tokens, including after recomputation.\n\n## actual behavior\n\nWith capacity 512, both outputs are correct and neither request pauses. With capacity 128, the scheduler pauses the second request after 64 committed tokens. It then emits 31 `a` tokens instead of the remaining 31 `c` tokens, failing with `Real worker lost guided output progress`.\n\n## additional notes\n\n`GuidedRequest.from_llm_request` omits the committed output prefix when a matcher must be rebuilt. Replaying that prefix restores the correct continuation at the same 64-token pause. Restoring the old code restores identical incorrect token IDs.\n\nThe linked logs were recorded without `TLLM_DEBUG_MODE=1`; the reproduction commands enable it.\n\n## Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and checked the [documentation](https://nvidia.github.io/TensorRT-LLM/) and [examples](https://github.com/NVIDIA/TensorRT-LLM/tree/main/examples) for answers to frequently asked questions.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/18891/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/18891/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

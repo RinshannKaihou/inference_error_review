@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/50901",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/50901/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/50901/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/50901/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/50901",
+  "id": 5052844803,
+  "node_id": "I_kwDOI7xefs8AAAABLSxLAw",
+  "number": 50901,
+  "title": "[Bug]: `BaseThinkingReasoningParser.extract_reasoning` silently discards output text when `<think>` appears mid-stream",
+  "user": {
+    "login": "lyncker",
+    "id": 1557051,
+    "node_id": "MDQ6VXNlcjE1NTcwNTE=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/1557051?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/lyncker",
+    "html_url": "https://github.com/lyncker",
+    "followers_url": "https://api.github.com/users/lyncker/followers",
+    "following_url": "https://api.github.com/users/lyncker/following{/other_user}",
+    "gists_url": "https://api.github.com/users/lyncker/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/lyncker/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/lyncker/subscriptions",
+    "organizations_url": "https://api.github.com/users/lyncker/orgs",
+    "repos_url": "https://api.github.com/users/lyncker/repos",
+    "events_url": "https://api.github.com/users/lyncker/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/lyncker/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 3,
+  "created_at": "2026-08-03T18:08:29Z",
+  "updated_at": "2026-08-03T21:38:55Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\n<details>\n<summary>Environment</summary>\n\n```text\nvLLM:            0.25.1 (docker image vllm/vllm-openai:v0.25.1)\nModel:           poolside/Laguna-S-2.1-INT4\nFlags:           --reasoning-parser poolside_v1 --tool-call-parser poolside_v1\n                 --enable-auto-tool-choice\n                 --default-chat-template-kwargs '{\"enable_thinking\": true}'\nGPU:             8x RTX 3090 (SM86), TP4\n```\n\n`collect_env.py` output not attached because the deployment runs inside the\nofficial container; the affected code path is pure Python string handling and\ndoes not depend on hardware or backend.\n\n</details>\n\n### 🐛 Describe the bug\n\n`BaseThinkingReasoningParser.extract_reasoning` drops a portion of the model's\noutput. The dropped text is returned in **neither** `content` **nor**\n`reasoning` — it is silently lost.\n\nAffected are parsers that inherit `BaseThinkingReasoningParser` **without**\noverriding `extract_reasoning`. Checked on `main`:\n\n| Parser | inherits base | own `extract_reasoning` | affected |\n|---|---|---|---|\n| `deepseek_r1` | yes | no | **yes** |\n| `poolside_v1` (via `deepseek_v3` → `deepseek_r1`) | – | no | **yes** |\n| `minimax_m3` | yes | yes | no |\n| `ernie45` | yes | yes | no |\n\n#### The code\n\n`vllm/reasoning/basic_parsers.py`, lines 157-181 on `main`:\n\n```python\ndef extract_reasoning(\n    self, model_output: str, request: \"ChatCompletionRequest | ResponsesRequest\"\n) -> tuple[str | None, str | None]:\n    # Check if the start token is present in the model output, remove it\n    # if it is present.\n    model_output_parts = model_output.partition(self.start_token)\n    model_output = (\n        model_output_parts[2] if model_output_parts[1] else model_output_parts[0]\n    )\n    ...\n```\n\n`model_output_parts[0]` — everything **before** the matched `<think>` — is bound\nto nothing. When the match succeeds, that prefix is discarded and never appears\nin either return value.\n\nThe match is unanchored: `str.partition` finds the **first** occurrence anywhere\nin the output. It has no notion of position, of JSON string context, or of\ntool-call markup. A `<think>` the model produced as *data* is indistinguishable\nfrom one produced as a *delimiter*.\n\nNote this is a **string** match, so it fires regardless of tokenisation. The\nmodel does not need to emit the reasoning special token; ordinary BPE pieces that\ndecode to `<think>` are enough.\n\n#### Reproduction\n\nAny prompt that makes a reasoning model write `<think>` in its answer will do.\nAsking it to explain what the tag means is the natural case:\n\n```bash\ncurl -s http://$ENDPOINT/v1/chat/completions \\\n  -H 'Content-Type: application/json' -d '{\n  \"model\": \"'\"$MODEL\"'\",\n  \"messages\": [{\"role\": \"user\", \"content\":\n    \"Explain in two sentences what the tag consisting of a less-than sign, the letters t h i n k, and a greater-than sign means in a chat template. Write the tag out once.\"}],\n  \"max_tokens\": 1200,\n  \"temperature\": 0,\n  \"return_token_ids\": true}'\n```\n\nThen compare the true model output against what the API returned. Detokenising\n`token_ids` gives the raw generation, so nothing has to be inferred:\n\n```python\nraw = detokenize(response.token_ids)          # what the model actually produced\nreturned = len(content) + len(reasoning)      # what the API handed back\n```\n\nMeasured, three runs at `temperature 0`:\n\n| Run | `<think>` in raw output | raw | content | reasoning | lost |\n|---|---|---|---|---|---|\n| 1 | at char 680 | 2078 | 287 | 1084 | **707** |\n| 2 | not written by the model | 1244 | – | – | 0 |\n| 3 | at char 658 | 3805 | 364 | 2756 | **685** |\n\nIn runs 1 and 3 the first 680 / 658 characters of the reasoning are gone. Their\nopening is:\n\n```text\n'Okay, the user is asking me to explain what the sequence of lowercase letters\n\"t h i n k\" in a chat template means, and ...'\n```\n\nVerified explicitly: this text is a substring of neither `content` nor\n`reasoning`. Run 2 is not a counter-example — the model simply did not write the\ntag that time, so the code path was not reached.\n\n#### Why this matters beyond the obvious\n\n`DelegatingParser.parse` runs reasoning extraction across the **entire** raw\noutput before the tool-call parser gets to split arguments\n(`vllm/parser/abstract_parser.py:793`):\n\n```python\nreasoning, content = self.extract_reasoning(model_output, request)\ntool_calls, content = self._extract_tool_calls(content=content, ...)\n```\n\nSo a `<think>` occurring inside a tool-call argument is consumed before anything\nthat understands tool calls has seen it. The tool parser is handed only the\nremainder.\n\nThe practical failure mode is a coding agent editing source code that contains\n`<think>` as a string literal — for example a chat-template or output-parser\nimplementation. The edit silently does nothing, or arrives truncated.\n\n#### Affected versions\n\n`vllm/reasoning/basic_parsers.py` is byte-identical at `v0.25.1`, `v0.26.0` and\n`main` (verified by sha256). The behaviour is unchanged across all three.\n\n#### The fix already exists in this repository\n\n`MiniMaxM3ReasoningParser` overrides `extract_reasoning` and handles exactly this\ncase correctly (`vllm/reasoning/minimax_m3_reasoning_parser.py`):\n\n```python\ncontent_before, _, after_start = model_output.partition(self.start_token)\nreasoning, end, content_after = after_start.partition(self.end_token)\nif not end:\n    return reasoning, content_before or None\n\nreturn reasoning, (content_before + content_after) or None\n```\n\nThe prefix is captured as `content_before` and concatenated onto the content\nrather than dropped. Lifting this into `BaseThinkingReasoningParser` would fix\n`deepseek_r1` and its delegates and let `minimax_m3` drop its override.\n\n#### Suggested direction\n\nTwo separable problems:\n\n1. **The discard is unambiguous data loss.** Whatever the intended semantics, a\n   parser should not route text to neither output field. The `minimax_m3`\n   treatment above is the obvious in-repo precedent.\n\n2. **The unanchored search is the deeper issue.** The intent appears to be\n   \"strip a leading `<think>` wrapper\". Anchoring the match to the start of the\n   generation would express that intent and would make a mid-stream occurrence\n   harmless. Parsers that moved to the `ParserEngine` design (`qwen3`,\n   `glm47_moe`) do not have this problem, because a single state machine sees\n   reasoning markers and tool-call markup together and knows which region of the\n   stream it is in.\n\nI am happy to open a PR for (1) if that direction is acceptable.\n\n#### What I did not verify\n\n- Only reproduced with `poolside_v1`. `deepseek_r1` shares the identical base\n  class and the same `extract_reasoning`, so it should behave the same, but I did\n  not run it.\n- The streaming path (`extract_reasoning_streaming`, same file) has a separate\n  single-special-token skip at lines 112-116 that also returns `None`. I have not\n  characterised it and it is not part of this report.\n- I have not checked whether the Rust frontend shares this logic.\n\n#### Related but distinct\n\n- **#48663** — `minimax_m3` splitting structured-output JSON at a `<mm:think>`\n  written as data. Same *class* of problem, different parser. As shown above the\n  non-streaming `minimax_m3` path preserves the prefix, so that report concerns a\n  different code path.\n- **#48863 / #48865** — same function, different line: misclassification of\n  output that contains no think block at all (`return model_output, None` when\n  `end_token` is absent). That fix does not address the discarded prefix.\n\n### Before submitting a new issue...\n\n- [x] I have searched existing issues and could not find this reported.\n- [x] I have made sure the reproduction is minimal and self-contained.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/50901/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/50901/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

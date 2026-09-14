@@ -1,0 +1,46 @@
+### 55351 [open] ttnn.add/subtract/multiply silently return wrong values at rank >= 7 when an operand is broadcast at dim -6: binary_ng collapses dims -6 and outward into one counter, and four of six tiles read past the end of the operand
+**Component / Area:** ttnn eltwise binary (binary_ng)
+
+**Issue Type:** Bad Outputs
+
+## Summary
+
+At rank >= 7, `ttnn.add` / `ttnn.subtract` / `ttnn.multiply` return silently wrong values whenever an operand is broadcast along dimension -6 — a broadcast the op's own validation explicitly permits. Five of six output tiles are wrong in the smallest reproducing case, and four of them come from reading past the end of the operand's buffer.
+
+Measured on ttsim v1.10.3 (`libttsim_bh.so`, Blackhole), tt-metal `v0.79.0-dev20260902` debs, bfloat16, TILE layout, DRAM interleaved. Every value below is a power of two or a small multiple of ten, exact in bfloat16, so nothing here is a rounding artefact.
+
+```python
+a = torch.zeros((2,1,1,1,1,32,32)); a[0] = 1.0;  a[1] = 2.0
+b = torch.zeros((2,3,1,1,1,32,32)); b[:,0] = 10.0; b[:,1] = 20.0; b[:,2] = 40.0
+ttnn.add(a, b)
+```
+
+| | ttnn | torch |
+|---|---|---|
+| `out[0]` | `[11, 22, 40]` | `[11, 21, 41]` |
+| `out[1]` | `[10, 20, 40]` | `[12, 22, 42]` |
+
+The output shape is correct; only the values are wrong. It happens in both operand positions — with the broadcast on the second operand instead, `a(2,3,…) + b(2,1,…)` gives `[[11, 22, 80], [20, 40, 80]]` against torch's `[[11, 21, 41], [12, 22, 42]]`, again 5 of 6 tiles.
+
+The same shapes one rank lower are correct:
+
+| case | result |
+|---|---|
+| rank 6, `a(2,1,1,1,32,32) + b(2,3,1,1,32,32)` | correct |
+| rank 6, `a(1,1,1,1,32,32) + b(3,3,1,1,32,32)` | correct |
+| rank 7, no broadcast | correct |
+| **rank 7, broadcast at dim -6** | **wrong** |
+| rank 7, broadcast at dim -7 | correctly rejected with `TT_FATAL` |
+
+## Cause
+
+`extract_nD_dims` ([`binary_ng_program_factory.cpp#L30-L40`](https://github.com/tenstorrent/tt-metal/blob/main/ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/binary_ng_program_factory.cpp#L30-L40)) multiplies every dimension from -6 outward into one scalar:
+
+```cpp
+// For rank > 5 dims will be collapsed into a single dim
+uint32_t extract_nD_dims(const Tensor& x, const int out_rank) {
+    const auto& shape = x.logical_shape();
+    uint32_t nD_dim = 1;
+    if (out_rank >= 6 && shape.rank() >= 6) {
+        for (int i = -6; i >= -out_rank; --i) {
+            auto dim = 

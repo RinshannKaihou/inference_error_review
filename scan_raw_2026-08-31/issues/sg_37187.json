@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/37187",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/37187/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/37187/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/37187/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/37187",
+  "id": 5296197306,
+  "node_id": "I_kwDOLCAjRs8AAAABO62Oug",
+  "number": 37187,
+  "title": "[Bug] GPT-OSS with DP attention enabled produces garbage output (GSM8K 0/128 vs 124/128)",
+  "user": {
+    "login": "sghhhh",
+    "id": 47981745,
+    "node_id": "MDQ6VXNlcjQ3OTgxNzQ1",
+    "avatar_url": "https://avatars.githubusercontent.com/u/47981745?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/sghhhh",
+    "html_url": "https://github.com/sghhhh",
+    "followers_url": "https://api.github.com/users/sghhhh/followers",
+    "following_url": "https://api.github.com/users/sghhhh/following{/other_user}",
+    "gists_url": "https://api.github.com/users/sghhhh/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/sghhhh/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/sghhhh/subscriptions",
+    "organizations_url": "https://api.github.com/users/sghhhh/orgs",
+    "repos_url": "https://api.github.com/users/sghhhh/repos",
+    "events_url": "https://api.github.com/users/sghhhh/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/sghhhh/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-31T03:45:58Z",
+  "updated_at": "2026-08-31T03:45:58Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\n## Describe the bug\n\nEnabling `--enable-dp-attention` on GPT-OSS-120B (MXFP4) with `--tp 4 --dp 4 --ep 4 --moe-a2a-backend none` completely breaks generation, while the identical command without DP attention works fine.\n\nWith DP attention on, responses are dominated by repeated Harmony channel markers, empty final answers, and runaway generation that hits the 8192-token cap. Fixed-prompt evals (temperature 0, seed 4242):\n\n| | GSM8K (first 128, 5-shot) | MMLU (fixed 128 subset) |\n|---|---|---|\n| DP attention off | 124/128 (96.9%) | 110/128 (85.9%) |\n| DP attention on | **0/128 (0%)** | **4/128 (3.1%)** |\n\nThe problem is not specific to chunk size, MoE runner backend (`flashinfer_mxfp4` or `triton`), CUDA graph, overlap schedule, radix cache, or hybrid SWA KV pool — we tried toggling each one alone and none recovered basic QA. Also reproducible on current `main` by source inspection; the GPU repro below was on v0.5.18.\n\n\n\n### Reproduction\n\nOfficial image `lmsysorg/sglang:v0.5.18`, model `openai/gpt-oss-120b`:\n\n```bash\npython3 -m sglang.launch_server \\\n  --model-path openai/gpt-oss-120b \\\n  --tp 4 --dp 4 --ep 4 --moe-a2a-backend none \\\n  --quantization mxfp4 --dtype bfloat16 \\\n  --attention-backend trtllm_mha --moe-runner-backend flashinfer_mxfp4 \\\n  --mem-fraction-static 0.85 --max-total-tokens 1048576 --max-prefill-tokens 131072 \\\n  --context-length 65536 --disable-prefill-cuda-graph --disable-flashinfer-autotune \\\n  --random-seed 4242 --cuda-graph-max-bs 128 --max-running-requests 512 \\\n  --disable-radix-cache --reasoning-parser gpt-oss --tool-call-parser gpt-oss \\\n  --chunked-prefill-size 65536 --enable-dp-attention\n```\n\nThe control (working) run is the same command with `--dp 4 --enable-dp-attention` removed and `--chunked-prefill-size 16384` (both land at an effective chunk of 16384 per rank). Eval via the OpenAI-compatible API with temperature 0, top_p 1, seed 4242, `reasoning_effort=low`, max_tokens 8192, concurrency 128; ask something trivial like \"What is 2+2? Reply with only the number.\" — the DP-attention server returns channel-marker gibberish or an empty final answer.\n\n\n### Environment\n\n\nRun inside the official Docker image `lmsysorg/sglang:v0.5.18` (ARM64, index digest `sha256:e42d0524...`), so the image itself pins the environment:\n\n- sglang 0.5.18 (launch_server reports v0.5.18; container source matches the `v0.5.18` tag, commit `71de97b2`)\n- PyTorch 2.13.0+cu130, FlashInfer 0.6.17, Transformers 5.12.1, Triton 3.7.1, numpy 2.3.5\n- 4× NVIDIA GB200 (185 GiB visible per GPU), driver 580.95.05\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/37187/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/37187/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

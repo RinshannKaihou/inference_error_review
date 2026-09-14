@@ -1,0 +1,334 @@
+{
+  "total_count": 3,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53142",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53142/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53142/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53142/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53142",
+      "id": 5206014505,
+      "node_id": "I_kwDOI7xefs8AAAABNk16KQ",
+      "number": 53142,
+      "title": "[Bug] Hybrid mamba align precopy: illegal memory access on prefix-cache resume with explicit --block-size (state column seeded with wrong block size)",
+      "user": {
+        "login": "mjungnickel18",
+        "id": 41702029,
+        "node_id": "MDQ6VXNlcjQxNzAyMDI5",
+        "avatar_url": "https://avatars.githubusercontent.com/u/41702029?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/mjungnickel18",
+        "html_url": "https://github.com/mjungnickel18",
+        "followers_url": "https://api.github.com/users/mjungnickel18/followers",
+        "following_url": "https://api.github.com/users/mjungnickel18/following{/other_user}",
+        "gists_url": "https://api.github.com/users/mjungnickel18/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/mjungnickel18/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/mjungnickel18/subscriptions",
+        "organizations_url": "https://api.github.com/users/mjungnickel18/orgs",
+        "repos_url": "https://api.github.com/users/mjungnickel18/repos",
+        "events_url": "https://api.github.com/users/mjungnickel18/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/mjungnickel18/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 4,
+      "created_at": "2026-08-20T17:11:53Z",
+      "updated_at": "2026-08-22T19:13:49Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\nvLLM 0.27.1, V2 GPU runner, single RTX 3090 (SM86), CUDA 12.x, WSL2 Ubuntu 24.04 (also reproduces the same way on bare metal by code inspection). Model: Qwen3.8-27B (hybrid GDN/mamba + full attention), W4A16.\n\n### 🐛 Describe the bug\n\n`MambaHybridModelState.add_request` (v1/worker/gpu/model_states/mamba_hybrid.py) seeds the running mamba state column with the **CLI/attention block size** instead of the **mamba KV-cache group's block size**:\n\n```python\nself._mamba_state_idx_gpu[req_index].fill_(\n    (new_req_data.num_computed_tokens - 1) // self.cache_config.block_size\n)\n```\n\nOn hybrid models the mamba group's `block_size` is derived from page matching (e.g. 2176 for a Qwen3-Next-style hybrid) and generally differs from `cache_config.block_size` whenever the user passes `--block-size` explicitly (required e.g. for quantized-KV setups whose tile size dictates the block, in our case 128).\n\nWith `--block-size 128 --enable-prefix-caching --mamba-cache-mode align`, the **second** request over a cached prefix crashes: a resume with `num_computed_tokens=100096` seeds `state_idx = (100096-1)//128 = 781` instead of `(100096-1)//2176 = 45`. The fused align precopy (`precopy_mamba_align_fused_kernel`) then reads `block_table[req, 781]` in a table with only ~61 columns, gets a garbage block id, and dies with:\n\n```\nRuntimeError: Triton Error [CUDA]: an illegal memory access was encountered\n  File \"vllm/v1/worker/gpu/model_states/mamba_hybrid.py\", line 201, in preprocess_state\n  File \"vllm/v1/worker/mamba_utils.py\", line 826, in run_fused_precopy\n```\n\n(confirmed as the faulting kernel with `CUDA_LAUNCH_BLOCKING=1`).\n\nFirst requests are unaffected (`num_computed == 0` seeds `-1` regardless of divisor), so in practice this looks like a spurious crash that only appears on the second request over a >1-block cached prefix — easy to misattribute.\n\n**Repro:** any hybrid (mamba+attention) model with `--block-size <n>` where n != the mamba group block size, `--enable-prefix-caching`, `--mamba-cache-mode align`; send the same multi-block prompt twice.\n\n### Fix (verified)\n\nSeed with the mamba spec's block size. `_mamba_spec` is populated lazily by the first batch's `preprocess_state`; a resume can only happen after some batch has run, and fresh requests seed `-1` either way, so the fallback is safe:\n\n```python\nmamba_bs = (self._mamba_spec.block_size\n            if self._mamba_spec is not None\n            else self.cache_config.block_size)\nself._mamba_state_idx_gpu[req_index].fill_(\n    (new_req_data.num_computed_tokens - 1) // mamba_bs\n)\n```\n\nVerified on the setup above: two-turn 102k-token needle test, turn 2 resumes from 100,096 cached tokens, both answers correct, turn-2 latency 6.3 s vs ~190 s cold. Happy to turn this into a PR if wanted.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53142/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53142/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/53086",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53086/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53086/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53086/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/53086",
+      "id": 5201863892,
+      "node_id": "I_kwDOI7xefs8AAAABNg4k1A",
+      "number": 53086,
+      "title": "int4 per-token-head KV cache: triton_reshape_and_cache_flash_per_token_head_quant returns wrong values",
+      "user": {
+        "login": "khluu",
+        "id": 51931015,
+        "node_id": "MDQ6VXNlcjUxOTMxMDE1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/51931015?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/khluu",
+        "html_url": "https://github.com/khluu",
+        "followers_url": "https://api.github.com/users/khluu/followers",
+        "following_url": "https://api.github.com/users/khluu/following{/other_user}",
+        "gists_url": "https://api.github.com/users/khluu/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/khluu/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/khluu/subscriptions",
+        "organizations_url": "https://api.github.com/users/khluu/orgs",
+        "repos_url": "https://api.github.com/users/khluu/repos",
+        "events_url": "https://api.github.com/users/khluu/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/khluu/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-20T09:25:40Z",
+      "updated_at": "2026-08-20T11:31:47Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "MEMBER",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "Observed on main @ eac636a7fa476983cdae34b45a984e9852aad375 (NVIDIA H200, driver 580.159.03, CUDA 13.0).\n\n`tests/quantization/test_per_token_kv_cache.py::test_reshape_and_cache_per_token_head` fails in the int4 branch (`kv_quant_mode=INT4_PER_TOKEN_HEAD`, `quant_min=-8.0`, `quant_max=7.0`): the dequantized round-trip (unpack nibbles → zero-point → scale → inverse RHT) lands far outside the assertion tolerance (atol=rtol=0.5) vs the bf16 reference.\n\n**Deterministic failure** — head_size=64, num_kv_heads=1, num_tokens=42 (seed 0, block_size 16), i.e. `[int4-0-16-64-1-42]`. Fails on every run with identical mismatch statistics (inputs are seed-deterministic):\n\n```\nAssertionError: Tensor-likes are not close!\nMismatched elements: 35 / 64 (54.7%)\nGreatest absolute difference: 3.0546875 at index (0, 38) (up to 0.5 allowed)\nGreatest relative difference: 3651.2666015625 at index (0, 52) (up to 0.5 allowed)\n```\n\n**Flaky failures** — pass/fail flips across runs on identical code:\n\n- head_size=128, num_kv_heads=1, num_tokens=42 (`[int4-0-16-128-1-42]`): 64/128 (50.0%) mismatched, abs 4.002 @ (0, 70), rel 25.5 @ (0, 101)\n- head_size=64, num_kv_heads=4, num_tokens=7 (`[int4-0-16-64-4-7]`): 149/256 (58.2%) mismatched, abs 3.93 @ (2, 26), rel 256 @ (0, 37)\n\nAll int8 and fp8 parametrizations, and the remaining int4 combos, pass consistently.\n\n**Minimal repro:**\n\n```bash\npytest tests/quantization/test_per_token_kv_cache.py \\\n  -k \"test_reshape_and_cache_per_token_head and int4-0-16-64-1-42\"\n```\n\n**Analysis:** the kernel under test is `vllm.v1.attention.ops.triton_reshape_and_cache_flash.triton_reshape_and_cache_flash_per_token_head_quant` (assertion at `tests/quantization/test_per_token_kv_cache.py:256`). A deterministic 54.7% element mismatch at ~6x the allowed absolute tolerance rules out tolerance noise and points to a correctness defect in the int4 pack/RHT path (candidate causes: zero-point packing or nibble ordering). The two shape-dependent flaky combos additionally suggest a race or uninitialized/leftover cache state whose manifestation depends on shape/head layout.\n\nThe qcfg fixture carries IDs int4/int8/fp8; the stacked parametrize resolves bottom-up, so `[int4-0-16-64-1-42]` = seed 0, block_size 16, head_size 64, num_kv_heads 1, num_tokens 42. All failing combos share seed 0 / block_size 16, but those are the only values in `SEEDS`/`BLOCK_SIZES`, so there is no signal there.\n\nHappy to collect a failing-tensor dump if that helps isolate it.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/53086/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53086/timeline",
+      "performed_via_github_app": {
+        "id": 1144995,
+        "client_id": "Iv23liVemv8A9if9v0F2",
+        "slug": "chatgpt-codex-connector",
+        "node_id": "A_kwHOAOQ6Gs4AEXij",
+        "owner": {
+          "login": "openai",
+          "id": 14957082,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjE0OTU3MDgy",
+          "avatar_url": "https://avatars.githubusercontent.com/u/14957082?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/openai",
+          "html_url": "https://github.com/openai",
+          "followers_url": "https://api.github.com/users/openai/followers",
+          "following_url": "https://api.github.com/users/openai/following{/other_user}",
+          "gists_url": "https://api.github.com/users/openai/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/openai/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/openai/subscriptions",
+          "organizations_url": "https://api.github.com/users/openai/orgs",
+          "repos_url": "https://api.github.com/users/openai/repos",
+          "events_url": "https://api.github.com/users/openai/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/openai/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "ChatGPT Codex Connector",
+        "description": "Bring ChatGPT and Codex to your GitHub repositories.",
+        "external_url": "https://www.chatgpt.com",
+        "html_url": "https://github.com/apps/chatgpt-codex-connector",
+        "created_at": "2025-02-14T01:37:05Z",
+        "updated_at": "2026-04-20T16:37:15Z",
+        "permissions": {
+          "actions": "write",
+          "checks": "read",
+          "contents": "write",
+          "emails": "read",
+          "issues": "write",
+          "metadata": "read",
+          "pull_requests": "write",
+          "statuses": "read",
+          "workflows": "write"
+        },
+        "events": [
+          "check_run",
+          "check_suite",
+          "commit_comment",
+          "issues",
+          "issue_comment",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "pull_request_review_thread",
+          "repository",
+          "status",
+          "sub_issues"
+        ]
+      },
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/52576",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/52576/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/52576/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/52576/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/52576",
+      "id": 5168633899,
+      "node_id": "I_kwDOI7xefs8AAAABNBMYKw",
+      "number": 52576,
+      "title": "[Bug]: Triton MoE and block-FP8 GEMMs mishandle the K tile — an out-of-bounds weight read, and wrong scales when a tile spans two quantization groups",
+      "user": {
+        "login": "truong-v",
+        "id": 61376017,
+        "node_id": "MDQ6VXNlcjYxMzc2MDE3",
+        "avatar_url": "https://avatars.githubusercontent.com/u/61376017?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/truong-v",
+        "html_url": "https://github.com/truong-v",
+        "followers_url": "https://api.github.com/users/truong-v/followers",
+        "following_url": "https://api.github.com/users/truong-v/following{/other_user}",
+        "gists_url": "https://api.github.com/users/truong-v/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/truong-v/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/truong-v/subscriptions",
+        "organizations_url": "https://api.github.com/users/truong-v/orgs",
+        "repos_url": "https://api.github.com/users/truong-v/repos",
+        "events_url": "https://api.github.com/users/truong-v/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/truong-v/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-17T05:31:31Z",
+      "updated_at": "2026-08-17T05:31:38Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\nTwo Triton GEMMs used by quantized MoE serving get the K tile wrong, and in both cases a sibling code path already does it correctly.\n\n1. **`fused_moe_kernel_gptq_awq` reads the packed weights out of bounds.** The kernel builds `k_mask` whenever `K` is not a multiple of `BLOCK_SIZE_K` and applies it to the scale load and to *both* zero-point loads, but the weight load itself is unmasked, so the last K iteration reads past the end of the weight tensor. The sibling `fused_moe_kernel` masks the identical load. The numbers that come back are multiplied by a scale that *is* masked to zero, so the arithmetic result is unaffected — this is a memory-safety bug, not a numerical one.\n\n2. **`w8a8_triton_block_scaled_mm` can pick one scale for a tile that spans several quantization groups.** `_w8a8_triton_block_scaled_mm` reads a single scale pair per K tile, indexed by `(k * BLOCK_SIZE_K) // group_k`, which is correct only when `BLOCK_SIZE_K` divides `group_k`. Nothing enforces it, and the comment above the default config states the requirement inverted — \"BLOCK_SIZE_K must be divisible by block_size[1]\" — which is exactly the configuration that breaks. The fused-MoE launcher clamps this (`BLOCK_SIZE_K = min(BLOCK_SIZE_K, min(block_shape[0], block_shape[1]))`); this one does not.\n\nNeither is caught today because the shipped defaults stay inside the safe range: `w8a8_triton_block_scaled_mm`'s default config sets `BLOCK_SIZE_K = block_k`, and `test_fused_moe_wn16` only uses `k` values of 128 and 1024, which are multiples of every `BLOCK_SIZE_K` the untuned path picks. The exposure in both cases is the tuning-config lookup, which reads `BLOCK_SIZE_K` straight out of a JSON file in `configs/` — and the wna16 files there already carry `BLOCK_SIZE_K` values of 128 (168 entries) and 256 (118 entries).\n\nThe GPTQ/AWQ MoE kernel was added in #12185 and the block-FP8 GEMM in #11523.\n\n## Reproduction\n\nBoth scripts drive the library's own launchers — `dispatch_fused_moe_kernel` and `w8a8_triton_block_scaled_mm` compute the grid and every kernel argument — against this repo at HEAD, installed with `VLLM_USE_PRECOMPILED=1 pip install -e .`.\n\n**1. Out-of-bounds weight read.** An int4 `w4a16` MoE matmul through `invoke_fused_moe_kernel`, with `K = 96` and `BLOCK_SIZE_K = 64`. The packed weight tensor is `[E, N, K // 2]` uint8, so each row holds 48 bytes while the loop covers 64. The weight tensor is allocated last so that the overrun lands in unallocated memory rather than in a neighbouring tensor, which is what makes it visible to `compute-sanitizer`.\n\n```\n$ PYTORCH_NO_CUDA_MEMORY_CACHING=1 compute-sanitizer --tool memcheck python repro_gptq_awq.py\n\n  K= 128 BLOCK_SIZE_K= 64: qweight holds 64 bytes per row, the loop covers 64  -> exact fit\n      ERROR SUMMARY: 0 errors\n  K= 128 BLOCK_SIZE_K= 32: qweight holds 64 bytes per row, the loop covers 64  -> exact fit\n      ERROR SUMMARY: 0 errors\n  K=  96 BLOCK_SIZE_K= 64: qweight holds 48 bytes per row, the loop covers 64  -> 16 bytes past the end\n      reported at vllm/model_executor/layers/fused_moe/fused_moe.py:236\n      ERROR SUMMARY: 8 errors\n  K=  48 BLOCK_SIZE_K= 32: qweight holds 24 bytes per row, the loop covers 32  -> 8 bytes past the end\n      reported at vllm/model_executor/layers/fused_moe/fused_moe.py:236\n      ERROR SUMMARY: 8 errors\n```\n\nThe reported line is the unmasked `b = tl.load(b_ptrs)`, and each access lands past the end of `qweight`:\n\n```\n========= Invalid __global__ read of size 1 bytes\n=========     at fused_moe_kernel_gptq_awq+0xc40 in fused_moe.py:236\n=========     by thread (127,0,0) in block (7,0,0)\n=========     Access to 0x7f0eb2405e0f is out of bounds\n=========     and is 16 bytes after the nearest allocation at 0x7f0eb2402e00 of size 12288 bytes\n```\n\nUnder memcheck the launch then fails with `CUDA error: unspecified launch failure`; without the sanitizer the read silently returns whatever is mapped. (The error count is not a property of the defect — the driver kills the context after a variable number of reported accesses — so the fault site is the signal, not the number.)\n\n**2. Wrong scales for an oversized K tile.** `w8a8_triton_block_scaled_mm` against a dequantize-and-matmul reference, `block_shape = [128, 128]`, with the config lookup standing in for a tuned `configs/*.json`:\n\n```\ncontrols: BLOCK_SIZE_K divides group_k\n  BLOCK_SIZE_K=  64  group_k=128  (requested tile inside one group)   max relative error 2.226e-07\n  BLOCK_SIZE_K= 128  group_k=128  (requested tile inside one group)   max relative error 2.082e-07\n\nbug: BLOCK_SIZE_K a multiple of group_k, which is what the comment asks for\n  BLOCK_SIZE_K= 256  group_k=128  (requested tile spans 2 groups)   max relative error 2.284e-01\n  BLOCK_SIZE_K= 512  group_k=128  (requested tile spans 4 groups)   max relative error 2.633e-01\n```\n\n## Environment\n\n- `vllm-project/vllm` at `6664d397bf091cb9371cba481d4efb8233436fe6`, installed with `VLLM_USE_PRECOMPILED=1 pip install -e .`\n- NVIDIA B200 (sm_100), driver 595.71.05\n- torch 2.13.0+cu130, triton 3.7.1, Python 3.12\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/52576/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/52576/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

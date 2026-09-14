@@ -1,0 +1,41 @@
+### 55311 [open] pow / maximum / minimum / gcd / lcm / bias_gelu silently ignore dtype=: nine signatures comment the parameter out and pass std::nullopt, while add/subtract/multiply honour it
+### Summary
+
+Seven binary eltwise entry points accept a `dtype=` argument and silently discard it. In each case the implementation comments the parameter name out of the signature and hardcodes `std::nullopt` in the output-dtype slot of the dispatch. Siblings in the same file honour the argument, and one op — `bias_gelu` — honours it on the tensor-tensor overload and ignores it on the tensor-scalar overload.
+
+Measured on **ttsim** (tenstorrent/ttsim v1.10.3, `libttsim_bh.so`, Blackhole) with the prebuilt tt-metal `v0.79.0-dev20260902` ubuntu22.04 debs and SFPI 7.72.0. bfloat16 inputs (int32 for gcd/lcm):
+
+```
+pow(tensor, tensor, dtype=float32)      -> BFLOAT16   ignored
+maximum(tensor, tensor, dtype=float32)  -> BFLOAT16   ignored
+maximum(tensor, scalar, dtype=float32)  -> BFLOAT16   ignored
+minimum(tensor, tensor, dtype=float32)  -> BFLOAT16   ignored
+minimum(tensor, scalar, dtype=float32)  -> BFLOAT16   ignored
+gcd(int32, int32, dtype=uint32)         -> INT32      ignored
+lcm(int32, int32, dtype=uint32)         -> INT32      ignored
+bias_gelu(tensor, scalar, dtype=float32)-> BFLOAT16   ignored
+bias_gelu(tensor, tensor, dtype=float32)-> FLOAT32    honoured
+add(tensor, tensor, dtype=float32)      -> FLOAT32    honoured   (control)
+```
+
+### Cause
+
+`ttnn/cpp/ttnn/operations/eltwise/binary/device/binary_composite_op.cpp`. Nine signatures in that file comment the parameter out:
+
+```
+ 56:    const std::optional<const DataType>& /*output_dtype*/,     minimum
+ 77:    const std::optional<const DataType>& /*output_dtype*/,     minimum
+ 97:    const std::optional<const DataType>& /*output_dtype*/,     maximum
+118:    const std::optional<const DataType>& /*output_dtype*/,     maximum
+691:    const std::optional<const DataType>& /*output_dtype*/,     gcd
+712:    const std::optional<const DataType>& /*output_dtype*/,     lcm
+762:    const std::optional<const DataType>& /*dtype*/,            pow
+784:    const std::optional<const DataType>& /*dtype*/,            pow
+880:    const std::optional<const DataType>& /*dtype*/,            bias_gelu
+```
+
+and each body then passes `std::nullopt` where the dtype belongs, for example `minimum` at `:62-72`:
+
+```cpp
+Tensor minimum(
+    con

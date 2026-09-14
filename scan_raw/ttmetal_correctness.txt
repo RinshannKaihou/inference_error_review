@@ -1,0 +1,15 @@
+52127|Pipelined Multi-galaxy Prefill|https://github.com/tenstorrent/tt-metal/issues/52127|2026-08-04T22:56:37Z|open|
+52119|[TTNN] Fix Blackhole rand and compact sparse output|https://github.com/tenstorrent/tt-metal/pull/52119|2026-08-04T20:54:09Z|open|llk:blackhole,fix
+52115|[test_tiebreak_input_adjust.py] | Sanity tests | ttnn-sanity-tests / ttnn reduce group [sim_blackhole]|https://github.com/tenstorrent/tt-metal/issues/52115|2026-08-04T20:34:50Z|open|CI auto triage
+52107|[Bug fix] fix(eltwise): overflow-safe logaddexp/logaddexp2 via native SFPU kernel|https://github.com/tenstorrent/tt-metal/pull/52107|2026-08-04T19:09:52Z|open|
+52077|[DiffusionGemma] Add full TTNN runtime|https://github.com/tenstorrent/tt-metal/pull/52077|2026-08-04T14:41:20Z|open|llk:blackhole,feat
+52074|[codegen-port] gather: generated DeviceOperation + ProgramFactory|https://github.com/tenstorrent/tt-metal/pull/52074|2026-08-04T14:16:54Z|open|feat
+52054|[Bounty $1800] Audio Spectrogram Transformer (AST) audio classification bring-up using TTNN APIs|https://github.com/tenstorrent/tt-metal/issues/52054|2026-08-04T08:52:12Z|open|community,model bringup
+52048|[Bug fix] Add back the sfpu_math value so the perf report headers match again|https://github.com/tenstorrent/tt-metal/pull/52048|2026-08-04T08:33:54Z|closed|llk:performance,fix
+52042|[repo-status] Repo Status: Active day with correctness fixes, bounties, and infra progress 🚀|https://github.com/tenstorrent/tt-metal/issues/52042|2026-08-04T06:45:06Z|open|reports
+52024|[Bug fix] Fix SFPU RNG correlation and improve FP32 uniform random quality|https://github.com/tenstorrent/tt-metal/pull/52024|2026-08-03T23:48:41Z|open|LLK,llk:wormhole,llk:blackhole
+52014|[Bounty $6000] Fix SFPU RNG correlation and improve FP32 uniform random quality|https://github.com/tenstorrent/tt-metal/issues/52014|2026-08-03T21:26:41Z|open|community,bounty,bounty_difficulty/hard
+52008|DeepSeek V4 HCA: functional prefill|https://github.com/tenstorrent/tt-metal/pull/52008|2026-08-03T20:23:49Z|open|feat
+51979|fix(sfpu): Bug fix - softsign returns 0 instead of ±1 for large magnitudes|https://github.com/tenstorrent/tt-metal/pull/51979|2026-08-03T15:06:33Z|open|
+51974|Metal 2.0] Port normalization/batch_norm (2/2 device-operations, 8 kernels)|https://github.com/tenstorrent/tt-metal/pull/51974|2026-08-03T13:59:45Z|open|feat
+51919|[codegen-port] tilize: generated DeviceOperation + ProgramFactory|https://github.com/tenstorrent/tt-metal/pull/51919|2026-08-03T11:15:03Z|open|feat

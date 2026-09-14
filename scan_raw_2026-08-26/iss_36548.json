@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/36548",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/36548/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/36548/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/36548/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/36548",
+  "id": 5260231389,
+  "node_id": "I_kwDOLCAjRs8AAAABOYjC3Q",
+  "number": 36548,
+  "title": "[Bug] DFlash2 Potentially state corruption with concurrent requests",
+  "user": {
+    "login": "L3tum",
+    "id": 9307432,
+    "node_id": "MDQ6VXNlcjkzMDc0MzI=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/9307432?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/L3tum",
+    "html_url": "https://github.com/L3tum",
+    "followers_url": "https://api.github.com/users/L3tum/followers",
+    "following_url": "https://api.github.com/users/L3tum/following{/other_user}",
+    "gists_url": "https://api.github.com/users/L3tum/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/L3tum/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/L3tum/subscriptions",
+    "organizations_url": "https://api.github.com/users/L3tum/orgs",
+    "repos_url": "https://api.github.com/users/L3tum/repos",
+    "events_url": "https://api.github.com/users/L3tum/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/L3tum/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-26T18:28:32Z",
+  "updated_at": "2026-08-26T18:31:06Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [ ] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [ ] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [ ] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\nUsing the cookbook settings for DFlash2 with Qwen3.8-27B.\n\nI've noticed under high concurrent load, sometimes the last user message is appended to the wrong context. As an example, running any of the GPQA tests along with a coding workflow, Qwen3.8-27B will sometimes spontaneously start a philosophy about certain questions in the middle of the coding workflow. Another type (see attached screenshot), Qwen3.8 actually caught the corruption and thought about it, but went head with answering \"the question\" instead of finishing the coding workflow. Luckily it appeas smart (or dumb) enough to not do any code edits based on the QA, but I'd be a little hesitant also under concurrent coding workflows.\n\n<img width=\"1054\" height=\"1557\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/cfedea1e-c3f1-4664-933d-4b4124fdd173\" />\n\n### Reproduction\n\nCookbook DFlash2 Qwen3.8-27B example\n\n### Environment\n\n(Docker Container)\nRunning on Debian 13 with an RTX Pro 6000 and Intel 12600K (I'm poor).",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/36548/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/36548/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

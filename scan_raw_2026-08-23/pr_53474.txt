@@ -1,0 +1,31 @@
+#### PR #53474 [KV Offload] Size node-local shared regions by local_world_size
+STATE:open merged:no
+## Summary
+
+`SharedOffloadRegion` is backed by a node-local `/dev/shm` mmap. In a multi-node TP deployment, the current CPU/Tiering offload specs size each non-replicated mmap row by global `world_size` and fold worker slots by global `world_size`.
+
+For a 2-node TP8 worker, each node only has 4 local ranks writing to its local mmap. Sizing/folding by 8 leaves half of each node-local row unused and cuts the effective CPU offload block count in half.
+
+This PR threads `ParallelConfig.local_world_size` into native offloading config and uses it for:
+
+- CPU offload non-replicated row sizing.
+- CPU offload shared-region rank/slot selection.
+- Tiering offload shared-region rank/slot selection.
+
+Single-node and legacy configs keep the existing fallback to `world_size`.
+
+## Non-duplication
+
+Duplicate checks run:
+
+- `gh pr list --repo vllm-project/vllm --state open --search "kv offload local_world_size" --limit 20`
+- `gh pr list --repo vllm-project/vllm --state open --search "SharedOffloadRegion world_size" --limit 20`
+- `gh pr list --repo vllm-project/vllm --state open --search "kv offload multi-node" --limit 20`
+- `gh pr list --repo vllm-project/vllm --state open --search "num_copies offloading" --limit 20`
+
+Related but non-duplicating work found:
+
+- #51317 fixes `/dev/shm` file cleanup/leak behavior and also notes node-local opener counts, but does not change CPU/Tiering offload row sizing or worker slot folding.
+- #51081 chunks `cudaHostRegister` for large regions, but does not change how many rank copies fit in each row.
+- #46556 adds scheduler-orchestrated worker transfers for m
+

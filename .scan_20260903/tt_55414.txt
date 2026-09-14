@@ -1,0 +1,41 @@
+### 55414 [open] eltwise/binary_ng: program-cache key incorrectly omits Alignment and Tile
+## One last port-blocker in `binary_ng`
+
+Oh -binary_ng`, the gift that keeps on giving. A whole bunch of Metal 2.0 port-blocking issues in `binary_ng` were fixed in https://github.com/tenstorrent/tt-metal/issues/54138. (Hurrah!) When I went to check that the op was good to port, I hit the very problem that Edwin's been bopping in legality relaxation ops: the op's hash key incorrectly omits Tile and Alignment. The custom hash makes a promise about what's safe to take the fast path, but the rest of the op fails to deliver on that promise.
+
+_Technically_ it's not impossible to port to Metal 2.0 with this bug intact. However, doing so violates the rule of "no semantic changes". Since we're not introducing a relaxation to express an erroneous claim in the program hash, the port would turn a silent bug into a legality check failure in Metal 2.0. Which would route incorrectly to runtime for debug :).
+
+Here's what my Claude has to say:
+
+---
+
+## The defect
+
+Under **every** `TensorSpecRelaxations` setting, `tensorspecs_match_with_relaxation` opens with an
+unconditional exact-equality test on `tensor_layout`:
+
+```cpp
+if (!(a.tensor_layout() == b.tensor_layout())) { return false; }
+```
+`tt_metal/impl/metal2_host_api/tensor_spec_relaxations.cpp:173-175`
+
+`TensorLayoutImpl::operator==` is `= default` over `{dtype_, page_config_, memory_config_, alignment_}`
+(`tt_metal/impl/tensor/spec/layout/tensor_layout_impl.hpp:25, :67-70`). **No relaxation flag reaches inside
+it** — the flags free the shape, the rank and the page size, never the layout.
+
+binary_ng's key hashes neither `Alignment` nor `Tile`:
+
+```cpp
+ttsl::hash::hash_t BinaryNgDeviceOperation::tensor_args_t::to_hash() const {
+    return ttsl::hash::hash_objects_with_default_seed(
+        input_tensor_a.dtype(), input_tensor_a.memory_config(),
+        /* b dtype, b memory_config, */
+        sharded_tensor_shape_in_pages(input_tensor_a), /* … */);
+}
+```
+`ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/binary_ng_device_operation.cpp:299-307`
+
+`attribute_values()` has no `Alignment` or `Tile` term either
+(`binary_ng_device_operation.hpp:97-120`).
+
+**So two tensors differing only in `Alignment` share one cache entry.** After 

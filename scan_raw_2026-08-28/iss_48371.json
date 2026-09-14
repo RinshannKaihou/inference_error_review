@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/huggingface/transformers/issues/48371",
+  "repository_url": "https://api.github.com/repos/huggingface/transformers",
+  "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/48371/labels{/name}",
+  "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/48371/comments",
+  "events_url": "https://api.github.com/repos/huggingface/transformers/issues/48371/events",
+  "html_url": "https://github.com/huggingface/transformers/issues/48371",
+  "id": 5266608764,
+  "node_id": "I_kwDOCUB6oc8AAAABOeoSfA",
+  "number": 48371,
+  "title": "NVFP4 MoE experts are dequantized without weight_global_scale, silently",
+  "user": {
+    "login": "Bluear7878",
+    "id": 200191325,
+    "node_id": "U_kgDOC-6tXQ",
+    "avatar_url": "https://avatars.githubusercontent.com/u/200191325?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Bluear7878",
+    "html_url": "https://github.com/Bluear7878",
+    "followers_url": "https://api.github.com/users/Bluear7878/followers",
+    "following_url": "https://api.github.com/users/Bluear7878/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Bluear7878/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Bluear7878/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Bluear7878/subscriptions",
+    "organizations_url": "https://api.github.com/users/Bluear7878/orgs",
+    "repos_url": "https://api.github.com/users/Bluear7878/repos",
+    "events_url": "https://api.github.com/users/Bluear7878/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Bluear7878/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-27T10:39:57Z",
+  "updated_at": "2026-08-27T10:39:57Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## What happens\n\nLoading a compressed-tensors MoE checkpoint whose routed experts are stored per expert dequantizes them **without** their per-tensor `weight_global_scale` when the scheme is NVFP4 (`tensor_group`), so the experts come back scaled by a wrong constant — no exception, and the fused parameter is filled so `missing_keys` stays empty.\n\n```\nhuggingface/transformers@323f24345ed92f88e68a14aeef7db78ee2b52475 (5.16.0.dev0)\ncompressed-tensors==0.18.0, torch==2.13.0+cpu, python 3.11.15, Linux x86_64\n```\n\n## Reproduction\n\nStandalone — `compressed_tensors` + `transformers` only, no checkpoint download. It drives `DecompressExperts.convert` with exactly the tensors `update_weight_conversions` collects today, and with the ones the checkpoint actually stores.\n\n```python\n\"\"\"Standalone repro: NVFP4 MoE experts are dequantized without weight_global_scale.\"\"\"\nimport types\nimport torch\nfrom compressed_tensors.compressors import BaseCompressor\nfrom compressed_tensors.compressors.format import infer_module_format\nfrom compressed_tensors.quantization import (\n    QuantizationArgs, QuantizationScheme, QuantizationStrategy, QuantizationType)\nfrom compressed_tensors.quantization.utils.helpers import calculate_qparams, generate_gparam\nfrom transformers.integrations.compressed_tensors import DecompressExperts\n\nGROUP = 16\nargs = QuantizationArgs(num_bits=4, type=QuantizationType.FLOAT, group_size=GROUP,\n                        strategy=QuantizationStrategy.TENSOR_GROUP, symmetric=True)\nscheme = QuantizationScheme(targets=[\"Linear\"], weights=args)\ncompressor = BaseCompressor.get_value_from_registry(infer_module_format(torch.nn.Linear, scheme))\n\ntorch.manual_seed(0)\npacked, scales, shapes, global_scales, reference = [], [], [], [], []\nfor expert in range(3):                      # differing magnitudes -> differing global scales\n    w = (torch.randn(32, 64) * (expert + 1) * 3.0).to(torch.bfloat16)\n    gs = generate_gparam(w.min(), w.max())\n    grouped = w.reshape(w.shape[0], -1, GROUP)\n    sc, _ = calculate_qparams(grouped.min(dim=-1).values, grouped.max(dim=-1).values,\n                              args, global_scale=gs)\n    c = compressor.compress({\"weight\": w, \"weight_scale\": sc, \"weight_global_scale\": gs}, scheme)\n    packed.append(c[\"weight_packed\"]); scales.append(c[\"weight_scale\"])\n    global_scales.append(c[\"weight_global_scale\"])\n    shapes.append(torch.tensor(list(w.shape))); reference.append(w.float())\n\nquantizer = types.SimpleNamespace(compressor=types.SimpleNamespace(\n    quantization_config=types.SimpleNamespace(config_groups={\"group_0\": scheme})))\nop = DecompressExperts(quantizer, scheme=scheme)\n\n# What `update_weight_conversions` collects today: packed / scale / shape. No global scale.\ntoday = op.convert({\"experts.gate_proj.weight_packed\": packed,\n                    \"experts.gate_proj.weight_scale\": scales,\n                    \"experts.gate_proj.weight_shape\": shapes}, [], [])\n# What the checkpoint actually stores.\nfaithful = op.convert({\"experts.gate_proj.weight_packed\": packed,\n                       \"experts.gate_proj.weight_scale\": scales,\n                       \"experts.gate_proj.weight_shape\": shapes,\n                       \"experts.gate_proj.weight_global_scale\": global_scales}, [], [])\n\nref = torch.stack(reference)\nt = today[\"experts.gate_proj.weight_packed\"].float()\nf = faithful[\"experts.gate_proj.weight_packed\"].float()\nrel = lambda a, b: (a - b).norm().item() / b.norm().item()\n\nprint(\"per-expert global scales :\", [round(g.item(), 1) for g in global_scales])\nprint(f\"relative L2 vs reference  : today={rel(t, ref):9.3f}   with the global scale={rel(f, ref):.3f}\")\nprint(f\"max |weight|              : today={t.abs().max():9.2f}   with the global scale={f.abs().max():.2f}\")\nprint(\"no exception was raised, and the fused parameter is filled (missing_keys stays empty)\")\n```\n\nActual output:\n\n```\nper-expert global scales : [218.0, 109.5, 79.5]\nrelative L2 vs reference  : today=  103.484   with the global scale=0.099\nmax |weight|              : today=  2688.00   with the global scale=33.75\nno exception was raised, and the fused parameter is filled (missing_keys stays empty)\n```\n\nExpected: `torch.testing.assert_close(decompressed, faithful_per_expert_decompression)` — i.e. relative L2 against the reference weights should be the NVFP4 quantization error (~0.1), not ~103.\n\n## Root cause\n\n[`quantizer_compressed_tensors.py#L210-L212`](https://github.com/huggingface/transformers/blob/323f24345ed92f88e68a14aeef7db78ee2b52475/src/transformers/quantizers/quantizer_compressed_tensors.py#L210-L212) — `update_weight_conversions` derives the expert conversion sources from the base `.weight` patterns as `_packed$` / `_scale$` / `_shape$`. NVFP4 stores a fourth per-module tensor, `weight_global_scale`, which is therefore never collected; and [`compressed_tensors.py#L108-L113`](https://github.com/huggingface/transformers/blob/323f24345ed92f88e68a14aeef7db78ee2b52475/src/transformers/integrations/compressed_tensors.py#L108-L113) gives `DummyModule` no slot for one even if it had been.\n\n**Why it is silent rather than a crash.** `NVFP4Compressor.decompress` reads `global_scale = state_dict.get(\"weight_global_scale\", None)` and passes it to `dequantize`, which treats `None` as \"no global scaling\". This is the difference from #47430, whose missing `zero_point` raises `Asymmetric quant requires zero-point values`. The global scale is per tensor (`scale_data.max * quant_data.max / max_abs`), so each expert is off by a *different* factor and the relative magnitudes between experts are destroyed too.\n\n**Not a regression — it never worked.** `DummyModule` has had the same three-tensor signature since `DecompressExperts` was introduced in #45630 (`09835700`, 2026-07-03); `weight_global_scale` was never carried.\n\n## Blast radius\n\nEvery scheme that reaches the changed line, executed against this checkout:\n\n| Scheme | Sources derived today | With the fix | Verdict | Verified |\n|---|---|---|---|---|\n| NVFP4 `float4` `tensor_group` g16 | packed, scale, shape | + `weight_global_scale` | **bug-fixed** | executed |\n| INT4 `int` `group` g128 | packed, scale, shape | unchanged | no-op | executed |\n| INT4 `int` `channel` | packed, scale, shape | unchanged | no-op | executed |\n| INT8 `int` `tensor` | packed, scale, shape | unchanged | no-op | executed |\n| FP8 `float` `channel` | weight, scale | unchanged (separate branch) | no-op | executed |\n| `tensor_group` checkpoint shipping **no** global scale | — | `.get` returns `None`, same as today | no-op, no raise | executed |\n| The 24 MoE families aliased to `qwen2_moe`/`mixtral` in `conversion_mapping.py` | — | affected iff quantized NVFP4 | bug-fixed | source-read only |\n\n## Candidate fixes\n\n1. **Gate on the strategy (narrow).** Collect `weight_global_scale$` only when `weights.strategy == \"tensor_group\"` — exactly when `initialize_module_for_quantization` registers the parameter — and thread an optional `global_scale` through `DummyModule`. Mirrors #47430's shape. Leaves the general problem: the next companion tensor a scheme adds fails the same way.\n2. **Derive the whole set (generic).** Enumerate the per-module tensors the scheme actually registers instead of hardcoding suffixes, which would subsume #47430's `zero_point` fix in one place. Larger change, and it touches the FP8 branch's semantics.\n3. **Make it loud (different repo).** Have `NVFP4Compressor.decompress` raise when a `tensor_group` scheme has no global scale, so the omission can never be silent again. Belongs in `compressed-tensors`, and is complementary rather than an alternative.\n\nRecommendation: **1**, because the blast-radius table shows every non-`tensor_group` row is byte-identical under it, so it carries no regression risk for existing checkpoints — with **3** as a follow-up upstream in `compressed-tensors`.\n\n## Question\n\n> Would you prefer the narrow strategy-gated fix (option 1, mirroring #47430), or a single generic derivation (option 2) that enumerates the scheme's registered per-module tensors and would subsume #47430's `zero_point` fix as well?\n\n## Prior work checked\n\n```bash\ngh pr list --repo huggingface/transformers --state open --search \"compressed_tensors MoE experts\"\ngh pr list --repo huggingface/transformers --state open --search \"global_scale\"\ngh pr list --repo huggingface/transformers --state open --search \"nvfp4\"\ngh api \"search/issues?q=repo:huggingface/transformers+weight_global_scale+in:title,body\"\ngh api \"search/issues?q=repo:huggingface/transformers+DecompressExperts\"\ngh api \"search/issues?q=repo:huggingface/transformers+update_weight_conversions\"\n```\n\n→ No open issue or PR covers `weight_global_scale` (`total_count: 0` for the `weight_global_scale` search). The closest is **#47430** (open), which fixes the *same two functions* for the asymmetric `zero_point` — a different tensor, a different scheme, and it crashes rather than corrupting silently. Adjacent but distinct: #47956 (`weight_shape` sharded away under TP/EP), #47315 (non-32-divisible bit widths), #47407 (`run_compressed=False` random init, different code path).\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/huggingface/transformers/issues/48371/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/48371/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

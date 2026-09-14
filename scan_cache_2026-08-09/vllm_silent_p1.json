@@ -1,0 +1,17 @@
+{
+  "total": 3,
+  "items": [
+    {
+      "num": 51581,
+      "title": "[Bug][Spec Decode]: DFlash fused-KV projection calls F.linear on a sliced qkv_proj weight — breaks (and can silently corrupt) any weight-quantized drafter"
+    },
+    {
+      "num": 51561,
+      "title": "[Bug]: use_heterogeneous_vocab (TLI) silently bypassed when use_local_argmax_reduction is enabled"
+    },
+    {
+      "num": 51525,
+      "title": "[Bug]: Explicit VLLM_CUTLASS NVFP4 MoE selection silently produces empty completions on SM_120"
+    }
+  ]
+}

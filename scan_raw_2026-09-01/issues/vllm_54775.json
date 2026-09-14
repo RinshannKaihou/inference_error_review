@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54775",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54775/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54775/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54775/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54775",
+  "id": 5312313252,
+  "node_id": "I_kwDOI7xefs8AAAABPKN3pA",
+  "number": 54775,
+  "title": "[Bug]: KDA/gated-delta-rule chunked-scan buffers are outside memory profiling — runtime OOM at large --max-num-batched-tokens",
+  "user": {
+    "login": "stefanskiasan",
+    "id": 69960390,
+    "node_id": "MDQ6VXNlcjY5OTYwMzkw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/69960390?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/stefanskiasan",
+    "html_url": "https://github.com/stefanskiasan",
+    "followers_url": "https://api.github.com/users/stefanskiasan/followers",
+    "following_url": "https://api.github.com/users/stefanskiasan/following{/other_user}",
+    "gists_url": "https://api.github.com/users/stefanskiasan/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/stefanskiasan/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/stefanskiasan/subscriptions",
+    "organizations_url": "https://api.github.com/users/stefanskiasan/orgs",
+    "repos_url": "https://api.github.com/users/stefanskiasan/repos",
+    "events_url": "https://api.github.com/users/stefanskiasan/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/stefanskiasan/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6114440385,
+      "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+      "name": "rocm",
+      "color": "B60205",
+      "default": false,
+      "description": "Related to AMD ROCm"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-09-01T13:17:31Z",
+  "updated_at": "2026-09-01T13:20:44Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Summary\n\nThe chunked-scan buffers in the gated-delta-rule (KDA) path scale linearly with\n`--max-num-batched-tokens`, are allocated transiently inside the forward pass, and are **not\ncovered by vLLM's startup memory profiling**. The KV cache is therefore sized as if that memory\nwere free, and above a certain chunk size the engine dies at runtime — mid-request, after having\nserved traffic.\n\n### Observed\n\nGLM-5.3-Flash (45 layers: 34 KDA linear-attention + 11 sparse MLA), 1× MI350X (gfx950),\nROCm 7.2.3, TP1, MXFP4 weights, `--kv-cache-dtype fp8_e4m3`, `--gpu-memory-utilization 0.93`.\n16 concurrent requests of ~38k tokens each.\n\n| `--max-num-batched-tokens` | successful | failed | outcome |\n|---|---|---|---|\n| 8 192 … 65 536 | 16 / 16 | 0 | stable across 3 runs each |\n| **81 920** | **5 / 16** | **11** | engine shut down |\n| **131 072** | **4 / 16** | 12 | engine shut down |\n\n```\n(Worker) ERROR  File \".../flash_linear_attention/ops/chunk_delta_h.py\", line 357,\n                  in chunk_gated_delta_rule_fwd_h\n(Worker) ERROR    v_new = torch.empty_like(u) if save_new_value else None\n(Worker) ERROR  torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.25 GiB.\n                  GPU 0 has a total capacity of 287.98 GiB of which 0 [bytes is free]\n(APIServer) INFO [shutdown] EngineCore process manager: using 15.0s ROCm cleanup grace\n                  after immediate request abort\n```\n\nStartup reported no problem — `GPU KV cache size: 6,940,947 tokens` at 81,920, and the memory\nprofiling line looked healthy.\n\n### Mechanism\n\n`chunk_gated_delta_rule_fwd_h` allocates two buffers proportional to the token count in the batch:\n\n```python\nB, T, Hg, K, V = *k.shape, u.shape[-1]\nH  = u.shape[-2]\nBT = chunk_size                      # FLA_CHUNK_SIZE = 64, hard-coded in ops/utils.py:31\n...\nN, NT = len(cu_seqlens) - 1, len(chunk_indices)\nh     = k.new_empty(B, NT, H, V, K)          # NT = ceil(T / 64)  -> linear in T\nv_new = torch.empty_like(u) if save_new_value else None   # linear in T\n```\n\nFor this model (`linear_attn_config`: 64 heads, head_dim 128) at T = 81,920 with BT = 64:\n\n```\nNT     = 1280\nh      = 1280 · 64 · 128 · 128 · 2 B  ≈ 2.5 GiB\nv_new  = 81920 · 64 · 128 · 2 B       ≈ 1.25 GiB   <- the allocation that failed\n```\n\nThat is ~3.75 GiB transient **per KDA layer invocation**, and there are 34 KDA layers per forward\npass. They are freed between layers, so the caching allocator mostly reuses the blocks — but the\npeak is real, and it is not what the profiling run measured. Measured peaks from vLLM's own log,\nsame model, same everything but the chunk size:\n\n```\nchunk  8 192:  14.52 GiB peak activation   KV 9,578,037 tokens\nchunk 65 536:  22.73 GiB peak activation   KV 7,512,186 tokens\n```\n\nThe KV pool shrinks ~35 KV-tokens per extra chunk token, linearly, which is the profiler\n*partially* accounting for this. But at 131,072 the loss jumps to ~60 KV-tokens per chunk token —\nnon-linear — and at 81,920 the runtime allocation no longer fits.\n\n### Why it matters beyond this model\n\nThe failure mode is the bad one: **it does not fail at startup, it fails under load.** A\nconfiguration passes a smoke test, serves requests, then the engine dies with requests in flight.\nAnd it is silent in the metrics — `vllm bench serve` computes `Total input tokens` over\n*successful* requests only, so throughput per second goes **up** as requests die. In my own sweep\n81,920 initially looked like the fastest setting (+21 % over baseline) purely because 11 of 16\nrequests never completed.\n\nAny model with gated-delta-rule / linear-attention layers goes through this path (GLM-5.x hybrid,\nQwen3-Next GDN, and others).\n\n### Suggested directions\n\n1. **Include the KDA path in the memory profiling run** at the configured\n   `max_num_batched_tokens`, with a batch composition representative of chunked prefill\n   (several sequences, not one), so the peak is measured rather than partly inferred.\n2. **Or bound the buffers**: `FLA_CHUNK_SIZE` is a module-level constant\n   (`third_party/flash_linear_attention/ops/utils.py:31`). Making it configurable would let\n   operators trade chunk-scan parallelism for memory — `BT = 128` halves `h`. `BT` is already a\n   free `tl.constexpr` in the kernels (the `64` in the block pointers is the head-dim blocking,\n   not the time chunk), so this looks mechanically possible, though I have not yet measured\n   whether 128 is correct and faster.\n3. **Or refuse the configuration at startup** rather than at runtime, if the peak can be\n   computed analytically from `max_num_batched_tokens`, the head count and `FLA_CHUNK_SIZE`.\n\nHappy to test a patch on this hardware.\n\n**Unrelated but adjacent, in case it helps someone sizing a config:** the ~11.7 GiB left unused by\n`--gpu-memory-utilization 0.93` on a 288 GiB part is *not* free headroom — it is where these\ntransient allocations land. vLLM's own log suggests `--kv-cache-memory=<the full amount>` to\n\"fully utilize gpu memory\"; taking that suggestion at a large chunk size is what removes the room\nthis path needs.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54775/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54775/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

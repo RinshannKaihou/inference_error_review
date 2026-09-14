@@ -1,0 +1,150 @@
+[Bug] fast_topk_v2 can silently return wrong top-k sets when a radix threshold bucket exceeds its 4096-entry candidate buffer (k=2048, long rows)
+## Checklist
+
+- [x] I searched related issues but found no solution.
+- [x] The bug persists in the latest version.
+- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.
+- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.
+- [x] Please use English. Otherwise, it will be closed.
+
+## Describe the bug
+
+`sgl_kernel.fast_topk_v2` (`topk_kernel` in `python/sglang/kernels/aot/csrc/elementwise/topk.cu`) can return silently wrong top-k index sets when the coarse-radix threshold bucket of a row contains more than 4096 candidates. No error is raised, the output has the normal shape and exactly `k` valid indices, but some of them are not in the true top-k. In the reproduction below, at 64 rows x 256K columns with k=2048, **all 64 rows return wrong top-k sets, with 6-42 of the 2048 selected entries per row absent from the true top-k** (and 98-157 per row at 64 x 1M). Which selections are wrong is nondeterministic run to run. (Overflow makes corruption *possible*, not certain: if the overflowing bucket is dominated by ties at the k-th value boundary, any k tied candidates are valid and the output may still be correct. For continuous score distributions every measured row past the cliff is wrong.)
+
+### Mechanism
+
+Line numbers are at current main (`6480cce9bc`), file `python/sglang/kernels/aot/csrc/elementwise/topk.cu`:
+
+- The kernel builds a 256-bin coarse histogram over the fp16-high-byte key of each score (pass 1), then re-scans the row (pass 2): scores strictly above the threshold bin go directly to the output; scores *in* the threshold bin are staged into a fixed shared-memory candidate buffer for radix refinement.
+- The candidate buffer holds `SMEM_INPUT_SIZE = kSmem / (2 * sizeof(int)) = 4096` entries on CUDA (L38, L96). The sizing comment (L35-L37) records the underlying assumption — "Each radix pass needs at most ~TopK candidates in the threshold bin, so 4K entries per round ... is sufficient" — but for long rows the threshold bucket is much larger than `k`, which is exactly the overflow case.
+- Pass 2 stores a candidate only `if (C10_LIKELY(pos < SMEM_INPUT_SIZE))` (L173). Once the threshold bucket exceeds 4096 entries, the remaining candidates are **silently dropped**, and their contributions to the fused refinement histogram are lost with them, so the subsequent threshold selection operates on a truncated population.
+- `num_input` is clipped rather than flagged (L192); the refinement rounds carry the same silent-drop guard (L239), though the demonstrated candidate loss happens at the pass-2 staging (L173) — after the clip, the staged population is already at most 4096.
+- The kernel still emits exactly `k` valid, duplicate-free indices, so ordinary downstream shape/range/count checks do not detect the corruption. Which candidates survive depends on `atomicAdd` arrival order, so the wrong output is also nondeterministic run to run (repeated calls on the same input changed the selected index sets in roughly 40 of 64 rows in our runs).
+- (On CUDA `kSmem` is 32KB. ROCm builds parameterize it via `SGL_TOPK_DYNAMIC_SMEM_BYTES` — 6144 entries on gfx942, 16384 on gfx95x/gfx1250 — so the same defect exists with a later cliff.)
+
+### When it triggers
+
+The coarse key keeps only 2 mantissa bits, so buckets are wide. Whether a given workload overflows depends on how many scores share the bucket containing the k-th value, which grows with row length and with the concentration of the score distribution. With standard-normal synthetic scores at k=2048 that bucket holds ~1.1K candidates at 64K columns (correct output), ~4.3K at 256K columns (every row wrong), and ~5.1K at 1M columns (every row wrong); other smooth distributions sit lower at the same length (in our measurements exponential and logistic scores at 256K columns peaked around ~3.1K candidates and stayed correct), while distributions concentrated near the k-th bucket can cross the cliff earlier. Real-world exposure therefore depends on both the score distribution and on which top-k path a workload routes through.
+
+### Why it matters
+
+- k=2048 is the only k this kernel supports (`TopK = 2048`, L23) and is the DeepSeek V3.2 DSA configuration. In current routing, the affected AOT entry points are reachable as follows: `fast_topk_v2` is the `DSATopKBackend.SGL_KERNEL` unfused path (`topk_func` in `python/sglang/srt/layers/attention/dsa/dsa_topk_backend.py`), taken whenever top-k fusion is off (`SGLANG_DSA_FUSE_TOPK=0` or `force_unfused_topk`); the fused AOT variants are the legacy branches of `topk_transform`, reached only by calls that miss the JIT v2 dispatch predicates (e.g. PAGED calls with `batch_idx_list` set, or the RAGGED prefill-CP path). With all-default settings, eligible PAGED and RAGGED calls route to the separate JIT v2 kernels (`_topk_transform_v2_paged` / `_topk_transform_v2_ragged`) instead — those have a closely related fixed-buffer truncation defect of their own, reported in #35257 (`kMaxNumTie` tie buffer in `topk_impl.cuh`); the bug reported here is in the AOT kernel in `topk.cu`, a separate file and code path, so this is not a duplicate of that report.
+- The fused variants `topk_transform_decode_kernel` (L270), `topk_transform_prefill_kernel` (L301), and `topk_transform_prefill_ragged_kernel` (L353) call the same `fast_topk_cuda_tl` device function (L287, L339, L370) and inherit the defect.
+- `python/sglang/kernels/aot/tests/test_topk.py` parametrizes `seq_len` only up to 65536, which stays below the cliff, so CI does not catch this.
+- The file header notes the adaptation "fix[ed] the potential illegal memory access"; the bounds guard indeed removes the out-of-bounds write, but converts it into silent wrong results.
+
+### Possible directions for a fix
+
+1. Spill overflowing candidates to a global-memory workspace and have the refinement rounds walk both parts (correct; needs a workspace argument).
+2. Detect overflow after pass 2 and fall back to refinement passes that re-read the full row instead of the candidate buffer (correct; in-kernel; the slow path only runs when triggered). As qualitative context from our own radix-select kernel work (not benchmarked on this kernel), a guarded fallback of this kind typically costs a low single-digit percentage on inputs below the cliff.
+3. At minimum, detect overflow and fail loudly instead of returning corrupted indices.
+
+## Reproduction
+
+Self-contained; needs only `torch` and the `sglang-kernel` wheel (reproduced with the stock `0.4.6.post1+cu130` wheel, whose `topk.cu` is byte-identical to current main):
+
+```python
+# fast_topk_v2 can return silently wrong top-k results when the radix
+# threshold bucket of a row holds more than 4096 candidates (the kernel's
+# fixed shared-memory candidate buffer, SMEM_INPUT_SIZE = kSmem / 8 = 4096).
+# Overflowing candidates are silently dropped instead of spilled.
+# Requires: torch + sglang-kernel (stock wheel), one CUDA GPU.
+import torch
+from sgl_kernel import fast_topk_v2
+
+B, L, K = 64, 256 * 1024, 2048  # k=2048: the DeepSeek V3.2 sparse-attention k
+
+torch.manual_seed(0)
+score = torch.randn(B, L, device="cuda", dtype=torch.float32)
+lengths = torch.full((B,), L, device="cuda", dtype=torch.int32)
+
+idx = fast_topk_v2(score, lengths, K)  # [B, K] int32
+torch.cuda.synchronize()
+
+# validity: in range, no duplicates per row
+assert 0 <= int(idx.min()) and int(idx.max()) < L
+srt = idx.long().sort(dim=1).values
+assert not (srt[:, 1:] == srt[:, :-1]).any(), "duplicate indices in a row"
+
+# tie-robust comparison: the multiset of selected scores must equal torch.topk's
+got = score.gather(1, idx.long()).sort(dim=1, descending=True).values
+ref = torch.topk(score, K, dim=1, sorted=True).values
+row_wrong = (got != ref).any(dim=1)
+
+
+def multiset_excess(a, b):
+    # Exact count of selected values absent from the reference multiset
+    # (a, b: equal-length lists sorted descending; two-pointer merge).
+    i = j = excess = 0
+    la, lb = len(a), len(b)
+    while i < la and j < lb:
+        if a[i] == b[j]:
+            i += 1
+            j += 1
+        elif a[i] > b[j]:
+            excess += 1
+            i += 1
+        else:
+            j += 1
+    return excess + (la - i)
+
+
+excess_per_row = torch.tensor(
+    [multiset_excess(got[r].tolist(), ref[r].tolist()) for r in range(B)],
+    device=row_wrong.device,
+)
+
+# mechanism: population of the coarse-histogram bucket holding the k-th value.
+# convert_to_uint8() in topk.cu: fp16 bit pattern, sign-flipped, high byte.
+bits = score.to(torch.float16).view(torch.int16).to(torch.int32) & 0xFFFF
+key = torch.where(bits & 0x8000 != 0, bits ^ 0xFFFF, bits | 0x8000)
+bins = (key >> 8) & 0xFF
+kth_idx = torch.topk(score, K, dim=1).indices[:, -1:]
+kth_bin = bins.gather(1, kth_idx.long())
+bucket_pop = (bins == kth_bin).sum(dim=1)
+
+print(f"shape: {B} rows x {L} cols, k={K}")
+print(
+    f"threshold-bucket population per row: min={int(bucket_pop.min())} "
+    f"median={int(bucket_pop.median())} max={int(bucket_pop.max())} "
+    f"(candidate buffer capacity: 4096)"
+)
+print(f"rows with wrong top-k set: {int(row_wrong.sum())}/{B}")
+if row_wrong.any():
+    e = excess_per_row[row_wrong]
+    print(
+        f"wrong selections per wrong row (values not in the true top-k"
+        f" multiset): min={int(e.min())} max={int(e.max())}"
+    )
+```
+
+Output on one B200 (same qualitative outcome on repeated runs, with per-row counts varying because the drop is arrival-order dependent):
+
+```
+shape: 64 rows x 262144 cols, k=2048
+threshold-bucket population per row: min=4178 median=4327 max=4448 (candidate buffer capacity: 4096)
+rows with wrong top-k set: 64/64
+wrong selections per wrong row (values not in the true top-k multiset): min=6 max=42
+```
+
+The comparison is tie-robust (it compares selected-score multisets, not index sets, so legitimate ties at the k-th boundary do not count as errors). Control points with the same script: at `L = 65536` (the maximum the unit tests cover) it reports 0/64 wrong rows; at `L = 1048576` it reports 64/64 wrong rows with 98-157 wrong selections per row. Behavior is stable across seeds (tested seeds 0-3).
+
+## Environment
+
+```
+Python: 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]
+CUDA available: True
+GPU 0,1,2,3,4,5,6,7: NVIDIA B200
+GPU 0,1,2,3,4,5,6,7 Compute Capability: 10.0
+CUDA_HOME: /usr/local/cuda
+NVCC: Cuda compilation tools, release 13.3, V13.3.33
+CUDA Driver Version: 590.48.01
+PyTorch: 2.13.0+cu130
+sglang: 0.5.18
+sglang-kernel: 0.4.6.post1+cu130
+flashinfer_python: 0.6.17
+triton: 3.7.1
+transformers: 5.12.1
+numpy: 2.3.5
+```
+

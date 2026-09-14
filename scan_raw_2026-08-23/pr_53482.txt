@@ -1,0 +1,31 @@
+#### PR #53482 [Bugfix][LoRA] Implement get_expert_mapping for Gemma 4 MoE models
+STATE:open merged:no
+## Purpose
+
+Serving **any** LoRA adapter against a **MoE Gemma 4** model currently fails at engine start:
+
+```
+INFO  [utils.py:101] MoE model detected. Using fused MoE LoRA implementation.
+AttributeError: To support LoRA for MoE model, 'get_expert_mapping' must be implemented
+```
+
+`LoRAModelManager` calls `get_expert_mapping()` on MoE models. `Gemma4Model`, `Gemma4ForCausalLM` and `Gemma4ForConditionalGeneration` don't implement it — although all three already declare `SupportsLoRA`, and `Gemma4ForCausalLM` also declares `MixtureOfExperts`.
+
+The mapping itself **already exists**: `Gemma4Model.load_weights` builds it as a local, in exactly the `(param_name, weight_name, expert_id, shard_id)` shape the hook returns. This PR exposes it as a method, has `load_weights` call it so the two cannot diverge, and delegates from the two top-level classes — the pattern `qwen3_moe.py`, `deepseek_v2.py`, `glm4_moe.py` and `gpt_oss.py` already follow.
+
+Fixes #53470.
+
+Related but **separate**: #39815 / #39816 (module aliasing zeroing LoRA weights) and #41754. Those cause a *silently inert* adapter once the engine is running; this one is a hard failure before it starts. On a MoE Gemma 4 you need both.
+
+## Test Plan
+
+- `unsloth/gemma-4-26b-a4b-it` (Gemma 4 26B-A4B, 128 experts), r=16 adapter
+- NVIDIA GB10 (DGX Spark), aarch64, sm_121
+- `vllm serve <model> --enable-lora --max-lora-rank 16 --lora-modules test=/adapter`
+- Before: `AttributeError` at engine start, nothing serves
+- After: engine starts, adapter loads, generations differ from base
+
+## Test Result
+
+Engine starts and serves normally.
+

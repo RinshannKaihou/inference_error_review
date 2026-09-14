@@ -1,0 +1,4 @@
+TOTAL: 2
+
+11165|[bug] [precision] tl.softmax reduction followed by floor/exp disagrees with PyTorch|https://github.com/triton-lang/triton/issues/11165|2026-08-04T12:14:49Z
+11147|[FRONTEND] Generate each loop body once instead of 2^depth times|https://github.com/triton-lang/triton/pull/11147|2026-08-02T06:24:02Z

@@ -1,0 +1,102 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/52767",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/52767/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/52767/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/52767/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/52767",
+  "id": 5182305368,
+  "node_id": "I_kwDOI7xefs8AAAABNOO0WA",
+  "number": 52767,
+  "title": "[Bug]: MTP spec decode still advances the grammar matcher after termination when a structural tag is built (residual after #44297)",
+  "user": {
+    "login": "datanerdie",
+    "id": 7207924,
+    "node_id": "MDQ6VXNlcjcyMDc5MjQ=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/7207924?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/datanerdie",
+    "html_url": "https://github.com/datanerdie",
+    "followers_url": "https://api.github.com/users/datanerdie/followers",
+    "following_url": "https://api.github.com/users/datanerdie/following{/other_user}",
+    "gists_url": "https://api.github.com/users/datanerdie/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/datanerdie/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/datanerdie/subscriptions",
+    "organizations_url": "https://api.github.com/users/datanerdie/orgs",
+    "repos_url": "https://api.github.com/users/datanerdie/repos",
+    "events_url": "https://api.github.com/users/datanerdie/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/datanerdie/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "closed",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-08-18T13:25:50Z",
+  "updated_at": "2026-08-18T21:21:45Z",
+  "closed_at": "2026-08-18T21:21:45Z",
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\nvLLM **v0.27.1**, Qwen3.6-27B-FP8, TP=2 (2× RTX 3090), `--tool-call-parser qwen3_coder`,\nserved via `/v1/chat/completions`. Spec decode enabled with\n`--speculative-config {\"method\":\"mtp\",\"num_speculative_tokens\":3}`.\n\n### Describe the bug\n\nWhen a structural tag is built for tool calling **and** MTP spec decode is enabled, the\ngrammar matcher is still handed a token after it has terminated:\n\n```\n/project/cpp/grammar_matcher.cc:612: Warning: The matcher has terminated after\naccepting the stop token, but is trying to accept new token with id 198.\n```\n\nThis looks like a **residual of #44006 / #44297** rather than a regression of it. That fix\n(\"Constrain bitmask and trim grammar advance at the reasoning boundary\", merged 2026-07-04)\nis an ancestor of v0.27.1, and the fatal half is indeed gone — no `Failed to advance FSM`,\nno `grammar rejected tokens`, no terminated requests, no 500s. But token **198** is the same\ntoken that appears in that issue's `grammar rejected tokens [198, 248069]`, and it is still\nreaching a matcher that has already accepted the stop token.\n\n### Conditions\n\nTwo things must hold together. Either alone is silent.\n\n1. A structural tag is actually built — i.e. `get_model_structural_tag()` does **not**\n   return early. That needs `strict: true` on some tool, or a `tool_choice` other than\n   `auto`/`none`.\n2. Spec decode is enabled.\n\n3 tools, 3 trials per arm, walking that gate. Only `--speculative-config` differs between\nthe two columns; nothing else changed:\n\n| `strict` | `tool_choice` | structural tag | warnings, MTP on | MTP off |\n|---|---|---|---|---|\n| absent | `auto` | skipped | 0 | 0 |\n| `false` | `auto` | skipped | 0 | 0 |\n| `true` | `auto` | **built** | 3 | 0 |\n| absent | `required` | **built** | 6 | 0 |\n| `true` | `required` | **built** | 6 | 0 |\n| absent | named fn | **built** | 6 | 0 |\n| | | **total** | **21** | **0** |\n\n### Impact\n\nModest, and I want to be accurate about it: **the tool calls themselves were correct 3/3 in\nall twelve arms in both configurations** (36 requests, worker healthy throughout). At this\npayload size this is log noise plus wasted matcher work, not wrong output. I have not tried\nto find a size or shape where it becomes user-visible, so I cannot say it stays harmless.\n\nFiling it because it sits in the code path a recently-fixed fatal bug came from, and the\nwarning suggests the trim at the reasoning boundary is not covering every path that advances\nthe grammar under speculative decoding.\n\n### Reproduce\n\nServe the model with `--tool-call-parser qwen3_coder` and\n`--speculative-config {\"method\":\"mtp\",\"num_speculative_tokens\":3}`, then send any\ntool-calling request that builds a structural tag — simplest is one tool with\n`\"strict\": true` and `tool_choice: \"auto\"` — and watch the server log. Remove\n`--speculative-config`, change nothing else, and the warnings stop.\n\nReported separately from #52741, which is about `strict` being rendered into the prompt and\nis unrelated to decoding; raised there by @gaby, who is seeing these warnings independently.\n",
+  "closed_by": {
+    "login": "sfeng33",
+    "id": 200688931,
+    "node_id": "U_kgDOC_ZFIw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/200688931?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/sfeng33",
+    "html_url": "https://github.com/sfeng33",
+    "followers_url": "https://api.github.com/users/sfeng33/followers",
+    "following_url": "https://api.github.com/users/sfeng33/following{/other_user}",
+    "gists_url": "https://api.github.com/users/sfeng33/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/sfeng33/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/sfeng33/subscriptions",
+    "organizations_url": "https://api.github.com/users/sfeng33/orgs",
+    "repos_url": "https://api.github.com/users/sfeng33/repos",
+    "events_url": "https://api.github.com/users/sfeng33/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/sfeng33/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/52767/reactions",
+    "total_count": 1,
+    "+1": 1,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/52767/timeline",
+  "performed_via_github_app": null,
+  "state_reason": "completed",
+  "pinned_comment": null
+}

@@ -1,0 +1,15 @@
+2846|Update github/gh-aw-actions action to v0.84.4|https://github.com/AlphaSphereDotAI/chattr/pull/2846|2026-08-04T22:30:44Z|closed|github-actions,ci
+51082|[Bug]: TurboQuant hybrid model crashes at determine_available_memory with 'Unknown cache dtype: auto' on v0.25.0+|https://github.com/vllm-project/vllm/pull/51082|2026-08-04T21:34:13Z|open|bug,quantization
+56|Dev|https://github.com/rinaahmd/PolyAIFursa-Private/pull/56|2026-08-04T20:31:43Z|closed|
+2291|Prove LFM2.5-2.6B (JANG_6M + MXFP8) live and repin vMLX to the short-conv cache fixes|https://github.com/osaurus-ai/osaurus/pull/2291|2026-08-04T20:23:50Z|closed|pending release
+45|Validation track — DeepSeek-V4-Flash full-model out-of-core on 24 GB CUDA|https://github.com/murillo128/k3-out-of-core/issues/45|2026-08-04T20:19:55Z|closed|
+21|feat: engine-level cache_namespace tag to prevent cross-runtime KV replay|https://github.com/local-inference-lab/LMCache/pull/21|2026-08-04T20:17:31Z|open|
+210|Round-trip LFM2 short-conv prefix-cache state through disk and paged restore|https://github.com/osaurus-ai/vmlx-swift/pull/210|2026-08-04T19:48:19Z|closed|
+54|Dev|https://github.com/rinaahmd/PolyAIFursa-Private/pull/54|2026-08-04T19:15:44Z|closed|
+2840|merge queue: checking main (93db24e) and #2838 together|https://github.com/AlphaSphereDotAI/chattr/pull/2840|2026-08-04T18:53:14Z|closed|
+2837|Update qdrant/qdrant:latest Docker digest to 057ee3a|https://github.com/AlphaSphereDotAI/chattr/pull/2837|2026-08-04T18:44:21Z|closed|github-actions,docker-compose,ci
+2|chore(deps): bump undici, jest-environment-miniflare, miniflare and wrangler|https://github.com/Kyure-A/logTranslatorWorkers/pull/2|2026-08-04T18:11:25Z|open|dependencies,javascript
+26|docs: LMCache feasibility analysis + DSpark 0731 upgrade sync + cognee retest|https://github.com/kostadis/dgx-fun/pull/26|2026-08-04T17:57:17Z|closed|
+9224|Length-prefix Badger index key fields to prevent collisions|https://github.com/jaegertracing/jaeger/pull/9224|2026-08-04T17:51:15Z|open|bug,area/storage,storage/badger
+292|Pipeline-owned versioned KV snapshots, zero-wake consumers, live preopen capture & tests|https://github.com/RRJ00699/aacapitalv2/pull/292|2026-08-04T17:26:26Z|closed|codex
+33579|[Bug] DSPARK/DFLASH spec v2 at page_size=1: req_to_token row too narrow for the decode reserve — silent KV slot leak at the context boundary|https://github.com/sgl-project/sglang/issues/33579|2026-08-04T17:21:13Z|open|

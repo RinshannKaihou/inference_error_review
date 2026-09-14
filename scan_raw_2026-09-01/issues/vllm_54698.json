@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54698",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54698/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54698/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54698/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54698",
+  "id": 5307893484,
+  "node_id": "I_kwDOI7xefs8AAAABPGAG7A",
+  "number": 54698,
+  "title": "[Bug]: EngineCore hangs indefinitely in torch.xpu.graphs.replay() under concurrent load on Intel Arc B70 (Battlemage)",
+  "user": {
+    "login": "aangelinsf",
+    "id": 194045,
+    "node_id": "MDQ6VXNlcjE5NDA0NQ==",
+    "avatar_url": "https://avatars.githubusercontent.com/u/194045?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/aangelinsf",
+    "html_url": "https://github.com/aangelinsf",
+    "followers_url": "https://api.github.com/users/aangelinsf/followers",
+    "following_url": "https://api.github.com/users/aangelinsf/following{/other_user}",
+    "gists_url": "https://api.github.com/users/aangelinsf/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/aangelinsf/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/aangelinsf/subscriptions",
+    "organizations_url": "https://api.github.com/users/aangelinsf/orgs",
+    "repos_url": "https://api.github.com/users/aangelinsf/repos",
+    "events_url": "https://api.github.com/users/aangelinsf/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/aangelinsf/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6775085627,
+      "node_id": "LA_kwDOI7xefs8AAAABk9OaOw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/intel-gpu",
+      "name": "intel-gpu",
+      "color": "D4C5F9",
+      "default": false,
+      "description": "Related to Intel GPU"
+    },
+    {
+      "id": 9988761457,
+      "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+      "name": "quantization",
+      "color": "62bfab",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-01T04:43:18Z",
+  "updated_at": "2026-09-01T04:54:55Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\n```\nvLLM version: 0.27.2rc1.dev77+gac7509e2b\ntorch: 2.13.0+xpu\nGPU: Intel(R) Arc(TM) Pro B70 Graphics (Battlemage), single device\nBackend: native torch XPU (no IPEX installed)\nModel: Qwen3-30B-A3B-class model, GPTQ Int4, served as \"qwen38\"\nLaunch flags (relevant):\n  vllm serve /model --quantization gptq --dtype float16 \\\n    --max-model-len 110000 --gpu-memory-utilization 0.88 \\\n    --kv-cache-dtype fp8 --max-num-seqs 16 --max-num-batched-tokens 9216 \\\n    --enable-auto-tool-choice --tool-call-parser qwen3_xml \\\n    --reasoning-parser qwen3 --enable-log-requests\n  (speculative decoding / MTP toggled via an env var wrapper around vllm serve;\n   both MTP-on and MTP-off configurations reproduce this issue)\n```\n\n### Model Input Dumps\n\nNot applicable — this is a hang, not a crash/incorrect-output bug, so there is no failing request payload to attach. Happy to capture one if it would help.\n\n### 🐛 Describe the bug\n\nUnder sustained concurrent load (2 agentic API clients issuing overlapping long-running\nchat completions against the same server), the vLLM EngineCore process periodically\nenters a genuine infinite spin inside `torch.xpu.graphs.replay()` (the CUDA/XPU-graph\nreplay call), pegging one CPU core at 100% and never returning. The server stops\nresponding to new requests; from the outside this looks like a hang, and our\n`llama-swap`-based reverse proxy eventually kills and restarts the whole backend\nservice after its health probe (a real inference call) itself gets stuck behind the\nspin.\n\nThis has recurred roughly every 10–25 minutes of concurrent-load runtime over\nmultiple independent sessions on this box, on both an MTP-enabled and an MTP-disabled\nconfiguration, and is not correlated with `vllm:num_preemptions_total` (confirmed 0 at\nthe moment of at least one capture) or KV-cache eviction — i.e. it is not simply\n\"ran out of KV cache and got stuck recovering.\" It occurs while other engine threads\nare otherwise idle (`Thread-1`/`Thread-2` housekeeping threads shown idle in every\ncapture below).\n\nWe confirmed this is a genuine spin, not a slow-but-progressing call, by taking\nrepeated `py-spy dump` snapshots of the same EngineCore PID several seconds apart:\nthe captured Python frame is byte-identical across snapshots, and `/proc/<pid>/stat`\ncumulative CPU ticks climb steadily between snapshots (e.g. one PID: 55960 → 124899 →\n263597 → 293561 ticks across four captures ~10–70 min apart, same top frame every time).\n\n**Two distinct stack-trace variants of the same underlying `replay()` spin have been\nobserved** on this box, depending on whether speculative decoding (MTP) is enabled:\n\n**Variant A — via the MTP/speculative-decode draft-proposal path:**\n```\nThread (active): \"MainThread\"\n    replay (torch/xpu/graphs.py:107)\n    __call__ (vllm/compilation/cuda_graph.py:360)\n    execution_fn (<string>:10)\n    __call__ (vllm/compilation/caching.py:225)\n    forward (vllm/model_executor/models/qwen3_5_mtp.py:284)\n    __call__ (torch/_dynamo/aot_compile.py:244)\n    __call__ (vllm/compilation/decorators.py:520)\n    propose (vllm/v1/spec_decode/llm_base_proposer.py:755)\n    propose_draft_token_ids (vllm/v1/worker/gpu_model_runner.py:5366)\n    propose_draft_token_ids (vllm/v1/worker/gpu_model_runner.py:4718)\n```\n\n**Variant B — via the regular (non-speculative) decode forward path, observed after\ndisabling MTP as a mitigation attempt:**\n```\nThread (active): \"MainThread\"\n    replay (torch/xpu/graphs.py:107)\n    __call__ (vllm/compilation/cuda_graph.py:360)\n    _model_forward (vllm/v1/worker/gpu_model_runner.py:3970)\n    execute_model (vllm/v1/worker/gpu_model_runner.py:4554)\n    decorate_context (torch/utils/_contextlib.py:124)\n    execute_model (vllm/v1/worker/gpu_worker.py:1086)\n    decorate_context (torch/utils/_contextlib.py:124)\n    execute_model (vllm/v1/worker/worker_base.py:351)\n    run_method (vllm/v1/serial_utils.py:510)\n    collective_rpc (vllm/v1/executor/uniproc_executor.py:109)\n```\n\nBoth bottom out at the identical frame: `replay (torch/xpu/graphs.py:107)` called from\n`vllm/compilation/cuda_graph.py:360`. This strongly suggests the bug is in the XPU\ngraph-replay call itself (or the state it depends on), not in either calling path —\nMTP just changes which code path reaches it first/more often.\n\n**Mitigation tried:** disabling MTP (speculative decoding) reduces frequency and\nappears to make the spin less likely to require a full service restart to recover\nfrom, and improves realized end-to-end throughput under concurrent load (measured\n~44% higher tokens/sec over a wall-clock window, accounting for outage time), but does\n**not** eliminate the spin — Variant B above was captured with MTP fully disabled.\n\n**Independent third-party corroboration:** a public benchmarking log for the same\nGPU (`steveseguin/b70-optimization-lab`, README) documents XPU-graph + MTP\nproducing corrupted/zero-acceptance output on this hardware generation:\n> `MTP1 + XPU graph | 7.63 tok/s | 0.00 acceptance | corrupt (0/25) - do not use`\n> `MTP off, XPU graph on (two boots) | 30.22 / 30.26 tok/s | - | faithful (23/25, within boot envelope)`\n\nThat log documents output corruption specifically with MTP+graph, which is a\ndifferent symptom (wrong output vs. our hang) but points at the same suspect\ncomponent (XPU graph replay interacting with speculative decoding) on the same GPU\nfamily, and independently supports MTP+graph being unreliable on Battlemage.\n\nRelated-but-not-identical issues we found and ruled out as duplicates:\n- vllm-project/vllm#48327 — same class of Intel-XPU CUDA-graph-replay issue, but\n  reported as producing garbage output, not a hang.\n- pytorch/pytorch#187277 — XPU graph replay crash (not a spin) on similar hardware.\n\nNeither exactly matches a genuine infinite spin with climbing CPU and no crash/error,\nso filing this as a distinct report rather than a duplicate.\n\n### Steps to reproduce\n\n1. Serve a GPTQ-quantized model on a single Intel Arc Pro B70 (Battlemage) via vLLM's\n   native XPU backend, with CUDA/XPU graph capture enabled (default), `--kv-cache-dtype fp8`.\n2. Drive sustained concurrent load: 2+ long-running agentic/chat-completion clients\n   issuing overlapping requests continuously for tens of minutes.\n3. Periodically (observed every ~10–25 min of concurrent runtime), the EngineCore\n   process's MainThread enters `torch.xpu.graphs.replay()` and never returns; CPU\n   usage for that thread pegs at 100% indefinitely. Confirm via repeated `py-spy dump`\n   of the EngineCore PID showing an identical frame with climbing `/proc/<pid>/stat`\n   CPU ticks across snapshots taken minutes apart.\n4. The server stops answering any new request; recovery currently requires a full\n   process restart (nothing short of restart has been found to un-stick it).\n\n### Before submitting a new issue\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54698/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54698/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

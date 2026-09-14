@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55798",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55798/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55798/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55798/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/55798",
+  "id": 5390434153,
+  "node_id": "I_kwDOI9Wqc88AAAABQUt_aQ",
+  "number": 55798,
+  "title": "[Bug] ttnn.softplus (float32) returns +/-inf, NaN and values up to 3.28e38 for beta*x below -8.72e6, where the exact result is 0",
+  "user": {
+    "login": "badnikhil",
+    "id": 72620320,
+    "node_id": "MDQ6VXNlcjcyNjIwMzIw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/72620320?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/badnikhil",
+    "html_url": "https://github.com/badnikhil",
+    "followers_url": "https://api.github.com/users/badnikhil/followers",
+    "following_url": "https://api.github.com/users/badnikhil/following{/other_user}",
+    "gists_url": "https://api.github.com/users/badnikhil/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/badnikhil/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/badnikhil/subscriptions",
+    "organizations_url": "https://api.github.com/users/badnikhil/orgs",
+    "repos_url": "https://api.github.com/users/badnikhil/repos",
+    "events_url": "https://api.github.com/users/badnikhil/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/badnikhil/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5150031476,
+      "node_id": "LA_kwDOI9Wqc88AAAABMvc-dA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 7139963093,
+      "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+      "name": "community",
+      "color": "2DEB44",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-08T18:26:36Z",
+  "updated_at": "2026-09-08T18:42:25Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Describe the bug\n\n`ttnn.softplus(x, beta, threshold)` in `float32` returns `+inf`, `NaN` and finite values as large as\n`3.28e38` once `beta * x` falls below about `-8.72e6`, where the exact result has long since\nunderflowed to exactly `0`. `ttnn.softplus(-1e7)` is `+inf`; `ttnn.softplus(-8.78182e6)` is\n`0.715743`. About **8.4 million float32 bit patterns** — essentially all of the binade\n`-[2^23, 2^24)` and 4% of `-[2^24, 2^25)` — are affected at `beta = 1`, and the band scales as\n`1/beta`.\n\nThe tail of the FP32 residual is evaluated by `softplus_exp_negative`\n([`ckernel_sfpu_softplus.h#L60-L90`](https://github.com/tenstorrent/tt-metal/blob/main/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu/ckernel_sfpu_softplus.h#L60-L90),\nthe Wormhole copy is byte-identical), which computes `z = -a * INV_LN2` and passes it **unclamped**\nto `_sfpu_round_to_nearest_int32_`\n([`ckernel_sfpu_exp.h#L299`](https://github.com/tenstorrent/tt-metal/blob/main/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu/ckernel_sfpu_exp.h#L299)).\nThat helper is the Hacker's-Delight round-to-nearest trick and its magic constant\n`c231 = 0x4B400000` (`2^23 + 2^22`) is only valid while `z + c231` stays inside `c231`'s own binade,\ni.e. `|z| <= 2^22`. Once `z < -c231` the `as<vInt>(tmp) - as<vInt>(c231)` difference comes back a\nlarge **positive** integer, and\n\n```cpp\nsfpi::vInt new_exp = p_exp + k_int;\nsfpi::vFloat result = 0.0f;\nv_if(new_exp > 0) { result = sfpi::setexp(poly, new_exp); }\nv_endif;\n```\n\nwrites it straight into the 8-bit exponent field. The `new_exp > 0` flush-to-zero guard is useless\nhere precisely because `k_int` has the wrong sign.\n\nEvery other caller of the same helper bounds its argument; `softplus` is the one that does not:\n\n| caller | guard |\n|---|---|\n| [`ckernel_sfpu_xielu.h#L25`](https://github.com/tenstorrent/tt-metal/blob/main/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu/ckernel_sfpu_xielu.h#L25) | `z = sfpi::max(z, -126.5f)` — added as the fix for #54046 |\n| `ckernel_sfpu_unary_power.h#L161,L201` | `z = sfpi::max(z, -0x7e.ffff8p0f)` plus `v_if(z >= 128) result = inf` |\n| `ckernel_sfpu_binary_pow.h#L242,L258` | the same clamp and an explicit exponent bound |\n| `ckernel_sfpu_gelu.h` | only reached on the bounded `(-13.375, -5]` branch |\n| `ckernel_sfpu_tanh_derivative.h` | only reached below `TAIL_REGION_LIMIT ~ 45` |\n| **`ckernel_sfpu_softplus.h#L68`** | **none** |\n\n### Repro\n\n```python\nimport torch, ttnn\n\ndevice = ttnn.open_device(device_id=0)\nx = torch.tensor([[-8.78182e6, -9.0e6, -1.0e7, -1.2e7, -1.6e7, -1.7432e7]], dtype=torch.float32)\nt = ttnn.from_torch(x, dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\nprint(ttnn.to_torch(ttnn.softplus(t, beta=1.0, threshold=20.0)))\n# tensor([[7.1574e-01, 1.6779e-10,        inf, 2.3656e-27,        inf, 5.5537e-38]])\nprint(torch.nn.functional.softplus(x, beta=1.0, threshold=20.0))\n# tensor([[0., 0., 0., 0., 0., 0.]])\n```\n\n### Observed vs expected (float32, `beta=1`, `threshold=20`)\n\nThe exact `softplus` is `0` for every row, so the ULP column is the sign-magnitude distance from\n`0.0` to the returned value.\n\n| input | input bits | got | got bits | want | ULP |\n|---|---|---|---|---|---|\n| -8781820 | `0xCB05FFFC` | 0.715743 | `0x3F373AEF` | 0 | 1,060,584,175 |\n| -8767488 | `0xCB05C800` | +inf | `0x7F800000` | 0 | 2,139,095,040 |\n| -8768512 | `0xCB05CC00` | NaN | — | 0 | — |\n| -9000000 | `0xCB095440` | 1.67788e-10 | `0x2F387C20` | 0 | 792,230,944 |\n| -1.0e7 | `0xCB189680` | +inf | `0x7F800000` | 0 | 2,139,095,040 |\n| -1.2e7 | `0xCB371B00` | 2.365619e-27 | `0x133B6C76` | 0 | 322,661,494 |\n| -12336128 | `0xCB3C3C00` | 3.28091949e+38 | `0x7F76D436` | 0 | 2,138,494,006 |\n| -1.6e7 | `0xCB742400` | +inf | `0x7F800000` | 0 | 2,139,095,040 |\n| -1.7432e7 | `0xCB84FEE0` | 5.553699e-38 | `0x01972FA2` | 0 | 26,685,346 |\n\nSweeping all 65,536 bfloat16 bit patterns promoted to `float32`, counting only inputs whose exact\n`softplus` underflows to `0`:\n\n| beta | nonzero where the answer is 0 | of which `inf` | band in `x` | max finite \\|got\\| |\n|---|---|---|---|---|\n| 1 | 128 | 44 | [-1.74326e7, -8.78182e6] | 4.566e37 |\n| 0.5 | 128 | 44 | [-3.48652e7, -1.75636e7] | 9.132e37 |\n| 2 | 128 | 44 | [-8.71629e6, -4.39091e6] | 2.283e37 |\n| 10 | 126 | 46 | [-1.7367e6, -872448] | 6.928e34 |\n| 100 | 125 | 44 | [-174080, -87552] | 4.560e33 |\n\nThe band is exactly `beta * x` below `-c231 * ln(2) = -8.72e6`, so it moves with `1/beta` but never\ngoes away. A dense per-binade `float32` scan (8,192 mantissa samples per binade, `beta = 1`):\n\n| x | nonzero | inf | NaN | max \\|got\\| |\n|---|---|---|---|---|\n| -[2^22, 2^23) | 0 / 8192 | 0 | 0 | 0 |\n| **-[2^23, 2^24)** | **7,856 / 8,192** | 2,625 | 62 | **3.28092e38** |\n| **-[2^24, 2^25)** | 326 / 8,192 | 109 | 2 | 6.11954e37 |\n| -[2^25, 2^30) | 0 / 8192 | 0 | 0 | 0 |\n\n### Affected range\n\n`beta * x` in roughly `[-3.4e7, -8.72e6]`, i.e. about 8.4 million float32 bit patterns at\n`beta = 1`. `float32` only: the bfloat16 branch clamps its residual to `0` past\n`SOFTPLUS_POLY_BOUNDARY` and never reaches the exp tail (that clamp is the subject of #51866).\n\n### Expected behavior\n\n`softplus(x)` tends to `exp(beta * x) / beta`, which is below the smallest normal float long before\n`beta * x = -8.7e6`, so the kernel must return exactly `0` there — as it already does for\n`beta * x < -3.4e7` and as `torch.nn.functional.softplus` does everywhere.\n\n### Which architectures\n\nBoth Wormhole and Blackhole. `tt_metal/hw/ckernels/{wormhole_b0,blackhole}/metal/llk_api/llk_sfpu/ckernel_sfpu_softplus.h`\nare byte-identical, so both carry the defect.\n\n### Why the existing tests miss it\n\n`run_activation_softplus_test`\n([`test_activation.py#L171-L187`](https://github.com/tenstorrent/tt-metal/blob/main/tests/ttnn/unit_tests/operations/eltwise/test_activation.py#L171-L187))\nbuilds its stimulus with `torch.rand((h, w), dtype=torch.bfloat16)` — bfloat16 only, inputs in\n`[0, 1)`, checked with PCC 0.99. `test_softplus_threshold_boundary` uses thresholds of 4 or below,\nand `test_eltwise_softplus_inf.py` samples `uniform_(-100, 100)` in bfloat16. Nothing in the suite\nfeeds a large negative float32 input.\n\n### How it was verified\n\nttsim Blackhole v1.10.6 (`TT_METAL_SIMULATOR=libttsim_bh.so`, slow dispatch), exhaustive bfloat16\nbit-pattern sweep promoted to `float32` at `beta` = 0.5 / 1 / 2 / 10 / 100, plus a dense\nper-binade `float32` scan of `-[2^21, 2^30)` at 8,192 mantissa samples per binade. The golden is\n`torch.nn.functional.softplus` evaluated in `float64`, with results below `2^-126` flushed to zero\non both sides.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55798/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55798/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

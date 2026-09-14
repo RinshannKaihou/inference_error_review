@@ -1,0 +1,110 @@
+{
+  "url": "https://api.github.com/repos/huggingface/transformers/issues/48057",
+  "repository_url": "https://api.github.com/repos/huggingface/transformers",
+  "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/48057/labels{/name}",
+  "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/48057/comments",
+  "events_url": "https://api.github.com/repos/huggingface/transformers/issues/48057/events",
+  "html_url": "https://github.com/huggingface/transformers/issues/48057",
+  "id": 5180632190,
+  "node_id": "I_kwDOCUB6oc8AAAABNMosfg",
+  "number": 48057,
+  "title": "Qwen2-VL get_rope_index shape mismatch even with batch_size=1 (transformers 5.15.0)",
+  "user": {
+    "login": "changwangss",
+    "id": 24910407,
+    "node_id": "MDQ6VXNlcjI0OTEwNDA3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/24910407?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/changwangss",
+    "html_url": "https://github.com/changwangss",
+    "followers_url": "https://api.github.com/users/changwangss/followers",
+    "following_url": "https://api.github.com/users/changwangss/following{/other_user}",
+    "gists_url": "https://api.github.com/users/changwangss/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/changwangss/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/changwangss/subscriptions",
+    "organizations_url": "https://api.github.com/users/changwangss/orgs",
+    "repos_url": "https://api.github.com/users/changwangss/repos",
+    "events_url": "https://api.github.com/users/changwangss/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/changwangss/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 3817266200,
+      "node_id": "MDU6TGFiZWwzODE3MjY2MjAw",
+      "url": "https://api.github.com/repos/huggingface/transformers/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": null
+    }
+  ],
+  "state": "closed",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-08-18T10:10:02Z",
+  "updated_at": "2026-08-18T11:16:11Z",
+  "closed_at": "2026-08-18T11:16:11Z",
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### System Info\n\nLinux ubuntu 5090d\n\n### Who can help?\n\n @zucchini-nlp \n\n### Information\n\n- [x] The official example scripts\n- [x] My own modified scripts\n\n### Tasks\n\n- [x] An officially supported task in the `examples` folder (such as GLUE/SQuAD, ...)\n- [x] My own task or dataset (give details below)\n\n### Reproduction\n\ntransformers: 5.15.0\nPython: 3.13\nPyTorch: 2.13\nGPU: 5090d\n\nMinimal Reproduction (single image, batch_size=1):\n```\nfrom PIL import Image\nimport torch\nfrom transformers import Qwen2VLForConditionalGeneration, AutoProcessor\n\nmodel_name = \"Qwen/Qwen2-VL-2B-Instruct\"\nprocessor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)\nmodel = Qwen2VLForConditionalGeneration.from_pretrained(model_name, device_map=\"auto\", trust_remote_code=True)\n\n# Single image\nimage = Image.new(\"RGB\", (224, 224))\nconversation = [{\"role\": \"user\", \"content\": [{\"type\": \"image\"}, {\"type\": \"text\", \"text\": \"Describe this image.\"}]}]\ntext = processor.apply_chat_template(conversation, add_generation_prompt=True)\n\ninputs = processor(text=[text], images=[image], padding=True, return_tensors=\"pt\").to(model.device)\n\nwith torch.no_grad():\n    outputs = model.generate(**inputs, max_new_tokens=50)  # Error here\n```\nError traceback\n````\nRuntimeError: shape mismatch: value tensor of shape [3, 452] cannot be broadcast to indexing result of shape [3, 552]\n```\n\n### Expected behavior\n\ngenerate success.",
+  "closed_by": {
+    "login": "changwangss",
+    "id": 24910407,
+    "node_id": "MDQ6VXNlcjI0OTEwNDA3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/24910407?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/changwangss",
+    "html_url": "https://github.com/changwangss",
+    "followers_url": "https://api.github.com/users/changwangss/followers",
+    "following_url": "https://api.github.com/users/changwangss/following{/other_user}",
+    "gists_url": "https://api.github.com/users/changwangss/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/changwangss/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/changwangss/subscriptions",
+    "organizations_url": "https://api.github.com/users/changwangss/orgs",
+    "repos_url": "https://api.github.com/users/changwangss/repos",
+    "events_url": "https://api.github.com/users/changwangss/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/changwangss/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "reactions": {
+    "url": "https://api.github.com/repos/huggingface/transformers/issues/48057/reactions",
+    "total_count": 1,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 1
+  },
+  "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/48057/timeline",
+  "performed_via_github_app": null,
+  "state_reason": "completed",
+  "pinned_comment": null
+}

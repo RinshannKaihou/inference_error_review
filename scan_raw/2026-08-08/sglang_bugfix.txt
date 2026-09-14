@@ -1,0 +1,42 @@
+TOTAL: 220
+
+#34128 | 2026-08-08 | [Fix] Support transformers >= 4.57 configs for DeepSeek V4
+#34124 | 2026-08-08 | [diffusion] perf_logger: SYNC_STAGE_PROFILING must drain the GPU queue for stage records too (fixes 2-3x inflated DecodingStage readings)
+#34123 | 2026-08-08 | fix(openai): report hidden decode progress in streams
+#34121 | 2026-08-08 | [Diffusion] Fix cache-first fast path accepting a metadata-only snapshot
+#34119 | 2026-08-08 | fix(inkling): preserve ordered reasoning blocks
+#34116 | 2026-08-08 | [Fix] Keep token_type_ids aligned across mixed and padded batches
+#34115 | 2026-08-08 | [Fix] Handle mixed precomputed and raw multimodal inputs
+#34109 | 2026-08-08 | [jit_kernel] Fix single-token MoE align namespace
+#34108 | 2026-08-08 | fix(gateway): propagate generated request ID to downstream workers
+#34107 | 2026-08-08 | [diffusion] fix: guard SageAttention SM90 bindings
+#34106 | 2026-08-08 | [jit_kernel] Fix missing JIT kernel namespaces
+#34105 | 2026-08-08 | Fix follow-bootstrap-room routing with reserved DP slots
+#34102 | 2026-08-08 | [Fix] Guard q_b_proj weight probe so DeepSeek AWQ checkpoints load
+#34100 | 2026-08-08 | [Fix] Give the piecewise CUDA graph test stub an `hf_config`
+#34090 | 2026-08-08 | Fix GLM streaming unknown-tool filtering
+#34088 | 2026-08-08 | feat(cache-sim-tee): concurrent ingest sender (fix peak tee-drop / oracle undercount)
+#34077 | 2026-08-08 | [Fix] Fence relay staging writes behind the in-flight forward's tail relay writes
+#34076 | 2026-08-08 | [Fix] Pin overlap batch tensors freed while forward-stream kernels still read them
+#34075 | 2026-08-08 | [Fix] Keep DECODE token-ids logprob entries tensor-typed under no_copy_to_cpu
+#34067 | 2026-08-08 | [Bugfix] Fix batched KV free aliasing
+#34060 | 2026-08-08 | managers/detokenizer_manager: fix spurious eviction in LimitedCapacityDict when updating existing key
+#34055 | 2026-08-08 | [Docker] Fix nightly image version stamp
+#34053 | 2026-08-08 | [Fix] Account resident weight memory in KV sizing
+#34051 | 2026-08-07 | Fix Inkling tool name leaking into content without an opener
+#34043 | 2026-08-07 | [srt] Fix sconv state memory corruption on specdec
+#34035 | 2026-08-07 | [Cherry-pick to release/v0.5.17] fix(PP): size the mamba pool per pipeline stage, not per whole model (#33666)
+#34032 | 2026-08-07 | [Cherry-pick to release/v0.5.17] Fix MXFP4 scale placeholder initialization (#33500)
+#34027 | 2026-08-07 | Fix int32 offset overflow in SM120 page-split kernel
+#34024 | 2026-08-07 | Fix DSpark compact confidence path locked to checkpoint-native gamma
+#34021 | 2026-08-07 | Fix DeepSeek-V4 mHC combine allocating transients in the NCCL symmetric pool
+#34017 | 2026-08-07 | [Fix] Judge the phase-checker device-assert test by its FAIL line, not the exit code
+#34016 | 2026-08-07 | [AMD] Fix weight checking for AITER-shuffled block FP8 weights
+#34013 | 2026-08-07 | fix(qwen3-vl): honor enable_precise_embedding_interpolation on the default ViT path
+#34010 | 2026-08-07 | [ROCm] Fix gfx942 LDS overflow in DSA bf16 decode under dp-attention
+#34006 | 2026-08-07 | Fix Qwen3-MoE producing garbage with the mori a2a backend
+#34002 | 2026-08-07 | Fix/hicache sidecar ok pure mla
+#33995 | 2026-08-07 | [Kimi K3] Fix reasoning parser returning empty content when model skips think channel
+#33990 | 2026-08-07 | [Fix] Normalize array function call outputs in Responses API
+#33988 | 2026-08-07 | fix: load Gemma-4 vision tower unquantized under compressed-tensors
+#33987 | 2026-08-07 | fix(flashinfer): plan with logits_soft_cap so attn capping is not dropped

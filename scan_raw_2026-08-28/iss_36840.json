@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/36840",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/36840",
+  "id": 5276933617,
+  "node_id": "I_kwDOLCAjRs8AAAABOoed8Q",
+  "number": 36840,
+  "title": "TBO unreachable for GLM-5.3-Flash (DSA+mamba hybrid): silent --enable-dp-attention reset + missing Glm5NextDecoderLayer strategy",
+  "user": {
+    "login": "Burlesque1",
+    "id": 11853736,
+    "node_id": "MDQ6VXNlcjExODUzNzM2",
+    "avatar_url": "https://avatars.githubusercontent.com/u/11853736?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Burlesque1",
+    "html_url": "https://github.com/Burlesque1",
+    "followers_url": "https://api.github.com/users/Burlesque1/followers",
+    "following_url": "https://api.github.com/users/Burlesque1/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Burlesque1/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Burlesque1/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Burlesque1/subscriptions",
+    "organizations_url": "https://api.github.com/users/Burlesque1/orgs",
+    "repos_url": "https://api.github.com/users/Burlesque1/repos",
+    "events_url": "https://api.github.com/users/Burlesque1/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Burlesque1/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-08-28T09:46:11Z",
+  "updated_at": "2026-08-28T10:41:57Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Environment\n\n- sglang: `0.0.0.dev1+g033446bb05` (dev build from image 1.0.0.270), editable install at `/sgl-workspace`\n- Hardware: single node, 4x H20 (SM90), NVLink; `--tp-size 4`\n- Model: GLM-5.3-Flash (HF, arch `Glm5NextForConditionalGeneration`) — hybrid DSA + mamba + FP8 MoE (289 experts)\n- Other flags: `--context-length 16384 --mem-fraction-static 0.95 --max-running-requests 40 --moe-runner-backend triton`\n\n## Problem\n\n`--enable-two-batch-overlap` cannot be enabled for this model, and the first failure mode is actively misleading.\n\n### 1. Misleading error: `--enable-dp-attention` is silently reset\n\n```\n--enable-two-batch-overlap\n```\n→\n```\nValueError: When enabling two batch overlap without an EP a2a backend (moe_a2a_backend='none'),\n--enable-dp-attention is required (DeepSeek-V4 non-EP DP TBO path).\n```\n\nAdding the flag it asks for changes nothing:\n\n```\n--enable-two-batch-overlap --enable-dp-attention\n```\n→ the **identical** ValueError.\n\nCause: `_data_parallelism_defaults` post-process in `arg_groups/overrides.py` resets `enable_dp_attention=False` (and `enable_dp_lm_head=False`) whenever `dp_size == 1`, with no warning:\n\n```python\n@register_post_process\ndef _data_parallelism_defaults(view: Any) -> dict:\n    if view.dp_size == 1 and view.ep_join_mode != \"scale\":\n        return {\"enable_dp_attention\": False, \"enable_dp_lm_head\": False}\n    return {}\n```\n\nSo `_check_two_batch_overlap()` then tells the user to add exactly the flag that was passed and silently dropped. Suggest either warning on the silent reset, or an error that names `--dp-size` when TBO is requested with `dp_size == 1`.\n\n### 2. With `--dp-size 4`, capture crashes: `filter_batch` rejects mamba fields\n\nWith `--tp-size 4 --dp-size 4 --enable-dp-attention --enable-two-batch-overlap`, validation passes and the model loads, but decode CUDA graph capture dies on all ranks:\n\n```\nException: 2 errors happen:\nField mamba_track_indices has value, but is not yet supported ...\nField mamba_track_mask has value, but is not yet supported ...\n```\n\n`TboForwardBatchPreparer.filter_batch` gates on a hand-enumerated field list, and GLM-5.3-Flash is a DSA + mamba hybrid whose `ForwardBatch` always carries `mamba_track_indices` / `mamba_track_mask`. TBO is therefore unreachable for this model.\n\nLocally we added the mamba fields to the per-seq slice list in `filter_batch` (slicing by `start_seq_index:end_seq_index`, same as `seq_lens`). The gate then passes, but capture hits the next blocker:\n\n### 3. No TBO operations strategy for `Glm5NextDecoderLayer`\n\n```\nFile \".../batch_overlap/operations_strategy.py\", line 77, in init_new_tbo\n    raise NotImplementedError\n```\n\n`OperationsStrategy.init_new_tbo` dispatches only on `DeepseekV2DecoderLayer`, `Qwen3MoeDecoderLayer`, `MiMoV2DecoderLayer`, `DeepseekV4DecoderLayer`; `Glm5NextDecoderLayer` (plain `nn.Module`, no op_* decomposition) has no strategy. Full TBO support for this hybrid layer (DSA attention + mamba + FP8 MoE) would require an operations decomposition, not a small patch.\n\n## Request\n\n1. Fix the silent reset / misleading error interaction so TBO failure tells users they need `--dp-size` (or warn when `enable_dp_attention` is dropped).\n2. Consider TBO support for `Glm5NextForConditionalGeneration` (DSA + mamba hybrid): `filter_batch` mamba-field handling and an operations strategy for `Glm5NextDecoderLayer`.\n\nRelated: #36829 (EAGLE3/MTP draft for the same model is also blocked).\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

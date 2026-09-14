@@ -1,0 +1,35 @@
+#### PR #53442 [Bugfix] Make BatchedTritonExperts reduction deterministic
+STATE:open merged:no
+## Summary
+
+- make `TopKWeightAndReduceNaiveBatched` deterministic for identical inputs
+- preserve the vectorized expert matching and gather path
+- stage each gathered contribution at its unique `[token, topk_slot]` position
+- use the existing fixed-order `moe_sum` kernel instead of CUDA `index_add_`
+
+Fixes #53430.
+
+## Root cause
+
+The batched reducer gathered contributions in expert-major order and then used
+`output.index_add_(0, t_idx, ...)`. A token routed to multiple experts appears
+multiple times in `t_idx`, so CUDA may concurrently add several BF16 values to
+the same output row. The additions are atomic but their order is not fixed.
+Because floating-point addition is not associative, repeated calls can differ
+in the low bits and those differences can propagate far enough to change a
+greedy argmax.
+
+## Implementation
+
+The reducer now recovers the original top-k slot for every gathered
+token/expert contribution. It writes those contributions to a zero-initialized
+`[num_tokens, topk, hidden_size]` tensor at unique locations and calls the
+existing `moe_sum` kernel. `moe_sum` accumulates each output element in fixed
+top-k order with an FP32 accumulator, avoiding conflicting writes and
+nondeterministic atomic reduction order.
+
+This keeps the single vectorized `nonzero`/gather path and does not restore the
+old per-expert Python loop. The tradeoff is one temporary
+`[num_tokens, topk, hidden_size]` tensor.
+
+

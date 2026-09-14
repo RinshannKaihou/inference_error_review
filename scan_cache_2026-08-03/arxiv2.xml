@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/MxnIzB4ny9YMNPbj1FUzKdV6dNQ</id>
+  <title>arXiv Query: search_query=all:"bit flip" AND all:LLM AND all:weight&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-08-03T23:06:00Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22bit+flip%22+AND+(all:LLM+AND+all:weight)&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>10</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2607.25227v1</id>
+    <title>Decision-Level Hijacking: Injecting Cognitive Bias into Large Language Models via Bit-Flip Attacks</title>
+    <updated>2026-07-28T02:59:32Z</updated>
+    <link href="https://arxiv.org/abs/2607.25227v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.25227v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) have been widely applied in high-stakes decision-making scenarios such as corporate strategy, and users are increasingly relying on their outputs. However, the deep integration of open-source model sharing ecosystems with LLM-powered critical decision-making applications also introduces critical risks: if an attacker can manipulate the model's cognitive stance, they can indirectly influence the judgments and actions of downstream decision-makers. This paper defines such threats as decision-level hijacking. Existing attacks fail to achieve targeted cognitive manipulation without triggering prohibited content or degrading model functionality. To fill this gap, this paper reveals that Bit-Flip Attacks (BFAs) can serve as an attack vector for inducing decision-level hijacking, requiring no real-time interaction or control over the training process, and only a minimal number of weight bits need to be flipped after deployment to achieve stealthy, low-cost, and persistent cognitive manipulation. Therefore, we propose CogBias, a cognitive bias injection framework for LLMs. CogBias converts subjective preferences into optimization signals via a differentiable sentiment evaluator, uses a multi-objective loss to jointly constrain multiple dimensions, and constructs BitScout to locate critical bits, achieving targeted cognitive intervention under an ultra-sparse flip budget. Experiments on Llama-3.2-3B, Mistral-7B, and Qwen2.5-14B, as well as on the commercial recommendation and controversial factual topic scenarios, demonstrate that flipping only a small number of bits stably induces significant stance shifts on target topics, while the impact on non-target tasks and overall output distribution is limited. This work demonstrates that minute perturbations to low-level weight data suffice to undermine the high-level value alignment of LLMs.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-28T02:59:32Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Yu Yan</name>
+    </author>
+    <author>
+      <name>Jiahao Chen</name>
+    </author>
+    <author>
+      <name>Siqi Lu</name>
+    </author>
+    <author>
+      <name>Yongjuan Wang</name>
+    </author>
+    <author>
+      <name>Ziming Zhao</name>
+    </author>
+    <author>
+      <name>Zhaoxuan Li</name>
+    </author>
+    <author>
+      <name>Tianyu Du</name>
+    </author>
+    <author>
+      <name>Qingjun Yuan</name>
+    </author>
+    <author>
+      <name>Shouling Ji</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.17249v2</id>
+    <title>Bit-Flip Vulnerability of Shared KV-Cache Blocks in LLM Serving Systems</title>
+    <updated>2026-06-07T11:31:40Z</updated>
+    <link href="https://arxiv.org/abs/2604.17249v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.17249v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Rowhammer on GPU DRAM has enabled adversarial bit flips in model weights; shared KV-cache blocks in LLM serving systems present an analogous but previously unexamined target. In vLLM's Prefix Caching, these blocks exist as a single physical copy without integrity protection. Using software fault injection under ideal bit targeting, we characterize worst-case severity and identify three properties: (1) Silent divergence - 13 of 16 BF16 bit positions produce coherent but altered outputs, indistinguishable from legitimate responses without a clean baseline. (2) Selective propagation - only requests sharing the targeted prefix are affected. (3) Persistent accumulation - no temporal decay occurs, so cumulative damage grows linearly with subsequent requests. Together, these constitute a threat profile distinct from weight corruption: silent divergence and selective propagation enable detection evasion; persistent accumulation then proceeds unchecked, yielding damage amplification bounded only by how long the block remains cached. A checksum-based countermeasure detects any single-bit corruption at scheduling time, bounding cumulative damage to one batch independent of the block's cache lifetime, with negligible overhead. These results argue for integrity protection of prefix blocks before end-to-end exploitation is demonstrated.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-19T04:31:12Z</published>
+    <arxiv:comment>12 pages, 4 figures. Accepted at SECRYPT 2026 (23rd International Conference on Security and Cryptography). Conference: https://secrypt.scitevents.org/</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Yuji Yamamoto</name>
+    </author>
+    <author>
+      <name>Satoshi Matsuura</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.16382v1</id>
+    <title>Rotated Robustness: A Training-Free Defense against Bit-Flip Attacks on Large Language Models</title>
+    <updated>2026-03-17T11:11:17Z</updated>
+    <link href="https://arxiv.org/abs/2603.16382v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.16382v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Hardware faults, specifically bit-flips in quantized weights, pose a severe reliability threat to Large Language Models (LLMs), often triggering catastrophic model collapses. We demonstrate that this vulnerability fundamentally stems from the spatial alignment between sensitive weight bits and extreme activation outliers, which causes a single hardware fault to be massively amplified. To address this, we propose Rotated Robustness (RoR), a training-free defense utilizing orthogonal Householder transformations. By applying an orthogonal rotation to the activation space, RoR geometrically smooths extreme outliers across all feature dimensions. This mechanism effectively breaks the alignment between outliers and vulnerable weights, mathematically guaranteeing original model accuracy. Extensive empirical evaluations across Llama-2/3, OPT, and Qwen families demonstrate the superior reliability of our approach. Under random bit-flip attacks, RoR reduces the stochastic collapse rate from 3.15\% to 0.00\% on Qwen2.5-7B. Furthermore, under severe targeted attacks with 50 Progressive Bit Search flips, RoR sustains robust reasoning on Llama-2-7B, maintaining a 43.9\% MMLU accuracy that nearly matches its 45.2\% unattacked accuracy, while competing defenses collapse to random guessing. Most notably, against the Single-Point Fault Attack (SPFA) -- the most aggressive targeted threat -- RoR exponentially inflates the attack complexity from a few bits to over 17,000 precise bit-flips. With a negligible storage overhead of 0.31\% and a minimal inference latency increase of 9.1\% on Llama-2-7B, RoR achieves true lossless robustness, providing a practical and highly reliable defense for LLM deployment.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-17T11:11:17Z</published>
+    <arxiv:comment>13 pages, 8 figures. Preprint. Under review at IEEE Transactions on Information Forensics and Security</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Deng Liu</name>
+    </author>
+    <author>
+      <name>Song Chen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2602.17837v1</id>
+    <title>TFL: Targeted Bit-Flip Attack on Large Language Model</title>
+    <updated>2026-02-19T20:59:47Z</updated>
+    <link href="https://arxiv.org/abs/2602.17837v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2602.17837v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models (LLMs) are increasingly deployed in safety and security critical applications, raising concerns about their robustness to model parameter fault injection attacks. Recent studies have shown that bit-flip attacks (BFAs), which exploit computer main memory (i.e., DRAM) vulnerabilities to flip a small number of bits in model weights, can severely disrupt LLM behavior. However, existing BFA on LLM largely induce un-targeted failure or general performance degradation, offering limited control over manipulating specific or targeted outputs. In this paper, we present TFL, a novel targeted bit-flip attack framework that enables precise manipulation of LLM outputs for selected prompts while maintaining almost no or minor degradation on unrelated inputs. Within our TFL framework, we propose a novel keyword-focused attack loss to promote attacker-specified target tokens in generative outputs, together with an auxiliary utility score that balances attack effectiveness against collateral performance impact on benign data. We evaluate TFL on multiple LLMs (Qwen, DeepSeek, Llama) and benchmarks (DROP, GSM8K, and TriviaQA). The experiments show that TFL achieves successful targeted LLM output manipulations with less than 50 bit flips and significantly reduced effect on unrelated queries compared to prior BFA approaches. This demonstrates the effectiveness of TFL and positions it as a new class of stealthy and targeted LLM model attack.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-02-19T20:59:47Z</published>
+    <arxiv:comment>13 pages, 11 figures. Preprint</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Jingkai Guo</name>
+    </author>
+    <author>
+      <name>Chaitali Chakrabarti</name>
+    </author>
+    <author>
+      <name>Deliang Fan</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2512.14715v1</id>
+    <title>How a Bit Becomes a Story: Semantic Steering via Differentiable Fault Injection</title>
+    <updated>2025-12-09T04:04:19Z</updated>
+    <link href="https://arxiv.org/abs/2512.14715v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.14715v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Hard-to-detect hardware bit flips, from either malicious circuitry or bugs, have already been shown to make transformers vulnerable in non-generative tasks. This work, for the first time, investigates how low-level, bitwise perturbations (fault injection) to the weights of a large language model (LLM) used for image captioning can influence the semantic meaning of its generated descriptions while preserving grammatical structure. While prior fault analysis methods have shown that flipping a few bits can crash classifiers or degrade accuracy, these approaches overlook the semantic and linguistic dimensions of generative systems. In image captioning models, a single flipped bit might subtly alter how visual features map to words, shifting the entire narrative an AI tells about the world. We hypothesize that such semantic drifts are not random but differentiably estimable. That is, the model's own gradients can predict which bits, if perturbed, will most strongly influence meaning while leaving syntax and fluency intact. We design a differentiable fault analysis framework, BLADE (Bit-level Fault Analysis via Differentiable Estimation), that uses gradient-based sensitivity estimation to locate semantically critical bits and then refines their selection through a caption-level semantic-fluency objective. Our goal is not merely to corrupt captions, but to understand how meaning itself is encoded, distributed, and alterable at the bit level, revealing that even imperceptible low-level changes can steer the high-level semantics of generative vision-language models. It also opens pathways for robustness testing, adversarial defense, and explainable AI, by exposing how structured bit-level faults can reshape a model's semantic output.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-09T04:04:19Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Zafaryab Haider</name>
+    </author>
+    <author>
+      <name>Md Hafizur Rahman</name>
+    </author>
+    <author>
+      <name>Shane Moeykens</name>
+    </author>
+    <author>
+      <name>Vijay Devabhaktuni</name>
+    </author>
+    <author>
+      <name>Prabuddha Chakraborty</name>
+    </author>
+  </entry>
+</feed>

@@ -1,0 +1,54 @@
+[Bug]: Bare asserts in DeepseekVLV2/DeepseekOCR processors return HTTP 500 (should be 400) and silently corrupt input under `python -O`
+STATE: closed
+BODY:
+### Your current environment
+
+vLLM `main` (b1fbbc2). Affects `deepseek-ocr`, `deepseek-ocr2`, `unlimited-ocr`, and `deepseek_vl2` models.
+
+### 🐛 Describe the bug
+
+`vllm/transformers_utils/processors/deepseek_vl2.py` and `vllm/transformers_utils/processors/deepseek_ocr.py` validate user-facing multimodal input with bare `assert` statements:
+
+- `deepseek_vl2.py:206` — `assert prompt is not None and images is not None`
+- `deepseek_vl2.py:313` — `assert conversation.count(self.image_token) == len(images)`
+- `deepseek_ocr.py:253` — `assert prompt is not None and images is not None`
+- `deepseek_ocr.py:314` — `assert conversation.count(self.image_token) == len(images)`
+
+This is the same class of bug fixed for the DeepSeek V3.2 encoder in #32884 and for the V4 encoder in #53747, but it still exists in the multimodal processors.
+
+Two consequences:
+
+1. **Wrong HTTP status.** `AssertionError` is neither `ValueError` nor `VLLMError`, so `create_error_response` falls through to its `else` branch and returns HTTP 500 instead of HTTP 400 for malformed user input.
+2. **Silent input corruption under `python -O`.** When CPython is run with `-O`, `assert` statements are removed entirely. The image-count check at `tokenize_with_images` is the only guard for the `zip(text_splits, images)` + separate `text_splits[-1]` handling:
+   - `text_splits = conversation.split(self.image_token)` yields `N+1` segments for `N` image tokens.
+   - The loop pairs the first `N` segments with `N` images; `text_splits[-1]` (trailing text) is processed after the loop.
+   - If the counts mismatch and the assert is gone, text segments are silently dropped or duplicated and images are misaligned — corrupting the token sequence with no error.
+
+### Reproduction
+
+```python
+from PIL import Image
+from transformers import AutoTokenizer
+from vllm.transformers_utils.processors.deepseek_ocr import DeepseekOCRProcessor
+
+tok = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-OCR")
+proc = DeepseekOCRProcessor(tokenizer=tok)
+
+img = Image.new("RGB", (100, 100), color="red")
+
+# Image-count mismatch: 2 <image> tokens, 1 image.
+try:
+    proc(prompt="<image> and <image>", images=[img])
+except AssertionError as e:
+    print("AssertionError (-> HTTP 500):", e)
+```
+
+Running the same snippet under `python -O` produces no error and silently emits a corrupted token sequence (the middle text segment is dropped).
+
+### Expected behaviour
+
+Raise `ValueError` (-> HTTP 400) with a clear message, matching #32884 / #53747, and survive `python -O`.
+
+### Suggested fix
+
+Convert the four bare asserts to `ValueError` with descripti

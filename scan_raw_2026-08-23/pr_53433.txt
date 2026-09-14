@@ -1,0 +1,8 @@
+#### PR #53433 [Bugfix] Reject empty bad-word tokenizations
+STATE:open merged:no
+- Reject a `bad_words` entry with `VLLMValidationError` when its required, unprefixed form tokenizes to no tokens.
+- Skip an empty optional space-prefixed encoding while preserving the enforceable unprefixed token sequence.
+- Add GPU-free regressions for an empty required base encoding and an empty optional space-prefixed encoding.
+
+[AMD CI build 12331](https://buildkite.com/vllm/amd-ci/builds/12331/table?jid=01a0281b-bc93-4354-9e97-35cf2397419b&tab=output) exposed an HTTP 500 when Schemathesis supplied a non-whitespace control character in `bad_words`. The SmolVLM tokenizer encoded the base form to an empty list, after which `update_from_tokenizer` indexed that list while processing the space-prefixed form. This should be a structured invalid-request response rather than an internal server error. Validating the tokenizer result closes the tokenizer-specific gap without changing valid bad-word handling or model generation.
+

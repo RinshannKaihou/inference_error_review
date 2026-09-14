@@ -1,0 +1,10 @@
+TOTAL: 8
+
+[47712] config: raise on missing local config file instead of silently falling back to defaults | state=open | created=2026-08-02
+[47572] Fix incorrect documented default for downsample_in_first_stage in RegNetConfig. | state=closed | created=2026-07-27
+[47519] Fix incorrect type hint | state=closed | created=2026-07-24
+[47496] `DataCollatorWithFlattening` uses 0-based `position_ids`, silently degrading RoBERTa-family models | state=closed | created=2026-07-23
+[47478] Fix CLVP `c_proj` residual scaled-init silently never applied | state=open | created=2026-07-22
+[47475] [Zamba2] Causality violation in torch_forward: inter-chunk state recurrence reduces over the wrong axis | state=closed | created=2026-07-22
+[47467] Qwen3.5-MoE (Qwen3_5MoeExperts) data-dependent expert dispatch breaks torch.utils.checkpoint reproducibility — CheckpointError / silent NaN gradients | state=open | created=2026-07-22
+[47458] [Bug] GPT2 c_proj weights incorrectly initialised | state=closed | created=2026-07-21

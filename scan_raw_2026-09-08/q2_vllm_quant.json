@@ -1,0 +1,115 @@
+{
+  "total_count": 1,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55927",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55927/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55927/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55927/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55927",
+      "id": 5389127133,
+      "node_id": "I_kwDOI7xefs8AAAABQTeN3Q",
+      "number": 55927,
+      "title": "DeepSeek-V4-Flash-0731: deterministic wrong token on deep-context exact retrieval at 1-in-4 prompt lengths (reasoning off) — vLLM 0.28.0 + SGLang, reproduced on two hosted providers (DeepInfra, Baidu); one provider (OpenInference) is correct",
+      "user": {
+        "login": "pro-Anne",
+        "id": 284779135,
+        "node_id": "U_kgDOEPlifw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/284779135?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/pro-Anne",
+        "html_url": "https://github.com/pro-Anne",
+        "followers_url": "https://api.github.com/users/pro-Anne/followers",
+        "following_url": "https://api.github.com/users/pro-Anne/following{/other_user}",
+        "gists_url": "https://api.github.com/users/pro-Anne/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/pro-Anne/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/pro-Anne/subscriptions",
+        "organizations_url": "https://api.github.com/users/pro-Anne/orgs",
+        "repos_url": "https://api.github.com/users/pro-Anne/repos",
+        "events_url": "https://api.github.com/users/pro-Anne/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/pro-Anne/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 8509281801,
+          "node_id": "LA_kwDOI7xefs8AAAAB-zFWCQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/tool-calling",
+          "name": "tool-calling",
+          "color": "C1E8F1",
+          "default": false,
+          "description": ""
+        },
+        {
+          "id": 8746007475,
+          "node_id": "LA_kwDOI7xefs8AAAACCU17sw",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/deepseek",
+          "name": "deepseek",
+          "color": "1995FE",
+          "default": false,
+          "description": "Related to DeepSeek models"
+        },
+        {
+          "id": 10799676958,
+          "node_id": "LA_kwDOI7xefs8AAAACg7X-Hg",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/DSv4",
+          "name": "DSv4",
+          "color": "be3bfa",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-09-08T16:09:33Z",
+      "updated_at": "2026-09-08T18:25:26Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\nWith reasoning disabled, an exact-string needle placed ~28k tokens into a ~57k-token prompt is returned with its last digit wrong (`PROVOCATIVE-8417` → `PROVOCATIVE-8411`) whenever the prompt length ≡ 3 (mod 4) tokens. It is deterministic (temperature 0, same wrong token every time), independent of the surrounding text (fully repetitive filler and a mixed filler both fail), and independent of the top-k backend. With reasoning enabled the same prompts are 16/16 correct. Needles early in the context, or with padding *after* the needle, are always correct.\n\nThe same checkpoint served by another provider (OpenRouter → OpenInference, fp8, reasoning_tokens=0) returns the correct code at the same prompt lengths; served by DeepInfra (fp8) and by Baidu (fp8) it returns the same wrong `8411` at every failing length. Four independent stacks agree on the wrong token; one provider does not — so this is not a property of the weights and not specific to our GPU.\n\n## Environment (reporter)\n- GPU: 4× NVIDIA RTX PRO 6000 Blackwell Server Edition (sm_120), driver 580.173.02, CUDA 13.0\n- vLLM 0.28.0 (`vllm/vllm-openai:v0.28.0`), torch 2.13.0+cu130, flashinfer 0.6.16.post3 (+cubin, +jit-cache cu130), vendored DeepGEMM, nvidia-cutlass-dsl 4.6.2\n- Checkpoint: `deepseek-ai/DeepSeek-V4-Flash-0731` @ `7872f01b1d1fe23eabc4c98b48bffcef5a386062` (official; `quantization_config.scale_fmt=ue8m0`)\n- Launch (from the official recipe's rtx_pro_6000_8x pill, TP=4):\n  `--trust-remote-code --tensor-parallel-size 4 --kv-cache-dtype fp8 --block-size 256 --attention_config.use_fp4_indexer_cache False --tokenizer-mode deepseek_v4 --tool-call-parser deepseek_v4 --enable-auto-tool-choice --reasoning-parser deepseek_v4 --reasoning-config '{\"reasoning_parser\":\"deepseek_v4\",\"reasoning_start_str\":\"\",\"reasoning_end_str\":\"\"}' --max-model-len 262144 --max-num-seqs 64 --gpu-memory-utilization 0.90 --default-chat-template-kwargs '{\"thinking\": false}'`\n- Startup log lines of note: `Selected DeepGemmFp8BlockScaledMMKernel for Fp8LinearMethod`, `Using FP8 indexer cache for Lightning Indexer`, `DeepGEMM E8M0 enabled`, `Using DeepSeek's fp8_ds_mla KV cache format`, `[AutoTuner]: Tuning sparse_mla_sm120_decode_dsv4`\n- Also reproduced (identical lengths, identical wrong token) on SGLang v0.5.18 and `nightly-dev-20260901-07c8f729` (`--moe-runner-backend flashinfer_mxfp4 --kv-cache-dtype fp8_e4m3`, dsv4 attention backend), with `--dsa-topk-backend sgl-kernel` and `torch`.\n\n## Minimal reproduction\n```python\nimport json, urllib.request\nURL = \"http://127.0.0.1:8000/v1/chat/completions\"; M = \"deepseek-v4-flash-0731\"\nfox = (\"The quick brown fox jumps over the lazy dog. \" * 20 + \"\\n\") * 285   # ~57k tokens\ncode = \"PROVOCATIVE-8417\"; Q = \"\\n\\nWhat is the secret access code? Answer with just the code.\"\nfor n in range(16):  # 16 consecutive prompt lengths; every 4th fails\n    q = \"pad \" * n + fox[:len(fox)//2] + f\"\\nThe secret access code is {code}.\\n\" + fox[len(fox)//2:] + Q\n    b = {\"model\": M, \"messages\": [{\"role\": \"user\", \"content\": q}], \"max_tokens\": 64, \"temperature\": 0,\n         \"chat_template_kwargs\": {\"thinking\": False}}\n    d = json.load(urllib.request.urlopen(urllib.request.Request(URL, data=json.dumps(b).encode(), headers={\"Content-Type\": \"application/json\"})))\n    c = d[\"choices\"][0][\"message\"][\"content\"]; print(d[\"usage\"][\"prompt_tokens\"], \"OK\" if code in c else f\"WRONG {c!r}\")\n```\nObserved (vLLM 0.28.0, thinking off):\n```\n57316 OK 57317 OK 57318 OK 57319 WRONG 'PROVOCATIVE-8411' 57320 OK 57321 OK 57322 OK 57323 WRONG 'PROVOCATIVE-8411'\n57324 OK 57325 OK 57326 OK 57327 WRONG 'PROVOCATIVE-8411' 57328 OK 57329 OK 57330 OK 57331 WRONG 'PROVOCATIVE-8411'\n```\nSame 16 lengths with `\"thinking\": True`: 16/16 OK. Mixed (non-repetitive) filler, thinking off: 4/16 wrong at 56730/56734/56738/56742 (same period). Padding appended *after* the needle instead of before it: 16/16 OK. Needle at ~4k tokens instead of ~28k: 16/16 OK.\n\n## Cross-provider control (same checkpoint via OpenRouter, `reasoning: {enabled: false}`, reasoning_tokens=0, identical prompt_tokens)\n| prompt_tokens | reporter vLLM 0.28.0 (sm_120) | reporter SGLang (sm_120) | OpenInference (fp8) | DeepInfra (fp8) | Baidu (fp8) |\n|---|---|---|---|---|---|\n| 57319 (bad) | 8411 | 8411 | refusal (unrelated) | **8411** | **8411** |\n| 57323 (bad) | 8411 | 8411 | **8417** ✓ | **8411** | **8411** |\n| 57327 (bad) | 8411 | 8411 | **8417** ✓ | **8411** | **8411** |\n| 57331 (bad) | 8411 | 8411 | **8417** ✓ | **8411** | **8411** |\n| 57318 / 57322 (good) | 8417 ✓ | 8417 ✓ | 8417 ✓ | 8417 ✓ | 8417 ✓ |\n\nFour independent serving stacks (reporter's ×2, DeepInfra, Baidu) agree on the identical wrong token at the identical lengths; one provider (OpenInference) does not. Whether OpenInference deviates from the reference attention path (e.g. dense fallback) or has a fix is unknown to us. DeepSeek's first-party endpoint: not obtainable through our OpenRouter key policy.\n\n## Expected\nExact retrieval should not depend on prompt length mod 4. The failing set is the DSA sparse-attention path with the needle deep in context; the mod-4 period and the single-token corruption suggest an indexer/logits or paged sparse-attention alignment issue rather than a model behavior.\n\n_Repro script and provider-control scripts available on request; the minimal repro above is self-contained._\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55927/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55927/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

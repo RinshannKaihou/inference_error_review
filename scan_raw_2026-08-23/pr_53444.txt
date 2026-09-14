@@ -1,0 +1,26 @@
+#### PR #53444 [Bugfix] Handle bare <|tool_call>:name{...} opener in Gemma4 tool parser
+## Purpose
+
+Fixes #53431.
+
+`gemma-4-26b-a4b-it` emits **two** tool-call opener forms:
+
+1. `<|tool_call>call:name{...}<tool_call|>` — documented
+2. `<|tool_call>:name{...}<tool_call|>` — bare, omits `call`
+
+The `gemma4` parser FSM only defined a `CALL_PREFIX` (`"call:"`) transition from `TOOL_PREAMBLE` to `TOOL_NAME`. The bare form never matched, so the FSM stayed in `TOOL_PREAMBLE` (which has no `content_events` entry) from `<|tool_call>` all the way to `<tool_call|>`. The entire tool call was **silently dropped** — no tool call extracted, no content emitted, the turn lost with no error and no recovery path for the client.
+
+## Root cause
+
+`gemma4_config()` in `vllm/parser/gemma4.py` defines exactly one way out of `TOOL_PREAMBLE` into `TOOL_NAME`:
+
+```python
+"CALL_PREFIX": "call:",
+...
+(ParserState.TOOL_PREAMBLE, "CALL_PREFIX"): Transition(
+    ParserState.TOOL_NAME,
+    (),
+),
+```
+
+On th

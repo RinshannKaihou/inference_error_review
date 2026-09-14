@@ -1,0 +1,46 @@
+#### PR #53449 [Bugfix][Spec Decode] Restore decoder_layer_cls indirection so DFlash2 drafts load
+STATE:open merged:no
+## The bug
+
+DFlash2 draft models fail to load on `main`:
+
+```
+ValueError: There is no module or parameter named 'layers.0.attention_conv'
+```
+
+`DFlash2Qwen3Model` declares `decoder_layer_cls = DFlash2Qwen3DecoderLayer`, but the shared
+`DFlashQwen3Model.__init__` builds its layers by hardcoding `DFlashQwen3DecoderLayer`:
+
+```python
+self.layers = nn.ModuleList(
+    [
+        DFlashQwen3DecoderLayer(   # <- the subclass override never takes effect
+```
+
+So a DFlash2 draft is silently constructed from plain DFlash layers, which have no local
+convolution. Weight loading then fails on the first `attention_conv` tensor in the checkpoint.
+
+The indirection was added by #52816 and removed again by #52560 (Qwen3-Omni-DSpark).
+
+## The fix
+
+`DFlashQwen3Model` gets an explicit `decoder_layer_cls` class attribute defaulting to its own
+layer, and the constructor goes through it. Plain DFlash drafts are unaffected — they resolve
+to exactly the class that was hardcoded before.
+
+## Verification
+
+Verified on an L40s serving `philbert440/Qwen3.8-27B-W4A16-AWQ` with the
+`z-lab/Qwen3.8-27B-DFlash2` draft at `num_speculative_tokens=7`. With the indirection in place:
+
+- `Resolved architecture: DFlash2DraftModel`
+- no missing/unexpected weight warnings; all 20 `*_conv` tensors
+  (`layers.N.attention_conv.base_kernel`, `layers.N.mlp_conv.base_kernel`, …) and all 3
+  `candidate_selector.*` tensors bind
+- acceptance length **7.98 / 8** on a code-editing workload, **2.16** on free prose
+
+## Test
+
+Adds `test_dflash2_model_builds_its_own_decoder_layers`, which asserts both that the subclass
+override is pre
+

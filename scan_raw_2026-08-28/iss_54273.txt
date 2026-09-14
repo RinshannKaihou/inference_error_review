@@ -1,0 +1,108 @@
+[Bug]: Kimi-K3 parsers miss channel terminators - tool calls silently dropped, message terminator leaked into streamed content
+### Your current environment
+
+Both defects are in pure-Python parser logic, so the reproduction below needs only the tokenizer — no GPU and no model weights.
+
+- vLLM: reproduced against current `main`, and against the `0.26.1rc1` dev build we run in production.
+- Model: `moonshotai/Kimi-K3`, served with `--reasoning-parser kimi_k3 --tool-call-parser kimi_k3 --enable-auto-tool-choice`.
+
+### 🐛 Describe the bug
+
+The Kimi-K3 parsers assume that `<|close|>think<|sep|>` is the only way the think channel can end, and that `<|close|>response<|sep|>` / `<|open|>tools<|sep|>` are the only bounds for streamed response text. In practice the model also:
+
+- leaves the think channel by opening a downstream channel directly, without emitting `<|close|>think<|sep|>`, and
+- terminates a plain answer with `<|close|>message<|sep|>` and no preceding `<|close|>response<|sep|>`.
+
+Two independent defects follow.
+
+#### 1. `is_reasoning_end()` never returns `True` when the model skips `<|close|>think<|sep|>`
+
+[`is_reasoning_end()`](https://github.com/vllm-project/vllm/blob/main/vllm/reasoning/kimi_k3_reasoning_parser.py#L157-L171) only compares the think-open and think-close markers. When the model goes straight from the think channel into `<|open|>tools<|sep|>`, the gate stays `False` for the rest of the turn.
+
+`DelegatingParser` only hands deltas to the tool parser once reasoning has ended, so on those turns the tool call is never parsed. It surfaces as `finish_reason: "stop"` with zero output tokens, or as raw XTML in visible content. This happens intermittently on tool-calling turns in an agentic workload.
+
+`is_reasoning_end_streaming()` inherits the same assumption.
+
+#### 2. The streaming path leaks `<|close|>message<|sep|>` into content
+
+`_strip_response_content()` (non-streaming) removes the terminator:
+
+https://github.com/vllm-project/vllm/blob/main/vllm/tool_parsers/kimi_k3_tool_parser.py#L261
+
+but `_extract_response_content()` (streaming) does not consider it — neither as a sendable bound:
+
+https://github.com/vllm-project/vllm/blob/main/vllm/tool_parsers/kimi_k3_tool_parser.py#L289
+
+nor in the partial-marker holdback:
+
+https://github.com/vllm-project/vllm/blob/main/vllm/tool_parsers/kimi_k3_tool_parser.py#L294-L296
+
+So an answer ending in `<|close|>message<|sep|>` streams the terminator to the client, while the same generation over the non-streaming path does not. The two paths disagree on the same output.
+
+### Reproduction
+
+```python
+import importlib.util, inspect, sys
+from transformers import AutoTokenizer
+
+# vllm/reasoning/kimi_k3_reasoning_parser.py and
+# vllm/tool_parsers/kimi_k3_tool_parser.py from main
+RP_PATH = "vllm/reasoning/kimi_k3_reasoning_parser.py"
+TP_PATH = "vllm/tool_parsers/kimi_k3_tool_parser.py"
+
+tok = AutoTokenizer.from_pretrained("moonshotai/Kimi-K3", trust_remote_code=True)
+
+def load(path, name, suffix):
+    spec = importlib.util.spec_from_file_location(name, path)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules[name] = m
+    spec.loader.exec_module(m)
+    for n, o in vars(m).items():
+        if inspect.isclass(o) and n.endswith(suffix) and o.__module__ == name:
+            return o
+
+E = lambda s: tok.encode(s, add_special_tokens=False)
+
+# --- 1. reasoning end -------------------------------------------------------
+rp = load(RP_PATH, "rp", "ReasoningParser")(tok)
+
+skipped_close = (
+    E("<|open|>think<|sep|>") + E("I should read the file.")
+    + E("<|open|>tools<|sep|>") + E('{"name":"read_file"}')
+)
+normal = (
+    E("<|open|>think<|sep|>") + E("I should read the file.")
+    + E("<|close|>think<|sep|>") + E("answer")
+)
+
+print("skipped close ->", rp.is_reasoning_end(skipped_close), "(expected True)")
+print("normal        ->", rp.is_reasoning_end(normal), "(expected True)")
+
+# --- 2. streamed terminator -------------------------------------------------
+TP = load(TP_PATH, "tp", "ToolParser")
+text = "<|open|>response<|sep|>Indexes speed up lookups.<|close|>message<|sep|>"
+
+print("streaming     ->", repr(TP(tok)._extract_response_content(text)))
+print("non-streaming ->", repr(TP(tok)._strip_response_content(
+    "Indexes speed up lookups.<|close|>message<|sep|>")))
+```
+
+Output on `main`:
+
+```
+skipped close -> False (expected True)
+normal        -> True (expected True)
+streaming     -> 'Indexes speed up lookups.<|close|>message<|sep|>'
+non-streaming -> 'Indexes speed up lookups.'
+```
+
+### Suggested fix
+
+1. **Reasoning parser.** Treat `<|open|>tools<|sep|>`, `<|open|>response<|sep|>`, `<|close|>response<|sep|>` and `<|close|>message<|sep|>` as implicit reasoning-end markers in `is_reasoning_end()` and `is_reasoning_end_streaming()`. The scan has to start after the current `<|open|>think<|sep|>`, otherwise a previous turn's channels — which the chat template keeps in the prompt — end the current turn's reasoning immediately.
+
+   Those markers also need to be held back by the partial-marker logic in the streaming text path. Emitting a partial marker as reasoning breaks the `startswith` check in `extract_reasoning_streaming`, and the whole reasoning is then re-emitted — which reads to the user as the model repeating itself.
+
+2. **Tool parser.** Add `<|close|>message<|sep|>` to the `candidates` bound and to the `_partial_tag_overlap` set in `_extract_response_content()`, so the streaming path matches `_strip_response_content()`.
+
+We have been running a local patch along these lines since 2026-08-25 and it has been stable. Happy to send it as a PR if that would be useful.
+

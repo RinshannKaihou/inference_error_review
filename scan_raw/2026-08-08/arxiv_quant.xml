@@ -1,0 +1,129 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/4S7HNk5sLLpunzDg75jOXuVTTIs</id>
+  <title>arXiv Query: search_query=all:quantization AND all:LLM AND all:reliability&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-08-08T23:06:08Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:quantization+AND+(all:LLM+AND+all:reliability)&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>78</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2608.05823v1</id>
+    <title>Decomposed Entailment for Factuality Checking and Hallucination Detection</title>
+    <updated>2026-08-06T09:52:09Z</updated>
+    <link href="https://arxiv.org/abs/2608.05823v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.05823v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>The reliability of Large Language Models (LLMs) is often compromised by factual inconsistencies, including hallucinations---cases where generated content is not supported by the underlying source. We present HallDetect, a lightweight, reference-free, and black-box framework for hallucination detection that we evaluate not only on summarization but across a broader range of source-grounded generation settings. HallDetect builds on decomposition-based factuality evaluation: generated content is decomposed into atomic claims, each verified by a compact encoder-based entailment model through a contrastive formulation over a multi-scale library of source chunks, and aggregated with an asymmetric score in which a single confidently contradicted claim flags the response. Under a controlled protocol in which all methods share the same 4-bit quantized backbones and consumer-grade hardware budget, HallDetect outperforms comparably resourced generative and embedding-based baselines on three of four benchmarks while remaining stable across backbone families, and yields a claim-to-span audit trail that localizes each error.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-06T09:52:09Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Achir Oukelmoun</name>
+    </author>
+    <author>
+      <name>Nasredine Semmar</name>
+    </author>
+    <author>
+      <name>Gaël De Chalendar</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.05660v1</id>
+    <title>Reasoning Errors Have a Region and a Direction in the Residual-Stream Trajectory of LLMs</title>
+    <updated>2026-08-06T06:58:10Z</updated>
+    <link href="https://arxiv.org/abs/2608.05660v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.05660v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As language models are increasingly used for tasks that require verifiable reasoning, reliably distinguishing sound reasoning from flawed reasoning has become an important practical problem. Recent trajectory-based methods seek this signal in layerwise residual-stream displacements, which capture how representations change while attenuating some stable, token-specific information. However, displacement omits the state from which an update originates, whereas restoring the full state risks reintroducing shortcut-prone information. We identify this trade-off and propose a three-stream detector that combines motion with two restricted views of location. A coarse region reader based on vector quantization and a fine direction reader over normalized multi-layer states. This design restores enough state context to interpret the motion without returning to full-state probing. On reasoning benchmarks unseen during training, our method improves selection accuracy by up to 12% over the displacement-only state of the art and 21% over single-layer probing baselines. Although trained only on reasoning benchmarks, it also reads factual completion and fact verification, ahead of every detector we compare against, which places the signal on correctness rather than on a kind of reasoning. Ablations further show that motion, region, and direction provide complementary signals. These results suggest that reasoning validity is better read from state-conditioned motion than from either static states or decontextualized trajectories alone.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-06T06:58:10Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Hamed Damirchi</name>
+    </author>
+    <author>
+      <name>Ignacio Meza De la Jara</name>
+    </author>
+    <author>
+      <name>Damith Ranasinghe</name>
+    </author>
+    <author>
+      <name>Yuhang Liu</name>
+    </author>
+    <author>
+      <name>Javen Shi</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.03854v2</id>
+    <title>Quantization Effects on Biomedical LLM Reliability</title>
+    <updated>2026-08-05T02:34:35Z</updated>
+    <link href="https://arxiv.org/abs/2608.03854v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.03854v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>When decoder language models are used as classifiers, predicted class probabilities depend on implementation choices, including the prompt template, verbalizer (label-to-token mapping), and scoring rule, that are rarely treated as experimental variables. We present a controlled evaluation of three Mistral-7B variants (Base, BioMistral, and Instruct) on PubMed RCT sentence classification (n=2000) under FP16, INT8, and INT4 precision using four answer-text prompt templates. Our primary finding is that the probability extraction protocol dominates apparent calibration. Switching from summed to mean token log-likelihood scoring reverses the calibration ranking between models: BioMistral average expected calibration error increases from 0.097 to 0.289, whereas Instruct decreases from 0.237 to 0.096, while accuracy changes by less than 1 percentage point for the specialized models but 4-6 percentage points for the base model. Prompt template choice produces accuracy differences of 7-24 percentage points, comparable to or larger than model-level effects. On one template, BioMistral outperforms Instruct although the overall mean favors Instruct by only 1.3 percentage points. For BioMistral and Instruct, INT8 quantization changes accuracy and F1 by only 1-2 percentage points relative to FP16, whereas the base model shows larger INT8 effects on some templates (up to +4.2 percentage points). INT4 produces heterogeneous but non-catastrophic effects. Temperature scaling reduces expected calibration error under summed scoring for both models but only for that scoring rule. A fine-tuned PubMedBERT reference achieves 82.7% accuracy but uses about 176000 labeled training examples, precluding direct comparison. These results demonstrate that prompt template design and scoring normalization are first-order experimental decisions when evaluating decoder language model calibration.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-04T15:57:21Z</published>
+    <arxiv:comment>8 pages, 1 figure</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Anton Rasmussen</name>
+    </author>
+    <author>
+      <name>Hong Qin</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.27944v1</id>
+    <title>Interpretable Representation via LLM-Driven Generative Disentanglement for Local-Life Service Recommendation</title>
+    <updated>2026-07-30T09:52:18Z</updated>
+    <link href="https://arxiv.org/abs/2607.27944v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.27944v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>While large language models (LLMs) have advanced ID-based recommendation through Semantic ID (SID) modeling, existing SID generation frameworks largely follow a single-representation-then-quantization paradigm. This design faces two bottlenecks: semantic entanglement mixes heterogeneous attributes, such as geography, brand, and category, causing information loss during quantization, low-quality SIDs, and severe collisions; moreover, black-box representation learning provides neither explicit attribute semantics nor clear geographic or semantic meanings for SID positions. These limitations weaken both retrieval reliability and the ability to diagnose or control SID generation. We propose Interpretable Representation via LLM-Driven Generative Disentanglement for Local-Life Service Recommendation (LGRID). LGRID introduces a generative disentanglement paradigm through an Encode -&gt; Disentangle -&gt; Align -&gt; Quantize pipeline. It first uses joint LLM encoding to preserve cross-attribute geographic-semantic dependencies, rather than encoding fields independently. A Structured Disentangled Block then routes hidden states into attribute-aligned slots for geographic and semantic factors. Synergistic Alignment Learning makes these slots both generatively decodable and discriminative for retrieval, while Dual-Stream Residual Quantization separately discretizes the two streams into compact SIDs with explicit attribute correspondence. This design yields interpretable SIDs with positions grounded in item attributes and local-service semantics. Experiments on Kuaishou and Foursquare show that LGRID consistently outperforms strong SID baselines, achieving up to a 5.44 percent relative AUC gain. It also achieves over 99 percent attribute-decoding accuracy for coarse geographic fields and reduces the full-SID collision rate to 39.9 percent, compared with 97.0 percent for LGSID.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-30T09:52:18Z</published>
+    <arxiv:primary_category term="cs.IR"/>
+    <author>
+      <name>Long Zhang</name>
+    </author>
+    <author>
+      <name>Hao Jiang</name>
+    </author>
+    <author>
+      <name>Sheng Yu</name>
+    </author>
+    <author>
+      <name>Fei Pan</name>
+    </author>
+    <author>
+      <name>Peng Jiang</name>
+    </author>
+    <author>
+      <name>Kun Gai</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.10855v1</id>
+    <title>Reliability Scaling Laws for Quantized Large Language Models</title>
+    <updated>2026-07-12T17:39:09Z</updated>
+    <link href="https://arxiv.org/abs/2607.10855v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.10855v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Quantization is a powerful strategy to build capable and resource-efficient large language models (LLMs) by reducing the bitwidth of the parameters. While quantized LLMs achieve state-of-the-art performance on unperturbed inputs using standard predictive metrics, their performance on perturbed inputs, measured using reliability metrics, remains underexplored, despite its importance for reliable deployment. To address this gap, we first conduct a comprehensive reliability evaluation of quantized LLMs consisting of three key components: (1) Uncertainty: We assess the trustworthiness of LLMs quantized to 2, 3, 4, and 8 bits using six different quantization methods, employing established uncertainty metrics. (2) Calibration: We assess how well-calibrated the uncertainty estimates of quantized models are across model scales and bit precisions. (3) Robustness: We design character-level and word-level input perturbations to evaluate the reliability of quantized models under semantically-preserving variations in the inputs that arise in real-world applications. Second, we characterize how reliability scales with the total number of model bits. Our study reveals that while the performance scales monotonically with the total number of bits, the reliability scalings are nonlinear. A reliability peak occurs for 4-bit quantized models, indicating that quantizing moderately sized models offers the best reliability-efficiency trade-off. Additionally, our empirical findings reveal that quantization enhances the robustness of LLMs to natural input perturbations.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-12T17:39:09Z</published>
+    <arxiv:comment>Transactions on Machine Learning Research (TMLR), 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Sirine Ayadi</name>
+    </author>
+    <author>
+      <name>Sándor Daróczi</name>
+    </author>
+    <author>
+      <name>Stephan Günnemann</name>
+    </author>
+    <author>
+      <name>Bertrand Charpentier</name>
+    </author>
+  </entry>
+</feed>

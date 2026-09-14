@@ -1,0 +1,113 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54636",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54636/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54636/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54636/events",
+  "html_url": "https://github.com/vllm-project/vllm/pull/54636",
+  "id": 5305131463,
+  "node_id": "PR_kwDOI7xefs8AAAABBqXd6w",
+  "number": 54636,
+  "title": "[Kimi Bug] Fix gdn build_attn_metadata `'KimiK3KDAMetadataBuilder' object has no attribute 'layer_names'`",
+  "user": {
+    "login": "yewentao256",
+    "id": 44945378,
+    "node_id": "MDQ6VXNlcjQ0OTQ1Mzc4",
+    "avatar_url": "https://avatars.githubusercontent.com/u/44945378?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/yewentao256",
+    "html_url": "https://github.com/yewentao256",
+    "followers_url": "https://api.github.com/users/yewentao256/followers",
+    "following_url": "https://api.github.com/users/yewentao256/following{/other_user}",
+    "gists_url": "https://api.github.com/users/yewentao256/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/yewentao256/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/yewentao256/subscriptions",
+    "organizations_url": "https://api.github.com/users/yewentao256/orgs",
+    "repos_url": "https://api.github.com/users/yewentao256/repos",
+    "events_url": "https://api.github.com/users/yewentao256/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/yewentao256/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 7197733874,
+      "node_id": "LA_kwDOI7xefs8AAAABrQSz8g",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/ready",
+      "name": "ready",
+      "color": "ededed",
+      "default": false,
+      "description": "ONLY add when PR is ready to merge/full CI is needed"
+    },
+    {
+      "id": 11639749480,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7aA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/kimi",
+      "name": "kimi",
+      "color": "78d0bd",
+      "default": false,
+      "description": null
+    },
+    {
+      "id": 11639749575,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7xw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/k3",
+      "name": "k3",
+      "color": "e429eb",
+      "default": false,
+      "description": null
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-08-31T21:35:15Z",
+  "updated_at": "2026-08-31T22:35:53Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "MEMBER",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": false,
+  "pull_request": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/pulls/54636",
+    "html_url": "https://github.com/vllm-project/vllm/pull/54636",
+    "diff_url": "https://github.com/vllm-project/vllm/pull/54636.diff",
+    "patch_url": "https://github.com/vllm-project/vllm/pull/54636.patch",
+    "merged_at": null
+  },
+  "body": "## Purpose\r\n\r\n`vllm serve moonshotai/Kimi-K3   --trust-remote-code   --tensor-parallel-size 8--load-format fastsafetensors   --gpu-memory-utilization 0.85   --enable-prefix-caching   --use-replayssm   --reasoning-parser kimi_k3   --enable-auto-tool-choice   --tool-call-parser kimi_k3   --host 0.0.0.0   --port 30000   --speculative-config '{\"model\":\"RadixArk/Kimi-K3-DSpark\",\"method\":\"dspark\",\"num_speculative_tokens\":7,\"draft_sample_method\":\"probabilistic\",\"rejection_sample_method\":\"standard\"}'`\r\n\r\nWill raise \r\n\r\n```bash\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]   File \"/home/yewentao256/vllm-source/vllm/v1/worker/gpu/model_states/mamba_hybrid.py\", line 311, in prepare_attn\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]     attn_metadata = build_attn_metadata(\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]                     ^^^^^^^^^^^^^^^^^^^^\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]   File \"/home/yewentao256/vllm-source/vllm/v1/worker/gpu/attn_utils.py\", line 330, in build_attn_metadata\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]     metadata = attn_metadata_builder.build(\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]   File \"/home/yewentao256/vllm-source/vllm/models/kimi_k3/nvidia/kda_metadata.py\", line 721, in build\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]     self._get_recoverssm_context()\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]   File \"/home/yewentao256/vllm-source/vllm/models/kimi_k3/nvidia/kda_metadata.py\", line 346, in _get_recoverssm_context\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]     layers = [forward_context[layer_name] for layer_name in self.layer_names]\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055]                                                             ^^^^^^^^^^^^^^^^\r\n(Worker_TP0 pid=3369154) ERROR 08-31 21:06:29 [multiproc_executor.py:1055] AttributeError: 'KimiK3KDAMetadataBuilder' object has no attribute 'layer_names'\r\n```\r\n\r\nThis PR fixes the issue\r\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54636/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54636/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

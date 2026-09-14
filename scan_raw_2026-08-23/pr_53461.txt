@@ -1,0 +1,48 @@
+#### PR #53461 [Bugfix] Skip LoRA adapters whose adapter_config.json lacks the expected keys
+STATE:open merged:no
+## Purpose
+
+`FilesystemResolver` reads two keys straight out of `adapter_config.json`:
+
+```python
+if (
+    adapter_config["peft_type"] == "LORA"
+    and adapter_config["base_model_name_or_path"] == base_model_name
+):
+```
+
+If a directory in `VLLM_LORA_RESOLVER_CACHE_DIR` has an `adapter_config.json`
+without either key, that's a `KeyError` out of `resolve_lora`.
+
+It doesn't get caught anywhere useful. In `OpenAIServingModels._resolve_lora`
+the `try/except` only wraps `add_lora`, not the resolve call:
+
+```python
+for resolver in self.lora_resolvers:
+    lora_request = await resolver.resolve_lora(base_model_name, lora_name)   # not guarded
+
+    if lora_request is not None:
+        ...
+        try:
+            await self.engine_client.add_lora(lora_request)
+        except BaseException as e:
+            ... "Trying next resolver."
+```
+
+So the client gets a 500 with a `KeyError` traceback instead of "LoRA not
+found", and the loop over `self.lora_resolvers` is aborted — a later resolver
+that could have handled the adapter never gets a turn.
+
+The cache dir is scanned by adapter name, so anything sitting in it can trigger
+this: a partially written download, a checkpoint dir that happens to contain an
+`adapter_config.json`, a config from a tool that names its fields differently.
+
+Using `.get()` treats a config without those keys the same way the resolver
+already treats a non-LoRA adapter — not a match, return `None`, move on to the
+next resolver.
+
+### Not a duplicate
+
+Per AGENTS.md I searched open PRs for `lora resolver`, `adapter_config` and
+`filesystem_resolver`. The two nearby PRs 
+

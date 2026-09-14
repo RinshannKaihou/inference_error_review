@@ -1,0 +1,79 @@
+{
+  "total": 9,
+  "items": [
+    {
+      "num": 11186,
+      "title": "Fix incorrect reordering in OptimizeThreadLocality",
+      "state": "closed",
+      "created": "2026-08-05T18:40:23Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/pull/11186"
+    },
+    {
+      "num": 11153,
+      "title": "Interpreter and GPU disagree: valid  kernel silently returns wrong result when compiled",
+      "state": "open",
+      "created": "2026-08-03T09:28:09Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/triton-lang/triton/issues/11153"
+    },
+    {
+      "num": 11118,
+      "title": "[AMD] Delegate NaN-propagating min/max to LLVM",
+      "state": "closed",
+      "created": "2026-07-31T00:44:00Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/pull/11118"
+    },
+    {
+      "num": 10993,
+      "title": "[Blackwell] Fix incorrectly pipelined RMW accumulator consumed by another MMA",
+      "state": "open",
+      "created": "2026-07-21T10:23:54Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/pull/10993"
+    },
+    {
+      "num": 10988,
+      "title": "reland \"[Blackwell] Fix incorrectly pipelined back-to-back MMAs sharing the same accumulator\"",
+      "state": "closed",
+      "created": "2026-07-21T01:45:43Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/pull/10988"
+    },
+    {
+      "num": 10971,
+      "title": "Revert \"[Blackwell] Fix incorrectly pipelined back-to-back MMAs sharing the same accumulator\"",
+      "state": "closed",
+      "created": "2026-07-20T03:52:34Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/pull/10971"
+    },
+    {
+      "num": 10927,
+      "title": "[Bug] Tensor-descriptor gather/load × tl.dot produces incorrect results on Blackwell when K is not a multiple of BLOCK_SIZE_K",
+      "state": "open",
+      "created": "2026-07-17T15:20:00Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/issues/10927"
+    },
+    {
+      "num": 10906,
+      "title": " [AMD] Restrict BarrierOpConversion to CDNA to avoid ROCm numeric drift on RDNA",
+      "state": "closed",
+      "created": "2026-07-16T14:44:45Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/pull/10906"
+    },
+    {
+      "num": 10858,
+      "title": "[Blackwell] Fix incorrectly pipelined back-to-back MMAs sharing the same accumulator",
+      "state": "closed",
+      "created": "2026-07-13T04:40:08Z",
+      "labels": [],
+      "url": "https://github.com/triton-lang/triton/pull/10858"
+    }
+  ]
+}

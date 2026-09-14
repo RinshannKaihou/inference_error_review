@@ -1,0 +1,7 @@
+TOTAL: 5
+
+#47838 | 2026-08-07 | `additional_special_tokens` is silently discarded when `tokenizer_config.json` also contains `extra_special_tokens`
+#47788 | 2026-08-05 | [Fix] Wrong type hint in get_number_of_image_patches
+#47754 | 2026-08-04 | ## Fix for Issue #47752: Incorrect Precedence of `generation_config` Values  ###
+#47752 | 2026-08-03 | incorrect precedence of generation_config values
+#47712 | 2026-08-02 | config: raise on missing local config file instead of silently falling back to defaults

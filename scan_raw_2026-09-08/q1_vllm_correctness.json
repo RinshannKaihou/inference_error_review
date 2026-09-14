@@ -1,0 +1,236 @@
+{
+  "total_count": 2,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55916",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55916/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55916/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55916/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55916",
+      "id": 5388122682,
+      "node_id": "I_kwDOI7xefs8AAAABQSg6Og",
+      "number": 55916,
+      "title": "[RFC]: Add an RDNA4 FlyDSL all-reduce backend",
+      "user": {
+        "login": "big-yellow-duck",
+        "id": 83417790,
+        "node_id": "MDQ6VXNlcjgzNDE3Nzkw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/83417790?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/big-yellow-duck",
+        "html_url": "https://github.com/big-yellow-duck",
+        "followers_url": "https://api.github.com/users/big-yellow-duck/followers",
+        "following_url": "https://api.github.com/users/big-yellow-duck/following{/other_user}",
+        "gists_url": "https://api.github.com/users/big-yellow-duck/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/big-yellow-duck/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/big-yellow-duck/subscriptions",
+        "organizations_url": "https://api.github.com/users/big-yellow-duck/orgs",
+        "repos_url": "https://api.github.com/users/big-yellow-duck/repos",
+        "events_url": "https://api.github.com/users/big-yellow-duck/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/big-yellow-duck/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 6114440385,
+          "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+          "name": "rocm",
+          "color": "B60205",
+          "default": false,
+          "description": "Related to AMD ROCm"
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-09-08T14:39:47Z",
+      "updated_at": "2026-09-08T14:46:15Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Motivation\n\nRDNA4 PCIe systems currently rely on AITER/PyNCCL all-reduce paths. On 4× AMD Radeon AI PRO R9700, a vLLM-owned FlyDSL implementation can reduce launch overhead for graph-replayed tensor-parallel collectives and sustain about 41–45 GB/s bus bandwidth at large messages, while retaining PyNCCL where a custom route does not meet the performance or integration-safety gate.\n\nThe design goals are:\n\n- keep the implementation in Python/FlyDSL;\n- support TP2, TP4, and TP8 on single-node gfx1200/gfx1201 systems;\n- select only measured, correctness-checked regions;\n- preserve the existing path when the feature is disabled or a tensor is unsupported;\n- remain graph-capture safe and avoid eager direct-P2P progress stalls observed under sustained model profiling.\n\nA search of open vLLM PRs/issues for “RDNA4 all reduce”, “FlyDSL all reduce”, and “ROCm custom allreduce” found adjacent AITER and graph-capture work, but no existing implementation of this RDNA4 FlyDSL backend or routing policy.\n\n## Proposed Change\n\nAdd an opt-in `VLLM_ROCM_USE_RDNA4_ALL_REDUCE=1` communicator ahead of the normal fallback path for TP groups.\n\nThe communicator owns HIP IPC and mapped-host lifecycle, while FlyDSL launchers are split by transport and topology:\n\n- mapped-memory kernels for small TP2/TP4/TP8 messages;\n- graph-registered direct-P2P kernels for larger messages;\n- a measured router with a minimum 0.98× PyNCCL performance gate;\n- PyNCCL fallback for rejected sizes and all eager direct-P2P cases;\n- exact BF16 changed-input correctness checks and eager/graph benchmark tooling.\n\nEager direct-P2P kernels won short isolated runs but could leave one rank waiting on peer progress during sustained vLLM model profiling. The production route therefore keeps direct-P2P graph-only. TP4 mapped-memory eager kernels remain enabled.\n\n### Measured production-safe routing\n\nAll profiling used `NCCL_PROTO=Simple`, BF16, 20 warmups, 9 median samples, and slowest-rank latency on 4× R9700.\n\n| Region | FlyDSL cases | PyNCCL fallbacks | Routed geomean vs PyNCCL |\n|---|---:|---:|---:|\n| TP2 eager | 0 | 15 | 1.0000× |\n| TP2 graph | 15 | 0 | 1.2794× |\n| TP4 eager | 6 | 20 | 1.0302× |\n| TP4 graph | 21 | 5 | 1.1505× |\n| Overall | 42 | 40 | 1.1040× |\n\nSensitivity views over the 82-case matrix:\n\n- uniform-case geomean: 1.1040× (9.42% equivalent latency reduction);\n- equal TP/execution-quadrant weight: 1.1097× (9.89%);\n- message-byte weighted: 1.0329× (3.19%);\n- aggregate sequential suite time: 1.0287× (2.79%).\n\nRepresentative graph results:\n\n| Case | FlyDSL | PyNCCL | Speedup | FlyDSL bus BW |\n|---|---:|---:|---:|---:|\n| TP2, 8 KiB | 0.007984 ms | 0.017691 ms | 2.2158× | 1.026 GB/s |\n| TP2, 128 MiB | 2.985023 ms | 3.527894 ms | 1.1819× | 44.964 GB/s |\n| TP4, 8 KiB | 0.009611 ms | 0.031691 ms | 3.2972× | 1.278 GB/s |\n| TP4, 128 MiB | 4.882761 ms | 4.924318 ms | 1.0085× | 41.232 GB/s |\n\nTP8 is implemented and unit-routed, but hardware performance validation is pending because the available test host has four GPUs.\n\n## Feedback Period\n\nAt least one week, following the RFC template guidance. An implementation will be posted as a draft PR so design and code can be reviewed together.\n\n## CC List\n\n@vllmellm @tanpinsiang\n\n## Any Other Things\n\nThe branch includes focused CPU policy/lifecycle tests, multi-GPU exact-correctness tests, an NCCL Simple benchmark runner, DCO sign-offs, and co-author trailers.\n\nAI assistance disclosure: OpenAI Codex assisted with implementation, investigation, testing, and drafting. The human submitter tested the branch and remains responsible for reviewing and submitting the contribution.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55916/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55916/timeline",
+      "performed_via_github_app": {
+        "id": 1144995,
+        "client_id": "Iv23liVemv8A9if9v0F2",
+        "slug": "chatgpt-codex-connector",
+        "node_id": "A_kwHOAOQ6Gs4AEXij",
+        "owner": {
+          "login": "openai",
+          "id": 14957082,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjE0OTU3MDgy",
+          "avatar_url": "https://avatars.githubusercontent.com/u/14957082?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/openai",
+          "html_url": "https://github.com/openai",
+          "followers_url": "https://api.github.com/users/openai/followers",
+          "following_url": "https://api.github.com/users/openai/following{/other_user}",
+          "gists_url": "https://api.github.com/users/openai/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/openai/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/openai/subscriptions",
+          "organizations_url": "https://api.github.com/users/openai/orgs",
+          "repos_url": "https://api.github.com/users/openai/repos",
+          "events_url": "https://api.github.com/users/openai/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/openai/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "ChatGPT Codex Connector",
+        "description": "Bring ChatGPT and Codex to your GitHub repositories.",
+        "external_url": "https://www.chatgpt.com",
+        "html_url": "https://github.com/apps/chatgpt-codex-connector",
+        "created_at": "2025-02-14T01:37:05Z",
+        "updated_at": "2026-04-20T16:37:15Z",
+        "permissions": {
+          "actions": "write",
+          "checks": "read",
+          "contents": "write",
+          "emails": "read",
+          "issues": "write",
+          "metadata": "read",
+          "pull_requests": "write",
+          "statuses": "read",
+          "workflows": "write"
+        },
+        "events": [
+          "check_run",
+          "check_suite",
+          "commit_comment",
+          "issues",
+          "issue_comment",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "pull_request_review_thread",
+          "repository",
+          "status",
+          "sub_issues"
+        ]
+      },
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55894",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55894",
+      "id": 5386550665,
+      "node_id": "I_kwDOI7xefs8AAAABQRA9iQ",
+      "number": 55894,
+      "title": "[Bug]: Hybrid Mamba + MTP silently corrupts requests when the drafter's attention backend lowers the batch-reorder threshold (decode rows run through Mamba prefill kernels)",
+      "user": {
+        "login": "filipmihal",
+        "id": 11509995,
+        "node_id": "MDQ6VXNlcjExNTA5OTk1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/11509995?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/filipmihal",
+        "html_url": "https://github.com/filipmihal",
+        "followers_url": "https://api.github.com/users/filipmihal/followers",
+        "following_url": "https://api.github.com/users/filipmihal/following{/other_user}",
+        "gists_url": "https://api.github.com/users/filipmihal/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/filipmihal/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/filipmihal/subscriptions",
+        "organizations_url": "https://api.github.com/users/filipmihal/orgs",
+        "repos_url": "https://api.github.com/users/filipmihal/repos",
+        "events_url": "https://api.github.com/users/filipmihal/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/filipmihal/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-09-08T12:14:05Z",
+      "updated_at": "2026-09-08T12:14:05Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\nWith MTP speculative decoding on a hybrid Mamba2 model (`nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16`), a request whose first decode step is scheduled while a long prompt is being chunk-prefilled comes back as word salad or an empty loop of special tokens for the rest of its life, from roughly its fifth token on. About 0.2–1% of requests on a mixed workload; up to 7% with a targeted trigger.\n\nRoot cause (verified with an in-process probe, see \"Probe evidence\"): `GPUModelRunner.calculate_reorder_batch_threshold` takes the **minimum** `reorder_batch_threshold` over all attention groups. The MTP drafter's attention backend is auto-selected independently of the target's (`llm_base_proposer.py`: \"Never inherit the attention backend from base\") and lands on FlashInfer, whose builder reports `1` (`supports_spec_as_decode` is false without the trtllm-gen decode kernel). The target's Mamba2 builders report `1 + k = 4`. With the runner at `1`, `reorder_batch_to_split_decodes_and_prefills` puts a 4-token draft-decode row and a chunked long prefill's *continuing chunk* in the same region and never sorts the decode rows ahead of that chunk. `Mamba2AttentionMetadataBuilder` then calls `split_decodes_and_prefills` at its own threshold `4`, which is positional: every row from the first prefill row on is a prefill. Decode rows behind the continuing chunk are run through `causal_conv1d_fn` / `mamba_chunk_scan_combined_varlen`, which read and write only state slot 0 and never the `k` speculative slots. On a request's first decode step those slots have never been written; the next step's `selective_state_update` reads slot `num_accepted - 1` and the recurrent state is garbage from then on.\n\nThe docstring of `calculate_reorder_batch_threshold` says a lower threshold \"just may have a performance penalty due to that backend treating decodes as prefills\". That holds for token-KV attention; for backends with per-draft recurrent state it is a correctness bug.\n\n## Environment\n\n- vLLM 0.27.1 (both code paths unchanged on `main` at 34b9899), torch 2.13.0+cu130, CUDA 13.0\n- 1× NVIDIA RTX PRO 6000 Blackwell (sm_120)\n- Model: `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16` (NemotronH hybrid Mamba2 + attention + MoE, in-weights MTP head)\n\nServe command (production):\n\n```\nvllm serve nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16 --trust-remote-code \\\n  --max-model-len 262144 --max-num-seqs 96 --gpu-memory-utilization 0.9 \\\n  --attention-backend TRITON_ATTN --mamba-backend triton --mamba-cache-mode align \\\n  --kv-cache-dtype fp8 --async-scheduling \\\n  --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder \\\n  --speculative-config '{\"method\":\"mtp\",\"num_speculative_tokens\":3}'\n```\n\nLog excerpt showing the drafter picking a different backend than the target:\n\n```\n[cuda.py:422] Using AttentionBackendEnum.TRITON_ATTN backend.\n[gpu_model_runner.py:5332] Loading drafter model...\n[cuda.py:482] Using FLASHINFER attention backend out of potential backends: ['FLASHINFER', 'TRITON_ATTN'].\n```\n\nPrefix caching on (`align`) or off (`none`), `--async-scheduling` on or off, and the KV dtype make no difference. `max_num_batched_tokens` is the default 8192.\n\n## Reproduction\n\nDeterministic-ish trigger: keep ~30 pairs in flight, each pair = one ~60k-token prompt followed 1.5 ± 1 s later by a short (~150-token) prompt; `temperature=1.0`, `max_tokens=3000`, chat completions with `enable_thinking`. The short \"follower\" is admitted while the long prompt is on its 2nd–8th prefill chunk.\n\n| variant | corrupted responses |\n|---|---|\n| production flags above | 15 + 2 / 400 (14 of the 200 followers); repeated on two other nodes: 12 / 400 and 9 / 400 |\n| same, `--no-async-scheduling` | 14 / 400 |\n| same, prefix caching off (`none` mode) | 4 / 400 (all first-step cases, as empty special-token loops) |\n| same, `--max-num-batched-tokens 65536` | 6 / 400 (fewer chunked prefills, not none) |\n| **no MTP** | **0 / 400** |\n| **runner `reorder_batch_threshold` forced to `1 + k`** (monkeypatch) | **0 / 400**, zero misordered prefill steps in 418 |\n| **drafter pinned: `\"attention_backend\":\"TRITON_ATTN\"` in `--speculative-config`** (its builder reports no threshold) | **0 / 400** |\n\nA mixed workload (1 in 7 prompts 24k tokens, the rest 2.3k or short, 110 in flight, 1000 requests) reproduces at 0.2–1.6% with production flags and 0/1000 without MTP.\n\n\"Corrupted\" = out-of-vocabulary word rate > 0.3 against the batch's own vocabulary, or > 200 completion tokens rendering to almost no text. Corrupted texts start with a coherent 5–15-word opener (\"We are given a multiple choice question: \\\"\") and then degenerate.\n\n## Probe evidence\n\nA `sitecustomize` probe (https://gist.github.com/filipmihal/ca652065fdd066063998c1bf6d3e9b8e, with the load generator and the analysis script) wrapped `GPUModelRunner._update_states`, `InputBatch.swap_states` and `Mamba2AttentionMetadataBuilder.build` without changing behaviour:\n\n```\n{\"event\": \"start\", \"async\": true, \"mamba_cache_mode\": \"align\",\n \"runner_reorder_batch_threshold\": 1,\n \"builder_thresholds\": {\"Mamba2AttentionMetadataBuilder\": 4, \"TritonAttentionMetadataBuilder\": null, \"FlashInferMetadataBuilder\": 1}}\n```\n\nMamba2 prefill region of one step (`[req, num_computed_before, tokens_this_step]`): the 24k prompt's continuing chunk followed by 14 decode rows of other requests, all counted as prefills (`num_prefills = 15`):\n\n```\n[[\"…700f8d\", 16960, 6627], [\"…f9466a\", 1470, 4], [\"…99e300\", 283, 4], [\"…c17e3f\", 651, 4], … ]\n```\n\nIn 85 of 89 such steps the reorder recorded no swap at all (the rows were all \"long_extend\" at threshold 1). Across six production-flag runs with the probe, 75 of the 154 requests whose *first* decode step sat in that region were corrupted, versus 1 of 3,246 others. With the threshold forced to `1 + k`: 0 misordered steps, 0 corrupted.\n\nWith the drafter pinned to TRITON_ATTN the start line reads `\"runner_reorder_batch_threshold\": 4` and the FlashInfer builder is gone.\n\n## Proposed fix\n\nDon't let a backend that only *tolerates* a low threshold lower the threshold of a backend that *requires* ordering. PR incoming: add `requires_decode_ordering` to `AttentionMetadataBuilder` (True for the Mamba, GDN, linear-attention and short-conv builders) and have `calculate_reorder_batch_threshold` raise the minimum to the largest such builder's threshold. Attention backends already treat rows above their own threshold as prefills, so a higher global threshold costs them nothing in correctness. A more thorough fix would make the Mamba2 split independent of batch position.\n\nWorkaround for users: set `\"attention_backend\": \"TRITON_ATTN\"` (or any backend whose builder reports no threshold or `1 + k`) in `--speculative-config`, or disable MTP.\n\n## Possibly related\n\n- #46088 (Gemma-4 hybrid, MTP, \"garbage from token 0\" for short requests batched with a 64k prompt, closed \"not planned\") and #53180 (Qwen3.8 hybrid, MTP, intermittent degenerate output) describe the same symptom without a root cause; the mechanism above may apply if their drafter's builder reports `1`.\n- #45100 (accepted-count race), #47861 / #51113 (align-mode prefix-cache snapshots) are different bugs.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

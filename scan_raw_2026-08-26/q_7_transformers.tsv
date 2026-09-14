@@ -1,0 +1,12 @@
+https://github.com/huggingface/transformers/issues/48349	FineGrainedFP8: modules_to_not_convert never matches on text-only loads of multimodal checkpoints (silent quality corruption)	open		2026-08-26T17:17:03Z
+https://github.com/huggingface/transformers/issues/48323	Chunk conversion op silently produces unequal chunks when the fused tensor is not divisible by the target count	open		2026-08-25T22:43:30Z
+https://github.com/huggingface/transformers/issues/48320	StopStringCriteria raises a bare 'substring not found' when the tokenizer vocab cannot round-trip its validation probe	open		2026-08-25T21:47:14Z
+https://github.com/huggingface/transformers/issues/48313	Continuous batching is loud by default: WARNING logs and progress bars on a plain generate_batch	open		2026-08-25T20:00:05Z
+https://github.com/huggingface/transformers/issues/48312	Continuous batching CUDA-graph capture crashes under distributed runs (allocator internal assert)	open		2026-08-25T19:54:50Z
+https://github.com/huggingface/transformers/issues/48308	Native TP does not shard qwen3_vl_moe experts (weights fully replicated per rank)	open		2026-08-25T16:24:26Z
+https://github.com/huggingface/transformers/issues/48307	Native TP has no KV-head replication: tp_size > num_key_value_heads fails mid-forward	open		2026-08-25T16:11:02Z
+https://github.com/huggingface/transformers/issues/48306	Native TP breaks on Qwen3.5/3.6 hybrids: reshape error in linear-attention layers	open		2026-08-25T16:06:11Z
+https://github.com/huggingface/transformers/issues/48305	Continuous batching does not support hybrid linear-attention models (all Qwen3.5/3.6/3.8)	open		2026-08-25T15:56:38Z
+https://github.com/huggingface/transformers/issues/48303	Async continuous batching crashes at start() if no request is queued yet	open		2026-08-25T15:47:46Z
+https://github.com/huggingface/transformers/issues/48298	Continuous batching crashes on every VLM: config attributes read from the top-level config	closed		2026-08-25T15:30:40Z
+https://github.com/huggingface/transformers/issues/48296	`paged|sdpa` silently computes non-causal attention on a standard forward	open		2026-08-25T15:19:25Z

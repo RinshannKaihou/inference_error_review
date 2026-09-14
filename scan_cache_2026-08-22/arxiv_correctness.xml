@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/x3/8YRyOGN5YaNNdHo/JjeNPuCU</id>
+  <title>arXiv Query: search_query=all:LLM AND all:inference AND all:correctness&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-08-22T23:06:54Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:LLM+AND+(all:inference+AND+all:correctness)&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>1119</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2608.20304v1</id>
+    <title>Calibration-Induced Degeneracy in LLM Financial Forecasting: An Audit-Trailed Case Study on Next-Day Market Risk</title>
+    <updated>2026-08-20T17:42:21Z</updated>
+    <link href="https://arxiv.org/abs/2608.20304v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.20304v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Costly LLM features matter only if calibration lets them affect the forecast. We document a failure of this link in a next-day risk study of two broad-market funds. Full-history scoring preceded the 2022 calibration. Calibration then set all four LLM weights to zero. The 856 later scores therefore could not affect the evaluation. We call this calibration-induced degeneracy. Allowing signed weights reactivated all four mappings. None improved forecasts after familywise correction. By contrast, a near-zero-cost headline count reduced SPY variance-forecast loss by 0.001720 (95 percent familywise interval: [0.000719, 0.002830]). The cheap baseline is therefore a critical diagnostic. We propose a calibration-viability checkpoint. Fit the mapping, perturb the feature over prespecified calibration values, and require a meaningful forecast response before acquiring holdout features. The check uses no holdout outcomes. Here, it would have stopped the paid full-history inference phase.</summary>
+    <category term="q-fin.RM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-20T17:42:21Z</published>
+    <arxiv:comment>13 pages, 2 figures, 6 tables</arxiv:comment>
+    <arxiv:primary_category term="q-fin.RM"/>
+    <author>
+      <name>Arin Mohanty</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.19758v1</id>
+    <title>FlashPrefill V2: Block-Sparse Prefill Attention for Long-Context LLM Serving</title>
+    <updated>2026-08-20T08:02:55Z</updated>
+    <link href="https://arxiv.org/abs/2608.19758v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.19758v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Long-context modeling is a pivotal capability for Large Language Models, yet the quadratic complexity of attention remains a critical bottleneck, particularly during the compute-intensive prefilling phase. Our previous work, FlashPrefill, mitigates this cost through instantaneous pattern discovery and max-based dynamic thresholding; however, it remains an algorithmic prototype that is still distant from production deployment. In this paper, we present FlashPrefill V2, which evolves FlashPrefill from a prototype toward practical long-context serving along three dimensions. First, we introduce a mean correction term that effectively suppresses the approximation error, keeping performance degradation manageable even at extreme sparsity levels. Second, we redesign the sparse attention operator with PackGQA memory access, warp specialization, and pingpong pipelining, fully aligning with the latest FlashAttention-3/4 implementations and supporting FP8 inference to meet practical quantization requirements. Third, FlashPrefill V2 natively supports paged KV cache and continuous batching, allowing integration as an attention backend in modern inference frameworks such as SGLang. Extensive evaluations on NVIDIA H20 GPUs---among the most widely deployed inference accelerators---demonstrate that FlashPrefill V2 delivers up to 47.26x and 27.19x speedups over FlashAttention-2 at 128K context length under FP8 and BF16 precision, respectively, and, in FP8, still achieves a 30.49x speedup against an FA3/4-aligned dense baseline.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-20T08:02:55Z</published>
+    <arxiv:comment>FlashPrefill V2</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Qihang Fan</name>
+    </author>
+    <author>
+      <name>Huaibo Huang</name>
+    </author>
+    <author>
+      <name>Zhiying Wu</name>
+    </author>
+    <author>
+      <name>Bingning Wang</name>
+    </author>
+    <author>
+      <name>Ran He</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.18952v1</id>
+    <title>rEDMRec: Distilling Large Language Model Reasoning into an Editable Experience Memory for Recommendation</title>
+    <updated>2026-08-19T14:17:34Z</updated>
+    <link href="https://arxiv.org/abs/2608.18952v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.18952v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large language models can improve recommendation quality by reasoning explicitly over user history and candidate items - for example, extracting a user's preferences or explaining why one item fits better than another - rather than mapping history directly to a ranked list. This reasoning, however, is expensive to repeat on every ranking request and, once produced, is typically consumed once and discarded, leaving it neither reusable across future requests nor easy to inspect or correct as user tastes drift. Our insight is that reasoning does not need to be regenerated at every call if it can instead be compressed once into a compact, structured memory that a lightweight model retrieves from. We propose rEDMRec, which distills a teacher LLM's reasoning into four typed, editable experience channels - long-term preference, short-term context, item-perception, and counterfactual hard-negative comparisons - maintained by an LLM memory controller that performs Add/Delete/Modify/Keep operations and refines entries via K-agent debate. A lightweight student LLM then ranks candidates purely by retrieving from this memory, without invoking the teacher again, decoupling online inference cost from reasoning depth. Across ML-1M, Amazon Beauty, and Steam and ten student backbones, rEDMRec improves HR@1 over zero-shot, few-shot, and RAG on every backbone, and over GraphRAG on most backbones, with Impv up to 13.3% vs. the second-best baseline on ML-1M. Channel ablations show that short-term context is the only channel that helps consistently across capacity tiers, whereas long-term, item-perception, and counterfactual contributions are capacity-dependent (and can reverse on the strongest students); debate-based memory optimization lowers bank duplication by 7.4 percentage points while raising downstream HR@1 by up to +0.029 over six optimization epochs.</summary>
+    <category term="cs.IR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-19T14:17:34Z</published>
+    <arxiv:primary_category term="cs.IR"/>
+    <author>
+      <name>Minh Hoang Nguyen</name>
+    </author>
+    <author>
+      <name>Tung Le</name>
+    </author>
+    <author>
+      <name>Huy Tien Nguyen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.18884v1</id>
+    <title>Training-Free Inference-Time Self-Reflection and Cost-Bounded Early Stopping for Large Language Models</title>
+    <updated>2026-08-19T13:09:57Z</updated>
+    <link href="https://arxiv.org/abs/2608.18884v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.18884v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Reinforcement-learning training of reasoning LLMs (e.g., GRPO) is expensive and requires a controllable environment, committing every contribution to a full training pipeline. We present EvoResearcher, a training-free, inference-time protocol that adds cost-bounded self-reflection to a single frozen LLM backbone. The protocol iterates generate -&gt; self-critique -&gt; revise until a maximum depth D is reached or the critique returns the CONFIRMED sentinel, an implicit early stop that lets the backbone self-verify its answer under a strict compute budget. Four self-reflective meta-reward components (correctness, efficiency, reflection depth, tool-call diversity) act as design principles instantiated as prompt-level mechanisms, so their benefits accrue with zero gradient updates. We validate the protocol on Big-Bench Hard (100 questions) and establish cross-domain behavior on GSM8K (500) and MATH (500) on the same frozen backbone, with cross-model replication on Qwen2.5-72B. All experiments use pure-reasoning benchmarks; the tool-call diversity component is validated in prompt-level form, and the environment-level and multi-agent extensions are design blueprints left to future work. On clean BBH the protocol does not raise accuracy beyond the 95% Wilson interval; its value is cost-bounded self-verification, with the CONFIRMED early stop terminating 82-88% of items at equal accuracy (about 2.1 generations per question).</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-19T13:09:57Z</published>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Wei Yu</name>
+    </author>
+    <author>
+      <name>Suxing Liu</name>
+    </author>
+    <author>
+      <name>Minjie Yu</name>
+    </author>
+    <author>
+      <name>Jiahao Wang</name>
+    </author>
+    <author>
+      <name>Zhijian Zheng</name>
+    </author>
+    <author>
+      <name>Haocheng Deng</name>
+    </author>
+    <author>
+      <name>Bing Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.18490v1</id>
+    <title>Bayesian Partner Modelling enables Adaptive Replanning for LLM Coordination</title>
+    <updated>2026-08-19T03:29:32Z</updated>
+    <link href="https://arxiv.org/abs/2608.18490v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.18490v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multi-agent Large Language Model (LLM) systems often struggle to collaborate with new teammates whose strategies shift mid-task. Because agents execute multi-step or temporally extended skills, they frequently continue executing outdated plans long after public evidence shows that a partner has changed its skill. Existing methods either treat partner tracking as passive context-leaving the agent aware of the shift but slow to act-or replan indiscriminately. We introduce BayesBeliefAgent, which pairs a hierarchical LLM planner with a Bayesian tracking module. Rather than replanning constantly, our agent interrupts its current skill only when a partner's actions directly contradict the inferred skill. Beyond standard reward, we evaluate performance using replanning efficiency and the belief-action gap: the fraction of total decisions where an agent with a correct partner estimate executes a non-complementary skill. Across benchmark Overcooked environments, contradiction-conditioned control drastically narrows this belief-action gap while requiring an order of magnitude fewer replans than heuristic methods</summary>
+    <category term="cs.MA" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-19T03:29:32Z</published>
+    <arxiv:comment>Preprint</arxiv:comment>
+    <arxiv:primary_category term="cs.MA"/>
+    <author>
+      <name>Harsh Goel</name>
+    </author>
+    <author>
+      <name>Aditya Sai Ellendula</name>
+    </author>
+    <author>
+      <name>Vaishnav Tadiparthi</name>
+    </author>
+    <author>
+      <name>Ehsan Moradi Pari</name>
+    </author>
+    <author>
+      <name>Hossein Nourkhiz Mahjoub</name>
+    </author>
+    <author>
+      <name>Sandeep P. Chinchali</name>
+    </author>
+  </entry>
+</feed>

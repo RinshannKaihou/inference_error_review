@@ -1,0 +1,335 @@
+{
+  "total_count": 4,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/38561",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/38561",
+      "id": 5391555855,
+      "node_id": "I_kwDOLCAjRs8AAAABQVydDw",
+      "number": 38561,
+      "title": "[Bug] cache_salt in BlockStored KV events is undecodable with SGLang's exported msgspec types",
+      "user": {
+        "login": "hickeyma",
+        "id": 14892004,
+        "node_id": "MDQ6VXNlcjE0ODkyMDA0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/14892004?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/hickeyma",
+        "html_url": "https://github.com/hickeyma",
+        "followers_url": "https://api.github.com/users/hickeyma/followers",
+        "following_url": "https://api.github.com/users/hickeyma/following{/other_user}",
+        "gists_url": "https://api.github.com/users/hickeyma/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/hickeyma/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/hickeyma/subscriptions",
+        "organizations_url": "https://api.github.com/users/hickeyma/orgs",
+        "repos_url": "https://api.github.com/users/hickeyma/repos",
+        "events_url": "https://api.github.com/users/hickeyma/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/hickeyma/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-09-08T20:26:04Z",
+      "updated_at": "2026-09-08T20:29:38Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\n`cache_salt` was added to the KV event stream in #30827. The producer side works. Salted nodes emit `BlockStoredWithMetadata` which serializes as the legacy 7 element `BlockStored` array plus a trailing `metadata` element carrying the salt.\n\nThe consumer side doesn't. SGLang exports no type that can decode the resulting stream. `BlockStoredWithMetadata` declares `metadata` as a  required field and it can't therefore decode the unsalted events sharing the same stream. It carries the same `tag=\"BlockStored\"` as the base struct, and as a result the two can't coexist in one union.\n\nThe net effect is that a consumer using `KVEventBatch` sees salted stores as plain `BlockStored` with the salt silently dropped. The feature is invisible to anyone going through the public types and there's no documentation for it.\n\n**Expected behavior.** A consumer should be able to `pip install sglang`, import a documented event type and decode a mixed stream, reading `cache_salt` where it's present and `None` where it isn't.\n\nIt should be noted that the wire format is fine and backward compatible. A legacy consumer decoding plain `BlockStored` gets the 7 elements it expects and ignores the trailing metadata and unsalted events keep their exact legacy shape. The two struct producer split is also correct.`omit_defaults=True` however does **not** trim a trailing `None` in `array_like` structs and as a result a single optional field on the producer breaks the wire for existing consumers. This is a missing *decoder side* type, not a format bug. The producer should stay as is.\n\n**Suggested fix.**\n\n1. Export a decoder side view type alongside the producer structs in `kv_events.py`:\n\n   ```python\n   class BlockStoredView(BlockStored, tag=\"BlockStored\", kw_only=True):\n       metadata: Optional[BlockStoredMetadata] = None\n   ```\n\n   plus a `KVEventBatchView` union built from it. Keep it separate from `BlockStoredWithMetadata`. Producer and consumer shapes genuinely differ here.\n\n2. Document the salted event shape in `docs/`: which events carry `metadata.cache_salt`, that block hashes are salt namespaced rather than salt disambiguated and that consumers must index emitted hashes rather than recompute them.\n\n### Reproduction\n\nNo model or server needed,. This is a pure serialization bug, reproducible from the exported types alone.\n\n```bash\npip install sglang\npython3 repro.py\n```\n\n```python\n# repro.py\nfrom typing import Union\n\nimport msgspec\n\nfrom sglang.srt.disaggregation.kv_events import (\n    BlockStored,\n    BlockStoredMetadata,\n    BlockStoredWithMetadata,\n    KVEventBatch,\n)\n\n\ndef store(cache_salt=None):\n    fields = dict(\n        block_hashes=[1],\n        parent_block_hash=None,\n        token_ids=[1, 2],\n        block_size=2,\n        lora_id=None,\n        medium=\"GPU\",\n    )\n    if cache_salt is None:\n        return BlockStored(**fields)\n    return BlockStoredWithMetadata(\n        **fields, metadata=BlockStoredMetadata(cache_salt=cache_salt)\n    )\n\n\n# One batch of mixed traffic: an unsalted request and a salted one.\npayload = msgspec.msgpack.encode(\n    KVEventBatch(ts=1.0, events=[store(), store(\"tenant-a\")])\n)\nprint(\"on the wire:\", msgspec.msgpack.decode(payload)[1])\n\n# 1. The exported union decodes, but the salt is gone.\nbatch = msgspec.msgpack.Decoder(KVEventBatch).decode(payload)\nprint(\"1.\", [type(e).__name__ for e in batch.events])\n\n# 2. Swap in the struct that has the metadata: it rejects the unsalted event.\nclass WithMetadata(KVEventBatch):\n    events: list[BlockStoredWithMetadata]\n\ntry:\n    msgspec.msgpack.decode(payload, type=WithMetadata)\nexcept msgspec.ValidationError as exc:\n    print(\"2. ValidationError:\", exc)\n\n# 3. Put both in one union: invalid at decoder construction.\nclass Both(KVEventBatch):\n    events: list[Union[BlockStored, BlockStoredWithMetadata]]\n\ntry:\n    msgspec.msgpack.Decoder(Both)\nexcept TypeError as exc:\n    print(\"3. TypeError:\", exc)\n```\n\nOutput:\n\n```\non the wire: [['BlockStored', [1], None, [1, 2], 2, None, 'GPU'], ['BlockStored', [1], None, [1, 2], 2, None, 'GPU', {'cache_salt': 'tenant-a'}]]\n1. ['BlockStored', 'BlockStored']\n2. ValidationError: Expected `array` of at least length 8, got 7 - at `$[1][0]`\n3. TypeError: If a type union contains multiple Struct types, all Struct types must have unique `tag` values - type `typing.Union[sglang.srt.disaggregation.kv_events.BlockStored, sglang.srt.disaggregation.kv_events.BlockStoredWithMetadata]` is not supported\n```\n\nThe first line shows the two array shapes the server really publishes: 7 elements unsalted, 8 salted. Case 1 is what a consumer gets today. That is both decode and `tenant-a` is gone. Cases 2 and 3 are the two workarounds and neither type checks.\n\nThe only shape that decodes both is a hand rolled struct SGLang doesn't export:\n\n```python\nclass BlockStoredView(BlockStored, tag=\"BlockStored\", kw_only=True):\n    metadata: Optional[BlockStoredMetadata] = None\n```\n\nTo see it against live traffic instead, launch with\n`--kv-events-config '{\"publisher\": \"zmq\", \"endpoint\": \"tcp://*:5557\", \"topic\": \"kv-events\"}'`,\nsend one request with `\"cache_salt\": \"tenant-a\"` and one without and decode the frames off the SUB socket with `KVEventBatch`.\n\n### Environment\n\nThis is a macOS dev box with no accelerator which is enough here. The bug is in the exported msgspec types and reproduces anywhere `sglang` and `msgspec` import. It isn't platform, GPU or model dependent.",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/38536",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/38536/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/38536/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/38536/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/38536",
+      "id": 5389325379,
+      "node_id": "I_kwDOLCAjRs8AAAABQTqUQw",
+      "number": 38536,
+      "title": "Rust TreeCore (v0.5.19) shows e2e regression at concurrency on small dense model",
+      "user": {
+        "login": "sejori",
+        "id": 10160507,
+        "node_id": "MDQ6VXNlcjEwMTYwNTA3",
+        "avatar_url": "https://avatars.githubusercontent.com/u/10160507?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/sejori",
+        "html_url": "https://github.com/sejori",
+        "followers_url": "https://api.github.com/users/sejori/followers",
+        "following_url": "https://api.github.com/users/sejori/following{/other_user}",
+        "gists_url": "https://api.github.com/users/sejori/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/sejori/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/sejori/subscriptions",
+        "organizations_url": "https://api.github.com/users/sejori/orgs",
+        "repos_url": "https://api.github.com/users/sejori/repos",
+        "events_url": "https://api.github.com/users/sejori/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/sejori/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-09-08T16:29:11Z",
+      "updated_at": "2026-09-08T21:29:52Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\nThe Rust TreeCore backend (`SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND=rust`), shipped as opt-in in v0.5.19, shows a measurable end-to-end regression at concurrency compared to the Python TreeCore backend, on a small dense model with a short shared prefix workload. The PR (#32710) notes end-to-end benchmarking as a \"planned follow-up\" — this is an independent data point for that.\n\n## Setup\n\n- **Model**: Qwen2.5-1.5B-Instruct (dense, bf16)\n- **GPU**: RTX 4090 (single GPU, TP=1)\n- **Engine**: SGLang v0.5.19 (`lmsysorg/sglang:v0.5.19` Docker image)\n- **Workload**: streaming tool-call completions with the stock `qwen` tool parser, 2 tool calls per request, 10.2–10.4 deltas/request (identical across all arms — no granularity confound)\n- **Shared prefix**: system prompt + tool JSON schema, order hundreds of tokens (not 61K-token class like the C++ PR's benchmark)\n- **Concurrency**: 8, 64, 256 concurrent requests; 3 rounds per level, medians reported\n\n## Three-arm A/B\n\nThree arms, same image, same model, same GPU:\n\n| arm | version | TreeCore backend |\n|---|---|---|\n| `stock` | v0.5.18 | plain RadixCache (no unified tree) |\n| `python` | v0.5.19 | Python TreeCore (unified, default) |\n| `rust` | v0.5.19 | Rust TreeCore (`SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND=rust`) |\n\nBaseline for comparison: `python` arm (same version, isolating only the TreeCore backend).\n\n## Results (median of 3 rounds)\n\n| conc | metric | python (0.5.19) | rust (0.5.19) | delta |\n|---|---|---|---|---|\n| 8 | stream_span | 189.6 ms | 189.6 ms | −0.0% |\n| 8 | e2e p50 | 278 ms | 275 ms | −0.9% |\n| 8 | CPU | 172% | 161% | −6% |\n| 64 | stream_span | 367.4 ms | 395.3 ms | **+7.6%** |\n| 64 | e2e p50 | 606 ms | 678 ms | **+11.9%** |\n| 64 | TTFT p50 | 223.7 ms | 249.9 ms | +11.7% |\n| 64 | ITL p50 | 11.0 ms | 12.5 ms | +14.2% |\n| 64 | CPU | 172% | 161% | −6% |\n| 256 | stream_span | 515.9 ms | 562.6 ms | **+9.1%** |\n| 256 | e2e p50 | 1208 ms | 1340 ms | **+10.9%** |\n| 256 | TTFT p50 | 664.2 ms | 752.2 ms | +13.2% |\n| 256 | ITL p50 | 24.8 ms | 24.3 ms | −1.8% |\n| 256 | CPU | 172% | 161% | −6% |\n\n`stream_span` is a delta-count-invariant metric (total streaming wall time / number of deltas), so it is not confounded by arms emitting different chunk counts. Delta counts were identical across all arms at every concurrency level.\n\nIQRs at conc 64: stream_span python IQR 19.8 ms, rust IQR 19.1 ms, against a 28 ms difference. IQRs at conc 256: python IQR 30.2 ms, rust IQR 29.9 ms, against a 47 ms difference. The gap is larger than the spread at both levels.\n\n## Observations\n\n1. **The Rust backend is slower at concurrency, not faster.** At conc 8 the arms are identical. At conc 64 and 256, `stream_span`, e2e, and TTFT all regress by 8–13%.\n\n2. **Rust uses ~6% less CPU while being slower.** This points at blocking/overhead (PyO3 boundary crossings, GIL round-trips, or lock contention) rather than the tree algorithm itself being computationally slow — the CPU savings should have produced a speedup, not a regression.\n\n3. **The engine-version control is clean.** stock (0.5.18, plain RadixCache) vs python (0.5.19, Python TreeCore) on `stream_span`: +0.1% / −0.0% / −0.4% at conc 8/64/256. The 0.5.18→0.5.19 upgrade, including the switch to the unified cache class, is a no-op for this workload, so the python-vs-rust difference is purely the TreeCore backend.\n\n## Limitation\n\nOur workload has a short shared prefix (system prompt + tool schema, order hundreds of tokens), not the 61K-token shared prefix used in the C++ radix tree PR (#36128). So this round measures the Rust backend's **overhead** when the cache is not under pressure, and does not test whether the backend pays off under prefix-heavy load. A prefix-heavy workload would be needed to claim the latter — but that regime was already tested end-to-end by the C++ PR and found flat.\n\n## Repro\n\n```bash\ndocker pull lmsysorg/sglang:v0.5.19\ndocker pull lmsysorg/sglang:v0.5.18\n\n# Start server with Rust TreeCore backend\ndocker run --rm --gpus all -p 8000:8000 -v $HOME/hf-cache:/hf -e HF_HOME=/hf \\\n  -e SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND=rust \\\n  lmsysorg/sglang:v0.5.19 \\\n  python3 -m sglang.launch_server --model-path Qwen/Qwen2.5-1.5B-Instruct \\\n  --port 8000 --host 0.0.0.0 --context-length 4096 --mem-fraction-static 0.85 \\\n  --tool-call-parser qwen\n\n# Start server with Python TreeCore backend (control)\n# Same command, but: -e SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND=python\n```\n\nWorkload: streaming chat completions with tool calls, 2 calls per request, at concurrency 8/64/256. Full A/B harness and raw results: [infe/bench/results/rtx4090-20260908-round6/](https://github.com/sejori/infe/tree/main/bench/results/rtx4090-20260908-round6).\n\nHappy to run a prefix-heavy variant if that would help disambiguate overhead from benefit.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/38536/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/38536/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/38452",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/38452/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/38452/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/38452/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/38452",
+      "id": 5383870255,
+      "node_id": "I_kwDOLCAjRs8AAAABQOdXLw",
+      "number": 38452,
+      "title": "[Bug] UnifiedRadixCache: L3 storage is never consulted when a prefix survives only as backuped stubs after host-tier eviction",
+      "user": {
+        "login": "todayim",
+        "id": 74353553,
+        "node_id": "MDQ6VXNlcjc0MzUzNTUz",
+        "avatar_url": "https://avatars.githubusercontent.com/u/74353553?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/todayim",
+        "html_url": "https://github.com/todayim",
+        "followers_url": "https://api.github.com/users/todayim/followers",
+        "following_url": "https://api.github.com/users/todayim/following{/other_user}",
+        "gists_url": "https://api.github.com/users/todayim/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/todayim/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/todayim/subscriptions",
+        "organizations_url": "https://api.github.com/users/todayim/orgs",
+        "repos_url": "https://api.github.com/users/todayim/repos",
+        "events_url": "https://api.github.com/users/todayim/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/todayim/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-09-08T07:53:45Z",
+      "updated_at": "2026-09-08T07:53:45Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\nWith HiCache enabled (UnifiedRadixCache + a storage backend), when a prefix's KV is evicted from both device (L1) and host (L2) tiers but its storage backup has completed, the prefix's tree nodes survive as backuped-only stubs. On re-sending the same prefix:\n\n- the prefetch path treats the stub span as \"already matched\" and issues **no** storage query for it, and\n- the load-back path rejects the span because stubs carry no host indices.\n\nThe request therefore recomputes the full prefix even though the data is present in L3. The same request **does** hit L3 after `flush_cache` or an engine restart (empty tree → root-anchored full-prefix prefetch works), proving the storage read path itself is functional — only the stub-anchored path is broken.\n\n## Environment\n\n- sglang v0.5.15.post1 (release image; code path also present in main @01e19ddf55)\n- 1x NVIDIA L40S, CUDA 13, Python 3.12\n- Storage backend: `file` (also reproduced with `mooncake`; the failure is tree-layer, backend-independent)\n\nServer:\n\n```bash\nexport SGLANG_ENABLE_UNIFIED_RADIX_TREE=1\nexport SGLANG_HICACHE_FILE_BACKEND_STORAGE_DIR=/data/hicache\npython3 -m sglang.launch_server --model-path Qwen/Qwen3-1.7B --port 30000 \\\n  --tensor-parallel-size 1 --max-total-tokens 20000 --hicache-size 2 \\\n  --enable-hierarchical-cache --enable-metrics \\\n  --hicache-storage-backend file \\\n  --hicache-storage-prefetch-policy wait_complete \\\n  --hicache-io-backend direct --hicache-mem-layout page_first_direct\n```\n\n## Reproduction\n\n```python\n# prompt A must exceed hicache prefetch_threshold (default 256 tokens) — use 336 tokens\nA = (\"...336-token prompt...\")\n\ngen(A); gen(A)\n\n# CRITICAL: wait until A's storage backup completes before flooding.\n# If the flood evicts A's nodes before the backup finishes, the nodes die\n# outright (evicted && !backuped) and the bug does NOT trigger — recall then\n# works via the root-anchored path. The bug needs the steady-state ordering:\n# backup completes first, eviction second.\nwhile backuped_tokens_total() < 336:   # sglang:backuped_tokens_total\n    sleep(2)\n\nflood_until_evicted(target=45000)       # ~700 short requests, > device+host capacity\n\nr = gen(A)   # after eviction\n# ACTUAL:   r.cached_tokens == 0, latency ~0.05s,\n#           sglang:prefetched_tokens_total UNCHANGED (no storage query issued)\n#           sglang:storage_prefetch_unfulfilled_tokens_total unchanged\n# EXPECTED: r.cached_tokens >= 335 (storage hit)\n\nflush_cache()\nr = gen(A)\n# ACTUAL:   r.cached_tokens == 335, latency ~0.3s,\n#           sglang:prefetched_tokens_total +335  ← same data, same process,\n#                                                   works as soon as the tree is empty\n```\n\nMeasured (v0.5.15.post1, file backend, 336-token prompt):\n\n| step | cached_tokens | latency | prefetched_tokens_total |\n|---|---|---|---|\n| re-send after pressure eviction (stub path) | **0** | 0.047s | unchanged |\n| re-send after flush_cache (root-anchored path) | **335** | 0.305s | +335 |\n\n## Root cause (traced in main @01e19ddf55)\n\n1. `unified_tree_core.py :: _match_prefix_helper` (~L787): the walk's only early-stop is `if child.evicted and not child.backuped: break` — nodes that are `evicted && backuped` (stubs) are **walked through** and their tokens accumulate into `full_kv_hit_length`.\n\n2. `scheduler.py :: _prefetch_kvcache` (~L3051):\n   ```python\n   matched_len = len(req.prefix_indices) + req.host_hit_length   # == 335, stub span included\n   new_input_tokens = req.full_untruncated_fill_ids[matched_len:match_end]  # == []\n   ```\n   → `prefetch_from_storage` receives an empty span → `prefetch_length (0) < prefetch_threshold (256)` → declined, **no storage query is issued for the stub span**.\n\n3. `unified_radix_cache.py :: _load_back_transfers` (~L1520): load-back is host→device only; stubs have no host indices, so `kv_tokens == 0 < load_back_threshold (10)` → declined.\n\nThe stub span falls between the two paths: the prefetch path counts it as \"matched, nothing new to fetch\", the load-back path can't materialize it. No code path converts a matched backuped-stub span into an L3 fetch.\n\nAlso note the racy aspect (relevant for reproduction): if eviction outruns the async write-through, nodes die outright instead of becoming stubs, and recall then **works** via the root-anchored path. The bug therefore specifically hits the steady-state ordering — backup completes before eviction — which is the normal production case.\n\n## Suggested fix directions\n\n- **A.** In match/scheduler, distinguish stub-only matched spans and issue a storage hit-query/prefetch for that span (not just for new tokens).\n- **B.** Extend load-back to source spans from storage (remote→device) when host indices are absent but the nodes are backuped.\n- **C.** Don't count backuped-stub tokens into `host_hit_length`/matched_len (anchor at the last host/device-resident node), letting the stub span flow into the existing root-anchored prefetch path — which is proven to work (post-flush behavior).\n\n## Impact\n\nAny workload that re-sends a prefix after it has aged out of L1/L2 (long conversation cold-return, periodic repeated prompts) silently loses L3 recall and recomputes at full prefill cost, despite the tier being designed exactly for this case.",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/38452/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/38452/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/38428",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/38428",
+      "id": 5382695904,
+      "node_id": "I_kwDOLCAjRs8AAAABQNVr4A",
+      "number": 38428,
+      "title": "[Bug] HiCache backup thread dies on any storage backend exception; queued backups and their host memory are never released",
+      "user": {
+        "login": "qidaye",
+        "id": 26450235,
+        "node_id": "MDQ6VXNlcjI2NDUwMjM1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/26450235?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/qidaye",
+        "html_url": "https://github.com/qidaye",
+        "followers_url": "https://api.github.com/users/qidaye/followers",
+        "following_url": "https://api.github.com/users/qidaye/following{/other_user}",
+        "gists_url": "https://api.github.com/users/qidaye/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/qidaye/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/qidaye/subscriptions",
+        "organizations_url": "https://api.github.com/users/qidaye/orgs",
+        "repos_url": "https://api.github.com/users/qidaye/repos",
+        "events_url": "https://api.github.com/users/qidaye/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/qidaye/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-09-08T05:50:26Z",
+      "updated_at": "2026-09-08T05:50:26Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\n`HiCacheController.backup_thread_func` (and the `HybridCacheController` override) only catches `queue.Empty`:\n\n```python\nwhile not self.storage_stop_event.is_set():\n    try:\n        operation = self.backup_queue.get(block=True, timeout=1)\n        if operation is None:\n            continue\n        if not self.backup_skip:\n            self._page_backup(operation)\n        self.ack_backup_queue.put(operation)\n    except Empty:\n        continue\n```\n\nAny exception raised by the storage backend while writing a page (I/O error, timeout, malformed response from a remote store such as Mooncake / NIXL / 3FS / HF3FS / file backends) escapes the loop and kills the daemon thread. From that point on:\n\n- every backup operation stays in `backup_queue` forever and is never written to L3;\n- `ack_backup_queue` never drains, so `HiRadixCache` / `UnifiedRadixCache` never release the host memory held by those operations (`entry.release_host()` in the backup drain path);\n- the only visible symptom is host pool exhaustion much later. There is no log line pointing at the dead backup thread, and `hicache_*` metrics keep reporting as if backups were in flight.\n\nA backend that returns `False` from `batch_set` already stops the current operation, but the acked `StorageOperation` carries no information about the failure, so the ack consumer cannot distinguish a partial or failed write from a complete one.\n\nExpected: a failing backup should be logged, the operation should still be acked (so host memory is released and the queue keeps draining), and the ack should say what went wrong.\n\n### Reproduction\n\nDrives the production `backup_thread_func` with a controller stub whose backend raises once. No GPU or model needed.\n\n```python\nimport threading\nfrom queue import Empty, Queue\nfrom unittest import mock\n\nimport torch\n\nfrom sglang.srt.managers.cache_controller import HiCacheController, StorageOperation\n\ncontroller = mock.MagicMock()\ncontroller.storage_stop_event = threading.Event()\ncontroller.backup_skip = False\ncontroller.page_size = 16\ncontroller.backup_queue = Queue()\ncontroller.ack_backup_queue = Queue()\n\ncalls = [0]\ndef page_backup(operation):\n    calls[0] += 1\n    if calls[0] == 1:\n        raise RuntimeError(\"storage backend I/O error\")  # e.g. remote store timeout\n    operation.completed_tokens = 16 * len(operation.hash_value)\ncontroller._page_backup = page_backup\n\ndef make_op(n):\n    return StorageOperation(torch.zeros(n * 16), list(range(n * 16)), hash_value=[f\"h{i}\" for i in range(n)])\n\ncontroller.backup_queue.put(make_op(4))\ncontroller.backup_queue.put(make_op(2))\n\nt = threading.Thread(target=HiCacheController.backup_thread_func, args=(controller,), daemon=True)\nt.start()\nt.join(timeout=3)\nprint(\"backup thread alive:\", t.is_alive())\nacked = []\ntry:\n    while True:\n        acked.append(controller.ack_backup_queue.get(timeout=1).id)\nexcept Empty:\n    pass\nprint(\"acked operations:\", acked, \"(2 expected)\")\nprint(\"still queued:\", controller.backup_queue.qsize())\n```\n\nOutput on `main` (2358916d5a):\n\n```\nException in thread Thread-1 (backup_thread_func):\nTraceback (most recent call last):\n  ...\n  File \".../sglang/srt/managers/cache_controller.py\", line 1289, in backup_thread_func\n    self._page_backup(operation)\nRuntimeError: storage backend I/O error\nbackup thread alive: False\nacked operations: [] (2 expected)\nstill queued: 1\n```\n\nThe same happens in a real deployment whenever the L3 backend raises during `batch_set` (observed with a remote storage backend timing out under load): the backup thread disappears and host memory is never reclaimed.\n\nIn a server the trigger is any exception from the configured `--hicache-storage-backend` during a write; e.g. `--enable-hierarchical-cache --hicache-storage-backend <backend>` with a backend that becomes unreachable.\n\n### Environment\n\nReproduction above is CPU-only and does not depend on the accelerator.\n\n```\nsglang: main @ 2358916d5a (editable install from source)\npython: 3.12.13\ntorch: 2.13.0+cpu\nOS: Ubuntu 24.04, Linux 7.0.0-30-generic\n```\n\n`python3 -m sglang.check_env` currently fails on a CPU-only host with `NameError: name 'env' is not defined` (no branch in `check_env.py` for the CPU case), so the versions above were collected manually.\n\nA fix is in #38427.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

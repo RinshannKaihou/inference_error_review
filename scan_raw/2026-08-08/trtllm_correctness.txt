@@ -1,0 +1,4 @@
+TOTAL: 2
+
+#17437 | 2026-08-08 | [Bug]: Interior control-token rejection can split a tool-call prelude and silently drop tool_calls
+#17432 | 2026-08-07 | [None][infra] Log infra-retry classify declines instead of silent rethrow

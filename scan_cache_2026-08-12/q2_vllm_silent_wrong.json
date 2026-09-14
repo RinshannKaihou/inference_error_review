@@ -1,0 +1,292 @@
+{
+  "total": 31,
+  "items": [
+    {
+      "num": 52034,
+      "title": "[Bug]: Mistral-Small-3.1 FP8 (Pixtral) returns NaN on image inputs with compilation enabled; works with --enforce-eager",
+      "state": "closed",
+      "created": "2026-08-12T18:45:12Z",
+      "labels": [
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/52034"
+    },
+    {
+      "num": 51994,
+      "title": "[Bugfix][Model] Fix DiffusionGemma silently freezing attention mask under CUDA graph replay",
+      "state": "open",
+      "created": "2026-08-12T13:49:00Z",
+      "labels": [
+        "bug",
+        "nvidia"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51994"
+    },
+    {
+      "num": 51887,
+      "title": "[Bug]: PP decode deadlock — full-decode CUDA graph captures gloo recv_object on the pipeline boundary (silent hang, not capture fault)",
+      "state": "closed",
+      "created": "2026-08-11T23:29:52Z",
+      "labels": [
+        "rocm",
+        "kimi"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51887"
+    },
+    {
+      "num": 51828,
+      "title": "[Bug]: Gemma-4 NVFP4 (fp8 KV) on Blackwell: FLASH_ATTN is selected, silently falls back to FA2, then fails with \"FlashAttention only support fp16 and bf16 data type\"",
+      "state": "open",
+      "created": "2026-08-11T14:17:09Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51828"
+    },
+    {
+      "num": 51800,
+      "title": "[Quark] Remove quark-specific silent online quantization",
+      "state": "open",
+      "created": "2026-08-11T10:08:47Z",
+      "labels": [
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51800"
+    },
+    {
+      "num": 51789,
+      "title": "[Bugfix][V1] Fix silent -inf logprobs when logprob_token_ids shares a batch",
+      "state": "open",
+      "created": "2026-08-11T09:14:42Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51789"
+    },
+    {
+      "num": 51782,
+      "title": "[Bug]: persistent_topk silently drops top-k candidates when many values share a coarse histogram bin",
+      "state": "open",
+      "created": "2026-08-11T07:57:57Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51782"
+    },
+    {
+      "num": 51597,
+      "title": "[LoRA] Fix lm_head delta silently dropped from prompt_logprobs (#51594)",
+      "state": "open",
+      "created": "2026-08-10T02:16:08Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/pull/51597"
+    },
+    {
+      "num": 51594,
+      "title": "[Bug]: LoRA lm_head delta is silently dropped from prompt_logprobs",
+      "state": "open",
+      "created": "2026-08-10T01:33:51Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51594"
+    },
+    {
+      "num": 51581,
+      "title": "[Bug][Spec Decode]: DFlash fused-KV projection calls F.linear on a sliced qkv_proj weight — breaks (and can silently corrupt) any weight-quantized drafter",
+      "state": "open",
+      "created": "2026-08-09T21:32:59Z",
+      "labels": [
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51581"
+    },
+    {
+      "num": 51580,
+      "title": "[Bug]: [ROCm] v0.26.0 release image: NaN logits from AITER fused-MoE path on gfx942 (Qwen3.5-397B-A17B-FP8) — fixed on main, requesting 0.26.x backport",
+      "state": "open",
+      "created": "2026-08-09T20:31:33Z",
+      "labels": [
+        "bug",
+        "rocm",
+        "kimi"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51580"
+    },
+    {
+      "num": 51561,
+      "title": "[Bug]: use_heterogeneous_vocab (TLI) silently bypassed when use_local_argmax_reduction is enabled",
+      "state": "open",
+      "created": "2026-08-09T13:45:52Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51561"
+    },
+    {
+      "num": 51525,
+      "title": "[Bug]: Explicit VLLM_CUTLASS NVFP4 MoE selection silently produces empty completions on SM_120",
+      "state": "open",
+      "created": "2026-08-09T00:19:32Z",
+      "labels": [
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51525"
+    },
+    {
+      "num": 51401,
+      "title": "[Bug]: VLLM silently ignores falsey yaml configuration options",
+      "state": "closed",
+      "created": "2026-08-07T14:34:49Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51401"
+    },
+    {
+      "num": 51396,
+      "title": "[Bug]: cpu_offload_gb silently no-ops on Model Runner V2 — offloader never installed, model loads fully on-GPU with no warning",
+      "state": "open",
+      "created": "2026-08-07T12:50:21Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51396"
+    },
+    {
+      "num": 51313,
+      "title": "[Bug]: Kimi-K3 with --kv-cache-dtype fp8 is unusable on H200/Hopper — assertion demands use_prefill_query_quantization, but that flag is silently ignored on non-Blackwell devices",
+      "state": "open",
+      "created": "2026-08-06T21:38:39Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51313"
+    },
+    {
+      "num": 51304,
+      "title": "[V1] Copy NaN-in-logits counts to host asynchronously",
+      "state": "closed",
+      "created": "2026-08-06T19:33:07Z",
+      "labels": [
+        "ready",
+        "mrv1-only"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51304"
+    },
+    {
+      "num": 51230,
+      "title": "[Bugfix] MiniMax-M3: structured output silently ignored with thinking enabled (scheduler reasoning-end gate never fires)",
+      "state": "open",
+      "created": "2026-08-06T06:20:10Z",
+      "labels": [
+        "bug",
+        "tool-calling"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51230"
+    },
+    {
+      "num": 51201,
+      "title": "Step3p5ReasoningParser strips the wrong newline",
+      "state": "open",
+      "created": "2026-08-05T21:24:41Z",
+      "labels": [
+        "tool-calling"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51201"
+    },
+    {
+      "num": 51198,
+      "title": "[Bug]: --enable-prefix-caching is a silent 0%-hit no-op on Mamba-2/GDN hybrids (Qwen3_5MoeForConditionalGeneration)",
+      "state": "open",
+      "created": "2026-08-05T20:26:15Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51198"
+    },
+    {
+      "num": 51164,
+      "title": "[Bug]: Step3p5ReasoningParser strips the wrong newline once the discarded prefix is preserved (follow-up to #50918)",
+      "state": "open",
+      "created": "2026-08-05T12:49:35Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51164"
+    },
+    {
+      "num": 51094,
+      "title": "[Bug]: OffloadingConnector can silently return wrong output at exact chunk boundaries with mamba_cache_mode=all",
+      "state": "closed",
+      "created": "2026-08-05T01:22:04Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/51094"
+    },
+    {
+      "num": 51063,
+      "title": "[Bug]: Composite VLM wrapper (Mistral3ForConditionalGeneration) resolves tie_word_embeddings from the wrong (top-level) config, silently discarding a real lm_head.weight and producing coherent-vocabulary-but-incoherent output",
+      "state": "open",
+      "created": "2026-08-04T17:47:52Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51063"
+    },
+    {
+      "num": 51039,
+      "title": "[Model] Kimi-K3: all requests degenerate to a repeated token after long-context prefill (NaN logits; packed KDA prefill suspected)",
+      "state": "open",
+      "created": "2026-08-04T14:44:02Z",
+      "labels": [
+        "kimi",
+        "k3"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51039"
+    },
+    {
+      "num": 51026,
+      "title": "[Bugfix][Rust Frontend] Tolerate NaN-corrupted logprobs in engine-core",
+      "state": "open",
+      "created": "2026-08-04T13:26:00Z",
+      "labels": [
+        "bug",
+        "rust"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51026"
+    },
+    {
+      "num": 51025,
+      "title": "Fix/engine core client nan logprobs rank 0",
+      "state": "closed",
+      "created": "2026-08-04T13:21:18Z",
+      "labels": [
+        "rust",
+        "kimi",
+        "k3"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51025"
+    },
+    {
+      "num": 50901,
+      "title": "[Bug]: `BaseThinkingReasoningParser.extract_reasoning` silently discards output text when `<think>` appears mid-stream",
+      "state": "open",
+      "created": "2026-08-03T18:08:29Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/50901"
+    },
+    {
+      "num": 50889,
+      "title": "[Bug]: Gemma4 tool parser (non-streaming): finish_reason=tool_calls with empty tool_calls array — model's move silently lost under concurrent load",
+      "state": "open",
+      "created": "2026-08-03T16:12:58Z",
+      "labels": [],
+      "url": "https://github.com/vllm-project/vllm/issues/50889"
+    },
+    {
+      "num": 50882,
+      "title": "[Bugfix] MiniMax-M3 fp8_e5m2 KV cache on SM80 (A100/A800): admit the format Triton can read, fix the CUDA-graph KV corruption",
+      "state": "open",
+      "created": "2026-08-03T15:37:36Z",
+      "labels": [
+        "bug",
+        "nvidia"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/50882"
+    },
+    {
+      "num": 50767,
+      "title": "[Bug]: override-generation-config silently ignores presence_penalty / frequency_penalty (missing from available_params whitelist)",
+      "state": "open",
+      "created": "2026-08-02T20:26:54Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/50767"
+    }
+  ]
+}

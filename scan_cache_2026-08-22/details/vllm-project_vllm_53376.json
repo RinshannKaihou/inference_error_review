@@ -1,0 +1,95 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53376",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53376/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53376/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53376/events",
+  "html_url": "https://github.com/vllm-project/vllm/pull/53376",
+  "id": 5221607663,
+  "node_id": "PR_kwDOI7xefs8AAAABApCgkg",
+  "number": 53376,
+  "title": "[Bugfix] Gate CUTLASS FP8 linear kernel on SM89+",
+  "user": {
+    "login": "lesj0610",
+    "id": 35890237,
+    "node_id": "MDQ6VXNlcjM1ODkwMjM3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/35890237?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/lesj0610",
+    "html_url": "https://github.com/lesj0610",
+    "followers_url": "https://api.github.com/users/lesj0610/followers",
+    "following_url": "https://api.github.com/users/lesj0610/following{/other_user}",
+    "gists_url": "https://api.github.com/users/lesj0610/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/lesj0610/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/lesj0610/subscriptions",
+    "organizations_url": "https://api.github.com/users/lesj0610/orgs",
+    "repos_url": "https://api.github.com/users/lesj0610/repos",
+    "events_url": "https://api.github.com/users/lesj0610/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/lesj0610/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 9543357705,
+      "node_id": "LA_kwDOI7xefs8AAAACONQVCQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/nvidia",
+      "name": "nvidia",
+      "color": "76B900",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-22T11:10:17Z",
+  "updated_at": "2026-08-22T11:10:55Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": false,
+  "pull_request": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/pulls/53376",
+    "html_url": "https://github.com/vllm-project/vllm/pull/53376",
+    "diff_url": "https://github.com/vllm-project/vllm/pull/53376.diff",
+    "patch_url": "https://github.com/vllm-project/vllm/pull/53376.patch",
+    "merged_at": null
+  },
+  "body": "## Purpose\n\n`CutlassFP8ScaledMMLinearKernel.is_supported()` only checks that the platform is CUDA. It never consults a capability probe, even though `cutlass_scaled_mm_supports_fp8()` rejects everything below SM89 (and also rejects SM89 without CUDA 12.4, or SM90+ without CUDA 12.0). Since `_POSSIBLE_FP8_KERNELS[PlatformEnum.CUDA]` places it ahead of `MarlinFP8ScaledMMLinearKernel`, it wins auto-selection on pre-Ada GPUs and nothing downstream can recover.\n\nThis became reachable at `bca7bea2405127bd5291bb6fffa679bdcd8f6dd9` (\"Remove VLLM_TEST_FORCE_FP8_MARLIN to replace with linear_backend/moe_backend\"), which moved `MarlinFP8ScaledMMLinearKernel` from first to sixth in the CUDA FP8 priority list and dropped its `compute_capability >= 89` self-exclusion. Before that commit the ordering plus the self-exclusion made Marlin the only candidate on SM75/80/86; after it, the ungated CUTLASS entry is chosen there instead.\n\nCoverage does not catch it. The GSM8K eval configs that used to reach the Marlin path now pass `--linear-backend marlin` explicitly, so they no longer exercise auto-selection at all. `tests/quantization/test_fp8.py` still parametrizes `force_marlin=False`, which does go through auto-selection, but nothing guarantees that parametrization runs on pre-Ada hardware.\n\nSymptoms on SM80 with a mixed-precision ModelOpt checkpoint whose attention projections are FP8:\n\n- `CompilationMode.VLLM_COMPILE`: the FP8 activation-quant op keeps a `float8_e4m3fn` tensor in the Inductor graph. Triton has no `fp8e4nv` on SM80, so `unsupported_input_tensor()` makes `fallback_node_due_to_unsupported_type()` return `True`, `PatternMatcherPass.apply()` skips the `auto_functionalized` node, and `decompose_auto_functionalized()` ends with `AssertionError: auto_functionalized was not removed`.\n- `--enforce-eager`: the CUTLASS FP8 GEMM has no kernel compiled for the arch.\n\nEither way the affected ModelOpt FP8 linear layers are unservable unless the user knows to pass `--linear-backend marlin` by hand. `MarlinFP8ScaledMMLinearKernel` is documented as the \"FP8 Marlin kernel for GPUs that lack FP8 hardware support\", so making it unreachable on exactly those GPUs is the defect.\n\nThis PR reuses the probe that already backs `cutlass_fp8_supported()` so the CUTLASS entry declines the architecture/toolkit combinations it cannot serve and selection falls through to Marlin. On the tested CUDA 13.0 build, SM89+ behaviour is unchanged.\n\nAI assistance: Claude Opus 5 was used to bisect the regression, implement the gate, and draft this description; the submitter reviewed the changes.\n\n## Changes\n\n- `CutlassFP8ScaledMMLinearKernel.is_supported()` resolves the compute capability (argument first, device query as fallback) and returns unsupported when `ops.cutlass_scaled_mm_supports_fp8()` rejects it. The failure reason names the architecture *and* toolkit requirement the probe enforces, since a rejection on SM89/SM90 can come from the CUDA version rather than the capability.\n- Add `tests/model_executor/kernels/test_cutlass_fp8_linear.py`: probe thresholds, the device-query fallback when a caller omits the capability, selector-level fall-through to Marlin on SM80 with a control that reproduces the regression, a check that SM90 still selects CUTLASS, and agreement with the unmocked runtime probe.\n\n## Test Plan\n\nRun on an SM80 host.\n\n```bash\n.venv/bin/python -m ruff check \\\n  vllm/model_executor/kernels/linear/scaled_mm/cutlass.py \\\n  tests/model_executor/kernels/test_cutlass_fp8_linear.py\n\n.venv/bin/python -m ruff format --check \\\n  vllm/model_executor/kernels/linear/scaled_mm/cutlass.py \\\n  tests/model_executor/kernels/test_cutlass_fp8_linear.py\n\n.venv/bin/python -m pytest \\\n  tests/model_executor/kernels/test_cutlass_fp8_linear.py -q\n\n.venv/bin/python -m pytest tests/model_executor/kernels/ -q\n\n# Live gate on the host device.\n.venv/bin/python -c \"\nfrom vllm.model_executor.kernels.linear import CutlassFP8ScaledMMLinearKernel as K\nfrom vllm.platforms import current_platform\nprint(current_platform.get_device_capability().to_int(), K.is_supported(), K.is_supported(89))\n\"\n\n# Capability boundary of the probe reused by the gate.\n.venv/bin/python -c \"\nfrom vllm import _custom_ops as ops\nprint([(cc, ops.cutlass_scaled_mm_supports_fp8(cc)) for cc in (80, 86, 89, 90, 100, 120)])\n\"\n```\n\n## Test Result\n\n- `ruff check`: passed. `ruff format --check`: 2 files already formatted.\n- `pytest tests/model_executor/kernels/test_cutlass_fp8_linear.py -q`: 11 passed, 0 skipped.\n- `pytest tests/model_executor/kernels/ -q`: all 39 tests in that directory passed.\n- Selector level, with one synthetic CUDA device pinned across every FP8 candidate: an SM80 per-tensor FP8 config selects `MarlinFP8ScaledMMLinearKernel`; the control that restores the CUDA-only check on the same config selects `CutlassFP8ScaledMMLinearKernel`, i.e. the regression is reproduced and the gate is what changes the outcome. An SM90 config still selects `CutlassFP8ScaledMMLinearKernel`.\n- Live gate: capability `80`, `is_supported()` returns `False` with the architecture/toolkit reason, `is_supported(89)` returns `(True, None)`.\n- Probe boundary on this CUDA 13.0 build: `[(80, False), (86, False), (89, True), (90, True), (100, True), (120, True)]` — the same threshold the pre-regression Marlin self-exclusion used.\n- Pre-commit hooks passed, including `mypy` for Python 3.10.\n\nThe mocked tests pin the platform enum, the device-capability queries and the CUTLASS probe, so their outcome does not depend on the host or on the CUDA version the wheel was built against. `test_cutlass_fp8_is_supported_matches_runtime_probe` is the one unmocked case; it is `skipif`-guarded on `current_platform.is_cuda()`, which is a platform-enum check, and both sides of its assertion route through the same capability resolution, so it is consistent even where no device is visible.\n\nServing-level confirmation still needs a server restart with this head. The failing run was captured before the change and logs `Selected CutlassFP8ScaledMMLinearKernel for ModelOptFp8LinearMethod` immediately before the Inductor assertion; the expected post-fix log line is `Selected MarlinFP8ScaledMMLinearKernel for ModelOptFp8LinearMethod`.\n\n<details>\n<summary>Essential Elements of an Effective PR Description Checklist</summary>\n\n- The purpose of the PR, such as \"Fix some issue (link existing issues this PR will resolve)\".\n- The test plan, such as providing test command.\n- The test results, such as pasting the results comparison before and after, or e2e results.\n- (Optional) The necessary documentation update, such as updating supported_models.md and examples for a new model.\n\n</details>\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53376/reactions",
+    "total_count": 2,
+    "+1": 1,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 1
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53376/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

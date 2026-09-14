@@ -1,0 +1,61 @@
+{
+  "total": 14,
+  "items": [
+    {
+      "num": 51585,
+      "title": "[ROCm] [Bugfix] Preserve CPU query offsets during capture"
+    },
+    {
+      "num": 51584,
+      "title": "[Bugfix] Account for the NUMA memory policy when sizing available RAM"
+    },
+    {
+      "num": 51575,
+      "title": "[Bugfix][MRV2] Respect dynamic K=0 from scheduler in AutoRegressiveSpeculator"
+    },
+    {
+      "num": 51573,
+      "title": "[Bugfix][Core] Emit --no-{key} for false BooleanOptionalAction flags in YAML config"
+    },
+    {
+      "num": 51568,
+      "title": "[Bugfix][EPLB] Transport E8M0 expert state as byte views"
+    },
+    {
+      "num": 51565,
+      "title": "[Bugfix][GDN] Fix stateless first-chunk classification"
+    },
+    {
+      "num": 51564,
+      "title": "[Bugfix] Reject heterogeneous vocab with local argmax reduction"
+    },
+    {
+      "num": 51560,
+      "title": "[Bugfix][Model] Fail fast on Inkling's unsupported GPU architectures"
+    },
+    {
+      "num": 51556,
+      "title": "[Bugfix][Frontend] Report Cohere stop sequences correctly"
+    },
+    {
+      "num": 51550,
+      "title": "[Bugfix] Fix RustToolParser streaming final flush"
+    },
+    {
+      "num": 51547,
+      "title": "  [Bugfix][Kimi-K3] Fix usage.prompt_tokens over-counting generation prefix tokens"
+    },
+    {
+      "num": 51545,
+      "title": "[Bugfix][NVFP4 MoE] Pad non-gated CuTeDSL intermediate to 128"
+    },
+    {
+      "num": 51538,
+      "title": "[Bugfix] Make DSpark work end-to-end with FLASHINFER_MLA_SPARSE_DSV4"
+    },
+    {
+      "num": 51536,
+      "title": "[Bugfix][MiniMax-M3] Fix MiniMAXGemmaRMSNorm crash on non-CUDA platfo…"
+    }
+  ]
+}

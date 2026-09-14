@@ -1,0 +1,40 @@
+#33986 | 2026-08-07 | fix(sm120): widen unsupported topk so DSpark verify reaches decode-dsv4
+#33983 | 2026-08-07 | Fix vae fast path test after the gate refactor
+#33980 | 2026-08-07 | Fix misleading assertion message for speculative decoding
+#33974 | 2026-08-07 | [unified memory] Support DSPARK speculative decoding + fix two NaN root causes (page hand-out zeroing, CuTe int32 slot-stride wrap)
+#33969 | 2026-08-07 | [diffusion] fix: stop RunAI Model Streamer's rank-discovery collective from firing on independent per-rank loads
+#33968 | 2026-08-07 | [ROCm] Fix HiCache host-pool allocator: hipHostRegister's device pointer is not the host VA
+#33964 | 2026-08-07 | fix: guard set_embed_and_head against tied word embeddings
+#33963 | 2026-08-07 | [Spec][DSpark] Clamp per-request verify window to context/generation budget (fix #33454)
+#33953 | 2026-08-07 | [Diffusion] fix: scope the masked-path replicated guard to SP runs
+#33949 | 2026-08-07 | fix(vlm): stream-order CUDA IPC feature pool lifecycle and streamline multimodal transport module
+#33946 | 2026-08-07 | Fix GLM streaming parser to drain buffered tool calls
+#33940 | 2026-08-07 | fix: route scheduler aborts to multi-tokenizer workers
+#33934 | 2026-08-07 | [Fix] Prevent PP deadlock during weight update group initialization
+#33922 | 2026-08-07 | Fix Qwen3.5 GDN multi-item scoring
+#33912 | 2026-08-06 | fix(dflash): use draft KV geometry and dtype for pool sizing
+#33906 | 2026-08-06 | Fix prefill CP graph overflow with larger bucket search
+#33892 | 2026-08-06 | [Fix] Speculative decoding crashes with DP-Attention
+#33878 | 2026-08-06 | [diffusion] fix output-rank test fixture
+#33877 | 2026-08-06 | [PD] Fix asymmetric MTP metadata buffer mismatch
+#33876 | 2026-08-06 |  fix(HiSparse): use logical request capacity in disaggregated decode
+#33875 | 2026-08-06 |  [diffusion] Fix 4/8-step distilled MiniMax-H3 Turbo LoRA merge
+#33872 | 2026-08-06 | [DSV4] Fix silent KV corruption when speculative draft tokens > 4
+#33868 | 2026-08-06 | [BUGFIX] [NPU] [DIFFUSION] Fix wrong attentions import warning
+#33866 | 2026-08-06 | Fix sgl-deep-ep builder dependencies
+#33865 | 2026-08-06 | Fix DSpark + DeepSeek V4 prefill CP compatibility
+#33864 | 2026-08-06 | [diffusion] fix: MiniMax-H3 text encoder device mismatch under --text-encoder-cpu-offload
+#33862 | 2026-08-06 | [Fix] HiCache: reclaim redundant host mirrors after storage backup (write_through host-pool starvation)
+#33859 | 2026-08-06 | [diffusion] fix: crop GLM-Image output to requested size
+#33836 | 2026-08-06 | fix(connector): Honor Redis file selection
+#33835 | 2026-08-06 | fix(dsv4): avoid fused TopK v2 on Hopper
+#33833 | 2026-08-06 | Fix/kimi k3 triton dcp functionality
+#33830 | 2026-08-06 | Fix lint error
+#33827 | 2026-08-06 | fix: make Cache-DiT actually cache on MiniMax-H3
+#33821 | 2026-08-06 | fix: Allow remote-loaded instances to serve as TransferEngine weight seeds
+#33814 | 2026-08-06 | Fix context-boundary max_new_tokens clipping
+#33810 | 2026-08-06 | fix(gdn): skip the -1 padding sentinel in the chunked extend kernel
+#33805 | 2026-08-06 | Fix single-request generation being killed early on hybrid-SWA models under DFLASH/DSPARK speculative decoding
+#33796 | 2026-08-06 | [fix] Correct metric names in example Grafana dashboard (sglang_* -> sglang:*)
+#33795 | 2026-08-06 | Fix(DSpark): sync device before CUDA graph capture to avoid JIT race
+#33794 | 2026-08-06 | Fix paged SWA retraction resume accounting

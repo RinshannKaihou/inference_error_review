@@ -1,0 +1,245 @@
+{
+  "total_count": 2,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54584",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54584/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54584/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54584/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/54584",
+      "id": 5267753844,
+      "node_id": "I_kwDOI9Wqc88AAAABOfuLdA",
+      "number": 54584,
+      "title": "pcc non-determinism for kimi27",
+      "user": {
+        "login": "jjovicicTT",
+        "id": 262320581,
+        "node_id": "U_kgDOD6KxxQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/262320581?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jjovicicTT",
+        "html_url": "https://github.com/jjovicicTT",
+        "followers_url": "https://api.github.com/users/jjovicicTT/followers",
+        "following_url": "https://api.github.com/users/jjovicicTT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jjovicicTT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jjovicicTT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jjovicicTT/subscriptions",
+        "organizations_url": "https://api.github.com/users/jjovicicTT/orgs",
+        "repos_url": "https://api.github.com/users/jjovicicTT/repos",
+        "events_url": "https://api.github.com/users/jjovicicTT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jjovicicTT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 10184233926,
+          "node_id": "LA_kwDOI9Wqc88AAAACXwcTxg",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/shield_prefill",
+          "name": "shield_prefill",
+          "color": "663664",
+          "default": false,
+          "description": "Prefill tasks worked on by Shield team"
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+        {
+          "login": "jjovicicTT",
+          "id": 262320581,
+          "node_id": "U_kgDOD6KxxQ",
+          "avatar_url": "https://avatars.githubusercontent.com/u/262320581?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/jjovicicTT",
+          "html_url": "https://github.com/jjovicicTT",
+          "followers_url": "https://api.github.com/users/jjovicicTT/followers",
+          "following_url": "https://api.github.com/users/jjovicicTT/following{/other_user}",
+          "gists_url": "https://api.github.com/users/jjovicicTT/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/jjovicicTT/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/jjovicicTT/subscriptions",
+          "organizations_url": "https://api.github.com/users/jjovicicTT/orgs",
+          "repos_url": "https://api.github.com/users/jjovicicTT/repos",
+          "events_url": "https://api.github.com/users/jjovicicTT/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/jjovicicTT/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        }
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-08-27T12:55:05Z",
+      "updated_at": "2026-08-28T21:08:13Z",
+      "closed_at": null,
+      "assignee": {
+        "login": "jjovicicTT",
+        "id": 262320581,
+        "node_id": "U_kgDOD6KxxQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/262320581?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jjovicicTT",
+        "html_url": "https://github.com/jjovicicTT",
+        "followers_url": "https://api.github.com/users/jjovicicTT/followers",
+        "following_url": "https://api.github.com/users/jjovicicTT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jjovicicTT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jjovicicTT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jjovicicTT/subscriptions",
+        "organizations_url": "https://api.github.com/users/jjovicicTT/orgs",
+        "repos_url": "https://api.github.com/users/jjovicicTT/repos",
+        "events_url": "https://api.github.com/users/jjovicicTT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jjovicicTT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "* https://github.com/tenstorrent/tt-metal/actions/runs/33059838009/job/98482463553\n* https://github.com/tenstorrent/tt-metal/actions/runs/33059845510/job/98481100287\n\n\nkv cahce bcc falls down to 0.81995 for some layers",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54584/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54584/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54516",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54516/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54516/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54516/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/54516",
+      "id": 5263452746,
+      "node_id": "I_kwDOI9Wqc88AAAABObnqSg",
+      "number": 54516,
+      "title": "[model]: prefill reference rope is built in bf16, so PCC decays with position",
+      "user": {
+        "login": "kmabeeTT",
+        "id": 118925087,
+        "node_id": "U_kgDOBxanHw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/118925087?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/kmabeeTT",
+        "html_url": "https://github.com/kmabeeTT",
+        "followers_url": "https://api.github.com/users/kmabeeTT/followers",
+        "following_url": "https://api.github.com/users/kmabeeTT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/kmabeeTT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/kmabeeTT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/kmabeeTT/subscriptions",
+        "organizations_url": "https://api.github.com/users/kmabeeTT/orgs",
+        "repos_url": "https://api.github.com/users/kmabeeTT/repos",
+        "events_url": "https://api.github.com/users/kmabeeTT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/kmabeeTT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 5150031476,
+          "node_id": "LA_kwDOI9Wqc88AAAABMvc-dA",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": "Something isn't working"
+        },
+        {
+          "id": 6751817534,
+          "node_id": "LA_kwDOI9Wqc88AAAABknCPPg",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/prefill",
+          "name": "prefill",
+          "color": "99B648",
+          "default": false,
+          "description": "LLM models have prefill mode and it's optimization is usually separated from decode mode."
+        },
+        {
+          "id": 10184233926,
+          "node_id": "LA_kwDOI9Wqc88AAAACXwcTxg",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/shield_prefill",
+          "name": "shield_prefill",
+          "color": "663664",
+          "default": false,
+          "description": "Prefill tasks worked on by Shield team"
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-27T03:04:50Z",
+      "updated_at": "2026-08-27T03:07:41Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Component / Area\n\nmodel — `models/demos/deepseek_v3_d_p` (prefill reference path)\n\n### Issue Type\n\nBad Outputs\n\n**Found during:** Mistral Small 4 119B prefill bring-up (#53688). The bug is in shared DeepSeek-family prefill code and affects every MLA variant's long-context validation, not just Mistral.\n\n## Observed\n\nThe torch reference used for prefill PCC validation gets its rotary table from an already-instantiated model. The reference is instantiated in bfloat16, so `inv_freq` is a bf16 **buffer** — 0.75 where the true value is 0.7498942 — and the later `.float()` upcasts a number that has already lost its low bits. Evaluating \"in fp32\" changes nothing.\n\nThe residue is a ~4.4e-4 per-dimension frequency error, i.e. a phase error growing **linearly with position**. It hits only the rotary half of the KVPE cache, and attention output stays ~0.99 because q and k share the same wrong table and the error cancels in q·k — so it reads exactly like a device rope kernel bug and is not one.\n\nMeasured at mesh-8x4, KVPE PE part: **0.997590 at 1024 tokens, 0.946176 at 5120**.\n\n## Expected\n\nThe reference rotary table is fp32 regardless of the dtype the reference model was built in, so reference-vs-device PCC is flat in sequence length rather than decaying with position.\n\n## Steps to Reproduce\n\n1. `pytest models/demos/deepseek_v3_d_p/tests/test_prefill_block.py` for any MLA variant, at 1024 and then 5120 tokens.\n2. Compare the KVPE PE-part PCC at the two lengths: it degrades with position (0.9976 → 0.9462).\n\n**Input data:** any MLA variant (DeepSeek-V3, Kimi-K2, GLM-5.2, Mistral Small 4) and its HF checkpoint.\n**Frequency:** Always; the error scales with position, so short runs look clean.\n\n## Software Versions\n\n- tt-metal main `58342a6f63d` (2026-08-26) — bug present at this commit\n- `transformers == 5.12.1`, `torch == 2.11.0+cpu` (repo pins)\n- Ubuntu 22.04.5 LTS\n\n## Hardware Details\n\n- Product: Blackhole\n- Card/System: Galaxy, 32-chip (`bh-glx-110-a04u02`)\n\n## Regression\n\nNot a regression — the reference has been built from the model object since it was introduced. It only became visible at long context.\n\n## Priority\n\nP2\n\n## Impact\n\nLong-context prefill accuracy validation for MLA variants whose reference layer takes `position_embeddings` (transformers >= 5; Mistral Small 4 is the measured case). Worse than a plain failure: it points the investigation at the device.\n\n**Wider than the measured case.** `create_hf_model` casts the whole reference to bf16, and that cast converts the non-persistent `inv_freq` buffer — verified: 0.7498942 becomes 0.75, and `.float()` returns 0.75, not the original. So variants whose vendored layer computes rope *internally* (DeepSeekV3, Kimi, GLM) read the same corrupted table. That path is not addressed by the fix for this issue, which supplies an fp32 table only where the layer signature accepts one. Its practical PCC impact has not been measured; worth a follow-up rather than an assumption.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54516/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/54516/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

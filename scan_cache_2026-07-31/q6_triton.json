@@ -1,0 +1,1351 @@
+{
+  "total_count": 125,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10927",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10927/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10927/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10927/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10927",
+      "id": 4912594983,
+      "node_id": "I_kwDOAWaHXs8AAAABJNBAJw",
+      "number": 10927,
+      "title": "[Bug] Tensor-descriptor gather/load × tl.dot produces incorrect results on Blackwell when K is not a multiple of BLOCK_SIZE_K",
+      "user": {
+        "login": "afierka-intel",
+        "id": 160735857,
+        "node_id": "U_kgDOCZSicQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/160735857?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/afierka-intel",
+        "html_url": "https://github.com/afierka-intel",
+        "followers_url": "https://api.github.com/users/afierka-intel/followers",
+        "following_url": "https://api.github.com/users/afierka-intel/following{/other_user}",
+        "gists_url": "https://api.github.com/users/afierka-intel/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/afierka-intel/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/afierka-intel/subscriptions",
+        "organizations_url": "https://api.github.com/users/afierka-intel/orgs",
+        "repos_url": "https://api.github.com/users/afierka-intel/repos",
+        "events_url": "https://api.github.com/users/afierka-intel/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/afierka-intel/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-07-17T15:20:00Z",
+      "updated_at": "2026-07-18T09:15:21Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\n`tensor_descriptor.gather()` (for A) combined with `tensor_descriptor.load()` (for B), fed into `tl.dot`, produces incorrect results on Blackwell (sm100+) whenever the K dimension is **not a multiple of `BLOCK_SIZE_K`** (i.e. the last K-tile is ragged/partially out of bounds). The equivalent computation via plain pointer arithmetic + explicit `tl.load(..., mask=...)` is correct for the identical shape.\n\nFound while validating a tensor-descriptor MoE kernel path for vLLM ([vllm-project/vllm#42436](https://github.com/vllm-project/vllm/pull/42436)) — root-caused down to a minimal, vLLM-independent repro (attached below). Confirmed on real B200 hardware, not a simulator/CI artifact.\n\n### Environment\n\n- Triton: 3.6.0\n- torch: 2.11.0+cu130\n- Hardware: NVIDIA B200 (Blackwell, `torch.cuda.get_device_capability(0) == (10, 0)`)\n\n### Repro\n\n```python\nimport torch\nimport triton\nimport triton.language as tl\n\n\ndef _alloc_fn(size: int, alignment: int, stream) -> torch.Tensor:\n    return torch.empty(size, dtype=torch.int8, device=\"cuda\")\n\n\ntriton.set_allocator(_alloc_fn)\n\n\n@triton.jit\ndef gemm_gather_kernel(\n    a_ptr, b_ptr, c_ptr,\n    M, N, K,\n    stride_am, stride_ak,\n    stride_bn, stride_bk,\n    stride_cm, stride_cn,\n    BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,\n    USE_TD: tl.constexpr,\n):\n    pid_m = tl.program_id(0)\n    pid_n = tl.program_id(1)\n    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)\n    offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)\n    offs_k = tl.arange(0, BLOCK_K)\n\n    if USE_TD:\n        a_desc = tl.make_tensor_descriptor(\n            base=a_ptr, shape=(M, K), strides=(stride_am, stride_ak),\n            block_shape=(1, BLOCK_K),\n        )\n        b_desc = tl.make_tensor_descriptor(\n            base=b_ptr, shape=(N, K), strides=(stride_bn, stride_bk),\n            block_shape=(BLOCK_N, BLOCK_K),\n        )\n        gather_idx = offs_m.to(tl.int32)  # identity gather: row i -> row i\n    else:\n        a_ptrs = a_ptr + offs_m[:, None] * stride_am + offs_k[None, :] * stride_ak\n        b_ptrs = b_ptr + offs_n[:, None] * stride_bn + offs_k[None, :] * stride_bk\n\n    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)\n    for k in range(0, tl.cdiv(K, BLOCK_K)):\n        if USE_TD:\n            a = a_desc.gather(gather_idx, k * BLOCK_K)          # [BLOCK_M, BLOCK_K]\n            b = b_desc.load([pid_n * BLOCK_N, k * BLOCK_K]).T   # [BLOCK_K, BLOCK_N]\n        else:\n            k_mask = offs_k < K - k * BLOCK_K\n            a = tl.load(a_ptrs, mask=k_mask[None, :], other=0.0)\n            b = tl.load(b_ptrs, mask=k_mask[:, None].broadcast_to(BLOCK_K, BLOCK_N).T, other=0.0)\n            b = tl.trans(b)\n        acc += tl.dot(a, b)\n        if not USE_TD:\n            a_ptrs += BLOCK_K * stride_ak\n            b_ptrs += BLOCK_K * stride_bk\n\n    c_ptrs = c_ptr + offs_m[:, None] * stride_cm + offs_n[None, :] * stride_cn\n    tl.store(c_ptrs, acc)\n\n\ndef run(use_td, a, b, BLOCK_M, BLOCK_N, BLOCK_K):\n    M, K = a.shape\n    N, _ = b.shape\n    c = torch.zeros((M, N), device=a.device, dtype=torch.float32)\n    grid = (triton.cdiv(M, BLOCK_M), triton.cdiv(N, BLOCK_N))\n    gemm_gather_kernel[grid](\n        a, b, c, M, N, K,\n        a.stride(0), a.stride(1), b.stride(0), b.stride(1), c.stride(0), c.stride(1),\n        BLOCK_M=BLOCK_M, BLOCK_N=BLOCK_N, BLOCK_K=BLOCK_K, USE_TD=use_td,\n    )\n    return c\n\n\ntorch.manual_seed(42)\nBLOCK_M, BLOCK_N, BLOCK_K = 32, 64, 64\nM, N, K = 128, 128, 511  # 511 is NOT a multiple of BLOCK_K=64\n\na = torch.randn((M, K), device=\"cuda\", dtype=torch.bfloat16)\nb = torch.randn((N, K), device=\"cuda\", dtype=torch.bfloat16)\n\nc_pointer = run(False, a, b, BLOCK_M, BLOCK_N, BLOCK_K)\nc_td = run(True, a, b, BLOCK_M, BLOCK_N, BLOCK_K)\nref = a.float() @ b.float().T\n\nprint(\"pointer path max diff:\", (c_pointer - ref).abs().max().item())\nprint(\"TD path max diff:     \", (c_td - ref).abs().max().item())\nprint(\"TD path mismatch frac:\", (~torch.isclose(c_td, ref, atol=1e-1, rtol=1e-1)).float().mean().item())\n```\n\n### Output\n\n```\npointer path max diff: 0.0001220703125\nTD path max diff:      130.4498...\nTD path mismatch frac: 0.9642...\n```\n\n96% of output elements are wrong for the TD path when `K=511, BLOCK_K=64` (ragged last tile). Re-running with `K=512` (aligned, no ragged tile) makes the TD path bit-exact with the pointer path — the bug is specifically triggered by the non-block-aligned K tail, not by `gather`/`load` in general.\n\n### Expected behavior\n\n`tensor_descriptor.gather()` / `tensor_descriptor.load()` should either:\n- correctly zero-fill (or otherwise handle) the out-of-bounds K region so the result matches the masked-pointer-load reference, or\n- raise a clear compile-time/runtime error if a ragged (non-block-aligned) descriptor block along the loaded dimension is unsupported, rather than silently miscomputing.\n\n### Additional context\n\nThis is likely the same general family of bug as #7510 in [intel/intel-xpu-backend-for-triton](https://github.com/intel/intel-xpu-backend-for-triton/issues/7510) (tensor-descriptor load + `tl.dot` miscompilation on Intel XPU, different trigger condition — `BLOCK_SIZE_N`/`BLOCK_SIZE_M` combination there, not K-alignment), but that repro is XPU-specific and doesn't reproduce this one, which is on the NVIDIA backend / Blackwell. Filing separately since the backends and trigger conditions differ, but flagging the pattern in case the root cause is shared in the frontend/common lowering code.\n\nThe full context (original ~74% mismatch found in a real MoE grouped-GEMM kernel, the fix applied downstream by disabling the TD path for this condition) is in [vllm-project/vllm#42436](https://github.com/vllm-project/vllm/pull/42436).\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10927/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10927/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10821",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10821/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10821/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10821/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10821",
+      "id": 4841554990,
+      "node_id": "I_kwDOAWaHXs8AAAABIJRELg",
+      "number": 10821,
+      "title": "[Bug] Two `tl.dot` chained through one accumulator in a K-loop compute wrong results on sm_103 (B300)",
+      "user": {
+        "login": "michaelroyzen",
+        "id": 45830328,
+        "node_id": "MDQ6VXNlcjQ1ODMwMzI4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/45830328?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/michaelroyzen",
+        "html_url": "https://github.com/michaelroyzen",
+        "followers_url": "https://api.github.com/users/michaelroyzen/followers",
+        "following_url": "https://api.github.com/users/michaelroyzen/following{/other_user}",
+        "gists_url": "https://api.github.com/users/michaelroyzen/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/michaelroyzen/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/michaelroyzen/subscriptions",
+        "organizations_url": "https://api.github.com/users/michaelroyzen/orgs",
+        "repos_url": "https://api.github.com/users/michaelroyzen/repos",
+        "events_url": "https://api.github.com/users/michaelroyzen/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/michaelroyzen/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-07-08T22:24:11Z",
+      "updated_at": "2026-07-17T21:14:51Z",
+      "closed_at": "2026-07-17T21:14:51Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\nOn NVIDIA B300 (sm_103), a K-loop that issues **two `tl.dot` calls chained through a single accumulator** (`acc = tl.dot(a1, b1, acc); acc = tl.dot(a2, b2, acc)`) produces wrong results for tile sizes that take the tcgen05 MMA path (BLOCK_M ≥ 64). Max abs error is ~50–70 on values of magnitude ~25 (reference: `A1 @ B1 + A2 @ B2` in fp32 torch). The wrong results are **deterministic** — bit-identical across runs — so this is a miscompile, not a race (distinct from #9871, whose fix is present in the tested builds).\n\nControls that are all correct: the same loop with a single `tl.dot`; the same two dots into **two separate accumulators** (summed after the loop); and `BLOCK_M = 16` (non-tcgen05 lowering). Both fp32 and bf16 inputs are affected.\n\nReproduces on **triton 3.6.0, 3.7.1, and current `main` (3.8.0, be7e23cc653162903be98fc24ae8944cbe42810a)**, each in a clean venv.\n\n## Reproducer\n\n```python\nimport torch\nimport triton\nimport triton.language as tl\n\n\n@triton.jit\ndef two_dots_one_acc(a1, a2, b1, b2, c, M, N, K,\n                     BM: tl.constexpr, BN: tl.constexpr, BK: tl.constexpr):\n    pm = tl.program_id(0)\n    pn = tl.program_id(1)\n    m = pm * BM + tl.arange(0, BM)\n    n = pn * BN + tl.arange(0, BN)\n    acc = tl.zeros((BM, BN), tl.float32)\n    for kk in tl.range(0, K, BK):\n        k = kk + tl.arange(0, BK)\n        acc = tl.dot(tl.load(a1 + m[:, None] * K + k[None, :]),\n                     tl.load(b1 + k[:, None] * N + n[None, :]), acc=acc)\n        acc = tl.dot(tl.load(a2 + m[:, None] * K + k[None, :]),\n                     tl.load(b2 + k[:, None] * N + n[None, :]), acc=acc)\n    tl.store(c + m[:, None] * N + n[None, :], acc.to(c.dtype.element_ty))\n\n\ndef run(dtype, BM, BN, BK, M=256, N=256, K=256):\n    torch.manual_seed(0)\n    a1 = torch.randn(M, K, device=\"cuda\", dtype=dtype)\n    a2 = torch.randn(M, K, device=\"cuda\", dtype=dtype)\n    b1 = torch.randn(K, N, device=\"cuda\", dtype=dtype)\n    b2 = torch.randn(K, N, device=\"cuda\", dtype=dtype)\n    ref = a1.float() @ b1.float() + a2.float() @ b2.float()\n    c = torch.empty(M, N, device=\"cuda\", dtype=dtype)\n    two_dots_one_acc[(M // BM, N // BN)](a1, a2, b1, b2, c, M, N, K, BM, BN, BK)\n    torch.cuda.synchronize()\n    return (c.float() - ref).abs().max().item()  # rounding noise < 0.5; bug ~50-70\n\n\nfor dtype in (torch.float32, torch.bfloat16):\n    for BM, BN, BK in [(128, 64, 32), (64, 64, 64), (16, 64, 32)]:\n        print(dtype, f\"BM={BM} BN={BN} BK={BK}\", \"max_err =\", run(dtype, BM, BN, BK))\n```\n\n## Output (triton main @ be7e23c, B300)\n\n```\ntorch.float32 BM=128 BN=64 BK=32 max_err = 64.53   <- WRONG\ntorch.float32 BM=64  BN=64 BK=64 max_err = 53.57   <- WRONG\ntorch.float32 BM=16  BN=64 BK=32 max_err = 0.08    (ok, non-tcgen05 tile)\ntorch.bfloat16 BM=128 BN=64 BK=32 max_err = 57.23  <- WRONG\ntorch.bfloat16 BM=64  BN=64 BK=64 max_err = 61.79  <- WRONG\ntorch.bfloat16 BM=16  BN=64 BK=32 max_err = 0.25   (ok)\n```\n\nReplacing the shared accumulator with two accumulators summed after the loop, or merging the two dots into one GEMM, gives correct results at all tile sizes (max_err ≤ 0.25).\n\n@atalman @lezcano @ThomasRaoux\n\n### Environment details\n\n## Environment\n\n| | |\n|---|---|\n| GPU | NVIDIA B300 SXM6 (sm_103, compute capability (10, 3)) |\n| Driver / CUDA | 595.71.05 / 13.2 |\n| torch | 2.12.1+cu130 |\n| triton | 3.6.0, 3.7.1, and main @ be7e23cc653162903be98fc24ae8944cbe42810a — all reproduce |\n| OS / Python | Ubuntu (linux 6.17), Python 3.12 |\n\nsm_100 (B200) not tested; H100 (sm_90) is unaffected by the same code.",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10821/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10821/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10772",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10772/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10772/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10772/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10772",
+      "id": 4787586695,
+      "node_id": "I_kwDOAWaHXs8AAAABHVzGhw",
+      "number": 10772,
+      "title": "[Bug]: `triton_kernels.matmul` NaNs due to OOB reads on scale values",
+      "user": {
+        "login": "yzong-rh",
+        "id": 263738792,
+        "node_id": "U_kgDOD7hVqA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/263738792?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/yzong-rh",
+        "html_url": "https://github.com/yzong-rh",
+        "followers_url": "https://api.github.com/users/yzong-rh/followers",
+        "following_url": "https://api.github.com/users/yzong-rh/following{/other_user}",
+        "gists_url": "https://api.github.com/users/yzong-rh/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/yzong-rh/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/yzong-rh/subscriptions",
+        "organizations_url": "https://api.github.com/users/yzong-rh/orgs",
+        "repos_url": "https://api.github.com/users/yzong-rh/repos",
+        "events_url": "https://api.github.com/users/yzong-rh/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/yzong-rh/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 5,
+      "created_at": "2026-07-01T16:54:59Z",
+      "updated_at": "2026-07-07T22:59:04Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\nNote: this is an issue with the `triton_kernels.matmul` kernel, not in the Triton compiler.\n\nUnmasked loading of `x_scales` and `w_scales` leads to OOB reads of pontential NaNs values corrupting the outputs from `matmul()`.\n\n~~Affects MXFP4, MXFP8, and potentially other paths where swizzled scales are read. Affects both persistent and non-persistent kernels.~~ Affects MXFP4 Hopper path only because `convert_layout` properly zeros and pads the inputs on other paths.\n\nIn Triton v3.5.1 (used by vLLM v0.24.0: https://github.com/vllm-project/vllm/issues/47303):\n\nMXFP4 `w_scales` on Hopper: [repro_matmul_ogs.py](https://gist.github.com/yzong-rh/a42f1ef6161ed68c02c548b677cf31aa)\n\n```\n# FAILURE\npython repro_matmul_ogs.py\n\n# NO FAILURE\nFILL_VALUE=0xfe python repro_matmul_ogs.py\nFILL_VALUE=0x0 python repro_matmul_ogs.py\n```\n\nPotential fix:\nhttps://github.com/triton-lang/triton/blob/0add68262ab0a2e33b84524346cb27cbb2787356/python/triton_kernels/triton_kernels/matmul_ogs_details/_matmul_ogs.py#L326-L327\n```\n327,336c327\n<                 if EVEN_K:\n<                     hopper_scale_mask = tl.full([PACKED_MX_BLOCK], True, dtype=tl.int1)\n<                 else:\n<                     # PATCH: mask out the swizzled K tail.\n<                     hopper_scale_mask = (offs_k_scale // 32) * MX_PACK_DIVISOR < k\n<                 w_scales = unswizzle_mxfp4_scale_hopper(\n<                     tl.load(WMxScalePtrs, mask=hopper_scale_mask[None, :], other=0),\n<                     mx_axis=1,\n<                     num_warps=num_warps,\n<                 )\n---\n>                 w_scales = unswizzle_mxfp4_scale_hopper(tl.load(WMxScalePtrs), mx_axis=1, num_warps=num_warps)\n```\n\nIn Triton v3.7.1:\n\nMXFP4 `w_scales` on Hopper ~~and Blackwell~~:\n[repro_matmul.py](https://gist.github.com/yzong-rh/5073003ea5cd2fb8cba02fbd10354f20)\n~~[repro_matmul_bw.py](https://gist.github.com/yzong-rh/45d8431fdb572af8865ed9366aaafc5f)~~\n```\n# FAILURE\npython repro_matmul.py\npython repro_matmul_bw.py\n\n# NO FAILURE\nFILL_VALUE=0xfe python repro_matmul.py\nFILL_VALUE=0x0 python repro_matmul.py\nFILL_VALUE=0xfc python repro_matmul_bw.py\nFILL_VALUE=0x0 python repro_matmul_bw.py\n```\n\nHopper Bug Location:\nhttps://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/python/triton_kernels/triton_kernels/matmul_details/_matmul.py#L367-L371\n\n~~Blackwell Bug Location:\nhttps://github.com/triton-lang/triton/blob/f797708c0626e5f9840ca5b0a98790e2c7cb09ad/python/triton_kernels/triton_kernels/matmul_details/_p_matmul.py#L356-L359~~\n\n~~Affects MXFP8 `x_scales` and potentially other paths too.~~\n\n### Real World Failure in vLLM:\n\ntriton is the default MXFP4 MoE backend for Hopper. Corrupted output can occur anytime some other operation allocates memory on GPU (allocating bitmasks for constrained decoding for example).\n\nWhile working on [strict tool calling for GPT-OSS models in vLLM](https://github.com/vllm-project/vllm/pull/45560), discovered that GPT-OSS 20B intermittently generated non sense (0% accuracy on BFCL function calling benchmark) when constrained decoding is on (even when `AnyTokensFormat` is used, which should be equivalent to no constraints). Switching to another MoE kernel fixed this issue.\n\n### Environment details\n\nGPU: H100 and B200\nTriton: v3.5.1 to v3.7.1",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10772/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10772/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10745",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10745/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10745/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10745/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10745",
+      "id": 4764762430,
+      "node_id": "I_kwDOAWaHXs8AAAABHACBPg",
+      "number": 10745,
+      "title": "[BUG][AMD] fp8 e4m3fnuz/e5m2fnuz NaN (byte 0x80) silently decodes to fp16/bf16 -0.0 instead of NaN on non-CDNA3 GPUs",
+      "user": {
+        "login": "Hughshine",
+        "id": 32846078,
+        "node_id": "MDQ6VXNlcjMyODQ2MDc4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/32846078?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Hughshine",
+        "html_url": "https://github.com/Hughshine",
+        "followers_url": "https://api.github.com/users/Hughshine/followers",
+        "following_url": "https://api.github.com/users/Hughshine/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Hughshine/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Hughshine/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Hughshine/subscriptions",
+        "organizations_url": "https://api.github.com/users/Hughshine/orgs",
+        "repos_url": "https://api.github.com/users/Hughshine/repos",
+        "events_url": "https://api.github.com/users/Hughshine/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Hughshine/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-06-29T03:23:05Z",
+      "updated_at": "2026-07-12T02:09:21Z",
+      "closed_at": "2026-07-12T02:09:21Z",
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "\n## Describe the bug\n\nOn AMD GPUs **without** native FNUZ-fp8 hardware conversion (everything except CDNA3 / gfx942 — i.e. CDNA1 gfx908, CDNA2 gfx90a, CDNA4 gfx950, and RDNA), upcasting an `float8_e4m3fnuz` or `float8_e5m2fnuz` value whose bit pattern is `0x80` produces a finite `-0.0` instead of NaN. `0x80` is the *only* NaN encoding in these FNUZ formats (the formats have no -0/Inf; the -0 slot is repurposed as the single NaN), so a NaN is silently turned into a finite signed zero with no error — corrupting any downstream NaN-propagation or NaN-masking.\n\nThe conversion is done in software on these arches (the HW `cvt` path is gated to CDNA3 only — [`hasFnuzFp8HW`, ConvertFpCastOpToLLVM.cpp#L50](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L50)), and **three** software decoders mishandle `0x80`. The `→ fp16` decoders produce fp16 `-0.0` (`0x8000`) instead of NaN (`0x7e00`); the `→ bf16` decoder produces bf16 `-0.0` (`0x8000`) instead of NaN (`0x7fc0`):\n\n**`e4m3fnuz` — the NaN guard is present but then overwritten.** In [`Fp8E4M3fnuzToFp16OneValue`](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L949-L999), the NaN guard maps `0x80 → 0x7E00` at [L974](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L974), but the denorm/zero LUT loop at [L989-L992](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L989-L992) runs *after* it and selects on `vAbs = v8 & 0x7F`; for `0x80`, `vAbs == 0` matches `denormsAndZeroLut[0] = 0x0000` and overwrites the NaN, and the trailing sign re-apply at [L995](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L995) gives `0x8000`.\n\n**`e5m2fnuz → fp16` — no NaN guard at all.** [`Fp8E5M2fnuzToFp16OneValue`](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L1124-L1158) has no `0x80` case; with `exp == 0` it takes the `e_is_zero` branch `o0 = sign | (m >> 1) = 0x8000`.\n\n**`e4m3fnuz → bf16` — a separate decoder, also no NaN guard.** The bf16 upcast does not reuse the fp16 path; it has its own bit-trick decoder [`Fp8E4M3fnuzToBf16SW`](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L1257-L1306) (selected at [L1232](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L1232)). For `0x80` the magnitude is masked off ([`absHalfwordMask`, L1280](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L1280)) so the value becomes `0`, then the sign bit is OR'd back ([L1299-L1300](https://github.com/triton-lang/triton/blob/285de7a16f2d4585c6fdecad4167c6e7ee5cb869/third_party/amd/lib/TritonAMDGPUToLLVM/ConvertFpCastOpToLLVM.cpp#L1299-L1300)), giving bf16 `0x8000` (`-0.0`) instead of NaN (`0x7fc0`).\n\nThe remaining two fnuz upcasts route through the above and so share the defect (and the fix) transitively: `e5m2fnuz → bf16` calls `Fp8E5M2fnuzToFp16SW`, and both `→ fp32` go fp8 → fp16 → fp32. So all six `{e4m3fnuz, e5m2fnuz} × {fp16, bf16, fp32}` upcasts silently lose the NaN.\n\nMinimal kernel that triggers it (run on a non-CDNA3 AMD GPU — gfx908/gfx90a/gfx950/RDNA — so the SW decode path is selected):\n\n```python\nimport torch\nimport triton\nimport triton.language as tl\n\n@triton.jit\ndef cvt(x_ptr, y_ptr, N: tl.constexpr):\n    off = tl.arange(0, N)\n    x = tl.load(x_ptr + off)          # tl.float8e4b8 == e4m3fnuz (use float8e5b16 for e5m2fnuz)\n    tl.store(y_ptr + off, x.to(tl.float16))\n\n# 0x80 is the e4m3fnuz NaN encoding\nx = torch.tensor([0x80], dtype=torch.uint8, device=\"cuda\").view(torch.float8_e4m3fnuz)\ny = torch.empty(1, dtype=torch.float16, device=\"cuda\")\ncvt[(1,)](x, y, N=1)\nprint(y.item(), y.view(torch.int16).item())   # expected: nan / 0x7e00 ; actual: -0.0 / 0x8000\n```\n\nExpected: `nan` / `0x7e00` — matching the reference `torch.tensor([0x80],dtype=uint8).view(torch.float8_e4m3fnuz).to(torch.float16)`. From the SW decode path it instead produces `-0.0` / `0x8000`; same for `float8_e5m2fnuz`.\n\nCompiling that kernel through the AMD backend at `arch=gfx90a` (host-side codegen, no GPU needed) emits exactly the guard-then-clobber sequence — for the NaN byte `0x80`, `%17` sets the correct NaN `0x7E00` (=32256), then the LUT overwrites it and the sign is re-applied to give `0x8000`:\n\n```llvm\n%8  = ... raw.ptr.buffer.load.i8 ...        ; the fp8 byte v\n%11 = and i16 %10, -32768                   ; sign (0x8000)\n%16 = icmp eq i8 %8, -128                    ; v == 0x80 (the FNUZ NaN code)\n%17 = select i1 %16, i16 32256, i16 %14      ; NaN guard -> 0x7E00   (L974)\n%18 = icmp eq i8 %15, 0                       ; vAbs == 0 ?           (vAbs = v & 0x7F)\n%19 = select i1 %18, i16 0, i16 %17           ; LUT[0] overwrites the NaN with 0  (L989-992)\n...                                           ; %21..%33: LUT[1..7], none match for 0x80\n%34 = or i16 %33, %11                         ; re-apply sign -> 0x8000 = fp16 -0.0  (L995)\n```\n\n(The decode is pure integer + a `bitcast`, so the byte result is target-independent: this LLVM IR is what gfx90a/gfx908/gfx950/RDNA all lower to. I confirmed the emitted IR above and cross-checked all 256 codes against the torch reference, where only `0x80` diverges; I did not run it on a physical AMD GPU.)\n\n**Expected behavior.** Byte `0x80` should decode to a fp16 NaN (`0x7e00`), matching the format's single NaN encoding and the reference decoders (PyTorch's FNUZ dtypes, and the compiler's own intent — the guard at L974 is meant to produce exactly this). The compiler should not turn a NaN into a finite -0.0.\n\n**Suggested fix.**\n- `e4m3fnuz → fp16`: apply the `0x80 → 0x7E00` NaN guard *after* both the LUT loop and the sign re-apply (i.e. make it the last write), so the LUT cannot overwrite it. (Moving it just after the LUT but before the sign-or yields `0xfe00`, which is still a NaN but carries the sign bit; making it the final write gives `0x7e00` exactly.)\n- `e5m2fnuz → fp16`: add the same `v8 == 0x80 → 0x7E00` guard as the final step.\n- `e4m3fnuz → bf16`: add a per-lane `0x80 → 0x7FC0` (bf16 NaN) guard on the two unpacked output lanes.\n\nThe LUT-based denorm decode for all non-NaN codes is unaffected. Verified by lowering all six combos through the AMD backend at `arch=gfx90a` (host-side, no GPU): post-fix each emits the per-format NaN guard (`0x7E00` for fp16/fp32, `0x7FC0` for bf16) and the pre-fix build does not; cross-checked against the `torch.float8_e4m3fnuz` / `torch.float8_e5m2fnuz` upcast reference (`0x80 → 0x7e00` fp16 / `0x7fc0` bf16 / NaN fp32). An end-to-end test (`test_typeconvert_upcast_fnuz_nan`) is added so CI exercises it on the AMD runners.\n\nI searched the open and closed tracker (fnuz / e4m3fnuz / e5m2fnuz / fp8 NaN / fp8 signed-zero / \"NaN becomes zero\" and related) and found no existing report of this defect. The same buggy logic is present in the released tags v3.6.0, v3.7.0, and v3.7.1 (then in `ElementwiseOpToLLVM.cpp`; the functions were moved verbatim into `ConvertFpCastOpToLLVM.cpp` by the NFC refactor in #10441) and on current `main`.\n\n---\n\n## Environment details\n\n```\nTriton: source lines cited on main @ 285de7a16f2d4585c6fdecad4167c6e7ee5cb869\n        (also present in v3.6.0/v3.7.0/v3.7.1); the gfx90a LLVM-IR dump above was\n        produced with the v3.7.1 build (the AMD SW decode body is byte-identical).\nGPU:    AMD non-CDNA3 (gfx908 / gfx90a / gfx950 / RDNA) takes the software FNUZ->fp16 path.\n        CDNA3 (gfx942) uses the HW cvt path and is not affected.\n```\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10745/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10745/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10697",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10697/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10697/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10697/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10697",
+      "id": 4719608776,
+      "node_id": "I_kwDOAWaHXs8AAAABGU-DyA",
+      "number": 10697,
+      "title": "[interpreter] NaN semantic inconsistency in tl.min, tl.argmin, tl.sum — interpreter diverges from JIT for NaN inputs",
+      "user": {
+        "login": "Mattral",
+        "id": 88831350,
+        "node_id": "MDQ6VXNlcjg4ODMxMzUw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/88831350?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Mattral",
+        "html_url": "https://github.com/Mattral",
+        "followers_url": "https://api.github.com/users/Mattral/followers",
+        "following_url": "https://api.github.com/users/Mattral/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Mattral/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Mattral/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Mattral/subscriptions",
+        "organizations_url": "https://api.github.com/users/Mattral/orgs",
+        "repos_url": "https://api.github.com/users/Mattral/repos",
+        "events_url": "https://api.github.com/users/Mattral/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Mattral/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 3,
+      "created_at": "2026-06-22T18:44:35Z",
+      "updated_at": "2026-06-22T22:28:50Z",
+      "closed_at": "2026-06-22T22:28:50Z",
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\n`tl.argmax` with NaN inputs is known to produce different results between JIT and interpreter mode (see #10291). The same root cause — the interpreter's reduction loop using Python semantics for NaN rather than hardware semantics — almost certainly affects `tl.min`, `tl.argmin`, and `tl.sum` as well. No tests currently exercise NaN inputs through the interpreter's reduction path for these ops.\n\nThis is a correctness/semantic consistency issue: the interpreter is supposed to be a faithful simulation of JIT execution (used for debugging via `TRITON_INTERPRET=1`), but NaN handling diverges silently.\n\nBelow is a minimal reproducer that demonstrates the divergence for `tl.argmin`. The same pattern applies to `tl.min` and `tl.sum`.\n\n```python\nimport os\nimport torch\nimport triton\nimport triton.language as tl\n\n\n@triton.jit\ndef reduction_nan_kernel(x_ptr, out_ptr, N: tl.constexpr, BLOCK: tl.constexpr):\n    offsets = tl.arange(0, BLOCK)\n    mask = offsets < N\n    x = tl.load(x_ptr + offsets, mask=mask, other=float(\"inf\"))\n\n    result = tl.argmin(x, axis=0)\n    tl.store(out_ptr, result)\n\n\ndef run(x):\n    out = torch.empty((), device=x.device, dtype=torch.int32)\n    reduction_nan_kernel[(1,)](x, out, N=x.numel(), BLOCK=4)\n    return out.item()\n\n\nx = torch.tensor([float(\"nan\"), 2.0, 1.0], device=\"cuda\", dtype=torch.float32)\nmode = \"interpreter\" if os.environ.get(\"TRITON_INTERPRET\") == \"1\" else \"compiled\"\nprint(f\"mode: {mode}, tl.argmin result: {run(x)}\")\n# compiled:    tl.argmin result: 2   (correct: ignores NaN, finds minimum at index 2)\n# interpreter: tl.argmin result: 0   (wrong: NaN \"wins\" because Python min() propagates NaN)\n```\n\n**Expected behavior:**\nAll reduction ops (`tl.min`, `tl.argmin`, `tl.sum`) should produce the same results in interpreter mode as in compiled/JIT mode when inputs contain NaN. Compiled mode follows hardware semantics (NaN is ignored / treated as identity element). The interpreter should match this.\n\n**Observed behavior:**\nIn interpreter mode, NaN propagates through reductions (Python semantics), causing wrong indices and values to be returned. The divergence is silent — no warning is raised — which makes it a dangerous debugging trap.\n\n**Suspected root cause:**\nThe interpreter reduction path in `python/triton/interpreter/` calls Python built-ins (`min()`, `max()`, `sum()`) or uses `torch` operations directly without special-casing NaN. The JIT path maps to hardware reduction instructions that skip NaN. The fix should align the interpreter to ignore NaN in reductions, matching hardware behavior, and add regression tests for all four ops.\n\n### Environment details\n\nTriton: 3.7.0\nGPU: (any CUDA GPU : interpreter mode runs on CPU but divergence is reproducible without a GPU too, using TRITON_INTERPRET=1)",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10697/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10697/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10671",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10671/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10671/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10671/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10671",
+      "id": 4697179843,
+      "node_id": "I_kwDOAWaHXs8AAAABF_lGww",
+      "number": 10671,
+      "title": "[jit] [nan] `tl.sum` outputs nan value on jit",
+      "user": {
+        "login": "shaoyuyoung",
+        "id": 100203773,
+        "node_id": "U_kgDOBfj8_Q",
+        "avatar_url": "https://avatars.githubusercontent.com/u/100203773?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shaoyuyoung",
+        "html_url": "https://github.com/shaoyuyoung",
+        "followers_url": "https://api.github.com/users/shaoyuyoung/followers",
+        "following_url": "https://api.github.com/users/shaoyuyoung/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shaoyuyoung/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shaoyuyoung/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shaoyuyoung/subscriptions",
+        "organizations_url": "https://api.github.com/users/shaoyuyoung/orgs",
+        "repos_url": "https://api.github.com/users/shaoyuyoung/repos",
+        "events_url": "https://api.github.com/users/shaoyuyoung/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shaoyuyoung/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679822,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjI=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/enhancement",
+          "name": "enhancement",
+          "color": "84b6eb",
+          "default": true,
+          "description": null
+        },
+        {
+          "id": 125679825,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjU=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/question",
+          "name": "question",
+          "color": "cc317c",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-06-19T01:35:25Z",
+      "updated_at": "2026-06-19T09:07:03Z",
+      "closed_at": "2026-06-19T09:07:03Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\nIt seems that when calculating `(-0.25 / 0.75) * 0.75 + 0.25`, the interpreter gets `0` but jit gets a very small fp `-7.45e-09` on my machine, and finally the sqrt gets nan value.\n\n```python\nimport os\nimport math\nimport torch\nimport triton\nimport triton.language as tl\n\ntorch.manual_seed(0)\ntorch.manual_seed(20250815)\n\n\n@triton.jit\ndef grouped_ragged_sqrt_sum_kernel(\n    x_ptr,\n    starts_ptr,\n    lens_ptr,\n    scale_ptr,\n    out_ptr,\n    sums_ptr,\n    sx: tl.constexpr,\n    so0: tl.constexpr,\n    so1: tl.constexpr,\n    BLOCK: tl.constexpr,\n):\n    gid = tl.program_id(0)\n    offs = tl.arange(0, BLOCK)\n    start = tl.load(starts_ptr + gid)\n    length = tl.load(lens_ptr + gid)\n    scale = tl.load(scale_ptr + gid)\n    mask = offs < length\n    vals = tl.load(x_ptr + (start + offs) * sx, mask=mask, other=-0.25 / scale)\n    y = tl.sqrt(vals * scale + 0.25)\n    tl.store(out_ptr + gid * so0 + offs * so1, y, mask=mask)\n    total = tl.sum(y, axis=0)\n    tl.store(sums_ptr + gid, total)\n\n\ndef triton_impl(x, starts, lengths, scales):\n    G = starts.shape[0]\n    BLOCK = 16\n    out = torch.full((G, BLOCK), -1.0, device=x.device, dtype=torch.float32)\n    sums = torch.empty((G,), device=x.device, dtype=torch.float32)\n    grouped_ragged_sqrt_sum_kernel[G,](\n        x,\n        starts,\n        lengths,\n        scales,\n        out,\n        sums,\n        x.stride(0),\n        out.stride(0),\n        out.stride(1),\n        BLOCK,\n        num_warps=1,\n        num_stages=3,\n    )\n    return (out, sums)\n\n\nG = 1\n\nBLOCK = 16\n\nTOTAL = 16\n\nx = torch.linspace(0.10, 1.60, TOTAL, device=\"cuda\", dtype=torch.float32)\n\nstarts = torch.tensor([0], device=\"cuda\", dtype=torch.int32)\n\nlengths = torch.tensor([3], device=\"cuda\", dtype=torch.int32)\n\nscales = torch.tensor([0.75], device=\"cuda\", dtype=torch.float32)\n\ninputs = [x, starts, lengths, scales]\n\n\nif __name__ == \"__main__\":\n    torch.set_printoptions(precision=6, sci_mode=False)\n    out, sums = triton_impl(*inputs)\n    torch.cuda.synchronize()\n    mode = \"interpreter\" if os.environ.get(\"TRITON_INTERPRET\") == \"1\" else \"jit\"\n    print(\"mode:\", mode)\n    print(\"out:\", out.detach().cpu())\n    print(\"sums:\", sums.detach().cpu())\n\n```\n\nMaybe the potential root cause is that this kernel is lowering to `fused multiply-add` and gets this calculation path: \n`fma(-0.33333334, 0.75, 0.25) -> about -7.45e-09` \n`sqrt(-7.45e-09) -> nan`\n\nfeel free to correct me if i am wrong\n\n### Environment details\n\ntriton 3.7\ngpu v100",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10671/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10671/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10658",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10658/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10658/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10658/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10658",
+      "id": 4688809784,
+      "node_id": "I_kwDOAWaHXs8AAAABF3mPOA",
+      "number": 10658,
+      "title": "[Semantics] Float-to-int casts for out-of-range/NaN inputs are unspecified and diverge between JIT and interpreter",
+      "user": {
+        "login": "Chennesxu",
+        "id": 114332860,
+        "node_id": "U_kgDOBtCUvA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/114332860?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chennesxu",
+        "html_url": "https://github.com/Chennesxu",
+        "followers_url": "https://api.github.com/users/Chennesxu/followers",
+        "following_url": "https://api.github.com/users/Chennesxu/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chennesxu/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chennesxu/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chennesxu/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chennesxu/orgs",
+        "repos_url": "https://api.github.com/users/Chennesxu/repos",
+        "events_url": "https://api.github.com/users/Chennesxu/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chennesxu/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        },
+        {
+          "id": 6651147676,
+          "node_id": "LA_kwDOAWaHXs8AAAABjHB1nA",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/interpreter",
+          "name": "interpreter",
+          "color": "F2B0C7",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-06-18T03:17:07Z",
+      "updated_at": "2026-06-24T03:19:16Z",
+      "closed_at": "2026-06-24T03:19:16Z",
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\nTriton currently does not clearly define the behavior of `float.to(int_dtype)` when the input is out of range for the target integer type or is NaN.\n\nAs a result, JIT and interpreter mode can produce different results. JIT behavior itself also varies across dtype combinations, likely depending on LLVM/backend lowering details.\n\nThis makes programs that rely on float-to-int casts non-portable when the input may contain `inf`, `-inf`, NaN, or values outside the target integer range.\n\n### Reproduction\n\n```python\nimport torch\nimport triton\nimport triton.language as tl\n\n@triton.jit\ndef kernel(x_ptr, out_ptr, N: tl.constexpr):\n    idx = tl.arange(0, N)\n    x = tl.load(x_ptr + idx)\n    y = x.to(tl.int8)\n    tl.store(out_ptr + idx, y)\n\nvalues = torch.tensor(\n    [float(\"inf\"), 510.0, -200.0],\n    dtype=torch.float16,\n    device=\"cuda\",\n)\n\nout = torch.empty(3, dtype=torch.int8, device=\"cuda\")\nkernel[(1,)](values, out, N=3)\nprint(out)\n```\n\nOutput on my machine:\n\n```\ntensor([-1, -2, 56], device='cuda:0', dtype=torch.int8)\n```\n\n### Observed behavior\n\n| Mode | dtype combo | `inf` | `510.0` | `-200.0` | `nan` |\n|------|-------------|-------|---------|----------|-------|\n| JIT | f32 → i32 | 2147483647 | 510 | -200 | 0 |\n| JIT | f32 → u8 | 255 | 254 | 0 | 0 |\n| JIT | f16 → i8 | -1 | -2 | 56 | 0 |\n| Interpreter (NumPy 2.2) | f32 → i32 | -2147483648 | 510 | -200 | -2147483648 |\n| Interpreter (NumPy 2.2) | f32 → u8 | 0 | 254 | 56 | 0 |\n| Interpreter (NumPy 2.2) | f16 → i8 | 0 | -2 | 56 | 0 |\n\nThe exact JIT values may be backend- or architecture-dependent.\n\n### Root cause\n\nThe JIT and interpreter paths use different mechanisms for float-to-int casts.\n\n**JIT path** (`python/triton/language/semantic.py`): casts are lowered directly to `arith.fptosi` / `arith.fptoui` without clamp or saturate logic, which in turn lower to LLVM `fptosi` / `fptoui`. Out-of-range conversions may produce poison in LLVM IR, leading to undefined downstream values.\n\n**Interpreter path** (`python/triton/runtime/interpreter.py`): uses `numpy.ndarray.astype()`, which has its own dtype-dependent behavior that differs from LLVM semantics.\n\n### Expected behavior\n\nTriton should explicitly define the semantics of float-to-int casts for out-of-range inputs and NaN. Possible contracts:\n\n1. **Saturating**: clamp to `[INT_MIN, INT_MAX]`; NaN maps to a documented value (e.g. `0`)\n2. **Wrapping**: convert modulo target bitwidth; NaN behavior documented\n3. **Explicitly undefined**: document that results are not portable and that interpreter output may not match JIT\n\nI don't have a strong preference among these — the key requirement is that **JIT, interpreter, and documentation agree**.\n\n### Why this matters\n\n- The same Triton program can produce different results in JIT vs. interpreter, making interpreter-based testing unreliable.\n- Behavior may silently change across backends, GPU architectures, or LLVM versions even with identical Triton source.\n\n### Environment details\n\n- Triton: 3.8.0\n- NumPy: 2.2.6\n- GPU: NVIDIA TITAN RTX\n- NVIDIA driver: 550.144.03\n- CUDA toolkit / nvcc: 12.4\n- OS: Linux x86_64",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10658/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10658/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10291",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10291/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10291/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10291/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10291",
+      "id": 4427257750,
+      "node_id": "I_kwDOAWaHXs8AAAABB-KXlg",
+      "number": 10291,
+      "title": "[jit] [semantic inconsistency] `tl.argmax` outputs diffferently between jit and inpreter when meeting `nan`",
+      "user": {
+        "login": "shaoyuyoung",
+        "id": 100203773,
+        "node_id": "U_kgDOBfj8_Q",
+        "avatar_url": "https://avatars.githubusercontent.com/u/100203773?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shaoyuyoung",
+        "html_url": "https://github.com/shaoyuyoung",
+        "followers_url": "https://api.github.com/users/shaoyuyoung/followers",
+        "following_url": "https://api.github.com/users/shaoyuyoung/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shaoyuyoung/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shaoyuyoung/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shaoyuyoung/subscriptions",
+        "organizations_url": "https://api.github.com/users/shaoyuyoung/orgs",
+        "repos_url": "https://api.github.com/users/shaoyuyoung/repos",
+        "events_url": "https://api.github.com/users/shaoyuyoung/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shaoyuyoung/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 4,
+      "created_at": "2026-05-12T07:52:25Z",
+      "updated_at": "2026-05-19T02:46:24Z",
+      "closed_at": "2026-05-19T02:46:24Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\n `tl.argmax` appears to handle `NaN` differently between normal compiled execution and Triton interpreter mode.\n\n\n\n```python\nimport os\n\nimport torch\nimport triton\nimport triton.language as tl\n\n\n@triton.jit\ndef max_argmax_kernel(x_ptr, value_ptr, index_ptr, N: tl.constexpr, BLOCK: tl.constexpr):\n    offsets = tl.arange(0, BLOCK)\n    mask = offsets < N\n    x = tl.load(x_ptr + offsets, mask=mask, other=-float(\"inf\"))\n\n    value = tl.max(x, axis=0)\n    index = tl.argmax(x, axis=0)\n\n    tl.store(value_ptr, value)\n    tl.store(index_ptr, index)\n\n\ndef triton_max_argmax(x):\n    value = torch.empty((), device=x.device, dtype=torch.float32)\n    index = torch.empty((), device=x.device, dtype=torch.int32)\n    max_argmax_kernel[(1,)](x, value, index, N=x.numel(), BLOCK=4)\n    return value.item(), index.item()\n\n\ndef main():\n    x = torch.tensor([float(\"nan\"), 6.0, 8.0], device=\"cuda\", dtype=torch.float32)\n    value, index = triton_max_argmax(x)\n\n    mode = \"interpreter\" if os.environ.get(\"TRITON_INTERPRET\") == \"1\" else \"compiled\"\n    print(f\"mode: {mode}\")\n    print(f\"x: {x}\")\n    print(f\"tl.max: {value}\")\n    print(f\"tl.argmax: {index}\")\n\n\nif __name__ == \"__main__\":\n    main()\n\n```\n\ncompiled log\n```\nCompiled mode:\n\nmode: compiled\nx: tensor([nan, 6., 8.], device='cuda:0')\ntl.max: 8.0\ntl.argmax: 2\n```\n\ninterpreter log\n```\nmode: interpreter\nx: tensor([nan, 6., 8.], device='cuda:0')\ntl.max: 8.0\ntl.argmax: 0\n```\n\n\n**compiled mode returns index 2, which is the position of the largest finite value 8.0.**\n\n**Interpreter mode returns index 0, which is the position of the NaN.**\n\n### Environment details\n\ntriton 3.7.0",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10291/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10291/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10260",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10260/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10260/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10260/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10260",
+      "id": 4400260170,
+      "node_id": "I_kwDOAWaHXs8AAAABBkakSg",
+      "number": 10260,
+      "title": "RemoveMasks: opToMaskValue map poisoning causes incorrect select simplification",
+      "user": {
+        "login": "whitneywhtsang",
+        "id": 54643204,
+        "node_id": "MDQ6VXNlcjU0NjQzMjA0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/54643204?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/whitneywhtsang",
+        "html_url": "https://github.com/whitneywhtsang",
+        "followers_url": "https://api.github.com/users/whitneywhtsang/followers",
+        "following_url": "https://api.github.com/users/whitneywhtsang/following{/other_user}",
+        "gists_url": "https://api.github.com/users/whitneywhtsang/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/whitneywhtsang/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/whitneywhtsang/subscriptions",
+        "organizations_url": "https://api.github.com/users/whitneywhtsang/orgs",
+        "repos_url": "https://api.github.com/users/whitneywhtsang/repos",
+        "events_url": "https://api.github.com/users/whitneywhtsang/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/whitneywhtsang/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-05-07T16:16:27Z",
+      "updated_at": "2026-05-07T16:16:51Z",
+      "closed_at": "2026-05-07T16:16:51Z",
+      "assignee": null,
+      "author_association": "COLLABORATOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\n`registerMaskValue` in `RemovableMaskValidator` iterates **all** users of a mask `Value` and inserts `{user_op, maskVal}` into `opToMaskValue`. Since `std::map::insert` does not overwrite existing entries, the first insertion wins. When a single `Operation` uses two different mask Values as operands (e.g., an `arith.select` using one mask as its condition and another as its `true_value`), it receives the wrong classification from whichever mask's load was processed first.\n\n## Root Cause\n\n`registerMaskValue` (RemoveMasks.cpp) tags every user of a mask Value indiscriminately:\n\n```cpp\nvoid registerMaskValue(Value mask, bool maskVal) const {\n  for (Operation *user : mask.getUsers())\n    opToMaskValue.insert({user, maskVal});\n}\n```\n\n`collectMaskedOps` processes loads before selects (lines 580-582). If a load's mask Value is also used as a non-condition operand of a select, the select gets tagged with the load's mask classification rather than its own condition's classification.\n\n## Trigger Scenario\n\n```\nmask_true  = cmpi slt, [IV+0..31], 64  → AlwaysTrue\nmask_false = cmpi slt, [IV+0..31], 0   → AlwaysFalse\nload ptr, mask_true, other             → processed first (loads before selects)\nselect mask_false, mask_true, cst_false → condition=AlwaysFalse\n```\n\n1. Load processed: `registerMaskValue(mask_true, true)` tags `{select_op, true}` (select uses `mask_true` as its `true_value`)\n2. Select processed: `registerMaskValue(mask_false, false)` tries `{select_op, false}` → **insert fails**\n\nResult: `getMaskValue(select)` returns `true` (WRONG). `dropMask` picks `getTrueValue()` instead of `getFalseValue()`.\n\n## Reproducer\n\nThe following lit test demonstrates the bug (the pass produces wrong output):\n\n```mlir\n// RUN: triton-opt %s -triton-intel-remove-masks | FileCheck %s\n\nmodule {\n  tt.func public @test_select_map_poisoning(\n      %arg0: !tt.ptr<f32> {tt.divisibility = 16 : i32}\n  ) -> (tensor<32xf32>, tensor<32xi1>) {\n    %cst_f32 = arith.constant dense<0.000000e+00> : tensor<32xf32>\n    %cst_false = arith.constant dense<false> : tensor<32xi1>\n    %c0_i32 = arith.constant 0 : i32\n    %c32_i32 = arith.constant 32 : i32\n    %range = tt.make_range {end = 32 : i32, start = 0 : i32} : tensor<32xi32>\n    %zero = arith.constant dense<0> : tensor<32xi32>\n    %upper = arith.constant dense<64> : tensor<32xi32>\n    %base_ptrs = tt.splat %arg0 : !tt.ptr<f32> -> tensor<32x!tt.ptr<f32>>\n\n    %r:2 = scf.for %iv = %c0_i32 to %c32_i32 step %c32_i32\n        iter_args(%acc = %cst_f32, %acc_i1 = %cst_false)\n        -> (tensor<32xf32>, tensor<32xi1>) : i32 {\n      %iv_splat = tt.splat %iv : i32 -> tensor<32xi32>\n      %offsets = arith.addi %iv_splat, %range : tensor<32xi32>\n      %mask_true = arith.cmpi slt, %offsets, %upper : tensor<32xi32>\n      %mask_false = arith.cmpi slt, %offsets, %zero : tensor<32xi32>\n      %ptrs = tt.addptr %base_ptrs, %offsets : tensor<32x!tt.ptr<f32>>, tensor<32xi32>\n      %load = tt.load %ptrs, %mask_true, %cst_f32 : tensor<32x!tt.ptr<f32>>\n      %sel = arith.select %mask_false, %mask_true, %cst_false : tensor<32xi1>, tensor<32xi1>\n      %new_f32 = arith.addf %acc, %load : tensor<32xf32>\n      scf.yield %new_f32, %sel : tensor<32xf32>, tensor<32xi1>\n    }\n    tt.return %r#0, %r#1 : tensor<32xf32>, tensor<32xi1>\n  }\n}\n\n// CHECK-LABEL: tt.func public @test_select_map_poisoning\n// CHECK-DAG:     [[CST_FALSE:%.+]] = arith.constant dense<false> : tensor<32xi1>\n// CHECK:         scf.for\n// CHECK:           tt.load {{%.+}} : tensor<32x!tt.ptr<f32>>\n// CHECK:           scf.yield {{%.+}}, [[CST_FALSE]] : tensor<32xf32>, tensor<32xi1>\n```\n\n**Expected:** `scf.yield %x, %cst_false` (condition=AlwaysFalse → false_value)\n**Actual:** `scf.yield %x, %mask_true` (incorrectly picks true_value)\n\n## Notes\n\n- This is a pre-existing bug on `main`, not introduced by #6796.\n- Discovered during review of #6796 (https://github.com/intel/intel-xpu-backend-for-triton/pull/6796#discussion_r3197282061).\n- A possible fix: change `registerMaskValue` to only tag the specific masked operation being processed (the load/store/select whose mask is being validated), rather than all users of the mask Value.",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10260/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10260/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10106",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10106/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10106/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10106/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10106",
+      "id": 4308643240,
+      "node_id": "I_kwDOAWaHXs8AAAABANCtqA",
+      "number": 10106,
+      "title": "[Bug] gluon warp specialized pipeline load nan from TMA input in certain cases",
+      "user": {
+        "login": "FindDefinition",
+        "id": 73811981,
+        "node_id": "MDQ6VXNlcjczODExOTgx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/73811981?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/FindDefinition",
+        "html_url": "https://github.com/FindDefinition",
+        "followers_url": "https://api.github.com/users/FindDefinition/followers",
+        "following_url": "https://api.github.com/users/FindDefinition/following{/other_user}",
+        "gists_url": "https://api.github.com/users/FindDefinition/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/FindDefinition/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/FindDefinition/subscriptions",
+        "organizations_url": "https://api.github.com/users/FindDefinition/orgs",
+        "repos_url": "https://api.github.com/users/FindDefinition/repos",
+        "events_url": "https://api.github.com/users/FindDefinition/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/FindDefinition/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 8,
+      "created_at": "2026-04-22T11:27:17Z",
+      "updated_at": "2026-04-24T16:36:33Z",
+      "closed_at": "2026-04-24T16:36:14Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\nI'm working on warp specialized kernel. the TMA loaded smem contains nan values under a very specific and unusual condition. If I change mbar init order, the problem may disappear.\n\nThe following reproduce code take some code from gluon attn fwd example. some notes:\n\n1. the example cannot be further simplified; any change may cause the bug to become unreproducible.\n2. the bug pattern can be changed if you change `bug_variant` value from 0 to 1.\n3. the bug can be reliably reproduced and shows no randomness.\n4. the code is tested on H200/B200 (triton 3.6).\n5. the code only works on triton 3.7, 3.6 need to add inits to all aggregate types.\n\n```Python\nimport torch\n\nimport triton\nimport triton.language as tl\nfrom triton.experimental.gluon import language as gl\nimport triton.experimental.gluon as gluon\nfrom triton.experimental.gluon.nvidia.hopper import TensorDescriptor\nfrom triton.experimental.gluon.language.nvidia.blackwell import (\n    tma,\n    mbarrier,\n)\n\n@tl.core._aggregate\nclass BarrierCounter:\n    index: gl.tensor\n    phase: gl.tensor\n    num_barriers: gl.constexpr\n\n    @gluon.jit\n    def increment(self):\n        if self.num_barriers == 1:\n            return BarrierCounter(gl.to_tensor(0), self.phase ^ 1, self.num_barriers)\n        next_index = self.index + 1\n        rollover = next_index == self.num_barriers\n        index = gl.where(rollover, 0, next_index)\n        phase = gl.where(rollover, self.phase ^ 1, self.phase)\n        return BarrierCounter(index, phase, self.num_barriers)\n\n@tl.core._aggregate\nclass SharedMemoryChannel:\n    ready_bars: gl.shared_memory_descriptor\n    empty_bars: gl.shared_memory_descriptor\n    num_buffers: gl.constexpr\n    num_consumers: gl.constexpr\n\n    @gluon.jit\n    def alloc(name, shape: gl.constexpr, dtype: gl.constexpr, layout: gl.constexpr, num_buffers: gl.constexpr,\n                num_consumers: gl.constexpr = 1):\n        # change this value to see different nan pattern\n        bug_variant: tl.constexpr = 1\n        if bug_variant == 0:\n            ready_bars = gl.allocate_shared_memory(gl.int64, [num_buffers, 1], mbarrier.MBarrierLayout())\n            empty_bars = gl.allocate_shared_memory(gl.int64, [num_buffers, 1], mbarrier.MBarrierLayout())\n            for i in gl.static_range(num_buffers):\n                mbarrier.init(ready_bars.index(i), count=1)\n                mbarrier.init(empty_bars.index(i), count=num_consumers)\n                mbarrier.arrive(empty_bars.index(i), count=num_consumers)\n        else:\n            ready_bars = gl.allocate_shared_memory(gl.int64, [num_buffers, 1], mbarrier.MBarrierLayout())\n            for i in gl.static_range(num_buffers):\n                mbarrier.init(ready_bars.index(i), count=1)\n            empty_bars = gl.allocate_shared_memory(gl.int64, [num_buffers, 1], mbarrier.MBarrierLayout())\n            for i in gl.static_range(num_buffers):\n                mbarrier.init(empty_bars.index(i), count=num_consumers)\n                mbarrier.arrive(empty_bars.index(i), count=num_consumers)\n        return SharedMemoryChannel(ready_bars, empty_bars, num_buffers, num_consumers)\n\n    @gluon.jit\n    def acquire_producer(self, smem, counter):\n        index, phase = counter.index, counter.phase\n        mem = smem.index(index)\n        ready_bar = self.ready_bars.index(index)\n        empty_bar = self.empty_bars.index(index)\n\n        mbarrier.wait(empty_bar, phase)\n        return mem, ready_bar\n\n    @gluon.jit\n    def acquire_consumer(self, smem, counter):\n        index, phase = counter.index, counter.phase\n        mem = smem.index(index)\n        ready_bar = self.ready_bars.index(index)\n        empty_bar = self.empty_bars.index(index)\n\n        mbarrier.wait(ready_bar, phase)\n        return mem, empty_bar\n\n    @gluon.jit\n    def create_counter(self):\n        return BarrierCounter(gl.to_tensor(0), gl.to_tensor(0), self.num_buffers)\n\n    @gluon.jit\n    def create_producer(self):\n        return SharedMemoryProducer(self, self.create_counter())\n\n    @gluon.jit\n    def create_consumer(self):\n        return SharedMemoryConsumer(self, self.create_counter())\n\n    @gluon.jit\n    def release(self):\n        for i in gl.static_range(self.num_buffers):\n            mbarrier.invalidate(self.ready_bars.index(i))\n            mbarrier.invalidate(self.empty_bars.index(i))\n\n@tl.core._aggregate\nclass SharedMemoryProducer:\n    channel: SharedMemoryChannel\n    counter: BarrierCounter\n\n    @gluon.jit\n    def acquire(self, smem):\n        mem, ready_bar = self.channel.acquire_producer(smem, self.counter, )\n        next = SharedMemoryProducer(self.channel, self.counter.increment())\n        return mem, ready_bar, next\n\n@tl.core._aggregate\nclass SharedMemoryConsumer:\n    channel: SharedMemoryChannel\n    counter: BarrierCounter\n\n    @gluon.jit\n    def acquire(self, smem):\n        mem, empty_bar = self.channel.acquire_consumer(smem, self.counter, )\n        next = SharedMemoryConsumer(self.channel, self.counter.increment())\n        return mem, empty_bar, next\n\n\n_TORCH_TO_GL_DTYPE: dict[torch.dtype, gl.dtype] = {\n    torch.int8: gl.int8,\n    torch.uint8: gl.uint8,\n    torch.float16: gl.float16,\n    torch.bfloat16: gl.bfloat16,\n    torch.float32: gl.float32,\n    torch.float8_e4m3fn: gl.float8e4nv,\n    torch.float8_e5m2: gl.float8e5,\n    torch.float8_e4m3fnuz: gl.float8e4b8,\n}\n\n\ndef torch_dtype_to_gluon(dtype: torch.dtype) -> gl.dtype:\n    if dtype not in _TORCH_TO_GL_DTYPE:\n        raise ValueError(f\"Unsupported torch dtype: {dtype}\")\n    return _TORCH_TO_GL_DTYPE[dtype]\n\n\ndef tma_from_tensor_gluon(\n    ten: torch.Tensor, block_shape: list[int], padding: str = \"zero\"\n):\n    layout = gl.NVMMASharedLayout.get_default_for(\n        block_shape, torch_dtype_to_gluon(ten.dtype)\n    )\n    return TensorDescriptor.from_tensor(ten, block_shape, layout, padding=padding)\n@gluon.jit\ndef get_desc_channel(name, desc, num_buffers: gl.constexpr, num_consumers: gl.constexpr = 1):\n    shape: gl.constexpr = desc.block_type.shape\n    layout: gl.constexpr = desc.layout\n    return SharedMemoryChannel.alloc(name, shape, desc.dtype, layout, num_buffers, num_consumers)\n\n@gluon.jit\ndef alloc_desc_smem(desc, num_buffers: gl.constexpr):\n    shape: gl.constexpr = desc.block_type.shape\n    layout: gl.constexpr = desc.layout\n    return gl.allocate_shared_memory(desc.dtype, [num_buffers] + shape, layout)\n\n\n\n@tl.core._aggregate\nclass Args:\n    bug_output: tl.tensor\n    q_desc: tma.tensor_descriptor\n    k_desc: tma.tensor_descriptor\n    lse_qk_desc: tma.tensor_descriptor\n    ik_desc: tma.tensor_descriptor\n    w_desc: tma.tensor_descriptor\n    iq_desc: tma.tensor_descriptor\n\n    q_chnl: SharedMemoryChannel\n    k_chnl: SharedMemoryChannel\n    iq_chnl: SharedMemoryChannel\n    lse_qk_chnl: SharedMemoryChannel\n    qk_prob_chnl: SharedMemoryChannel\n    ik_chnl: SharedMemoryChannel\n    w_chnl: SharedMemoryChannel\n    misc_chnl: SharedMemoryChannel\n    dw_chnl: SharedMemoryChannel\n\n    q_chnl_smem: gl.shared_memory_descriptor\n    k_chnl_smem: gl.shared_memory_descriptor\n    iq_chnl_smem: gl.shared_memory_descriptor\n    lse_qk_chnl_smem: gl.shared_memory_descriptor\n    qk_prob_chnl_smem: gl.shared_memory_descriptor\n    ik_chnl_smem: gl.shared_memory_descriptor\n    w_chnl_smem: gl.shared_memory_descriptor\n    misc_chnl_smem: gl.shared_memory_descriptor\n    dw_chnl_smem: gl.shared_memory_descriptor\n\n\n\n    S_qo: tl.tensor \n    S_kv: tl.tensor\n    D: tl.constexpr\n    H_kv: tl.constexpr\n    H: tl.constexpr\n    BLOCK_M: tl.constexpr\n    BLOCK_N: tl.constexpr\n\n@gluon.jit\ndef issue_async_tma_load(smem, bar, desc, offset):\n    mbarrier.expect(bar, desc.block_type.nbytes)\n    tma.async_copy_global_to_shared(desc, offset, bar, smem)\n\n\n@gluon.jit\ndef producer0(args: Args):\n    q_producer = args.q_chnl.create_producer()\n    k_producer = args.k_chnl.create_producer()\n    lse_producer = args.lse_qk_chnl.create_producer()\n    q0_smem, q0_bar, q_producer = q_producer.acquire(args.q_chnl_smem)\n    issue_async_tma_load(q0_smem, q0_bar, args.q_desc, [0, 0, 0])\n    k_smem, k_bar, k_producer = k_producer.acquire(args.k_chnl_smem)\n    issue_async_tma_load(k_smem, k_bar, args.k_desc, [0, 0, 0])\n    lse_smem, lse_bar, lse_producer = lse_producer.acquire(args.lse_qk_chnl_smem)\n    issue_async_tma_load(lse_smem, lse_bar, args.lse_qk_desc, [0, 0, 0])\n\n@gluon.jit\ndef producer1(args: Args):\n    ik_producer = args.ik_chnl.create_producer()\n    misc_producer = args.misc_chnl.create_producer()\n    iq_producer = args.iq_chnl.create_producer()\n    w_producer = args.w_chnl.create_producer()\n    ik_smem, ik_bar, ik_producer = ik_producer.acquire(args.ik_chnl_smem)\n    issue_async_tma_load(ik_smem, ik_bar, args.ik_desc, [0, 0, 0])\n    w_smem, w_bar, w_producer = w_producer.acquire(args.w_chnl_smem)\n    issue_async_tma_load(w_smem, w_bar, args.w_desc, [0, 0, 0])\n    misc_smem, misc_bar, misc_producer = misc_producer.acquire(args.misc_chnl_smem)\n    mbarrier.arrive(misc_bar)\n    iq_smem, iq_bar, iq_producer = iq_producer.acquire(args.iq_chnl_smem)\n    issue_async_tma_load(iq_smem, iq_bar, args.iq_desc, [0, 0, 0])\n\n@gluon.jit\ndef consumer1(args: Args):\n\n    q_consumer = args.q_chnl.create_consumer()\n    kv_consumer = args.k_chnl.create_consumer()\n    lse_consumer = args.lse_qk_chnl.create_consumer()\n    q_consumer.acquire(args.q_chnl_smem)\n    kv_consumer.acquire(args.k_chnl_smem)\n    lse_consumer.acquire(args.lse_qk_chnl_smem)\n    qk_prob_producer = args.qk_prob_chnl.create_producer()\n    _, qk_prob_bar, _ = qk_prob_producer.acquire(args.qk_prob_chnl_smem)\n    mbarrier.arrive(qk_prob_bar)\n\n@gluon.jit\ndef consumer0(args: Args):\n    ik_consumer = args.ik_chnl.create_consumer()\n    qk_prob_consumer = args.qk_prob_chnl.create_consumer()\n    w_consumer = args.w_chnl.create_consumer()\n    misc_consumer = args.misc_chnl.create_consumer()\n    iq_consumer = args.iq_chnl.create_consumer()\n\n    ik_consumer.acquire(args.ik_chnl_smem)\n    qk_prob_consumer.acquire(args.qk_prob_chnl_smem)\n    w_consumer.acquire(args.w_chnl_smem)\n    misc_consumer.acquire(args.misc_chnl_smem)\n    iq_smem, iq_bar, _ = iq_consumer.acquire(args.iq_chnl_smem)\n    layout: gl.constexpr = gl.BlockedLayout([1, 1], [1, 32], [1, 4], [1, 0])\n\n    q_smem_reg = iq_smem.reshape((64, 32)).load(layout)\n    offs_m = gl.arange(0, 64, layout=gl.AutoLayout())\n    offs_n = gl.arange(0, 32, layout=gl.AutoLayout())\n    gl.store(args.bug_output + offs_m[:, None] * 32 + offs_n[None, :], q_smem_reg)\n\n\n@gluon.jit(do_not_specialize=[\"S_qo\"])\ndef fwd_kernel(\n    q_desc, k_desc, iq_desc, ik_desc, w_desc, lse_desc, bug_output,\n    S_qo, S_kv, \n    D: tl.constexpr,\n    H_kv: tl.constexpr,\n    H: tl.constexpr,\n    BLOCK_M: tl.constexpr,\n    BLOCK_N: tl.constexpr,\n) -> None:\n    # we have to split bar smem alloc and desc smem alloc to reproduce the bug. otherwise bug disappear.\n    iq_chnl = get_desc_channel(\"iq\", iq_desc, num_buffers=1)\n    q_chnl = get_desc_channel(\"q\", q_desc, num_buffers=1)\n    ik_chnl = get_desc_channel(\"ik\", ik_desc, num_buffers=1)\n    w_chnl = get_desc_channel(\"w\", w_desc, num_buffers=1)\n    k_chnl = get_desc_channel(\"k\", k_desc, num_buffers=1)\n    qk_prob_chnl = SharedMemoryChannel.alloc(\"qk_prob\", [1], gl.float32, gl.constexpr(mbarrier.MBarrierLayout()), num_buffers=1)\n    lse_chnl = get_desc_channel(\"lse\", lse_desc, num_buffers=1)\n    dw_chnl = SharedMemoryChannel.alloc(\"dw\", [1], gl.float32,gl.SwizzledSharedLayout(1, 1, 1, [0]), num_buffers=1)\n    misc_chnl = SharedMemoryChannel.alloc(\"misc\", [1], gl.float32, gl.constexpr(mbarrier.MBarrierLayout()), num_buffers=1)\n\n    iq = alloc_desc_smem(iq_desc, num_buffers=1)\n    ik = alloc_desc_smem(ik_desc, num_buffers=1)\n    q = alloc_desc_smem(q_desc, num_buffers=1)\n    k = alloc_desc_smem(k_desc, num_buffers=1)\n    lse = alloc_desc_smem(lse_desc, num_buffers=1)\n    w = alloc_desc_smem(w_desc, num_buffers=1)\n\n    dw = gl.allocate_shared_memory(gl.float32, [1, 1], gl.SwizzledSharedLayout(1, 1, 1, [0]))\n    qk_prob = gl.allocate_shared_memory(gl.float32, [1, 1], gl.constexpr(mbarrier.MBarrierLayout()))\n    indexer_lse_smem = gl.allocate_shared_memory(gl.float32, [1, 1], gl.constexpr(mbarrier.MBarrierLayout()))\n    args = Args(\n        bug_output,\n        q_desc=q_desc,\n        k_desc=k_desc,\n        lse_qk_desc=lse_desc,\n        ik_desc=ik_desc,\n        w_desc=w_desc,\n        iq_desc=iq_desc,\n        q_chnl=q_chnl,\n        k_chnl=k_chnl,\n        lse_qk_chnl=lse_chnl,\n        qk_prob_chnl=qk_prob_chnl,\n        ik_chnl=ik_chnl,\n        w_chnl=w_chnl,\n        misc_chnl=misc_chnl,\n        dw_chnl=dw_chnl,\n        iq_chnl=iq_chnl,\n        q_chnl_smem=q,\n        k_chnl_smem=k,\n        iq_chnl_smem=iq,\n        lse_qk_chnl_smem=lse,\n        qk_prob_chnl_smem=qk_prob,\n        ik_chnl_smem=ik,\n        w_chnl_smem=w,\n        misc_chnl_smem=indexer_lse_smem,\n        dw_chnl_smem=dw,\n\n        S_qo=S_qo,\n        S_kv=S_kv,\n        D=D,\n        H_kv=H_kv,\n        H=H,\n        BLOCK_M=BLOCK_M,\n        BLOCK_N=BLOCK_N,\n    )\n\n    gl.warp_specialize([\n        (consumer0, (args,)),\n        (consumer1, (args,)),\n\n        (producer0, (args,)),\n        (producer1, (args,)),\n    ], [4, 1, 1], [256, 24, 24])\n\ndef main():\n    import torch \n    S_qo = 1\n    S_kv = 64 \n    D = 32\n    H_kv = 1\n    H = 64 \n    BLOCK_M = 1\n    BLOCK_N = 64\n    torch.manual_seed(0)\n    q = torch.randn((S_qo, H, D), device=\"cuda\", dtype=torch.bfloat16)\n    k = torch.randn((S_kv, H_kv, D), device=\"cuda\", dtype=torch.bfloat16)\n    iq = torch.randn((S_qo, H, D), device=\"cuda\", dtype=torch.bfloat16)\n    ik = torch.randn((S_kv, H_kv, D), device=\"cuda\", dtype=torch.bfloat16)\n    w = torch.randn((S_kv, 1, H), device=\"cuda\", dtype=torch.bfloat16)\n    lse_qk = torch.randn((S_qo, 1, H), device=\"cuda\", dtype=torch.float32)\n    bug_output = torch.empty((64, 32), device=\"cuda\", dtype=torch.bfloat16)\n\n    q_desc = tma_from_tensor_gluon(q, [1, H, D])\n    iq_desc = tma_from_tensor_gluon(iq, [1, H, D])\n    k_desc = tma_from_tensor_gluon(k, [BLOCK_N, 1, D])\n    ik_desc = tma_from_tensor_gluon(ik, [BLOCK_N, 1, D])\n\n    w_desc = tma_from_tensor_gluon(w, [BLOCK_M, 1, H])\n    lse_desc = tma_from_tensor_gluon(lse_qk, [BLOCK_M, 1, H])\n    ker = fwd_kernel[(1,)](\n        q_desc, k_desc, iq_desc, ik_desc, w_desc, lse_desc, bug_output,\n        S_qo, S_kv, D, H_kv, H, BLOCK_M, BLOCK_N\n    ) \n    print(bug_output[0])\n\nif __name__ == \"__main__\":\n    main()\n```\n\nOutput:\n```\ntensor([        nan,  2.8469e-39, -1.0385e+34,         nan,  1.0156e-01,\n        -4.0430e-01,  9.0234e-01,  8.0859e-01, -6.8750e-01,  1.3770e-01,\n         1.0391e+00,  9.2773e-02, -3.7500e-01, -9.0820e-02,  2.0625e+00,\n        -1.8125e+00, -2.7148e-01,  2.8125e-01, -1.0391e+00,  7.7734e-01,\n         8.8281e-01,  4.4434e-02, -1.4844e+00,  1.1328e+00,  1.3281e+00,\n        -1.2578e+00,  9.4922e-01, -6.5625e-01,  9.1016e-01, -6.2891e-01,\n        -6.6016e-01,  2.0781e+00], device='cuda:0', dtype=torch.bfloat16)\n```\n\n### Environment details\n\nTriton: 3.7.0 main, commit: 37c9a4b569a0f1719bdd77ca5f666096e10b7227. also exists on 3.6.0.\nGPU: H200, B200",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10106/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10106/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/10079",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/10079/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/10079/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/10079/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/10079",
+      "id": 4294980180,
+      "node_id": "I_kwDOAWaHXs8AAAABAAAyVA",
+      "number": 10079,
+      "title": "[GSan] Incorrect comment: kReserveSize is 1 TiB, not 1 PiB",
+      "user": {
+        "login": "glassmanK",
+        "id": 193223484,
+        "node_id": "U_kgDOC4RbPA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/193223484?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/glassmanK",
+        "html_url": "https://github.com/glassmanK",
+        "followers_url": "https://api.github.com/users/glassmanK/followers",
+        "following_url": "https://api.github.com/users/glassmanK/following{/other_user}",
+        "gists_url": "https://api.github.com/users/glassmanK/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/glassmanK/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/glassmanK/subscriptions",
+        "organizations_url": "https://api.github.com/users/glassmanK/orgs",
+        "repos_url": "https://api.github.com/users/glassmanK/repos",
+        "events_url": "https://api.github.com/users/glassmanK/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/glassmanK/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-04-20T10:31:15Z",
+      "updated_at": "2026-04-20T10:31:15Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Description\n\nIn `python/triton/experimental/gsan/src/GSan.h`, the comment for `kReserveSize` says \"1 PiB\" but the value is `1ull << 40` which is 1 TiB (tebibyte).\n\n1 PiB would be `1ull << 50`.\n\n```cpp\n// Reserve 1 PiB, should be big enough for a while :)\nstatic constexpr size_t kReserveSize = 1ull << 40;\n```\n\n## Suggested fix\n\nEither update the comment to say \"1 TiB\", or change the value to `1ull << 50` if 1 PiB was intended.\n\n```diff\n-// Reserve 1 PiB, should be big enough for a while :)\n+// Reserve 1 TiB, should be big enough for a while :)\n static constexpr size_t kReserveSize = 1ull << 40;\n```",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/10079/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/10079/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/9963",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/9963/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/9963/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/9963/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/9963",
+      "id": 4226126930,
+      "node_id": "I_kwDOAWaHXs775ZRS",
+      "number": 9963,
+      "title": "[Bug] Wrong results from while-loop with mixed int32/bfloat16 arithmetic",
+      "user": {
+        "login": "JueonPark",
+        "id": 79134656,
+        "node_id": "MDQ6VXNlcjc5MTM0NjU2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/79134656?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/JueonPark",
+        "html_url": "https://github.com/JueonPark",
+        "followers_url": "https://api.github.com/users/JueonPark/followers",
+        "following_url": "https://api.github.com/users/JueonPark/following{/other_user}",
+        "gists_url": "https://api.github.com/users/JueonPark/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/JueonPark/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/JueonPark/subscriptions",
+        "organizations_url": "https://api.github.com/users/JueonPark/orgs",
+        "repos_url": "https://api.github.com/users/JueonPark/repos",
+        "events_url": "https://api.github.com/users/JueonPark/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/JueonPark/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 3,
+      "created_at": "2026-04-08T16:43:48Z",
+      "updated_at": "2026-04-14T16:24:55Z",
+      "closed_at": "2026-04-14T16:24:55Z",
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\n### Summary\n\nA Triton `while` loop that subtracts a `bfloat16` value from an `int32` loop variable (with `.to(tl.int32)` cast each iteration) produces incorrect output compared to the equivalent PyTorch computation. The maximum absolute error is consistently **8.0**, reproducing **100% of the time** across random inputs. The kernel and reference process the same 256 elements in a single block, so `tl.max` and `torch.max` evaluate the exact same data — this is a code generation bug, not a scope mismatch.\n\nNote that this code is generated from fuzzing tool.\n\n### Environment\n\n- **Triton**: 3.6.0\n- **PyTorch**: 2.10.0\n- **CUDA**: 13.2\n- **GPU**: NVIDIA GeForce RTX 4070 Ti SUPER\n- **OS**: Linux (WSL)\n\n### Reproducer\n\n```python\nimport torch\nimport triton\nimport triton.language as tl\n\n\n@triton.jit\ndef triton_kernel(in_ptr1, in_ptr2, out_ptr, n_elements, BLOCK_SIZE: tl.constexpr):\n    pid = tl.program_id(axis=0)\n    offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)\n    mask = offsets < n_elements\n    v_1 = tl.load(in_ptr1 + offsets, mask=mask)       # int32\n    v_2 = tl.load(in_ptr2 + offsets, mask=mask)       # bfloat16\n    v_4 = v_1\n    _i = 0\n    while tl.max(v_4, axis=0) >= 5.0 and _i < 8:\n        v_4 = v_4 - v_2          # int32 - bf16 → implicit promotion to bf16\n        v_4 = v_4.to(tl.int32)   # explicit truncation back to int32\n        _i += 1\n    v_4 = v_4.to(tl.float32)\n    tl.store(out_ptr + offsets, v_4, mask=mask)\n\n\ndef torch_ref(x1, x2):\n    \"\"\"Equivalent PyTorch reference.\"\"\"\n    v_4 = x1.clone()\n    _i = 0\n    while torch.max(v_4) >= 5.0 and _i < 8:\n        v_4 = v_4 - x2\n        v_4 = v_4.to(torch.int32)\n        _i += 1\n    return v_4.float()\n\n\nx1 = torch.randint(-127, 128, (256,), device=\"cuda\", dtype=torch.int32)\nx2 = torch.randn(256, device=\"cuda\", dtype=torch.bfloat16)\nout = torch.zeros(256, device=\"cuda\", dtype=torch.float32)\n\ngolden = torch_ref(x1, x2)\n\n# Single block: tl.max and torch.max evaluate the exact same 256 elements.\ntriton_kernel[(1,)](x1, x2, out, 256, BLOCK_SIZE=256, num_warps=8, num_stages=3)\n\ndiff = (golden - out).abs()\nprint(f\"max_abs_diff: {diff.max().item()}\")       # Expected: 0.0, Actual: 8.0\nprint(f\"match: {torch.allclose(golden, out)}\")     # Expected: True, Actual: False\n```\n\n### Observed behavior\n\n```\nmax_abs_diff: 8.0\nmatch: False\n```\n\nThe error is consistently **exactly 8.0** across all random inputs (100% reproduction rate over 50 trials with different seeds). The Triton kernel under-reports values by exactly 8 at the worst-case element.\n\n### Expected behavior\n\n`max_abs_diff: 0.0` — the Triton kernel should produce identical integer results to the PyTorch reference.\n\n\n### Environment details\n\nEnvironment\nTriton: 3.6.0\nPyTorch: 2.10.0\nCUDA: 13.2\nGPU: NVIDIA GeForce RTX 4070 Ti SUPER\nOS: Linux (WSL)",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/9963/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/9963/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/9830",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/9830/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/9830/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/9830/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/9830",
+      "id": 4131431674,
+      "node_id": "I_kwDOAWaHXs72QKT6",
+      "number": 9830,
+      "title": "Incorrect tl.dot / matmul result on RTX 3090 with Triton 3.6.0 for fp16 GEMM",
+      "user": {
+        "login": "narain1",
+        "id": 22630918,
+        "node_id": "MDQ6VXNlcjIyNjMwOTE4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/22630918?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/narain1",
+        "html_url": "https://github.com/narain1",
+        "followers_url": "https://api.github.com/users/narain1/followers",
+        "following_url": "https://api.github.com/users/narain1/following{/other_user}",
+        "gists_url": "https://api.github.com/users/narain1/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/narain1/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/narain1/subscriptions",
+        "organizations_url": "https://api.github.com/users/narain1/orgs",
+        "repos_url": "https://api.github.com/users/narain1/repos",
+        "events_url": "https://api.github.com/users/narain1/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/narain1/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 7,
+      "created_at": "2026-03-24T23:55:28Z",
+      "updated_at": "2026-05-06T17:57:18Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\n\n`tl.dot` fp16 matmul gives incorrect results on RTX 3090 (SM86) with Triton 3.6.0\n\n**Describe the bug**\n\nA simple fp16 matmul kernel using `tl.dot` appears to produce incorrect results on my local machine with an RTX 3090 and Triton 3.6.0.\n\nThe same kernel and test pass on a different machine, but on my local setup `torch.testing.assert_close` fails with about **4.5% mismatched elements** against the PyTorch reference. This looks like a correctness issue rather than ordinary fp16 tolerance noise, since the mismatch rate is fairly large and the same code behaves differently across machines.\n\nMinimal repro:\n\n```python\nimport triton\nimport triton.language as tl\nimport torch\n\n@triton.jit\ndef matrix_multiply_triton(\n    a, b, c,\n    m, n, k,\n    b_m: tl.constexpr,\n    b_k: tl.constexpr,\n    b_n: tl.constexpr\n):\n    pid = tl.program_id(axis=0)\n    n_blocks = tl.cdiv(n, b_n)\n\n    row_start = (pid // n_blocks) * b_m\n    col_start = (pid % n_blocks) * b_n\n\n    acc = tl.zeros((b_m, b_n), dtype=tl.float32)\n    for k_idx in range(0, k, b_k):\n        offset_a = (tl.arange(0, b_m)[:, None] + row_start) * k + (tl.arange(0, b_k)[None, :] + k_idx)\n        offset_b = (k_idx + tl.arange(0, b_k))[:, None] * n + (col_start + tl.arange(0, b_n)[None, :])\n\n        mask_a = (row_start + tl.arange(0, b_m)[:, None] < m) & (k_idx + tl.arange(0, b_k)[None, :] < k)\n        mask_b = (k_idx + tl.arange(0, b_k)[:, None] < k) & (col_start + tl.arange(0, b_n)[None, :] < n)\n\n        a_tile = tl.load(a + offset_a, mask=mask_a, other=0.0)\n        b_tile = tl.load(b + offset_b, mask=mask_b, other=0.0)\n        acc += tl.dot(a_tile, b_tile)\n\n    offset_c = (row_start + tl.arange(0, b_m))[:, None] * n + (col_start + tl.arange(0, b_n))[None, :]\n    mask_c = (row_start + tl.arange(0, b_m)[:, None] < m) & (col_start + tl.arange(0, b_n)[None, :] < n)\n    tl.store(c + offset_c, acc.to(tl.float16), mask=mask_c)\n\n\ndef mm_triton(a, b):\n    m, k = a.shape\n    k, n = b.shape\n\n    b_m = 16\n    b_k = 64\n    b_n = 16\n\n    c = torch.empty((m, n), device=a.device, dtype=a.dtype)\n    grid = (triton.cdiv(m, b_m) * triton.cdiv(n, b_n),)\n    matrix_multiply_triton[grid](a, b, c, m, n, k, b_m=b_m, b_k=b_k, b_n=b_n)\n    return c\n\n\na = torch.randn((2048, 2048), device=\"cuda\", dtype=torch.float16)\nb = torch.randn((2048, 2048), device=\"cuda\", dtype=torch.float16)\n\nc_ref = (a @ b).half()\nc_out = mm_triton(a, b)\n\ntorch.testing.assert_close(c_ref, c_out, atol=1e-3, rtol=1e-3)\n```\n\nObserved result on my machine:\n\n```text\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: ~4.5% / 4194304\ntorch.testing.assert_close(c_ref, c_out, atol=1e-3, rtol=1e-3) fails\n```\n\nA few details that may be relevant:\n\n* GPU: NVIDIA GeForce RTX 3090\n* Compute capability: sm_86\n* Triton version: 3.6.0\n* Inputs are contiguous fp16 tensors\n* Accumulator is fp32, final output is cast to fp16\n* The same code passes on a different machine\n\nThis made me suspect a backend/codegen issue specific to my environment, possibly related to `tl.dot` lowering on SM86 / Ampere, rather than an indexing bug in the kernel itself.\n\ni compared the same kernel with a A100 machine and it works fine.\n\n\n\n### Environment details\n\n```text\npython: 3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]\nplatform: Linux-6.17.0-19-generic-x86_64-with-glibc2.39\ntorch: 2.12.0.dev20260323+cu130\ntriton: 3.6.0\ncuda available: True\ntorch cuda: 13.0\ndevice: NVIDIA GeForce RTX 3090\ncapability: (8, 6)\n```",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/9830/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/9830/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/9310",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/9310/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/9310/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/9310/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/9310",
+      "id": 3860075667,
+      "node_id": "I_kwDOAWaHXs7mFBST",
+      "number": 9310,
+      "title": "[Bug] Numerical Overflow in nvfp4 Block-Scaled MMA: Accumulator Saturation at High Scale Factors",
+      "user": {
+        "login": "jinbaoziyl",
+        "id": 27070416,
+        "node_id": "MDQ6VXNlcjI3MDcwNDE2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/27070416?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jinbaoziyl",
+        "html_url": "https://github.com/jinbaoziyl",
+        "followers_url": "https://api.github.com/users/jinbaoziyl/followers",
+        "following_url": "https://api.github.com/users/jinbaoziyl/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jinbaoziyl/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jinbaoziyl/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jinbaoziyl/subscriptions",
+        "organizations_url": "https://api.github.com/users/jinbaoziyl/orgs",
+        "repos_url": "https://api.github.com/users/jinbaoziyl/repos",
+        "events_url": "https://api.github.com/users/jinbaoziyl/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jinbaoziyl/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 3,
+      "created_at": "2026-01-27T11:14:09Z",
+      "updated_at": "2026-02-02T18:15:28Z",
+      "closed_at": "2026-02-02T18:15:28Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\nHi Community, \n\nSummary: When performing Block-Scaled Matrix Multiplication using the nvfp4 (E2M1) data type on NVIDIA Blackwell architecture, the kernel yields +/-inf results as the scale factor increases. \n\n**changes:** triton/python/tutorials/10-block-scaled-matmul.py:: 366~367 \n![Image](https://github.com/user-attachments/assets/cbd7e967-5f7e-49c2-9c08-a7d93f75133a)\n\n**result**\n\n![Image](https://github.com/user-attachments/assets/767207d0-5426-4644-ac0b-5af676eed680)\n\n### Environment details\n\nTriton: Version: 3.6.0+git4760187e\nGpus：NVIDIA B300 SXM6 AC\nnvcc: Cuda compilation tools, release 13.0, V13.0.88\n          Build cuda_13.0.r13.0/compiler.36424714_0       ",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/9310/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/9310/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/9022",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/9022/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/9022/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/9022/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/9022",
+      "id": 3737162071,
+      "node_id": "I_kwDOAWaHXs7ewJFX",
+      "number": 9022,
+      "title": "argmin argmax result always 1 for input nan and inf",
+      "user": {
+        "login": "wxue1",
+        "id": 87170490,
+        "node_id": "MDQ6VXNlcjg3MTcwNDkw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/87170490?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/wxue1",
+        "html_url": "https://github.com/wxue1",
+        "followers_url": "https://api.github.com/users/wxue1/followers",
+        "following_url": "https://api.github.com/users/wxue1/following{/other_user}",
+        "gists_url": "https://api.github.com/users/wxue1/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/wxue1/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/wxue1/subscriptions",
+        "organizations_url": "https://api.github.com/users/wxue1/orgs",
+        "repos_url": "https://api.github.com/users/wxue1/repos",
+        "events_url": "https://api.github.com/users/wxue1/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/wxue1/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2025-12-17T03:16:49Z",
+      "updated_at": "2025-12-17T13:38:28Z",
+      "closed_at": "2025-12-17T13:38:28Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\n```\nimport math\nimport pytest\nimport torch\nimport numpy as np\nimport triton\nimport triton.language as tl\n\n\n# <<<<<<< test_argmax_1d\ndef torch_argmax(x0, dim, keepdim):\n    x0 = x0 if x0.device == \"cpu\" else x0.cpu()\n    return torch.argmax(x0, dim=dim, keepdim=keepdim).cuda()\n\n\n@triton.jit\ndef triton_argmax_1d8(in_ptr0, out_ptr1, xnumel, XBLOCK: tl.constexpr):\n    xoffset = tl.program_id(0) + tl.arange(0, XBLOCK)\n    tmp0 = tl.load(in_ptr0 + xoffset, None)\n    tmp4 = tl.argmax(tmp0, 0)\n    tl.store(out_ptr1, tmp4, None)\n\n\ndef test_argmax_1d_u8(dtype, shape):\n    #x0 = torch.tensor([torch.nan, torch.inf]).cuda()\n    x0 = torch.tensor([torch.inf, torch.nan]).cuda()\n    triton_res = torch.empty(1, dtype=torch.int32).cuda()\n    numel = 2\n    triton_argmax_1d8[1, 1, 1](x0, triton_res, numel, numel)\n    torch_res = torch_argmax(x0, dim=0, keepdim=True)\n    torch.equal(triton_res, torch_res)\n    print(triton_res)\n\n\nif __name__ == '__main__':\n    test_argmax_1d_u8('uint8', (16,))\n\n```\n    x0 = torch.tensor([torch.nan, torch.inf]).cuda()  -> triton_res = 1\n    x0 = torch.tensor([torch.inf, torch.nan]).cuda() ->  triton_res = 1\nIt's wrong ?\n\n\n### Environment details\n\nTriton 3.2",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/9022/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/9022/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

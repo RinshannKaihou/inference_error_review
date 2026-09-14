@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/38428",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/38428",
+  "id": 5382695904,
+  "node_id": "I_kwDOLCAjRs8AAAABQNVr4A",
+  "number": 38428,
+  "title": "[Bug] HiCache backup thread dies on any storage backend exception; queued backups and their host memory are never released",
+  "user": {
+    "login": "qidaye",
+    "id": 26450235,
+    "node_id": "MDQ6VXNlcjI2NDUwMjM1",
+    "avatar_url": "https://avatars.githubusercontent.com/u/26450235?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/qidaye",
+    "html_url": "https://github.com/qidaye",
+    "followers_url": "https://api.github.com/users/qidaye/followers",
+    "following_url": "https://api.github.com/users/qidaye/following{/other_user}",
+    "gists_url": "https://api.github.com/users/qidaye/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/qidaye/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/qidaye/subscriptions",
+    "organizations_url": "https://api.github.com/users/qidaye/orgs",
+    "repos_url": "https://api.github.com/users/qidaye/repos",
+    "events_url": "https://api.github.com/users/qidaye/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/qidaye/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-08T05:50:26Z",
+  "updated_at": "2026-09-08T05:50:26Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\n`HiCacheController.backup_thread_func` (and the `HybridCacheController` override) only catches `queue.Empty`:\n\n```python\nwhile not self.storage_stop_event.is_set():\n    try:\n        operation = self.backup_queue.get(block=True, timeout=1)\n        if operation is None:\n            continue\n        if not self.backup_skip:\n            self._page_backup(operation)\n        self.ack_backup_queue.put(operation)\n    except Empty:\n        continue\n```\n\nAny exception raised by the storage backend while writing a page (I/O error, timeout, malformed response from a remote store such as Mooncake / NIXL / 3FS / HF3FS / file backends) escapes the loop and kills the daemon thread. From that point on:\n\n- every backup operation stays in `backup_queue` forever and is never written to L3;\n- `ack_backup_queue` never drains, so `HiRadixCache` / `UnifiedRadixCache` never release the host memory held by those operations (`entry.release_host()` in the backup drain path);\n- the only visible symptom is host pool exhaustion much later. There is no log line pointing at the dead backup thread, and `hicache_*` metrics keep reporting as if backups were in flight.\n\nA backend that returns `False` from `batch_set` already stops the current operation, but the acked `StorageOperation` carries no information about the failure, so the ack consumer cannot distinguish a partial or failed write from a complete one.\n\nExpected: a failing backup should be logged, the operation should still be acked (so host memory is released and the queue keeps draining), and the ack should say what went wrong.\n\n### Reproduction\n\nDrives the production `backup_thread_func` with a controller stub whose backend raises once. No GPU or model needed.\n\n```python\nimport threading\nfrom queue import Empty, Queue\nfrom unittest import mock\n\nimport torch\n\nfrom sglang.srt.managers.cache_controller import HiCacheController, StorageOperation\n\ncontroller = mock.MagicMock()\ncontroller.storage_stop_event = threading.Event()\ncontroller.backup_skip = False\ncontroller.page_size = 16\ncontroller.backup_queue = Queue()\ncontroller.ack_backup_queue = Queue()\n\ncalls = [0]\ndef page_backup(operation):\n    calls[0] += 1\n    if calls[0] == 1:\n        raise RuntimeError(\"storage backend I/O error\")  # e.g. remote store timeout\n    operation.completed_tokens = 16 * len(operation.hash_value)\ncontroller._page_backup = page_backup\n\ndef make_op(n):\n    return StorageOperation(torch.zeros(n * 16), list(range(n * 16)), hash_value=[f\"h{i}\" for i in range(n)])\n\ncontroller.backup_queue.put(make_op(4))\ncontroller.backup_queue.put(make_op(2))\n\nt = threading.Thread(target=HiCacheController.backup_thread_func, args=(controller,), daemon=True)\nt.start()\nt.join(timeout=3)\nprint(\"backup thread alive:\", t.is_alive())\nacked = []\ntry:\n    while True:\n        acked.append(controller.ack_backup_queue.get(timeout=1).id)\nexcept Empty:\n    pass\nprint(\"acked operations:\", acked, \"(2 expected)\")\nprint(\"still queued:\", controller.backup_queue.qsize())\n```\n\nOutput on `main` (2358916d5a):\n\n```\nException in thread Thread-1 (backup_thread_func):\nTraceback (most recent call last):\n  ...\n  File \".../sglang/srt/managers/cache_controller.py\", line 1289, in backup_thread_func\n    self._page_backup(operation)\nRuntimeError: storage backend I/O error\nbackup thread alive: False\nacked operations: [] (2 expected)\nstill queued: 1\n```\n\nThe same happens in a real deployment whenever the L3 backend raises during `batch_set` (observed with a remote storage backend timing out under load): the backup thread disappears and host memory is never reclaimed.\n\nIn a server the trigger is any exception from the configured `--hicache-storage-backend` during a write; e.g. `--enable-hierarchical-cache --hicache-storage-backend <backend>` with a backend that becomes unreachable.\n\n### Environment\n\nReproduction above is CPU-only and does not depend on the accelerator.\n\n```\nsglang: main @ 2358916d5a (editable install from source)\npython: 3.12.13\ntorch: 2.13.0+cpu\nOS: Ubuntu 24.04, Linux 7.0.0-30-generic\n```\n\n`python3 -m sglang.check_env` currently fails on a CPU-only host with `NameError: name 'env' is not defined` (no branch in `check_env.py` for the CPU case), so the versions above were collected manually.\n\nA fix is in #38427.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/38428/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

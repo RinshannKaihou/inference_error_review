@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/52808",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/52808/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/52808/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/52808/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/52808",
+  "id": 5184938345,
+  "node_id": "I_kwDOI7xefs8AAAABNQvhaQ",
+  "number": 52808,
+  "title": "[Bug]: PD Multi Tier supplies nothing when the producer already holds the blocks",
+  "user": {
+    "login": "nilig",
+    "id": 36198131,
+    "node_id": "MDQ6VXNlcjM2MTk4MTMx",
+    "avatar_url": "https://avatars.githubusercontent.com/u/36198131?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/nilig",
+    "html_url": "https://github.com/nilig",
+    "followers_url": "https://api.github.com/users/nilig/followers",
+    "following_url": "https://api.github.com/users/nilig/following{/other_user}",
+    "gists_url": "https://api.github.com/users/nilig/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/nilig/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/nilig/subscriptions",
+    "organizations_url": "https://api.github.com/users/nilig/orgs",
+    "repos_url": "https://api.github.com/users/nilig/repos",
+    "events_url": "https://api.github.com/users/nilig/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/nilig/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-18T18:20:44Z",
+  "updated_at": "2026-08-18T19:10:09Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Summary\n\nIn the PD Multi Tier flow (`remote_decoder` / `remote_prefiller`, secondary tier\nof `type: p2p`),\na producer that **already holds the requested blocks** supplies nothing to the\nconsumer. The consumer's fetch demand parks unsatisfied, waits out\n`_LOAD_TIMEOUT_S = 30.0`, aborts, and recomputes the prompt locally.\n\nThe effect is inverted from the intent: the better the producer's prefix cache\nworks, the more often the Multi Tier path fails to deliver.\n\n### Environment\n\n- vLLM `v0.27.1`, stock `docker.io/vllm/vllm-openai:v0.27.1`\n- `openai/gpt-oss-120b`, TP=1, `--block-size 128`,\n  `--no-disable-hybrid-kv-cache-manager`, `PYTHONHASHSEED=0` on all instances\n- 2x H200, RDMA between pods\n- Connector on both instances:\n\n```\n--kv-transfer-config '{\"kv_connector\":\"OffloadingConnector\",\"kv_role\":\"kv_both\",\n  \"kv_load_failure_policy\":\"recompute\",\n  \"kv_connector_extra_config\":{\"spec_name\":\"TieringOffloadingSpec\",\n    \"cpu_bytes_to_use\":107374182400,\"block_size\":128,\"eviction_policy\":\"lru\",\n    \"offload_prompt_only\":false,\n    \"secondary_tiers\":[{\"type\":\"p2p\",\"host\":\"$(POD_IP)\",\"port\":7777}]}}'\n```\n\nTwo files (`tiering/p2p/session/server.py`, `.../client.py`) carried added\n`logger.info` counters only, no behavioural change; the timings and byte counts\nbelow come from vLLM's own metrics and logs.\n\n### Reproducer\n\nTwo instances, A (producer) and B (consumer). No P/D topology, router or proxy\nrequired — three HTTP calls.\n\n1. **Producer leg** on A: `POST /v1/completions`, `max_tokens=1`,\n   `kv_transfer_params={\"remote_decoder\":{\"kv_request_id\":ID}}`\n2. **Consumer leg** on B: `POST /v1/completions`,\n   `kv_transfer_params={\"remote_prefiller\":{\"kv_request_id\":ID,\"remote_host\":A,\"remote_port\":7777}}`\n\nRun that pair twice with a **unique prompt each time** (so the consumer is always\ncold). Before the second pair, send the prompt to A once on its own with no\n`kv_transfer_params`, so A already holds the blocks.\n\nPrompt ~8K tokens. Watch `vllm:kv_offload_load_bytes_total` on B.\n\n### Observed\n\n| case | producer leg | consumer leg | consumer bytes loaded |\n| --- | ---: | ---: | --- |\n| A cold for the prefix | 0.20 s | 0.16 s | +268,959,744 (256 MiB) |\n| A pre-warmed | 0.03 s | **32.9 s** | **0** |\n\nIdentical with a real P/D pair (prefill producer, decode consumer):\n0.086 s / +256 MiB cold vs 30.2 s / 0 bytes warm. Reproduces every time.\n\nConsumer log for the warm case:\n\n```\nP2PSession <A>:7777: <id> round=0 timed out, sending abort\nP2PSession <A>:7777: load request <id> (job_id=N) timed out; load job completed\nwith failure. If this recurs, ensure PYTHONHASHSEED is set to the same value on\nall nodes.\n```\n\n`PYTHONHASHSEED=0` was set and verified identical on every instance, so that\nhint is misleading for this failure mode.\n\n### Analysis\n\nSupply for a PD round can only come from that request's store jobs\n(`session/server.py` `_OutboundRequestState.add_stored_blocks`). A warm producer\ncreates no store job, so demand parked in `demanded`\n(`key -> remote_block_idx: blocks peer wants, awaiting supply`) is never matched.\n\nTwo gates prevent the blocks from being offered:\n\n1. `distributed/kv_transfer/kv_connector/v1/offloading/scheduler.py` (~L941):\n\n```python\n# Skip prefix-hit chunks for block-level policy; for\n# request-level, next_stored_chunk_idx stays at 0 so all\n# chunks (including hits) are offloaded.\nif req_status.offloading_context.policy == OffloadPolicy.BLOCK_LEVEL:\n    group_state.next_stored_chunk_idx = num_chunks\n```\n\n`P2PTierManager.on_new_request` returns a bare `RequestOffloadingContext()`,\nwhich defaults to `BLOCK_LEVEL`. `grep -c REQUEST_LEVEL` is **0** for every tier\n(`p2p`, `fs`, `obj`, `example`) at `v0.27.1` **and on `main`**, so\n`request_level_tiers` is always empty and\n`TieringOffloadingManager._cascade_existing_blocks_to_request_level_tiers` never\nruns.\n\n2. Forcing `REQUEST_LEVEL` for producer-side requests clears gate 1 — verified,\nthe request then reaches the store path with `next_stored_chunk_idx=0` and 56\nstorable chunks — but the keys are then dropped by `if block_id == 0: continue`,\nsince a prefix-hit request has no GPU block ids recorded for those blocks\n(measured: 55 keys dropped). `new_offload_keys` empties, `prepare_store` is\nskipped, and with it the cascade.\n\n### Why symmetric (non-PD) Multi Tier is unaffected\n\n`session/server.py`:\n\n> `# Supply came from inbound lookup pins (symmetric): no late submit_store can arrive, so unmatched fetch demand fails fast. PD rounds park demand for stores instead.`\n\n`session/client.py`:\n\n> `PD-only loads leave probes/unsent empty ... PD clients never probe and stay on round 0.`\n\nThe symmetric path supplies from tier lookups and pins, which need neither a store job\nnor GPU block ids, so a warm producer is its best case. PD has no equivalent\nroute.\n\n### Impact at scale\n\nShared-prefix workload, 8 producers + 8 consumers, 10,800 requests. Supply match\nrate tracks producer cache warmth:\n\n| | cold | warming | warm |\n| --- | ---: | ---: | ---: |\n| fetch demand matched | 93.8% | 51.5% | **36.7%** |\n\n6,083 load timeouts were logged against 10,800 requests. End to end this made\nPD Multi Tier slower than plain NIXL P/D on the same hardware (1571 s vs\n1032 s to completion; mean TPOT 92 ms vs 10.7 ms).\n\n### Question\n\nShould the PD Multi Tier path gain a lookup/pin supply route like the symmetric one, or should\nthe p2p tier declare `REQUEST_LEVEL` (and the store path then be able to offload\nprefix-hit blocks that have no GPU block id)? The second looks like it fights both\nthe `BLOCK_LEVEL` optimisation and the missing block-id constraint, so the first\nseems closer to the existing design — but that is your call.\n\ncc @liranschour\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/52808/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/52808/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

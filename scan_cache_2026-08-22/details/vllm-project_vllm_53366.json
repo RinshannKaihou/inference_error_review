@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53366",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53366/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53366/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53366/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/53366",
+  "id": 5221168284,
+  "node_id": "I_kwDOI7xefs8AAAABNzS0nA",
+  "number": 53366,
+  "title": "[Bug]: torch.compile cache key does not include num_speculative_tokens, causing compiled-graph collision across different speculative-token counts",
+  "user": {
+    "login": "Phil-Fan",
+    "id": 56161071,
+    "node_id": "MDQ6VXNlcjU2MTYxMDcx",
+    "avatar_url": "https://avatars.githubusercontent.com/u/56161071?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Phil-Fan",
+    "html_url": "https://github.com/Phil-Fan",
+    "followers_url": "https://api.github.com/users/Phil-Fan/followers",
+    "following_url": "https://api.github.com/users/Phil-Fan/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Phil-Fan/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Phil-Fan/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Phil-Fan/subscriptions",
+    "organizations_url": "https://api.github.com/users/Phil-Fan/orgs",
+    "repos_url": "https://api.github.com/users/Phil-Fan/repos",
+    "events_url": "https://api.github.com/users/Phil-Fan/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Phil-Fan/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 7290797835,
+      "node_id": "LA_kwDOI7xefs8AAAABspC_Cw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/torch.compile",
+      "name": "torch.compile",
+      "color": "E494D5",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-22T09:07:29Z",
+  "updated_at": "2026-08-22T09:07:36Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "\n### Describe the bug\n\nWhen serving the same model with speculative decoding and varying `num_speculative_tokens` (e.g. sweeping `k=7, 9, 11`), vLLM reuses a `torch.compile` artifact compiled for one value of `k` for a different value of `k`. Because the compiled Inductor graph embeds concrete tensor sizes, loading the wrong artifact triggers a runtime stride/size assertion failure:\n\n```\nAssertionError: expected size 7==9, stride 5120==5120 at dim=0\n```\n\nThe failure is order-dependent: the first `k` to compile populates the cache, and any subsequent `k` that happens to share the same cache directory loads the stale graph and crashes. Values that happen to be launched on a clean cache work fine, which makes the bug very non-obvious.\n\n### Root cause\n\nvLLM computes the `torch.compile` cache key in `VllmConfig.compute_hash()`, which delegates to `SpeculativeConfig.compute_hash()`:\n\n- `vllm/config/vllm.py`: `VllmConfig.compute_hash()` appends `self.speculative_config.compute_hash()`.\n- `vllm/config/speculative.py`: `SpeculativeConfig.compute_hash()` currently only hashes:\n  1. Whether the method uses auxiliary hidden states (`eagle3`, `extract_hidden_states`, `dflash`, `dspark`).\n  2. The draft model config hash, when (1) is true.\n  3. `eagle_aux_hidden_state_layer_ids`, if present.\n\n**`num_speculative_tokens` is not included in the hash.** Since `num_speculative_tokens` changes the target verification batch size (e.g. query length `1 + k` in many backends) and therefore the concrete shapes seen by Inductor, it must be part of the cache key. Omitting it makes compile artifacts for different `k` collide.\n\n### Environment\n\n- vLLM version: `0.26.1rc1.dev920+g66e5414c6.precompiled`\n- Model: `Qwen/Qwen3.8-27B`\n- Speculative decoding method: `dflash`\n- Draft model: `z-lab/Qwen3.8-27B-DFlash2`\n- Target tensor-parallel size: `2`\n- Draft tensor-parallel size: `1`\n- `num_speculative_tokens` sweep: `7`, `9`, `11`\n- `VLLM_CACHE_ROOT` default (`~/.cache/vllm`)\n\n### Full error\n\nWhen starting the server with `num_speculative_tokens=7` after a previous run with `num_speculative_tokens=9` has populated the compile cache:\n\n```\nAssertionError: expected size 7==9, stride 5120==5120 at dim=0\n```\n\nThis comes from the Inductor-generated `assert_size_stride` check in the loaded `torch.compile` artifact: the artifact was compiled for `k=9`, but the runtime input has `k=7`, so the first dimension differs (`7 != 9`) while the stride happens to match.\n\n### Minimal reproduction\n\n1. Start a server with `num_speculative_tokens=9` and let it finish warmup / compile:\n\n   ```bash\n   vllm serve Qwen/Qwen3.8-27B \\\n     --tensor-parallel-size 2 \\\n     --speculative-config '{\n       \"method\": \"dflash\",\n       \"model\": \"z-lab/Qwen3.8-27B-DFlash2\",\n       \"num_speculative_tokens\": 9,\n       \"draft_tensor_parallel_size\": 1\n     }'\n   ```\n\n2. Stop the server. Without clearing `~/.cache/vllm/torch_compile_cache`, start another server with the same model but `num_speculative_tokens=7`:\n\n   ```bash\n   vllm serve Qwen/Qwen3.8-27B \\\n     --tensor-parallel-size 2 \\\n     --speculative-config '{\n       \"method\": \"dflash\",\n       \"model\": \"z-lab/Qwen3.8-27B-DFlash2\",\n       \"num_speculative_tokens\": 7,\n       \"draft_tensor_parallel_size\": 1\n     }'\n   ```\n\n3. During warmup or the first request, the engine loads the `k=9` compiled graph and crashes with:\n\n   ```\n   AssertionError: expected size 7==9, stride 5120==5120 at dim=0\n   ```\n\n   The exact numbers depend on hidden size and `k`, but the pattern is `expected size <current_k>==<cached_k>, stride ...==...`.\n\n### Expected behavior\n\nEach distinct `num_speculative_tokens` should produce a distinct compile cache key, so the engine recompiles when `k` changes instead of loading a shape-incompatible artifact.\n\n### Actual behavior\n\nThe cache key is identical for different `k`, causing a stale artifact to be loaded and a runtime `assert_size_stride` failure.\n\n### Workaround\n\nIsolate the cache directory per `k` via `VLLM_CACHE_ROOT`:\n\n```python\nimport os\nfrom pathlib import Path\n\nk = 7  # or 9, 11, ...\nos.environ[\"VLLM_CACHE_ROOT\"] = str(Path.home() / \".cache\" / f\"vllm_dflash2_k{k}\")\n```\n\nThis prevents cross-`k` cache pollution at the cost of requiring a separate compile for each `k`.\n\n### Proposed fix\n\nInclude `num_speculative_tokens` (and `num_speculative_tokens_per_batch_size` if dynamic speculative decoding is enabled) in `SpeculativeConfig.compute_hash()`:\n\n```python\ndef compute_hash(self) -> str:\n    factors: list[Any] = []\n    uses_aux_hidden_states = self.method in (\n        \"eagle3\", \"extract_hidden_states\", \"dflash\", \"dspark\"\n    )\n    factors.append(uses_aux_hidden_states)\n\n    if uses_aux_hidden_states and self.draft_model_config is not None:\n        factors.append(self.draft_model_config.compute_hash())\n        layer_ids = getattr(\n            self.draft_model_config.hf_config,\n            \"eagle_aux_hidden_state_layer_ids\",\n            None,\n        )\n        if layer_ids is not None:\n            factors.append(tuple(layer_ids))\n\n    # NEW: num_speculative_tokens changes the verification shape\n    factors.append(self.num_speculative_tokens)\n    if self.num_speculative_tokens_per_batch_size is not None:\n        factors.append(tuple(self.num_speculative_tokens_per_batch_size))\n\n    hash_str = safe_hash(str(factors).encode(), usedforsecurity=False).hexdigest()\n    return hash_str\n```\n\n### Related issues / context\n\n- #16501 — discusses the broader fragility of vLLM's `torch.compile` cache keys.\n- #50891 — same failure mode: a config that changes the forward signature (`limit_mm_per_prompt`) is missing from the AOT compile cache key.\n\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53366/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53366/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

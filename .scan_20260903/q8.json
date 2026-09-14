@@ -1,0 +1,15 @@
+{
+  "total": 1,
+  "items": [
+    {
+      "n": 11519,
+      "t": "[FuseNestedLoops] matchPositiveTripCount accepts an llvm.assume without checking it dominates the loop, and miscompiles",
+      "u": "https://github.com/triton-lang/triton/issues/11519",
+      "s": "open",
+      "c": "2026-08-30T09:05:47Z",
+      "pr": false,
+      "labels": []
+    }
+  ],
+  "msg": null
+}

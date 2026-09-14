@@ -1,0 +1,657 @@
+{
+  "total_count": 7,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55609",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55609/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55609/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55609/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55609",
+      "id": 5367767226,
+      "node_id": "I_kwDOI7xefs8AAAABP_Ggug",
+      "number": 55609,
+      "title": "[ROCm] test_mla_backends surfaces two MLA decode-path issues: ROCM_AITER_MLA no query_len>4 kernel on gfx942 + bf16 chunked-context tolerance",
+      "user": {
+        "login": "wjabbour",
+        "id": 21234757,
+        "node_id": "MDQ6VXNlcjIxMjM0NzU3",
+        "avatar_url": "https://avatars.githubusercontent.com/u/21234757?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/wjabbour",
+        "html_url": "https://github.com/wjabbour",
+        "followers_url": "https://api.github.com/users/wjabbour/followers",
+        "following_url": "https://api.github.com/users/wjabbour/following{/other_user}",
+        "gists_url": "https://api.github.com/users/wjabbour/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/wjabbour/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/wjabbour/subscriptions",
+        "organizations_url": "https://api.github.com/users/wjabbour/orgs",
+        "repos_url": "https://api.github.com/users/wjabbour/repos",
+        "events_url": "https://api.github.com/users/wjabbour/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/wjabbour/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 6114440385,
+          "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+          "name": "rocm",
+          "color": "B60205",
+          "default": false,
+          "description": "Related to AMD ROCm"
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-09-06T21:29:10Z",
+      "updated_at": "2026-09-06T22:05:08Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Summary\n\n`tests/v1/attention/test_mla_backends.py` currently gives the ROCm MLA prefill\nbackends near-zero coverage — every `test_backend_correctness` /\n`test_chunked_context_backend_correctness` case is skip-marked at collection\nbecause the only ROCm prefill backend in the list (`ROCM_AITER_FA`) reports\nunavailable unless `VLLM_ROCM_USE_AITER=1`, which no CI job sets (#53944).\n\nWhile adding `FLASH_ATTN` to the ROCm prefill list to fix that (PR to follow),\nrunning the now-executable tests on an MI300X (gfx942) surfaced two **decode-path**\nissues, neither in the prefill backend being enabled. Filing so the skip / tolerance\nmarkers the PR adds have something to point at.\n\n### 1. `ROCM_AITER_MLA` has no persistent MLA-decode kernel for `query_len > 4` on gfx942\n\n`ROCM_AITER_MLA` is appended to `BACKENDS_TO_TEST` unconditionally on ROCm and\nadvertises multi-token-query support, so `spec_decode_medium` (query_len 8) runs it.\naiter's `get_heuristic_kernel_mla` has no persistent bf16 kernel for\n`gqa_ratio>=16, qseqlen>4` on gfx942 (the table stops at qseqlen 4), so the lookup\nfails.\n\n- Until [ROCm/aiter#5297](https://github.com/ROCm/aiter/pull/5297), that failure\n  was a raw `std::abort()` — it killed the pytest worker, taking down every other\n  test in the shard. ROCm/aiter#5297 (asm_mla ctypes error-bridge migration)\n  turns it into a catchable `RuntimeError`; validated on MI300X. The fp8-KV\n  column of the same abort is tracked upstream as ROCm/aiter#4752.\n- `query_len <= 4` (`spec_decode_small`) works. `fp8` KV works (`ROCM_AITER_MLA`\n  doesn't support fp8 KV, so only `TRITON_MLA` runs, and it handles query_len 8).\n  Only `spec_decode` + `query_len > 4` + `auto` (bf16) KV is affected — 16 cases.\n\nReal fix options (both AMD-side / larger):\n- aiter ships the gfx942 `mla_a16w16_qh32_qseqlen4_gqaratio32_ps` kernel family\n  (exists for gfx950; folds `qseqlen 8 / gqa 16` → `qseqlen 4 / gqa 32`,\n  capture-safe), or\n- `RocmAiterMLA` bounds its advertised spec-decode `query_len_support` to <= 4 on\n  gfx942 so it never requests the missing kernel (completes the partial\n  `_ASM_PADDED_MAX_PS_QLEN` guard, which today only covers `_decode_num_heads < 16`).\n\nThe PR skips the 16 `spec_decode` + `query_len > 4` + bf16 cases on ROCm with a\npointer here.\n\n### 2. `atol`/`rtol` = `1e-2` is below one bf16 ULP for `v_head_dim=256` chunked context\n\n`test_chunked_context_backend_correctness` at `v_head_dim=256` (glm), `auto`\n(bf16) KV: one element / 2,883,584 differs — reference `2.03125`, backend `2.0`\n(0.03125 = 2 bf16 ULP at magnitude ~2; one bf16 ULP there is 0.0156, already above\n`atol=1e-2`). mean diff 7.5e-4, p99 7.8e-3.\n\nNot backend-specific: both decode backends (`TRITON_MLA`, `ROCM_AITER_MLA`) show\nthe identical diff, so it's the AITER-FA `run_prefill_context_chunk` partial —\nits online-softmax merge is a reordered reduction vs the single-pass SDPA\nreference, so ~1 ULP of genuine fp32 disagreement is expected, and rounding to\nadjacent bf16 grid points near a boundary makes it a 2-ULP output gap.\n`FLASH_ATTN` prefill happens to round the other way and passes; `deepseek`\n(`v_head_dim=128`, shorter reduction) passes.\n\nThe comparison tolerance for a bf16 output vs an independent reference has to\nallow >= 1 ULP; `rtol=atol=1e-2` doesn't at magnitude ~2. The PR bumps `rtol` to\n`2e-2` for the ROCm `v_head_dim=256` + bf16 case only. A wider fix (the shared\n`rtol`/`atol` is arguably a hair tight for bf16 across all backends and both\nplatforms) would need a full CUDA run and belongs in a separate change. The p99\n7.8e-3 / 256-vs-128 asymmetry is worth a look from AMD on whether AITER-FA's\nchunk-merge error growth at `v_head_dim=256` is improvable, but it's not a bug\nsignature.\n\n### Repro\n\nMI300X (gfx942), `rocm/vllm-ci` image, aiter `0.1.21.post1`:\n\n```\nVLLM_ROCM_USE_AITER=1 pytest -q tests/v1/attention/test_mla_backends.py \\\n  -k \"backend_correctness and spec_decode_medium\"\n# with ROCm/aiter#5297 applied: 16 failed (RuntimeError), 32 passed\n# without: SIGABRT, 0 collected results\n```\n\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55609/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55609/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55584",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55584/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55584/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55584/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55584",
+      "id": 5365798678,
+      "node_id": "I_kwDOI7xefs8AAAABP9OXFg",
+      "number": 55584,
+      "title": "[RFC]: R3 support for prefill/decode disaggregation",
+      "user": {
+        "login": "ShuoleiWang",
+        "id": 46160365,
+        "node_id": "MDQ6VXNlcjQ2MTYwMzY1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/46160365?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ShuoleiWang",
+        "html_url": "https://github.com/ShuoleiWang",
+        "followers_url": "https://api.github.com/users/ShuoleiWang/followers",
+        "following_url": "https://api.github.com/users/ShuoleiWang/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ShuoleiWang/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ShuoleiWang/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ShuoleiWang/subscriptions",
+        "organizations_url": "https://api.github.com/users/ShuoleiWang/orgs",
+        "repos_url": "https://api.github.com/users/ShuoleiWang/repos",
+        "events_url": "https://api.github.com/users/ShuoleiWang/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ShuoleiWang/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 6478559908,
+          "node_id": "LA_kwDOI7xefs8AAAABgib6pA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/RFC",
+          "name": "RFC",
+          "color": "DE9220",
+          "default": false,
+          "description": ""
+        },
+        {
+          "id": 9306392211,
+          "node_id": "LA_kwDOI7xefs8AAAACKrRGkw",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/kv-connector",
+          "name": "kv-connector",
+          "color": "4417cb",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-09-06T15:07:13Z",
+      "updated_at": "2026-09-06T15:07:40Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Motivation.\n\nReinforcement learning (RL) rollouts with mixture-of-experts (MoE) models need a record of which experts actually ran for each token. Training can replay those routing choices. vLLM already captures and returns these R3 records. It can also reuse them with a local prefix cache.\n\nPrefill/decode disaggregation adds a missing step. Prefill (P) and decode (D) run in separate instances. D loads key/value (KV) cache data from P and does not run every prompt token again. D therefore cannot produce all prompt routes from its own capture alone.\n\nThis RFC proposes native NIXL transfer of R3 records from P to D. It would build on the R3 storage code that the project accepts from [PR #45635](https://github.com/vllm-project/vllm/pull/45635), or a successor. Workers would transfer the route data directly and keep it alive together with the matching KV. The proxy would not carry or merge route arrays. This is a PD extension of the work discussed in [RFC #45221](https://github.com/vllm-project/vllm/issues/45221), not a second R3 store or a new design for a general Artifact Connector.\n\nThe key rule is that routes must match the KV that D actually uses, not just the same prompt text. Consider a 48-token prompt. D already has KV for the first 32 tokens and recomputes the last prompt token:\n\n| Token range, start inclusive and end exclusive | KV source | Required R3 source |\n|---|---|---|\n| `[0, 32)` | D's existing local cache | The old routes that match this cached KV |\n| `[32, 47)` | KV loaded from P for this request | P's routes that match the loaded KV |\n| `[47, 48)` | Computed by D for this request | D's new capture |\n\nReplacing all prefix routes with P's current trace would not preserve this link. The same prefix hash does not prove that two executions chose exactly the same routes. Block reuse, async output, partial blocks, and transfer failures also affect when records are valid and when their memory can be freed.\n\nAs of September 6, 2026, PR #45635 at `df09778c1f` replaces the old scheduler-side slot store with records that workers own and look up by block key. It still rejects R3 when a KV connector is enabled. This RFC would extend that storage design for PD instead of bringing back the old slot manager. See the [R3 worker code](https://github.com/xhx1022/vllm/blob/df09778c1f5ad65706fccf5bc9c0c82d2b650736/vllm/distributed/artifact_connector/worker.py#L65) and its [current configuration checks](https://github.com/xhx1022/vllm/blob/df09778c1f5ad65706fccf5bc9c0c82d2b650736/vllm/config/vllm.py#L1012).\n\nRelated work:\n\n- [PR #39289](https://github.com/vllm-project/vllm/pull/39289) addresses the same R3+PD use case. It carries route arrays in `kv_transfer_params` and merges them on D. This proposal instead uses NIXL for the route data and selects records based on the KV source.\n- [PR #45419](https://github.com/vllm-project/vllm/pull/45419) relaxes the configuration check and relies on proxy-side merging. It has companion work in [vLLM Router #184](https://github.com/vllm-project/router/pull/184) and [llm-d Router #1627](https://github.com/llm-d/llm-d-router/pull/1627). This proposal keeps the proxy's normal PD handoff role. The engine and connector would check that the KV and routes match and are complete.\n- [PR #52902](https://github.com/vllm-project/vllm/pull/52902) reorganizes the R3 capture/replay tests. PD tests would extend that test setup and stay aligned with output-range work such as [PR #37094](https://github.com/vllm-project/vllm/pull/37094).\n\nThis RFC asks for agreement on the native NIXL path and how it should fit with these efforts. It does not assume that it replaces an existing PR. The implementation would use the storage interfaces accepted by the project. Before that storage work merges, this RFC can define the smallest additions needed for PD.\n\n\n### Proposed Change.\n\n\n### 1. Goals and initial scope\n\nThe proposed first version would:\n\n1. Transfer P's routes for the external KV that D actually reuses. Combine them with D's cached routes and new local capture to form the complete result.\n2. Keep prefix caching, chunked prefill, CUDA graphs, and async output enabled. Correctness must not depend on turning these features off.\n3. Require both KV and matching R3 to be ready before completing a load or exposing a cache hit. Keep transfer memory alive until no transfer can still access it.\n4. Be disabled by default. When disabled, preserve the base version's NIXL compatibility checks, R3 output rules, and other serving behavior.\n\nThe first version would support:\n\n- Model Runner V2, text-only MoE models, non-streaming completions, and `n=1`.\n- One data-parallel replica per side (`DP=1`).\n- Matching tensor-parallel (`TP`) layouts on P and D, plus compatible expert-parallel (`EP`) layouts that pass their own tests.\n- Dedicated producer and consumer roles, NIXL pull, one full-attention KV cache group, and matching logical-block layouts, hash-block layouts, and R3 data formats.\n\nThe first version would not support MTP/speculative decoding, DBO/microbatching, LoRA, multimodal inputs, resumable requests, different TP layouts on P and D, multiple DP output workers, pipeline parallelism (PP), decode/prefill context parallelism (DCP/PCP), reverse transfer, or CPU KV offload. Passing tests with another EP backend does not prove DeepEP support. Unsupported combinations would be rejected at startup or during request preprocessing. These new limits apply only when this extension is enabled.\n\nWeights would remain fixed while requests or transfers are active. To change weights, the deployment must first finish or safely stop those requests and transfers, then bring both sides to a consistent state. This RFC does not implement replay in the trainer or guarantee bit-exact training/inference logprobs.\n\n### 2. Configuration and API behavior\n\nBoth sides would keep using `--enable-return-routed-experts`. They would also set the proposed `enable_routed_experts_transfer` field in `KVTransferConfig` to `true`. This new field would default to `false`. The P configuration would be:\n\n```json\n{\n  \"kv_connector\": \"NixlConnector\",\n  \"kv_role\": \"kv_producer\",\n  \"enable_routed_experts_transfer\": true,\n  \"kv_load_failure_policy\": \"fail\"\n}\n```\n\nD would use `kv_consumer` with the same R3 transfer settings. The handshake would include an optional R3 transfer capability and data-format version. A transfer must fail if only one side enables the feature, or if versions or layouts do not match. It must not fall back to a warning or return an incomplete trace. With the extension disabled, the existing compatibility factors stay unchanged. This does not bypass vLLM's version checks or add a guarantee for mixed-version deployments.\n\nThe public R3 response format and token-range rules would stay the same. Normal requests to P would still return R3 as before. P requests used only for an internal PD handoff would not serialize a second copy of the full route array. D would return the complete route result. The last sampled token has no route row until it has run through a forward pass.\n\nThe proxy would keep forwarding the normal PD handoff. At most, it would pass along a small export ID. Workers would exchange the full route data, per-block transfer metadata, and memory descriptors directly. These would not travel as JSON arrays in `kv_transfer_params`.\n\n### 3. Storage ownership and public interfaces\n\nThe base R3 code would still capture routes, store completed blocks, and build R3 output. It would also keep each request's unfinished block and decide when cached records can be removed. The unfinished part of a hash block is called a tail. Published records are immutable: their contents cannot be changed in place. NIXL would manage transfer snapshots, memory registration, transfer handles, and notifications.\n\nThe new PD control path would send small readiness and completion messages to the Scheduler through public interfaces. It would not add a second source-of-truth route cache or route-data transfer code to the Scheduler. It would not access the store's private memory or eviction tables, or NIXL's private handles. The base R3 output path through EngineCore and the API server would stay unchanged.\n\nThe first version would use CPU transfer snapshots with a fixed memory budget. It would copy the matching records from the R3 store into a stable export buffer. D would receive them into a separate staging buffer, validate them, and then commit them through the store's public API. Each snapshot belongs to one transfer. It is not used for prefix lookup and is not a second R3 cache. The first version would not borrow raw addresses from the store's private memory buffer or claim end-to-end zero-copy transfer.\n\nA transfer lease keeps its data alive while a transfer may still access it. A manifest is the metadata that describes the transfer's source, format, and valid rows. The R3 worker layer would provide these public operations. Final method names can follow the accepted storage API, but the ownership and completion rules are part of this proposal:\n\n| Operation | Input and result | Required behavior |\n|---|---|---|\n| Reserve a usable cached prefix | Candidate KV range and its R3 references → usable prefix and reservation | Check that the records exist and match the KV. Keep them alive so they cannot be evicted before use. |\n| Prepare an export | Request, KV/R3 links, and token range → export lease and manifest | Include the needed full blocks and tails. Allow remote reads only after the snapshot is ready. |\n| Prepare a receive | Manifest and target request → private staging buffer | Check size, format, ranges, and request identity. Reserve budget before allocating memory. |\n| Commit received rows | Completed and validated staging data → local R3 references or tails | Commit through the store's API. Do not write private slots or change an existing immutable record. |\n| Release export or receive data | Lease or staging reservation | Free it only after NIXL confirms that no transfer can still access the memory. |\n\nWith matching TP layouts, each rank would transfer its KV shards through the existing NIXL path. R3 uses logical token positions, layer IDs, and expert IDs. Only the output rank that holds the full route record would export it; other TP ranks would not send duplicate copies. Completion must cover all required KV ranks, not just the output rank.\n\n### 4. Link KV to the exact route record\n\nEach KV cache range used by an R3 request would carry a reference to its matching route record. The R3 store owns this reference. Callers pass it back to the store rather than build it themselves. A prefix hash finds a possible cache hit; the record reference identifies the routes that belong to that specific KV. NIXL must not select an arbitrary stored record based only on the prefix hash.\n\nIf KV moves to a new address without being recomputed, this link stays the same. If a new forward pass produces new KV, it must link to the matching new route record. An old record with the same prefix hash is not an automatic substitute. The R3 storage code would create and resolve record references and any needed version information. PD would not maintain a separate key-generation scheme.\n\nThe export manifest would bind:\n\n- The source instance identity, a unique `transfer_id`, and the source cache epoch for this export.\n- The deployed model/weight identity and R3 format: layer count, experts per token (top-k), expert-ID encoding, and numeric type (dtype).\n- The matching KV/R3 record references, valid token ranges, and byte counts.\n- The request and transfer identity that the receiver can check.\n\nThe deployment configuration or a coordinator supplies the model/weight identity. A local cache generation counter is not a weight version. The handshake checks that both sides declare compatible identities; it does not prove that checkpoint files contain the claimed weights. Instance identity after a restart, local cache epoch, and shared weight identity must remain separate. Equal generation counters do not prove equal weights. Different counters do not by themselves prove a mismatch.\n\nA completion event must match the active request, `transfer_id`, and receive generation. An old notification cannot complete a new request. Data from an old epoch cannot be committed as valid data for a new epoch.\n\n### 5. Normal transfer flow\n\n1. **P keeps the records alive.** Before its handoff request ends, P retains the needed R3 records and tails for export. Request cleanup must not free them before the snapshot is ready.\n2. **P prepares the export.** Once the async readout and snapshot are complete, NIXL gets stable export descriptors. A background `put()` that is only queued is not enough.\n3. **D finds its usable prefix.** D reserves the longest local prefix with both valid KV and matching R3. It handles the rest as a normal cache miss: fetch both from P or recompute both.\n4. **D receives the external range.** KV and R3 transfers may make progress separately. Until they are ready, other requests and prefix lookups cannot see the receive buffers.\n5. **D resumes execution.** D leaves the load-wait state only after the external KV it will reuse and the matching R3 rows have arrived and passed validation. This does not wait for routes of tokens that D has not run yet.\n6. **D commits the final records.** D runs the remaining tokens. It combines cached routes, received routes, and new capture based on their actual sources, then completes the final block and output through the R3 storage API.\n7. **P releases the export lease.** Once all required KV/R3 reads have ended, NIXL notifies P to release its export snapshot. P does not wait for D to finish the whole generation. D manages its own staging and cache references through the local lifecycle.\n\nIf D needs no external range, it issues no R3 READ. It uses the existing notify-only path to release P's lease. Checking a cached prefix and retaining its records must form one reservation operation. There must be no gap where a record passes the check and is then evicted before use.\n\nThe first version would resume D only when both the reused external KV and its matching routes are ready. This keeps the normal output path from having to handle executed KV whose required routes are still in flight. Running D as soon as KV arrives while delaying route output is a possible later optimization, not part of this first version.\n\n### 6. Tails and the final block\n\nP's partial block would be copied into an immutable transfer snapshot with an explicit valid token range. Its export lease would keep it alive after the normal request tail is released. Transfers may use whole blocks, but D must use only the rows declared valid in the manifest.\n\nIf D recomputes the last prompt token, it must not use P's route row for that token in the final record. D first waits for the external range it will reuse, then runs its local tokens. The final immutable block, including D's new rows, is published after that forward pass. D must not publish P's full final block and modify it in place later. It must also not wait for its own new routes before allowing the forward pass that creates them.\n\n### 7. Failures, cancellation, and limits\n\n**Missing records before scheduling:** If KV has a cache hit but its R3 is missing, not ready, or from the wrong source, treat that range as a cache miss for this R3 request. Shorten the usable local prefix and fetch or recompute both KV and R3 for the missing range. The first version would not refill R3 alone, attach P's current routes to D's old KV, or disable prefix caching globally.\n\n**Errors after a transfer starts:** Follow `kv_load_failure_policy=\"fail\"`. End the affected request with an error. Do not retry without a bound or return a partly valid R3 result. If any required KV or R3 transfer fails, cancel or drain the others. Free receive buffers and source leases only after confirming that DMA can no longer access those addresses.\n\n**Timeouts and unconfirmed cancellation:** A timeout does not prove that DMA has stopped. Memory must remain reserved and count against the in-flight budget until NIXL confirms that all access has ended, through completion or safe cancellation. It cannot be given to another request. If the connector cannot recover, use its failure or instance-isolation path rather than reuse memory that may still be accessed.\n\n**Resource limits:** Each output worker would track export and receive snapshots separately from the R3 store. The first version's total snapshot-byte limit would equal that worker's effective R3 store capacity. The number of in-flight transfer windows would be limited to `2 * max_num_seqs`; a window is one tracked export or receive operation. A manifest could not contain more records than the full blocks and tails needed for the request's valid token range. This budget would not reduce or change the store's existing capacity. The deployment must account for snapshot memory as an extra cost. When the budget is full, reject new transfers with a request-level resource error, but keep completing and releasing transfers already in flight. Memory reports must separate the R3 store, snapshots, tail/capture buffers, and descriptors.\n\n**Error handling:** Reject unsupported configurations at startup and invalid requests during preprocessing. Handle recoverable missing-data and transfer errors at request scope. Keep assertions for broken internal invariants. Do not hide code bugs with a broad exception catch. This follows the existing [review on error handling](https://github.com/vllm-project/vllm/pull/45635#discussion_r3908999090).\n\n### 8. CUDA graphs, async scheduling, and pause\n\nRoute export would reuse the base R3 implementation's async GPU-to-CPU copy. It must not add CPU/GPU synchronization inside MoE layers or on each decode step. It must keep the device-buffer addresses used by CUDA graphs stable. Snapshot work, memory registration, and network work stay in the worker/connector lifecycle. See the [review on CPU/GPU overlap](https://github.com/vllm-project/vllm/pull/45635#discussion_r3909040668).\n\nThe Scheduler would receive public events for KV/R3 readiness and transfer completion. If the engine needs to track work that is only waiting on I/O, the KV connector would expose a small public progress interface. The implementation must not read NIXL's private state or add route-array handling to the Scheduler's main loop. See the [review on these module boundaries](https://github.com/vllm-project/vllm/pull/45635#pullrequestreview-4840148178).\n\nPause may stop model scheduling, but required transfers, heartbeats, cancellation, and cleanup must keep making progress. Before sleep or a change to registered KV memory, related transfers must finish or be cancelled safely. Waiting for a CUDA stream is not a substitute for draining NIXL DMA. Until these combinations pass validation, the extension must reject unsafe operations. It must not silently free memory or change the existing meaning of pause.\n\n### 9. Implementation order and merge criteria\n\nAfter the base storage changes merge and their public interfaces are settled, the PD feature would be submitted as one complete PR. It would include the small R3 transfer interface, NIXL support, shared KV/R3 lifecycle rules, and tests. Any new interface would ship with its actual caller, not as an unused general abstraction. Independent base-layer bug fixes can be submitted separately after checking for duplicate work.\n\nThe target implementation must pass the checks below before merge. Results from the old slot-based prototype do not count as passing these checks for the new design.\n\n| Area | Required coverage |\n|---|---|\n| Correct record source | No local hit, partial hit, full hit, repeated requests, and different records with the same hash. Every KV range must use its matching R3. |\n| Tails and block boundaries | Prompts that do not fill a block, chunked prefill, P tail lifetime, D recomputing the last prompt token, and delayed publication of the final block. |\n| Cache lifetime | KV present but R3 missing, record eviction, block reuse, instance restart, and cache-epoch changes. Known incomplete pairs must not count as usable hits. |\n| Transfer failures | Either KV or R3 finishing first, rank failure, abort, timeout, failed cancellation, and P finishing its request first. No early free or completion notification. |\n| Common runtime settings | TP1, TP greater than one, the selected EP backends, async scheduling, actual CUDA graph replay, pause/resume, and sleep/wake. |\n| Multiple hosts | At least one real two-host NIXL transfer test. A single-host P4/D4 test is not a substitute. |\n| Extension disabled | The same base version's existing hashes, metadata, output, and normal serving behavior. No extra R3 transfer allocation or copy. |\n| Performance and memory | Matched settings, repeated runs, and long-running tests. Report throughput, latency distributions, CPU use, memory, and cache hits. Separate capture, storage, transfer, and HTTP costs. |\n\nThis RFC asks the community to decide:\n\n1. Should R3 PD use native NIXL transfer with these storage boundaries, rather than add more route-merging work to the proxy?\n2. Should KV link to specific R3 record references, with bounded CPU snapshots for the first transfer implementation?\n3. Is the proposed recovery rule acceptable: treat an incomplete pair as a miss before scheduling, and fail the request if transfer later fails?\n4. Is the initial scope acceptable: matching layouts, DP=1, and no MTP/DBO? How should this work fit with #39289 and #45419?\n\n\n### Feedback Period.\n\n...\n\n### CC List.\n\n...\n\n### Any Other Things.\n\n\n### Prototype validation\n\nA local prototype was tested on top of `1970f3ed4be7fa8620e4ddc4a12c36a8384cfc27`. It used the old slot-based store, not the new store in #45635. Tests ran on one host with eight H20 GPUs and Qwen3-30B-A3B in BF16. P and D each used TP4. These are local prototype results, not validation of the proposed worker-store design or results from upstream CI. The implementation PR would include code and reproducible test material.\n\n| Test group | Result |\n|---|---|\n| Route capture, PD scheduler, NIXL, and configuration tests | 74 passed |\n| Request preprocessing and error handling | 50 passed |\n| R3-off hashes, old/new metadata decoding, and capability isolation | 5 passed |\n| Async scheduler regression tests | 17 passed |\n| Real P4/D4 requests | 16 correctness requests and 32 performance requests succeeded. Output tokens in the correctness run matched the no-R3 baseline. |\n| Request failure isolation | An invalid P handoff returned HTTP 500 for that request. The service stayed healthy and later valid requests succeeded. |\n| Prefix source test | Different P/D tags were used to warm, extend, and repeat a prefix. D's old cached routes were not replaced by P's current routes. |\n\nThis totals 146 unit and regression tests, plus real-model and separate tagged end-to-end tests. The tags test transfer and cache ownership. They do not prove that the model's actual top-k choices match those used by the trainer. Matching output tokens does not imply bit-exact logprobs. Prefix caching and normal CUDA graph settings stayed enabled; the tests did not use `--enforce-eager` to get a passing result.\n\n### Initial performance data\n\nOne matched short test of the old-store prototype used 8,192 input tokens, 128 output tokens, concurrency 1 or 4, and cold or warm caches. Each case had eight requests, with warmup before timing. The numbers below are end-to-end output tokens per second and include transfer of the full HTTP response.\n\n| Case | Baseline, R3 off | Prototype, R3 off | Prototype, R3 on |\n|---|---:|---:|---:|\n| Concurrency 1, cold cache | 178.00 | 178.95 | 158.72 |\n| Concurrency 1, warm cache | 231.65 | 233.57 | 205.72 |\n| Concurrency 4, cold cache | 468.15 | 475.34 | 437.65 |\n| Concurrency 4, warm cache | 718.00 | 718.97 | 559.29 |\n\nThis short test showed no clear throughput loss with R3 off. Enabling the full R3 path reduced throughput by about 6.5%–22.1% relative to the baseline. That cost includes capture, readout, storage, transfer, and HTTP output. It cannot all be attributed to PD. Eight requests per case are not enough to establish serving capacity or p99 latency.\n\nFor this model, the prototype's wire format uses 48 layers × top-8 × 1 byte, or 384 bytes per token. The total NIXL counters showed 89,210,880 extra bytes for 232,320 externally loaded tokens. This exactly matches the route-data size and is 0.390625% of the original KV transfer bytes. This is a byte-count check, not a latency ratio. The proposed design's snapshot and store-commit costs must be measured again.\n\nThe base code does not support R3+PD without an extension. Future reports would therefore distinguish the base without R3, the base with R3, and the R3+PD extension. They must explain where a fully matched baseline is not available. Single-host results would not be presented as proof of multi-host network behavior.\n\n### Known limits and coordination\n\nThe prototype still has an inherited DBO/microbatch route-overwrite issue. It has not completed validation of in-flight transfers with pause/sleep/wake, cross-host operation, or the full fault-injection test plan. The scope and merge criteria above reflect these gaps. These are not claimed as solved features.\n\nThis proposal does not ask to merge the prototype's scheduler-owned shared array or count its tests as tests of #45635. The implementation would use the accepted storage interfaces and coordinate ownership with the existing PD/R3 contributors. Reused code, design work, and tests would be credited, with their sources identified.\n\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55584/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55584/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55581",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55581/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55581/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55581/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55581",
+      "id": 5365758762,
+      "node_id": "I_kwDOI7xefs8AAAABP9L7Kg",
+      "number": 55581,
+      "title": "[Bug]: FlashInfer get_cudagraph_support() divides the *target* model's head count by the *draft* group's num_kv_heads, so spec-decode loses all CUDA graphs when the two models' head ratios differ (while the builder picks XQA and runs)",
+      "user": {
+        "login": "NNNtrance",
+        "id": 232268405,
+        "node_id": "U_kgDODdgidQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/232268405?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/NNNtrance",
+        "html_url": "https://github.com/NNNtrance",
+        "followers_url": "https://api.github.com/users/NNNtrance/followers",
+        "following_url": "https://api.github.com/users/NNNtrance/following{/other_user}",
+        "gists_url": "https://api.github.com/users/NNNtrance/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/NNNtrance/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/NNNtrance/subscriptions",
+        "organizations_url": "https://api.github.com/users/NNNtrance/orgs",
+        "repos_url": "https://api.github.com/users/NNNtrance/repos",
+        "events_url": "https://api.github.com/users/NNNtrance/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/NNNtrance/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-09-06T15:01:01Z",
+      "updated_at": "2026-09-06T17:44:27Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\n<details>\n<summary>Details</summary>\n\nvLLM `0.1.dev20051+g487ecf187` (our serving image; the function below is unchanged on `main` @ `52358e6e19`, 6 Sep 2026 — line numbers in this report are `main`'s). 3x DGX Spark (GB10, sm_121, CUDA 13), tensor parallel 3, one node per rank, plus a 2-node TP=2 arrangement of the same image used as the control.\n\nTarget: GLM-5.3-Flash (EXL3 4-bit, out-of-tree quant plugin; the target's attention runs on a custom backend, `--attention-backend CUSTOM`, so the **only** FlashInfer KV-cache group in the engine is the drafter's). Draft: a DFlash drafter for GLM-5.3-Flash, `speculative_config=SpeculativeConfig(method='dflash', ..., num_spec_tokens=7)`, 5 layers, `sliding_window=2048`. `--kv-cache-dtype fp8` on both target and draft; fp8 draft KV is what selects FlashInfer for the draft group (with bf16 draft KV the selector picks `FLASH_ATTN`). `cudagraph_mode` left at its default (`FULL_AND_PIECEWISE`), `compilation mode NONE`, `splitting_ops=[]`.\n\nOur TP=3 arrangement pads head counts out of tree so that they divide by 3 (target 64 → 66 query heads, draft 32/8 → 36/9). That padding is ours, not vLLM's — but it only sets up the arithmetic below; the check itself is wrong for any target/draft pair whose head ratios differ.\n\n</details>\n\n### 🐛 Describe the bug\n\n`FlashInferMetadataBuilder.get_cudagraph_support()` decides the CUDA-graph support level of a KV-cache group by dividing the **target model's** per-rank query-head count by **that group's** `num_kv_heads`. When the group belongs to the *draft* model, the two numbers come from different models, and the result is wrong. In our case it turns every CUDA graph in the engine off at TP=3 while the identical image captures them at TP=2 — and the runtime path that would actually run inside the graph (XQA decode) is selected and works.\n\n**The check** ([`vllm/v1/attention/backends/flashinfer.py:996-1019`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/v1/attention/backends/flashinfer.py#L996-L1019)):\n\n```python\nkv_specs = iter_layer_specs(kv_cache_spec)\nnum_qo_heads = vllm_config.model_config.get_num_attention_heads(   # <-- target model\n    vllm_config.parallel_config\n)\nhas_trtllm_support: bool = len(kv_specs) > 0\nfor spec in kv_specs:\n    ...\n    if not can_use_trtllm_attention(\n        num_qo_heads=num_qo_heads,\n        num_kv_heads=spec.num_kv_heads,                                # <-- this group (the draft)\n        is_prefill=False,\n    ):\n        has_trtllm_support = False\n        break\nif has_trtllm_support and (is_sm12x or not vllm_config.attention_config.use_non_causal):\n    return AttentionCGSupport.UNIFORM_BATCH\nelse:\n    return AttentionCGSupport.UNIFORM_SINGLE_TOKEN_DECODE\n```\n\n`can_use_trtllm_attention()` reduces to `num_qo_heads % num_kv_heads == 0` ([`vllm/utils/flashinfer.py:443-451`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/utils/flashinfer.py#L443-L451)).\n\n**The builder itself does not do this.** Three hundred lines earlier the instance computes its head count from the group's own layers, with a comment saying why ([`flashinfer.py:756-759`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/v1/attention/backends/flashinfer.py#L756-L759)):\n\n```python\n# Compatible with models with non-uniform per-layer head counts.\nself.num_qo_heads = get_num_attention_heads_from_layers(\n    vllm_config, layer_names\n) or self.model_config.get_num_attention_heads(self.vllm_config.parallel_config)\n```\n\nand then runs the *same* `can_use_trtllm_attention(self.num_qo_heads, self.num_kv_heads, is_prefill=False)` to pick the decode kernel ([`:803-814`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/v1/attention/backends/flashinfer.py#L803-L814)). `get_num_attention_heads_from_layers`'s docstring states the model-wide count \"is wrong for models with non-uniform per-layer head counts\" ([`v1/attention/backends/utils.py:362-372`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/v1/attention/backends/utils.py#L362-L372)). The class method was never moved over, so the two disagree whenever the group's layers do not share the target's geometry — which is always the case for a draft model's group.\n\n**The call site** passes the target's `vllm_config` for every group, including the drafter's ([`v1/worker/gpu_model_runner.py:7264-7277`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/v1/worker/gpu_model_runner.py#L7264-L7277)), takes the minimum over groups, and `resolve_cudagraph_mode_and_sizes` then drops `FULL_AND_PIECEWISE` to `NONE` (no attention splitting ops) because `UNIFORM_SINGLE_TOKEN_DECODE < UNIFORM_BATCH` with `uniform_decode_query_len = 8` ([`config/compilation.py:1447-1465`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/config/compilation.py#L1447-L1465)).\n\n**The arithmetic on our two arrangements** (same image, same model pair, same flags):\n\n| per rank | TP=2 (unpadded) | TP=3 (padded) |\n|---|---|---|\n| target query heads (`model_config.get_num_attention_heads`) | 64/2 = **32** | 66/3 = **22** |\n| draft query heads (what the builder uses) | 32/2 = 16 | 36/3 = **12** |\n| draft KV heads (`spec.num_kv_heads`) | 8/2 = **4** | 9/3 = **3** |\n| the class method's check | 32 % 4 = 0 ✔ | **22 % 3 = 1 ✘** |\n| the builder's check | 16 % 4 = 0 ✔ | 12 % 3 = 0 ✔ |\n| declared support | `UNIFORM_BATCH` | `UNIFORM_SINGLE_TOKEN_DECODE` |\n| result | graphs captured | **`cudagraph_mode=NONE`** |\n\n**Boot log, TP=3** (rank 0):\n\n```\nINFO  [cuda.py:532] Using FLASHINFER attention backend out of potential backends: ['FLASHINFER', 'TRITON_ATTN'].\nINFO  [flashinfer.py:889] FlashInfer resolved query dtypes: prefill=torch.bfloat16, decode=torch.bfloat16, decode_backend=xqa, kv_cache_dtype=torch.float8_e4m3fn, arch=sm121\nWARNING [compilation.py:1459] CUDAGraphMode.FULL_AND_PIECEWISE is not supported with spec-decode for attention backend FlashInferBackend (support: AttentionCGSupport.UNIFORM_SINGLE_TOKEN_DECODE); setting cudagraph_mode=NONE\nWARNING [model_runner.py:967] Skipping CUDA graph capture. To turn on CUDA graph capture, ensure `cudagraph_mode` was not manually set to `NONE`\nINFO  [gpu_worker.py:790] ... 1.66 GiB for peak activation, and 0.0 GiB for CUDAGraph memory. ...\nWARNING [flashinfer.py:1308] Using FlashInfer for draft model non-causal attention; TRTLLM can still be used for target model causal attention.\n```\n\nThe second line (`decode_backend=xqa`) and the last one are the contradiction in the engine's own words: the last warning is only emitted when `use_trtllm_decode_attention` is `True` ([`flashinfer.py:1349-1353`](https://github.com/vllm-project/vllm/blob/52358e6e19/vllm/v1/attention/backends/flashinfer.py#L1349-L1353)), i.e. the instance passed the divisibility check with its own 12 heads and chose the XQA decode kernel — the kernel the class method said cannot be graphed — and it serves correctly (our correctness/code gates and draft acceptance are identical between the two arrangements).\n\n**Boot log, TP=2** (same image, same flags):\n\n```\nINFO  [flashinfer.py:889] FlashInfer resolved query dtypes: prefill=torch.bfloat16, decode=torch.bfloat16, decode_backend=xqa, kv_cache_dtype=torch.float8_e4m3fn, arch=sm121\nINFO  [breakable_cudagraph.py:288] Breakable CUDA graph enabled\nWARNING [flashinfer.py:1308] Using FlashInfer for draft model non-causal attention; TRTLLM can still be used for target model causal attention.\nINFO  [model_runner.py:1012] Graph capturing finished in 11 secs, took 1.10 GiB\n```\n\n**When it bites.** The condition is `target_q_heads_per_rank % draft_kv_heads_per_rank != 0` while the draft's own `q % kv == 0`. With stock checkpoints and a TP degree that divides both head counts the two ratios usually coincide by luck, which is presumably why this has not been reported; it stops coinciding under head padding for an odd TP degree (our case), for target/draft pairs with unrelated geometries, and for the non-uniform-per-layer models the builder comment already covers. Using the target's head count for another model's KV spec is wrong by construction even when it happens to divide.\n\n**Expected behaviour.** The class method should derive `num_qo_heads` the way the instance does — from the layers of the group being asked about — so that the support level it declares matches the kernel it will actually run. The call site already holds `kv_cache_group.layer_names`, so the minimal change is an optional `layer_names` parameter on `get_cudagraph_support()` (other backends ignore it) and, in FlashInfer, `get_num_attention_heads_from_layers(vllm_config, layer_names) or model_config.get_num_attention_heads(...)` in place of the model-wide call. Happy to send a PR if that shape is acceptable.\n\n**Workaround** we use today: none that keeps fp8 draft KV. Switching the draft cache back to bf16 moves the drafter to `FLASH_ATTN`, which declares `UNIFORM_BATCH` without a head check, and graphs capture again — at the cost of the fp8 draft-cache pool gain. We have not measured the graph gain on this arrangement (an earlier bf16-draft, graphs-on boot read the same single-stream tok/s within noise), so this report is about the declared support being wrong, not about a large regression.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.\n\nRelated but different: #49547 is FlashInfer's *native* (non-XQA/trtllm) decode path being capped at `UNIFORM_SINGLE_TOKEN_DECODE`, which is a real limitation; here the XQA path is selected and used, and only the declaration is wrong. #47979 asks for FULL spec-decode graphs on SM120 generally. #53030 is the PIECEWISE + spec-decode silent rejection, which is why we did not take `cudagraph_mode=PIECEWISE` as a workaround. AI assistance was used for this report.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55581/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55581/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55580",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55580/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55580/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55580/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55580",
+      "id": 5365655518,
+      "node_id": "I_kwDOI7xefs8AAAABP9Fn3g",
+      "number": 55580,
+      "title": "[Performance]: GDN hybrid (Qwen3.8-27B, fp8 KV, TP2): c32 aggregate throughput steps -24% when the profiled KV pool is below ~190k tokens (<=116 blocks); c8 and single-stream unaffected",
+      "user": {
+        "login": "dmmdea",
+        "id": 4965968,
+        "node_id": "MDQ6VXNlcjQ5NjU5Njg=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4965968?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dmmdea",
+        "html_url": "https://github.com/dmmdea",
+        "followers_url": "https://api.github.com/users/dmmdea/followers",
+        "following_url": "https://api.github.com/users/dmmdea/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dmmdea/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dmmdea/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dmmdea/subscriptions",
+        "organizations_url": "https://api.github.com/users/dmmdea/orgs",
+        "repos_url": "https://api.github.com/users/dmmdea/repos",
+        "events_url": "https://api.github.com/users/dmmdea/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dmmdea/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-09-06T14:45:40Z",
+      "updated_at": "2026-09-06T21:34:01Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Summary\n\nOn a GDN hybrid (Qwen3.8-27B, INT4 weights, fp8 KV, TP=2) the aggregate throughput of 32 concurrent short requests drops by ~24 % when the profiled GPU KV pool is **below ~190k tokens (≤116 unified blocks)**, and is fully recovered when the pool is **≥ ~190k tokens (≥121 blocks)**. Each request needs only one block, `c8` and single-stream numbers are identical in every configuration, and the pool size is the only variable that tracks the step. Because the memory profiler lands the *same* launch at 183,028 or 191,884 tokens on different starts (~5 % variance), the c32 throughput of one production launch is a per-start coin flip.\n\nIs there a per-step cap in the hybrid (Mamba/GDN state) scheduling path that is derived from the number of KV blocks, independent of `--max-num-seqs`? If this is expected, what is the right knob?\n\n### Environment\n\n- vLLM 0.28.0, torch 2.13.0+cu130, CUDA 13.0, FlashInfer attention backend, driver 616.56, WSL2 (kernel 6.18.33), 2× RTX 5060 Ti 16 GB\n- Model: `RedHatAI/Qwen3.8-27B-INT4`\n- Launch (production): `--tensor-parallel-size 2 --kv-cache-dtype fp8 --mamba-cache-mode align --max-model-len 163840 --max-num-seqs 32 --max-num-batched-tokens 3135 --gpu-memory-utilization 0.90` (block size 1568 = the unified hybrid block); one series with the LMCache MP connector, one without — the step is the same either way.\n\n### Measurement\n\nProbe: 512-token prompt → 256 output tokens; W1 single stream (3 reps), then c1 / c8 / c32 fired at once; aggregate tok/s over the batch wall.\n\n| arm | max_len | util | connector | pool (tokens) | c32 agg t/s | c32 TTFT p95 | c8 agg | W1 |\n|---|---|---|---|---|---|---|---|---|\n| A | 65,536 | 0.90 | yes | 169,301 | 230.4 | 26.4 s | 160.9 | 29.3 |\n| B | 106,496 | 0.90 | yes | 178,452 | 230.6 | 26.4 s | 160.7 | 29.2 |\n| C | 131,072 | 0.90 | yes | 180,588 | 229.3 | 26.6 s | 161.5 | 29.5 |\n| D | 131,072 | 0.90 | no | 180,588 | 232.8 | 26.1 s | 162.4 | 29.7 |\n| E | 163,840 | 0.90 | no | 183,028 | 232.0 | 26.3 s | 162.3 | 29.7 |\n| F | 163,840 | 0.88 | yes | 172,696 | 229.6 | 26.4 s | 161.0 | 29.0 |\n| **G** | 163,840 | 0.90 | yes | **191,884** | **300.6 / 302.7** | 11.3 s | 160.9 | 29.0 |\n| G, batched 1568 | 163,840 | 0.90 | yes | 191,884 | 301.4 | 11.3 s | 160.4 | 29.2 |\n| G, batched 4703 | 163,840 | 0.90 | yes | 191,884 | 301.2 | 11.2 s | 160.7 | 29.2 |\n| G, `--max-num-seqs 40` | 163,840 | 0.90 | yes | 187,456 | 232.4 | 11.0 s | 161.7 | 29.4 |\n\n- F vs G is the cleanest control: identical launch except util 0.88 → 0.90, i.e. the pool 172,696 → 191,884; c32 goes 230 → 301.\n- In the slow arms c32 TTFT p95 is one full 256-token round (26 s) with per-request tok/s unchanged (9.8 vs 9.5), which looks like ~24 of the 32 streams are admitted and 8 wait for a slot.\n- `--max-num-seqs 40` at a 187,456 pool admits all 32 (TTFT p95 11 s) but the aggregate stays at 232 — so the cap may be a per-step batch limit rather than admission.\n- Ruled out: `--max-num-batched-tokens` (1568 / 3135 / 4703: no change), the connector's per-step cost (slow without it too), host state (re-runs reproduce), GPU clocks (P0, 2.5 GHz throughout).\n\n### Question\n\n1. Is there a per-step limit in the hybrid scheduling path that is derived from the number of KV blocks (rather than from `--max-num-seqs` / `--max-num-batched-tokens`)? The 116 → 121 block edge is very sharp for a workload where each request holds one block.\n2. Is pinning the pool with `--kv-cache-memory-bytes` (sized to the fast side) the recommended way to make this deterministic, or is there a scheduler knob for it? Pinning gives us the 190,408-token pool on every start, but skips the profile run, so we would rather not rely on it for production if there is a better handle.\n\n### Repro\n\n- Same launch, `--gpu-memory-utilization 0.88` vs `0.90`, then 32 concurrent 512→256 requests; the aggregate steps by ~24 %.\n- Probe: a small asyncio loop over `/v1/completions` (512-token prompt, `max_tokens=256`, 32 requests fired together, aggregate = total generated tokens / batch wall). Happy to attach it or run further arms on request.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55580/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55580/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55560",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55560/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55560/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55560/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55560",
+      "id": 5364086658,
+      "node_id": "I_kwDOI7xefs8AAAABP7l3gg",
+      "number": 55560,
+      "title": "[Bug]: CPU MoE kernel produces NaN logits under torch.compile for Qwen3_5MoeForConditionalGeneration — reproduces with AND without GPTQ-Int4 quantization, fixed by --enforce-eager",
+      "user": {
+        "login": "ixcans",
+        "id": 78341771,
+        "node_id": "MDQ6VXNlcjc4MzQxNzcx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/78341771?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ixcans",
+        "html_url": "https://github.com/ixcans",
+        "followers_url": "https://api.github.com/users/ixcans/followers",
+        "following_url": "https://api.github.com/users/ixcans/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ixcans/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ixcans/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ixcans/subscriptions",
+        "organizations_url": "https://api.github.com/users/ixcans/orgs",
+        "repos_url": "https://api.github.com/users/ixcans/repos",
+        "events_url": "https://api.github.com/users/ixcans/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ixcans/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 7290797835,
+          "node_id": "LA_kwDOI7xefs8AAAABspC_Cw",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/torch.compile",
+          "name": "torch.compile",
+          "color": "E494D5",
+          "default": false,
+          "description": ""
+        },
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-09-06T09:18:05Z",
+      "updated_at": "2026-09-06T13:33:19Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "> **Update (2026-09-06, same day):** the original title/body below claimed this\n> was specific to the GPTQ-Int4 quantized kernel path. That was **wrong** —\n> further testing reproduced the identical bug on the **unquantized bf16**\n> release of the same checkpoint (no `quantize_config.json`, no GPTQ at all).\n> `--enforce-eager` fixes it in both cases. So this is a general CPU MoE +\n> torch.compile/inductor issue for this model architecture\n> (`Qwen3_5MoeForConditionalGeneration`), independent of quantization method\n> — not a GPTQ-Int4-specific dequantization/kernel bug as originally\n> reported. Title and body below have been corrected in place (not left as a\n> stale/wrong report) to reflect this. The GPTQ-Int4 repro is kept since it's\n> still a valid, minimal reproduction; the bf16 repro is added alongside it.\n\n### Your current environment\n\n- vLLM CPU-backend image: `vllm/vllm-openai-cpu@sha256:ea8b61f8ccab650e1c369105373863ac12a581b53f289b344cea72a09238e131` (v0.28.0 — the latest published x86_64 CPU image at the time of testing)\n- Hardware: bare-metal Intel Xeon (AMX-capable: `amx_bf16`, `amx_int8`, `amx_tile` all present), CPU-only inference (no GPU)\n- Backend: `VLLM_CPU_KVCACHE_SPACE=16`, `VLLM_CPU_OMP_THREADS_BIND=auto`, `dtype=bfloat16`, `max_model_len=8192`, `enable_chunked_prefill=True`, TP=1\n\n### Model Input Dumps\n\nReproduces on **both** of these (same base model, same architecture, different quantization):\n\n- [`llmfan46/Qwen3.6-35B-A3B-uncensored-heretic-Native-MTP-Preserved-GPTQ-Int4`](https://huggingface.co/llmfan46/Qwen3.6-35B-A3B-uncensored-heretic-Native-MTP-Preserved-GPTQ-Int4) (revision `fb685a8409e4290f8a15dad0a691e6a9e3d42c3f`) — GPTQ 4-bit quantization auto-detected from `quantize_config.json`.\n- [`llmfan46/Qwen3.6-35B-A3B-uncensored-heretic-Native-MTP-Preserved`](https://huggingface.co/llmfan46/Qwen3.6-35B-A3B-uncensored-heretic-Native-MTP-Preserved) (revision `9599ac17d26daf33daf0fdd8f6c897ff4c6dc89a`) — **unquantized bf16**, no `quantize_config.json` at all.\n\nBoth: architecture `Qwen3_5MoeForConditionalGeneration` (MoE, hybrid linear/full attention).\n\n### 🐛 Describe the bug\n\nWith the default torch.compile/inductor compilation path enabled\n(`enforce_eager=False`), the CPU MoE kernel path for this architecture\nproduces **NaN logits** for every request, regardless of prompt or endpoint,\nand **regardless of whether the checkpoint is GPTQ-Int4 quantized or\nunquantized bf16**. This manifests as:\n\n- `/v1/chat/completions` on a simple prompt (\"What is 2 + 2? Reply with only the number.\") returns a degenerate, repeated `\"!\"` completion (e.g. `\"!!!!!!!!!!!!!!!!\"`) and never reaches EOS — `finish_reason: \"length\"` even at very low max_tokens.\n- A raw `/v1/completions` call on `\"The capital of France is\"` (bypassing the chat template entirely) produces the same degenerate `\"!\"` output.\n- Requesting `logprobs=5` on either endpoint surfaces the actual defect: `\"Out of range float values are not JSON compliant: nan\"` — the sampled logits are NaN, not merely a bad sample.\n\nThe model **loads successfully** and passes health/readiness checks (`/health` returns 200) in both cases, which makes this a silent-failure mode worth flagging on its own — a healthy pod/process gives zero signal that generation is broken.\n\n**Workaround: `--enforce-eager` completely fixes it, on both checkpoints.** With the identical checkpoint, config, and request, eager mode produces correct, coherent generations with real (non-NaN) logprobs and a proper EOS (`finish_reason: \"stop\"`). This isolates the defect to a torch.compile/inductor miscompilation of the CPU MoE code path for this architecture — not a GPTQ dequantization correctness bug (ruled out by the bf16 repro having no quantization at all), and not the CPU-MoE-GPTQ support gap tracked in #37979 (that issue is about whether MoE+GPTQ support exists on CPU at all; here it exists and works on both quantized and unquantized checkpoints — only the compiled path is broken).\n\nIsolated MoE specifically (rather than this model's hybrid linear-attention architecture, or GPTQ quantization) as the trigger by comparing against a sibling model that shares the same `Qwen3_5*ForConditionalGeneration` hybrid-attention family but is dense (no MoE) and uses INT8 compressed-tensors — that sibling works correctly with torch.compile enabled (default settings, no `--enforce-eager` needed). Combined with the GPTQ-vs-bf16 result above, this narrows the trigger to \"MoE, on CPU, under torch.compile/inductor, for this architecture\" — independent of quantization.\n\n### Steps to reproduce\n\n**GPTQ-Int4 checkpoint:**\n```\nvllm serve llmfan46/Qwen3.6-35B-A3B-uncensored-heretic-Native-MTP-Preserved-GPTQ-Int4 \\\n  --revision fb685a8409e4290f8a15dad0a691e6a9e3d42c3f \\\n  --dtype bfloat16 --max-model-len 8192 --enable-chunked-prefill \\\n  --served-model-name qwen3-6-35b-a3b-gptq-int4\n```\n\n**Unquantized bf16 checkpoint (same bug, same fix):**\n```\nvllm serve llmfan46/Qwen3.6-35B-A3B-uncensored-heretic-Native-MTP-Preserved \\\n  --revision 9599ac17d26daf33daf0fdd8f6c897ff4c6dc89a \\\n  --dtype bfloat16 --max-model-len 8192 --enable-chunked-prefill \\\n  --served-model-name qwen3-6-35b-a3b-bf16\n```\n\nThen, for either:\n\n1. Send a completion request with `logprobs: 5`:\n   ```\n   curl -s http://localhost:8000/v1/completions -H 'Content-Type: application/json' -d '{\n     \"model\": \"<served-model-name-above>\",\n     \"prompt\": \"The capital of France is\",\n     \"max_tokens\": 16,\n     \"logprobs\": 5\n   }'\n   ```\n   Observe: degenerate `\"!\"` output, and/or a JSON-serialization error surfacing NaN logprobs.\n2. Re-run with `--enforce-eager` added to the serve command. Observe: coherent completion (`\" Paris.\\nThe capital of France is Paris....\"`), real logprobs, no NaN.\n\n### Expected behavior\n\nGeneration should be correct with torch.compile enabled (the default), matching eager-mode output, for this CPU MoE checkpoint — whether GPTQ-Int4 quantized or unquantized.\n\n### Additional context\n\nNot yet tested: whether this reproduces on other MoE architectures on the CPU backend, or is specific to `Qwen3_5MoeForConditionalGeneration`. Filing as-is since both repros above are clean and the workaround is known — happy to help narrow it further if useful.\n\nRelated: #37979 (tracks CPU MoE+GPTQ support landing at all — this bug is in the already-working support path, on both quantized and unquantized checkpoints, once torch.compile is disabled).\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55560/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55560/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55534",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55534/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55534/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55534/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55534",
+      "id": 5362807607,
+      "node_id": "I_kwDOI7xefs8AAAABP6XzNw",
+      "number": 55534,
+      "title": "[Bug]: CUTLASS 3.x scaled_mm ignores leading strides of sliced tensors",
+      "user": {
+        "login": "jackLei0901",
+        "id": 42642542,
+        "node_id": "MDQ6VXNlcjQyNjQyNTQy",
+        "avatar_url": "https://avatars.githubusercontent.com/u/42642542?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jackLei0901",
+        "html_url": "https://github.com/jackLei0901",
+        "followers_url": "https://api.github.com/users/jackLei0901/followers",
+        "following_url": "https://api.github.com/users/jackLei0901/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jackLei0901/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jackLei0901/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jackLei0901/subscriptions",
+        "organizations_url": "https://api.github.com/users/jackLei0901/orgs",
+        "repos_url": "https://api.github.com/users/jackLei0901/repos",
+        "events_url": "https://api.github.com/users/jackLei0901/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jackLei0901/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 5135047172,
+          "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": "Something isn't working"
+        },
+        {
+          "id": 9543357705,
+          "node_id": "LA_kwDOI7xefs8AAAACONQVCQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/nvidia",
+          "name": "nvidia",
+          "color": "76B900",
+          "default": false,
+          "description": ""
+        },
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-09-06T04:18:05Z",
+      "updated_at": "2026-09-06T08:38:17Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\r\n\r\n## Environment\r\n\r\n- GPU: NVIDIA H800 PCIe (SM90)\r\n- Driver: 580.82.07\r\n- CUDA runtime/toolkit: 13.0\r\n- Python: 3.12\r\n- PyTorch: 2.13.0+cu130\r\n- Released build: official vLLM 0.28.0 wheel\r\n- Source build: vLLM main at `a69e75b9b6d6a26d90b6790e2eb75b3419a47c16`\r\n\r\n### 🐛 Describe the bug\r\n\r\n## Summary\r\n\r\n`torch.ops._C.cutlass_scaled_mm` silently returns incorrect results on the CUTLASS 3.x path when otherwise-valid A, B, or output tensors have a padded leading dimension.\r\n\r\nThe operator entry point accepts these layouts: it requires `a.stride(1) == 1`, `b.stride(0) == 1`, and `c.stride(1) == 1`, but does not require tightly packed leading dimensions. However, the C3x caller reconstructs packed strides from tensor shapes and discards the tensors' actual leading strides.\r\n\r\nI reproduced this on both the official vLLM 0.28.0 wheel and main at commit `a69e75b9b6d6a26d90b6790e2eb75b3419a47c16`, on an NVIDIA H800 (SM90). This is a correctness issue rather than a tolerance issue: separate A-only, B-only, and output-only padding controls each produce about 8.1% mismatched elements. A minimal fix that passes the actual leading dimensions to CUTLASS reduces all five cases below to zero mismatches.\r\n\r\n## Reproduction\r\n\r\nThe reproducer creates 512x512 views backed by 1024x1024 allocations:\r\n\r\n```python\r\nimport torch\r\n\r\ntorch.manual_seed(0)\r\n\r\ndef to_int8(x):\r\n    return torch.round(x.clamp(-128, 127)).to(torch.int8)\r\n\r\nwhole_a = to_int8(torch.randn((1024, 1024), device=\"cuda\") * 5)\r\nwhole_b = to_int8(torch.randn((1024, 1024), device=\"cuda\").t() * 5)\r\n\r\na = whole_a[:512, :512]  # stride (1024, 1)\r\nb = whole_b[:512, :512]  # stride (1, 1024)\r\n\r\nscale_a = torch.randn((1, 1), device=\"cuda\", dtype=torch.float32) / 10\r\nscale_b = torch.randn((1, 1), device=\"cuda\", dtype=torch.float32) / 10\r\n\r\nout = torch.empty((512, 512), dtype=torch.bfloat16, device=\"cuda\")\r\ntorch.ops._C.cutlass_scaled_mm(out, a, b, scale_a, scale_b, None)\r\n\r\nexpected = torch.mm(\r\n    scale_a * a.float(), scale_b * b.float()\r\n).to(torch.bfloat16)\r\n\r\nclose = torch.isclose(out, expected, rtol=1e-1, atol=1.0)\r\nprint((~close).sum().item(), close.numel())\r\n```\r\n\r\nBaseline results with a fixed seed:\r\n\r\n| Case | A stride | B stride | Output stride | Mismatches / 262,144 | Max abs error |\r\n|---|---:|---:|---:|---:|---:|\r\n| A and B padded | `(1024, 1)` | `(1, 1024)` | `(512, 1)` | 21,389 (8.16%) | 3.0391 |\r\n| B only padded | `(512, 1)` | `(1, 1024)` | `(512, 1)` | 21,227 (8.10%) | 2.8359 |\r\n| A only padded | `(1024, 1)` | `(1, 512)` | `(512, 1)` | 21,297 (8.12%) | 2.7578 |\r\n| All packed | `(512, 1)` | `(1, 512)` | `(512, 1)` | 0 | 3.5e-7 |\r\n| Output only padded | `(512, 1)` | `(1, 512)` | `(640, 1)` | 21,356 (8.15%) | 2.7656 |\r\n\r\nThe existing upstream `test_cutlass_subset` also fails on the released wheel and passes with the fix.\r\n\r\n## Root cause\r\n\r\nIn `csrc/libtorch_stable/quantization/w8a8/cutlass/c3x/cutlass_gemm_caller.cuh`, the caller currently constructs every CUTLASS stride as tightly packed:\r\n\r\n```cpp\r\nStrideA a_stride =\r\n    cutlass::make_cute_packed_stride(StrideA{}, cute::make_shape(M, K, L));\r\nStrideB b_stride =\r\n    cutlass::make_cute_packed_stride(StrideB{}, cute::make_shape(N, K, L));\r\nStrideC c_stride =\r\n    cutlass::make_cute_packed_stride(StrideC{}, cute::make_shape(M, N, L));\r\n```\r\n\r\nFor the layouts used by this kernel, those helpers substitute `K`, `K`, and `N` for the runtime leading dimensions. The kernel therefore reads or writes the wrong addresses whenever the real values are larger because the tensor is a sliced or padded view.\r\n\r\n## Proposed fix and validation\r\n\r\nKeep the existing CUTLASS stride types and static unit inner strides, but set their runtime leading components from the tensor metadata:\r\n\r\n```cpp\r\ncute::get<0>(a_stride) = a.stride(0);\r\ncute::get<0>(b_stride) = b.stride(1);\r\ncute::get<0>(c_stride) = out.stride(0);\r\ncute::get<0>(d_stride) = out.stride(0);\r\n```\r\n\r\nThis adds no copies and leaves packed inputs unchanged because their actual leading dimensions equal the shape-derived values.\r\n\r\nValidation on the source build:\r\n\r\n- five-way stride matrix above: all cases pass with 0 mismatches;\r\n- existing focused upstream test: `1 passed` (`test_cutlass_subset`).\r\n\r\nI am preparing a focused fix and regression coverage. This finding is separate from #38697: that issue concerns eager-path host/workspace overhead, while this report concerns incorrect tensor addressing in the C3x GEMM caller.\r\n\r\n\r\n\r\n### Before submitting a new issue...\r\n\r\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.\r\n\n## Remaining implementation coverage\n\n- [x] `cutlass_gemm_caller.cuh` common caller (INT8, SM120 FP8)\n- [x] `scaled_mm_sm90_fp8_dispatch.cuh` (including `swap_ab`)\n- [ ] `scaled_mm_sm100_fp8_dispatch.cuh` — needs SM100 hardware\n- [ ] `scaled_mm_blockwise_sm90_fp8_dispatch.cuh`\n- [ ] `scaled_mm_blockwise_sm100_fp8_dispatch.cuh`\n- [ ] `scaled_mm_blockwise_sm120_fp8_dispatch.cuh`\n\nPR #55537 partially addresses this issue. The unchecked callers construct their own packed strides and retain the same defect; this issue should remain open until they are handled and validated on suitable hardware.\r\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55534/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55534/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/55533",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55533/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55533/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55533/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/55533",
+      "id": 5362748050,
+      "node_id": "I_kwDOI7xefs8AAAABP6UKkg",
+      "number": 55533,
+      "title": "[Bug][Spec Decode] Hybrid GDN (Qwen3.5/Qwen3.8 27B-class) + MTP: scheduler runs only ~3 concurrent sequences at batch >= 4 — acceptance/throughput collapse",
+      "user": {
+        "login": "jsn1993",
+        "id": 2065153,
+        "node_id": "MDQ6VXNlcjIwNjUxNTM=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/2065153?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jsn1993",
+        "html_url": "https://github.com/jsn1993",
+        "followers_url": "https://api.github.com/users/jsn1993/followers",
+        "following_url": "https://api.github.com/users/jsn1993/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jsn1993/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jsn1993/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jsn1993/subscriptions",
+        "organizations_url": "https://api.github.com/users/jsn1993/orgs",
+        "repos_url": "https://api.github.com/users/jsn1993/repos",
+        "events_url": "https://api.github.com/users/jsn1993/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jsn1993/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 11777487818,
+          "node_id": "LA_kwDOI7xefs8AAAACvf4zyg",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/scheduler",
+          "name": "scheduler",
+          "color": "f5d1c9",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-09-06T04:02:32Z",
+      "updated_at": "2026-09-06T09:43:06Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Title\n\n[Bug][Spec Decode] Hybrid GDN (Qwen3.5/Qwen3.8 27B-class) + MTP: scheduler runs only ~3 concurrent sequences at batch >= 4 — acceptance/throughput collapse\n\n### Summary\n\nOn a 27B Qwen3.5-family hybrid GDN model (64 layers = 48 linear-attention\nGDN + 16 full attention) with MTP enabled, the v1 scheduler stops running\nthe full batch under speculative decoding: at batch = 8, every decode\niteration schedules exactly **3 of the 8 sequences** (per-seq dist\n`[2, 2, 2]` = 1 target + 1 draft token each); the other 5 wait\nindefinitely and rotate in only as earlier sequences finish. The batch\n\"rotates\" through a ~3-wide MTP concurrency window, so mean emitted\ntokens per sequence per iteration drops to 0.27-0.6 and MTP becomes 2-3x\n**slower** than no-spec decoding. bs <= 3 is healthy (per-position\nacceptance 0.67-0.74, +33-72% throughput).\n\nThe same harness on the 24-layer-GDN 9B sibling model schedules all\nbatches up to bs = 20 with MTP and shows no collapse — the cap scales\nwith the GDN layer count / per-sequence mamba state size, which points\nat the mamba cache budget being shared between target states and MTP\ndraft slots in the scheduler accounting.\n\n### Environment\n\n- vLLM built from source at f4eccda (current main as of 2026-09-06);\n  also reproduces on several builds over the past week\n- torch 2.13.0+cu130, RTX 4090 D (SM89), WSL2, driver 615.65.06\n- model: Qwen3.8-27B GPTQ INT4 g128 (Marlin path) — quant-path\n  independent (W4A16 vs W4FP8 identical), lm_head fp8 on/off identical\n- offline `LLM(...)`, `VLLM_ENABLE_V1_MULTIPROCESSING=0`,\n  `mamba_ssm_cache_dtype=bfloat16`, gpu_memory_utilization 0.90,\n  max_model_len 4608, max_num_seqs 25, KV bf16 and fp8 both tested\n\n### Repro\n\n```python\nllm = LLM(model=<27B hybrid GDN checkpoint>, max_model_len=4608,\n          gpu_memory_utilization=0.90, max_num_seqs=25,\n          mamba_ssm_cache_dtype=\"bfloat16\",\n          speculative_config={\"method\": \"mtp\",\n                              \"num_speculative_tokens\": 1})\n# 8 prompts x 256 tokens, greedy, 48 generated tokens\n```\n\nPatch `Scheduler.schedule` to log\n`(total_num_scheduled_tokens, len(num_scheduled_tokens), dist)` per call\nafter warmup. Every decode iteration shows `total=6, dist=[2,2,2]`.\n\nFull trace: run 8x256-token prompts, greedy 256 tokens, and record\nper-iteration `emitted` — iterations average 4.95 emitted tokens for 8\nactive sequences (e.g. 414 iterations for 8x256 tokens).\n\n### Observed\n\n| bs | no-spec tok/s | MTP k=1 tok/s | mean accepted len (per seq per iter) |\n|---:|---:|---:|---:|\n| 1 | 56.4 | 72.0 | 0.86 |\n| 3 | 150.6 | 203.7 | 0.84 |\n| 4 | 195.4 | 157.8 | **-0.03** |\n| 8 | 367.1 | 197.0 | **-0.38** |\n| 20 | 649.0 | 210.9 | **-0.73** |\n\n(mean accepted len < 1 means some iterations schedule a given sequence\nwith zero tokens; decode iterations exceed generated tokens — 962\niterations for 20x256 tokens at bs=20.)\n\n- Correctness is preserved: greedy outputs still match the no-spec\n  baseline on some legs (2/2), so this is a concurrency/scheduling\n  limitation, not output corruption.\n- Path-independent: identical collapse on GPTQ-Marlin W4A16 and\n  W4A8-FP8 (int4 x fp8 activations), on bf16 and fp8 KV cache, with\n  Triton-FLA and fused-CUDA GDN decode kernels.\n- Upstream `874df93` (preserve mamba state for padded prompt tails)\n  fixed exactly the bs=4 point; bs>=5 persists.\n\n### Expected\n\nAll batch sequences are scheduled under MTP every iteration (mean\naccepted length per sequence per iteration >= 1.0, as observed on the\n24-GDN-layer 9B sibling model up to bs=20).\n\n### Related but distinct\n\n- #53051: GDN state loss when prompt length == 1 + k (shape-aliasing\n  prefill dispatch) — different trigger; our repro uses 256-token\n  prompts at k=1 on current main.\n- #55357: episodic 0% acceptance on qwen4_exp — similar symptom,\n  different model family.\n- #47277 / #39680: \"Qwen3.5 MTP slower than no-MTP\" performance reports\n  — this trace is (we believe) the mechanism at 27B scale.\n\n### Note\n\nThe debugging data above was collected with an agent-driven harness\nunder human supervision; happy to run anything else needed (traces,\nconfig variations) on the 27B checkpoint.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/55533/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55533/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

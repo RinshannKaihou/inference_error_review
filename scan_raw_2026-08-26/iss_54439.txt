@@ -1,0 +1,37 @@
+[Bug] ttnn.pow_bw returns +inf for every negative base, where the gradient is finite
+STATE: open
+BODY:
+**Component / Area:** ttnn eltwise binary_backward
+
+**Issue Type:** Bad Outputs
+
+## Observed
+
+`pow_bw(grad, a, exponent)` with `exponent = 2.0` returns `+inf` for **every negative finite base** — all 32,639 nonzero negative bfloat16 patterns, uniformly `0x7F80`, independent of magnitude. The correct gradient is `2a` (finite everywhere).
+
+N300 and P300, `grad = 1.0`, all 65,536 bfloat16 base patterns:
+
+| base | torch `d/da a^2` | ttnn `pow_bw` |
+|---|---|---|
+| 2.0 | 4.0 | 4.0 |
+| -2.0 | -4.0 | **`+inf`** |
+| -1.0 | -2.0 | **`+inf`** |
+| any of the 32,639 negative finite patterns | `2a` | **`+inf`** |
+
+Positive bases are exact across the sweep. Bit-identical on both architectures, so this is the composite formulation, not an SFPU quirk — consistent with a `exp(exponent * log(a))` path whose `log(negative)` NaN then collapses to `+inf` in the bf16 pack.
+
+`exponent = 0.0` is correct (returns 0). A NaN base with finite exponent is also handled (`pow_bw(nan, 2.0)` does not diverge between the formulation and torch's NaN).
+
+## Not established
+
+- Whether integer-exponent special-casing is intended upstream (torch computes `2a` for exponent 2 regardless of base sign).
+- float32 behavior beyond the boundary set (5/21 boundary patterns differ between the architectures only in NaN encoding).
+
+ Full sweep artifacts: https://github.com/kinginu/tt-eager-fusion/blob/main/reports/2026-08-25-binary-backward-v0.md
+
+## Environment
+
+* OS: Ubuntu 22.04
+* Version of software: tt-metal `04cf22f7ee` (P300), `141fbea49c5` (N300)
+* Hardware: N300 and P300
+

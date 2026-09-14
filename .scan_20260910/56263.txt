@@ -1,0 +1,155 @@
+### Your current environment
+
+<details>
+<summary>The output of <code>python collect_env.py</code></summary>
+
+```text
+Collecting environment information...
+==============================
+        System Info
+==============================
+OS                           : Ubuntu 26.04 LTS (x86_64)
+GCC version                  : (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+Clang version                : Could not collect
+CMake version                : version 4.2.3
+Libc version                 : glibc-2.43
+
+==============================
+       PyTorch Info
+==============================
+PyTorch version              : 2.13.0+cpu
+Is debug build               : False
+CUDA used to build PyTorch   : Could not collect
+ROCM used to build PyTorch   : N/A
+XPU used to build PyTorch    : N/A
+
+==============================
+      Python Environment
+==============================
+Python version               : 3.12.14 (main, Sep  1 2026, 14:16:52) [Clang 22.1.3 ] (64-bit runtime)
+Python platform              : Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43
+
+==============================
+          CPU Info
+==============================
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           48 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  16
+On-line CPU(s) list:                     0-15
+Vendor ID:                               AuthenticAMD
+Model name:                              AMD Ryzen 7 4800H with Radeon Graphics
+CPU family:                              23
+Model:                                   96
+Thread(s) per core:                      2
+Core(s) per socket:                      8
+Socket(s):                               1
+Stepping:                                1
+BogoMIPS:                                5788.91
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm rep_good nopl cpuid extd_apicid tsc_known_freq pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw topoext ssbd ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 clzero xsaveerptr virt_ssbd arat umip rdpid
+Hypervisor vendor:                       Microsoft
+Virtualization type:                     full
+L1d cache:                               256 KiB (8 instances)
+L1i cache:                               256 KiB (8 instances)
+L2 cache:                                4 MiB (8 instances)
+L3 cache:                                4 MiB (1 instance)
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-15
+
+==============================
+Versions of relevant libraries
+==============================
+[pip3] numpy==2.3.5
+[pip3] pyzmq==27.2.0
+[pip3] torch==2.13.0+cpu
+[pip3] torchaudio==2.11.0+cpu
+[pip3] torchcodec==0.16.0+cpu
+[pip3] torchvision==0.28.0+cpu
+[pip3] transformers==5.16.1
+[pip3] triton==3.8.0
+[conda] Could not collect
+
+==============================
+         vLLM Info
+==============================
+ROCM Version                 : Could not collect
+vLLM Version                 : 0.28.1rc0
+vLLM Build Flags:
+  CUDA Archs: Not Set; ROCm: Disabled; XPU: Disabled
+
+==============================
+     Environment Variables
+==============================
+PYTORCH_NVML_BASED_CUDA_CHECK=1
+TORCHINDUCTOR_COMPILE_THREADS=1
+TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor_kushal
+```
+
+</details>
+
+
+### 🐛 Describe the bug
+
+For a model output that contains text before AND after a tool call, the two delivery modes disagree: streaming returns the post-tool text, non-streaming drops it. The tool parser is inconsistent with its own streaming mode.
+
+Reproduction (CPU only, no GPU or model weights; tokenizer download only):
+
+```python
+from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
+from vllm.tool_parsers.deepseekv3_tool_parser import DeepSeekV3ToolParser
+from vllm.tokenizers import get_tokenizer
+
+MODEL_OUTPUT = ("let me check the weather.<｜tool▁calls▁begin｜>"
+    "<｜tool▁call▁begin｜>function<｜tool▁sep｜>get_weather\n```json\n"
+    '{"city": "Paris"}\n```<｜tool▁call▁end｜><｜tool▁calls▁end｜>It is 30 degrees.')
+tok = get_tokenizer("deepseek-ai/DeepSeek-R1")
+p = DeepSeekV3ToolParser(tok)
+req = ChatCompletionRequest(model="m", messages=[])
+
+# non-streaming parse
+print("full  :", repr(p.extract_tool_calls(MODEL_OUTPUT, req).content))
+
+# streaming parse, token by token
+ids = tok.encode(MODEL_OUTPUT, add_special_tokens=False)
+out, prev_text, prev_ids = [], "", []
+for i, tid in enumerate(ids):
+    text = prev_text + tok.decode([tid])
+    d = p.extract_tool_calls_streaming(
+        prev_text, text, tok.decode([tid]),
+        prev_ids, ids[:i + 1], [tid], req)
+    if d and d.content:
+        out.append(d.content)
+    prev_text, prev_ids = text, ids[:i + 1]
+print("stream:", repr("".join(out)))
+```
+
+Observed:
+
+```
+full  : 'let me check the weather.'
+stream: 'let me check the weather.It is 30 degrees.'
+```
+
+The trailing "It is 30 degrees." is dropped by the non-streaming parse and kept by the streaming parse. Downstream, `messages_full_converter` (`/v1/messages` non-streaming) then never sees that text, while `message_stream_converter` emits it as a text block after the tool_use block - for the same generation, /v1/messages streaming shows the trailing text and non-streaming loses it.
+
+### Root cause
+
+Non-streaming `extract_tool_calls` implementations truncate content at the tool-call start token and never resume afterwards:
+
+- deepseekv3_tool_parser.py: content = text before `<｜tool▁calls▁begin｜>`
+- hermes_tool_parser.py:109: `content = model_output[: model_output.find(self.tool_call_start_token)]`
+
+Streaming implementations emit post-tool text as content deltas (deepseekv3_tool_parser.py:248, `DeltaMessage(tool_calls=[], content=text)`).
+
+### Expected behavior
+
+Both delivery modes return the same content for the same generation.
+
+### Proposed fix
+
+Make the DeepSeek-V3 parser's non-streaming parse include the post-tool text, matching its own streaming mode. The same truncation exists in hermes_tool_parser.py and can follow separately if maintainers agree it is also unintended. OpenAI clients currently lose this text in non-streaming mode, so returning it is a correction, not a new feature. 
+
+### Before submitting a new issue...
+
+- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.

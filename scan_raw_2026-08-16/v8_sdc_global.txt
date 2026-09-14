@@ -1,0 +1,72 @@
+- [29] Daily TCGplayer price history — Sync Prices records the day
+  URL: https://github.com/cognativebs/258_VIP/pull/29
+  Created: 2026-08-16T22:08:17Z  State: closed
+  Labels: 
+  Body: <!-- CURSOR_AGENT_PR_BODY_BEGIN --> Price history from TCGplayer, driven by the **existing Sync Prices button** — not a second control. The CLI, the `.bat`, and Task Scheduler stay available for unattended runs. Verified against live TCGplayer and a real Postgres. ## What you click In Binder Vault: - **Sync Prices** / **Refresh All** (page toolbar) — today's Near Mint prices for the open page, rec
+
+- [1] Security: Harden database lifecycle, type-safe rejection handling, and patch dependencies
+  URL: https://github.com/giwa-io/PoWFaucet/pull/1
+  Created: 2026-08-16T22:02:57Z  State: open
+  Labels: 
+  Body:  Why The faucet contained untyped rejection handling, swallowed shutdown-cleanup failures, unsafe database lifecycle transitions, and detached PoW worker shutdowns.  Test scripts relied on Unix-only commands, and the dependency tree contained a vulnerable transitive package (brace-expansion).   How Typed unhandled rejections securely using unknown and guarded stack access with an explicit Error ch
+
+- [43409] boot: embed build-id and DWARF debug info in PE binaries
+  URL: https://github.com/systemd/systemd/pull/43409
+  Created: 2026-08-16T20:38:19Z  State: open
+  Labels: build-system, sd-boot/sd-stub/bootctl, meson, please-review, claude-review
+  Body: systemd-boot EFI binaries created by elf2efi.py had no debug info. Change it so that build-id and DWARF sections are transferred from intermediate ELF to final PE binaries. DWARF, as usual, is enabled by buildtype=debug, disabled by buildtype=plain and overwritten by custom CFLAGS -g. This enables distributions to strip symbols from systemd-boot PE files, archive them in .build-id/xx/yyyy.debug an
+
+- [5] A structural insert or delete moves the tables too
+  URL: https://github.com/CasualOffice/opencalc/pull/5
+  Created: 2026-08-16T20:34:38Z  State: closed
+  Labels: 
+  Body: **FID-22, a verified P0 — silent data corruption.** Inserting or deleting rows and columns never moved a table. ## What it was `structural.rs` shifted merges, the sheet's `auto_filter`, `filter_hidden`, sizing, hidden lines, the freeze boundary and outline levels on every structural edit — and **`sheet.tables` appeared nowhere in the file.** The only `tables.iter_mut()` calls in the entire workspa
+
+- [2698] feat(consumer): add bounded snapshot consumption
+  URL: https://github.com/thomhurst/Dekaf/pull/2698
+  Created: 2026-08-16T20:31:53Z  State: open
+  Labels: 
+  Body: Closes #2559 ## Summary - add optional `IBoundedKafkaConsumer<TKey, TValue>` capability plus `IKafkaConsumer` extensions for finite snapshots and offset-count tail seeks - capture isolation-aware partition bounds once, exclude later appends before deserialization, and progress through control batches, aborted transactions, compaction holes, and retention gaps - preserve normal consume hot-path lay
+
+- [1416] refactor: key coordinator storage by CredentialAddress
+  URL: https://github.com/raman325/lock_code_manager/pull/1416
+  Created: 2026-08-16T20:15:02Z  State: closed
+  Labels: python, code-quality
+  Body: ## Proposed change Flips the coordinator's internal storage from `dict[int, SlotCredential]` to `dict[CredentialAddress, SlotCredential]`, with `_unverified` following. This is what lets one slot hold more than one credential type — the capability the user-centric model needs. Follows #1415, which introduced `CredentialAddress` and re-signed the coordinator's *accessors*. This one moves the *stora
+
+- [39] Versioned schema migrations for authdb (replace CREATE TABLE IF NOT EXISTS blobs)
+  URL: https://github.com/dlouwers/typst-d2-mcp/issues/39
+  Created: 2026-08-16T20:02:02Z  State: open
+  Labels: 
+  Body: ## Problem The schema is applied as two idempotent DDL blobs at open time: `migrate()` (`internal/authdb/authdb.go:64`) creates `users`, `api_keys`, `compiles`; `migrateOAuth()` (`internal/authdb/oauth.go:87`) creates `oauth_clients`, `oauth_authorize_sessions`, `oauth_authorization_codes`, `pdf_links`. Both are `CREATE TABLE IF NOT EXISTS` only, run unconditionally from `Open()` (`internal/authdb
+
+- [526] fix(telemetry): PKT-704 isValidMartianReport predicate closes silent false-URGENT
+  URL: https://github.com/bugsyhewitt/AlienClaw/pull/526
+  Created: 2026-08-16T20:00:20Z  State: open
+  Labels: auto-merge-ok
+  Body: ## Summary - Adds `isValidMartianReport(parsed: unknown): parsed is MartianReport` type predicate to `telemetry-reader.ts` that validates `ts` (finite number), `martianId` (non-empty string), `reportCode` (string), and `outcome` (exact enum literal) before admitting a parsed JSON blob into the reader - Closes three silent-data-corruption defects: **A** outcome non-string → false zero-success-rate 
+
+- [108] Enhance planner with wall types, openings, auto-snap, and area metrics
+  URL: https://github.com/d0linger/Parkrr/pull/108
+  Created: 2026-08-16T19:38:24Z  State: closed
+  Labels: 
+  Body:  <!-- This is an auto-generated comment: release notes by coderabbit.ai --> ## Summary by CodeRabbit - **New Features**   - Improved garage planner visuals for walls, openings, snapping guides, measurements, calibration, parking areas, and room labels.   - Added clearer visual distinctions for doors, windows, columns, and non-blocking parking surfaces. - **Bug Fixes**   - Strengthened CSV export p
+
+- [46] fix(host): fix the project lease and install lock for non-admin Windows users
+  URL: https://github.com/LordKuper/forge/pull/46
+  Created: 2026-08-16T19:17:07Z  State: closed
+  Labels: 
+  Body: ## Goal Add same-user isolation coverage for the project lease (`MutexProjectLease`), the last gap the 2026-08-15 audit found in P8.34-P8.41. Implementing it surfaced and fixed a real production defect in the primitive under test. ## What shipped (final state) - **New `tests/Forge.MutexIsolationProbe`**: exercises the real production `MutexProjectLease.TryAcquire`. - **`.github/scripts/test-same-u
+
+- [984] [Bug]: Allwinner A64 / sun50i-a64 (Pine64) - Hardware Crypto Engine (`sun8i-ce`) corrupts OpenSSH key exchanges and RSA host key generation
+  URL: https://github.com/armbian/configng/issues/984
+  Created: 2026-08-16T18:58:23Z  State: open
+  Labels: Bug, Good first issue, Not armbian-config bug
+  Body: ### What happened? ### Summary Allwinner A64 / sun50i-a64 (Pine64) - Hardware Crypto Engine (`sun8i-ce`) corrupts OpenSSH key exchanges and RSA host key generation ### Board / OS Details - **Board:** Pine64 (Allwinner A64 / sun50i-a64) - **Architecture:** aarch64 (sunxi64) - **Kernel Branch:** Current (Linux 6.x) - **Target OS:** Ubuntu Noble / Debian Trixie (Armbian Current) ### Description On mo
+
+- [665] Build Add Artist flow
+  URL: https://github.com/TheCaptiansLedger/purser/issues/665
+  Created: 2026-08-16T18:12:03Z  State: open
+  Labels: type: feature, area: ui, status: ready, scope: task
+  Body: Part of #646. ## Scope Search box → `MusicBrainzService.SearchArtists` (#649) → result list → user picks one → get-or-create composition, run **client-side**, exactly ADR 0026's 3-step pattern: 1. `ExternalIDService.GetExternalIDByValue(entity_type=LIBRARY_ENTRY, source=mbz, value=mbid)` (#647). Hit → navigate to the existing artist, done. 2. Miss → `LibraryEntryService.CreateLibraryEntry(kind="ar
+

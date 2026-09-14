@@ -1,0 +1,151 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/9j/cKwL3nDZ8g5p6ukuB5ALxBSQ</id>
+  <title>arXiv Query: search_query=all:"bit flip" AND all:LLM&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-08-09T23:03:33Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22bit+flip%22+AND+all:LLM&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>27</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2607.25227v1</id>
+    <title>Decision-Level Hijacking: Injecting Cognitive Bias into Large Language Models via Bit-Flip Attacks</title>
+    <updated>2026-07-28T02:59:32Z</updated>
+    <link href="https://arxiv.org/abs/2607.25227v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.25227v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) have been widely applied in high-stakes decision-making scenarios such as corporate strategy, and users are increasingly relying on their outputs. However, the deep integration of open-source model sharing ecosystems with LLM-powered critical decision-making applications also introduces critical risks: if an attacker can manipulate the model's cognitive stance, they can indirectly influence the judgments and actions of downstream decision-makers. This paper defines such threats as decision-level hijacking. Existing attacks fail to achieve targeted cognitive manipulation without triggering prohibited content or degrading model functionality. To fill this gap, this paper reveals that Bit-Flip Attacks (BFAs) can serve as an attack vector for inducing decision-level hijacking, requiring no real-time interaction or control over the training process, and only a minimal number of weight bits need to be flipped after deployment to achieve stealthy, low-cost, and persistent cognitive manipulation. Therefore, we propose CogBias, a cognitive bias injection framework for LLMs. CogBias converts subjective preferences into optimization signals via a differentiable sentiment evaluator, uses a multi-objective loss to jointly constrain multiple dimensions, and constructs BitScout to locate critical bits, achieving targeted cognitive intervention under an ultra-sparse flip budget. Experiments on Llama-3.2-3B, Mistral-7B, and Qwen2.5-14B, as well as on the commercial recommendation and controversial factual topic scenarios, demonstrate that flipping only a small number of bits stably induces significant stance shifts on target topics, while the impact on non-target tasks and overall output distribution is limited. This work demonstrates that minute perturbations to low-level weight data suffice to undermine the high-level value alignment of LLMs.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-28T02:59:32Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Yu Yan</name>
+    </author>
+    <author>
+      <name>Jiahao Chen</name>
+    </author>
+    <author>
+      <name>Siqi Lu</name>
+    </author>
+    <author>
+      <name>Yongjuan Wang</name>
+    </author>
+    <author>
+      <name>Ziming Zhao</name>
+    </author>
+    <author>
+      <name>Zhaoxuan Li</name>
+    </author>
+    <author>
+      <name>Tianyu Du</name>
+    </author>
+    <author>
+      <name>Qingjun Yuan</name>
+    </author>
+    <author>
+      <name>Shouling Ji</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.19623v1</id>
+    <title>From Bit-Position Sensitivity to Unequal Error Protection for DNN Inference Memory</title>
+    <updated>2026-07-21T23:07:56Z</updated>
+    <link href="https://arxiv.org/abs/2607.19623v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.19623v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We characterize per-bit-position fault sensitivity in ML inference across 16 workloads -- spanning transformer-based models and attention-free CNNs -- and across three floating-point formats. Our central empirical finding is a sharp bit-sensitivity transition: flipping any of the least-significant fraction bits up to a data-type-specific threshold, Xsafe, degrades task metrics by less than 1% under deterministic single-bit stress tests. Sensitivity rises through the upper fraction bits and spikes at the exponent-mantissa boundary, where a single-bit flip causes catastrophic collapse. Because low-order bits are largely inconsequential while high-order and exponent bits are critical, uniform SECDED protection -- which guards every bit equally at 12.5% storage overhead -- is unnecessarily conservative. We derive per-data-type Xsafe floors (FP16: 6, BF16: 4, FP32: 15) and workload-aware tiers that widen the unprotected region for resilient model classes, raising ECC savings to 37.5-62.5% without retraining. Text-conditioned diffusion models dictate the conservative floor; vision encoders, NLU models, and resilient LLMs tolerate wider bypass regions. These floors and tiers drive an Unequal Error Protection (UEP) codec with per-cacheline data-type tags and a dual-partition SRAM architecture for ML accelerators. Validation across 870+ fault-injection runs confirms selective protection holds under contiguous 2- and 3-bit upsets. The codec reduces ECC area by 27.8% relative to uniform SECDED; dual-voltage operation of the non-critical partition lowers gross BF16 read energy by about 17%, with a roughly 4% dual-partition macro-area overhead.</summary>
+    <category term="cs.AR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-21T23:07:56Z</published>
+    <arxiv:comment>Accepted to appear at the 59th IEEE/ACM International Symposium on Microarchitecture (MICRO 2026). 14 pages</arxiv:comment>
+    <arxiv:primary_category term="cs.AR"/>
+    <author>
+      <name>Muhammad Husnain Mubarik</name>
+    </author>
+    <author>
+      <name>Karthik Mohan Kumar</name>
+    </author>
+    <author>
+      <name>Pedro Antonio Pena</name>
+    </author>
+    <author>
+      <name>Keshavan Varadarajan</name>
+    </author>
+    <author>
+      <name>Kunal Tyagi</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2606.23672v3</id>
+    <title>Teaching LLMs String Matching, Backtracking, and Error Recovery to Deduce Bases and Truth Tables for the Combinatorially Exploding Bit Manipulation Puzzles</title>
+    <updated>2026-07-22T18:14:03Z</updated>
+    <link href="https://arxiv.org/abs/2606.23672v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2606.23672v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper presents our algorithmic innovations for the NVIDIA Nemotron Model Reasoning Challenge, focusing on Bit Manipulation Puzzles. In this task, the objective is to discover a hidden logical rule transforming input binary strings to outputs, then apply it to unseen inputs. Large Language Models (LLMs) notoriously struggle here; traditional methods force them to simulate complex boolean logic and arithmetic, leading to hallucinations. Furthermore, the search space of bitwise operations (combinations of shifts, rotations, and logic gates) suffers from a severe combinatorial explosion. To overcome this computational intractability, we present a novel approach that abandons arithmetic logic entirely in favor of string similarity, structured search, and autonomous error recovery.
+  Our core contributions are: 1. Bases and Truth Table Formulation: We reframe logic-gate deduction into a base-selection task, leveraging string similarity (minimal bit flips) to isolate primitive transformations ("bases") and deduce truth tables without complex arithmetic. 2. Backtracking DFS and Error Recovery: We formalize a search process that tests candidate bases, detects logical collisions across examples, and backtracks upon failure to perform robust error recovery. 3. Bit Tokenization and Interactive Reasoning SFT: We force the tokenizer to encode binary strings as individual single-bit tokens. We use dynamic masking to simulate external oracle feedback, training the model to hypothesize, self-evaluate, and backtrack natively.
+  Evaluated on bit manipulation puzzles, our approach achieved over 96% validation accuracy. This represents the highest performance in this category. These algorithmic and training innovations ultimately earned our team the Best Fine-tuning Method and Best Data/Synthetic Data Method awards in the contest, alongside a 7th Place overall finish on leaderboard.</summary>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-06-22T17:57:08Z</published>
+    <arxiv:comment>22 pages, 4 figures, 2 tables. 7th Place Solution for the NVIDIA Nemotron Model Reasoning Challenge (Kaggle)</arxiv:comment>
+    <arxiv:primary_category term="cs.AI"/>
+    <author>
+      <name>Prateek Agnihotri</name>
+    </author>
+    <author>
+      <name>Sanchit Jain</name>
+    </author>
+    <author>
+      <name>Prabhat Agnihotri</name>
+    </author>
+    <author>
+      <name>Aditya Prasad</name>
+    </author>
+    <author>
+      <name>Shubham Jain</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2605.04563v1</id>
+    <title>RangeGuard: Efficient, Bounded Approximate Error Correction for Reliable DNNs</title>
+    <updated>2026-05-06T07:05:30Z</updated>
+    <link href="https://arxiv.org/abs/2605.04563v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2605.04563v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As DRAM scales in density and adopts 3D integration, raw fault rates increase and multi-bit errors are no longer rare. Such errors can severely impact Deep Neural Networks (DNNs): although DNNs tolerate small numerical perturbations, random bit flips can create extreme outliers that propagate and sharply degrade accuracy. Large Language Models (LLMs) are particularly vulnerable because attention, residual, and normalization layers can amplify and preserve a single corrupted activation across many layers, destabilizing inference.
+  This paper introduces RangeGuard, a metadata-centric error-correcting framework that provides strong reliability and high efficiency based on bounded approximate correction. Instead of protecting raw bits, RangeGuard encodes compact Range Identifiers (RIDs) that capture the numerical range of each value. These compact metadata enable efficient use of limited redundancy and concentrate protection on range changes, which indicate harmful semantic deviations, while ignoring benign intra-range variations. Upon detecting a range change, RangeGuard restores the correct range and substitutes a representative value, ensuring that error magnitudes are bounded within the range. Based on RIDs, RangeGuard can tolerate 64+ flipped bits using only 16 bits of parity available in GPU memories without a noticeable accuracy loss. By introducing semantic range protection, RangeGuard enables reliable DNN execution even under frequent memory errors and tight redundancy budgets.</summary>
+    <category term="cs.AR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-05-06T07:05:30Z</published>
+    <arxiv:comment>16 pages, 9 figures. Accepted to the 53rd Annual IEEE/ACM International Symposium on Computer Architecture (ISCA 2026)</arxiv:comment>
+    <arxiv:primary_category term="cs.AR"/>
+    <author>
+      <name>Hanum Ko</name>
+    </author>
+    <author>
+      <name>Sangheum Yeon</name>
+    </author>
+    <author>
+      <name>Jong Hwan Ko</name>
+    </author>
+    <author>
+      <name>Jungrae Kim</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.17249v2</id>
+    <title>Bit-Flip Vulnerability of Shared KV-Cache Blocks in LLM Serving Systems</title>
+    <updated>2026-06-07T11:31:40Z</updated>
+    <link href="https://arxiv.org/abs/2604.17249v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.17249v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Rowhammer on GPU DRAM has enabled adversarial bit flips in model weights; shared KV-cache blocks in LLM serving systems present an analogous but previously unexamined target. In vLLM's Prefix Caching, these blocks exist as a single physical copy without integrity protection. Using software fault injection under ideal bit targeting, we characterize worst-case severity and identify three properties: (1) Silent divergence - 13 of 16 BF16 bit positions produce coherent but altered outputs, indistinguishable from legitimate responses without a clean baseline. (2) Selective propagation - only requests sharing the targeted prefix are affected. (3) Persistent accumulation - no temporal decay occurs, so cumulative damage grows linearly with subsequent requests. Together, these constitute a threat profile distinct from weight corruption: silent divergence and selective propagation enable detection evasion; persistent accumulation then proceeds unchecked, yielding damage amplification bounded only by how long the block remains cached. A checksum-based countermeasure detects any single-bit corruption at scheduling time, bounding cumulative damage to one batch independent of the block's cache lifetime, with negligible overhead. These results argue for integrity protection of prefix blocks before end-to-end exploitation is demonstrated.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-19T04:31:12Z</published>
+    <arxiv:comment>12 pages, 4 figures. Accepted at SECRYPT 2026 (23rd International Conference on Security and Cryptography). Conference: https://secrypt.scitevents.org/</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Yuji Yamamoto</name>
+    </author>
+    <author>
+      <name>Satoshi Matsuura</name>
+    </author>
+  </entry>
+</feed>

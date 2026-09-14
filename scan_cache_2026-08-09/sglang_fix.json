@@ -1,0 +1,61 @@
+{
+  "total": 14,
+  "items": [
+    {
+      "num": 34189,
+      "title": "[DSV4] Fix silent KV corruption when speculative draft tokens > 4"
+    },
+    {
+      "num": 34187,
+      "title": "[Kimi K3] Rework skipped-think fix as opt-in force_nonempty_content with streaming coverage"
+    },
+    {
+      "num": 34184,
+      "title": "Fix stale track rows corrupting conv checkpoints under the prefill graph"
+    },
+    {
+      "num": 34181,
+      "title": "Fix mlx unit test batch mock"
+    },
+    {
+      "num": 34178,
+      "title": "fix(parser): DSV4 reasoning + tool call streaming parser bugs"
+    },
+    {
+      "num": 34167,
+      "title": "[DSA] Fix top-k v2 dropping non-primary ranks' output on CUDA 13.1+ (root cause for #33835)"
+    },
+    {
+      "num": 34163,
+      "title": "fix(vlm): preserve Kimi-K3 GPU JPEG accuracy"
+    },
+    {
+      "num": 34161,
+      "title": "fix: preserve GQA head mapping in Triton DCP prefill"
+    },
+    {
+      "num": 34159,
+      "title": "Fix deterministic inference all-reduce for tp>1"
+    },
+    {
+      "num": 34156,
+      "title": "docs: fix model test suite link"
+    },
+    {
+      "num": 34154,
+      "title": "[Fix] Give multimodal draft-extend one mRoPE position per extended token"
+    },
+    {
+      "num": 34153,
+      "title": "[Scheduler] Fix final chunked-prefill abort commit race"
+    },
+    {
+      "num": 34142,
+      "title": "Fix inflated row pitch when a CP round-robin shard has a single row"
+    },
+    {
+      "num": 34139,
+      "title": "[Bugfix] DeepSeek V4 DSpark: fix shared-expert loading performance regression"
+    }
+  ]
+}

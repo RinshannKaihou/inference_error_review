@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17916",
+  "repository_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM",
+  "labels_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17916/labels{/name}",
+  "comments_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17916/comments",
+  "events_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17916/events",
+  "html_url": "https://github.com/NVIDIA/TensorRT-LLM/issues/17916",
+  "id": 5183934080,
+  "node_id": "I_kwDOKH5No88AAAABNPyOgA",
+  "number": 17916,
+  "title": "DeepSeekR1Parser ignores a per-request enable_thinking=False, returning empty content",
+  "user": {
+    "login": "StephenLReed",
+    "id": 3487363,
+    "node_id": "MDQ6VXNlcjM0ODczNjM=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/3487363?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/StephenLReed",
+    "html_url": "https://github.com/StephenLReed",
+    "followers_url": "https://api.github.com/users/StephenLReed/followers",
+    "following_url": "https://api.github.com/users/StephenLReed/following{/other_user}",
+    "gists_url": "https://api.github.com/users/StephenLReed/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/StephenLReed/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/StephenLReed/subscriptions",
+    "organizations_url": "https://api.github.com/users/StephenLReed/orgs",
+    "repos_url": "https://api.github.com/users/StephenLReed/repos",
+    "events_url": "https://api.github.com/users/StephenLReed/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/StephenLReed/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6170460443,
+      "node_id": "LA_kwDOKH5No88AAAABb8nBGw",
+      "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/labels/Decoding/Sampling",
+      "name": "Decoding/Sampling",
+      "color": "31096c",
+      "default": false,
+      "description": "<NV>Token sampling algorithms in TRTLLM for text gen (top-k, top-p, beam)."
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-18T16:15:08Z",
+  "updated_at": "2026-08-18T16:15:22Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "\n### System Info\n\n- TensorRT-LLM: 1.3.0rc23 (built from `f20ea652`); behaviour re-checked against `main` @ `fbda11f5`\n- GPU: NVIDIA GeForce RTX 5090 (sm_120), driver 595.71.05\n- PyTorch 2.11.0+cu130, CUDA 13.0, Python 3.12.13\n- Ubuntu 25.10, kernel 6.17.0-41-generic\n- Backend: PyTorch; single GPU, no TP/PP\n- Model where observed: Qwen3.6-35B-A3B-NVFP4 with FP8 KV cache (where model-specific)\n\n### Who can help?\n\n_No response_\n\n### Reproduction\n\n`DeepSeekR1Parser` is registered with `reasoning_at_start=True` for `qwen3_5`, `minimax_m2` and\n`minimax_m2_append_think`. When a request passes `chat_template_kwargs: {\"enable_thinking\": false}`,\nthe rendered template injects no `<think>` and the model emits no `</think>`, so `parse()` partitions\non an absent tag and returns the whole reply as `reasoning_content` with an **empty `content`**.\n\nA conventional OpenAI client reads `message.content` and therefore receives nothing for a request\nthat succeeded. Two clients on one server — one wanting thinking, one not — cannot share it.\n\n### Expected behavior\n\nWith enable_thinking=False, the reply is returned in message.content.\n\n### actual behavior\n\nparse() partitions on an absent </think>, so the whole reply lands in reasoning_content and content is empty. An OpenAI-style client reading message.content receives nothing.\n\n### additional notes\n\n`NemotronV3ReasoningParser` (a `DeepSeekR1Parser` subclass) already implements the rule:\n\n```python\nreasoning_at_start = chat_template_kwargs.get(\"enable_thinking\", reasoning_at_start)\n```\n\nand `test_nano_v3_reasoning_parser` already covers `{\"enable_thinking\": False}`. The base class does\nnot, so the keys that register it directly do not benefit.\n\nApply the same rule in `DeepSeekR1Parser.__init__`, so every `reasoning_at_start=True` registration\nhonours a per-request `enable_thinking=False`. The value is already threaded into the constructor by\n`ReasoningParserFactory.create_reasoning_parser()`.\n\nPer CONTRIBUTING.md we are raising this Issue Request before submitting the patch.\n\n**Questions for maintainers**\n\n1. Would you prefer the rule hoisted to the base class (making the Nemotron subclass's assignment\n   redundant), or duplicated per subclass?\n2. Should the existing `test_nano_v3_reasoning_parser` parametrisation be extended to a base-class\n   registration such as `qwen3_5`?",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17916/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17916/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

@@ -1,0 +1,133 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/gJ/+JMPhji3EmjJvAsq5z9hRuE4</id>
+  <title>arXiv Query: search_query=all:"LLM inference" AND all:correctness&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-09-01T23:03:23Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22LLM+inference%22+AND+all:correctness&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>96</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2608.29934v1</id>
+    <title>Compression-Aware Abstention: Teaching LLMs to Refuse When KV-Compression Masks Remove Answer Evidence</title>
+    <updated>2026-08-30T18:02:15Z</updated>
+    <link href="https://arxiv.org/abs/2608.29934v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.29934v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>KV-cache compression reduces LLM inference memory by evicting context tokens, but when the evicted tokens contain answer-bearing evidence, the model may hallucinate instead of recognizing that the compressed context is insufficient. We address this failure from a behavioral perspective: to our knowledge, this is the first work to formulate compression-aware abstention as a learning problem, in which a model learns to answer when supporting evidence survives compression and abstain when it does not. We construct supervision from compressor survival masks and tight answer-bearing spans, labeling examples as Confident when evidence survives and Abstain when it is removed. A 10.1M-parameter LoRA adapter trained on ~2.6K MuSiQue 2-hop QA examples reduces base-model hallucinations by 97% under prompt-style truncation while preserving correct answering on evidence-retaining examples. Unlike prompt-only abstention baselines, which over-abstain on many answerable high-retention examples, the trained adapter learns a conditional policy. We also evaluate the method under actual compressed-cache decoding, where multi-compressor training yields a 6-22x relative lift over the unaided base on evidence-retaining examples. Controlled-deletion experiments show that the learned behavior is driven by evidence content rather than input length alone.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-30T18:02:15Z</published>
+    <arxiv:comment>19 pages, 5 figures. Accepted to the GroundLM workshop at EMNLP 2026. Code, adapters, and datasets: https://github.com/mali-kh/compression-aware-abstention</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Mohammadali Khodabandehlou</name>
+    </author>
+    <author>
+      <name>Bhaskar Krishnamachari</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.29745v1</id>
+    <title>JITterFlip: Uncovering Fault Attack Surfaces in JIT-Compiled LLM Serving</title>
+    <updated>2026-08-30T12:16:00Z</updated>
+    <link href="https://arxiv.org/abs/2608.29745v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.29745v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLMs are widely deployed through cloud-hosted inference services, where Just-in-Time (JIT) compilation is used to reduce recurring framework and GPU-launch overhead. JIT serving introduces a host-side control plane that selects compiled artifacts and orchestrates their execution on the GPU. Meanwhile, the shared cloud setting has motivated a growing body of bit-flip attacks (BFAs) against LLM/DNN inference. Most existing BFAs target model parameters or weights and require model-specific knowledge. A smaller body of work reduces this dependency by faulting executable code, yet still corrupts code that directly implements model computation, limiting their attack effect to inference depletion.
+  We present JITterFlip, the first BFA targeting the host-side JIT serving control plane of GPU-based LLM inference. By faulting CPU-resident serving decisions rather than model computation, JITterFlip enables both gibberish output generation and a correct-output sponge attack. To identify exploitable targets in a large JIT compiler stack, JITterFlip develops a decision-guided fault-vulnerable code analysis.
+  Across four text and multimodal LLM workloads, the identified vulnerable code faults exhibit cross-model transferability, produce gibberish outputs with PPL ratios of $15.45\times$ to $2.48{\times}10^{6}\times$, and demonstrate correct-output sponge attacks with latency amplification of $2.03\times$ to $181.90\times$. JITterFlip also bypasses recent BFA defenses for LLMs while retaining both attack effects. Last, we demonstrate end-to-end Rowhammer attacks across four LLMs: a single bit flip in CPU-resident branch code propagates across the CPU-GPU boundary to disrupt GPU-executed inference without direct access to GPU memory, reaching up to $7.23{\times}10^{6}\times$ PPL amplification or $124.97\times$ latency amplification while preserving the exact generated output.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-30T12:16:00Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Tairui Wang</name>
+    </author>
+    <author>
+      <name>Zhi Zhang</name>
+    </author>
+    <author>
+      <name>Yansong Gao</name>
+    </author>
+    <author>
+      <name>Xin Zhang</name>
+    </author>
+    <author>
+      <name>Qingni Shen</name>
+    </author>
+    <author>
+      <name>Zhonghai Wu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.17546v2</id>
+    <title>REST API Testing with Verified LLM-Inferred Dependencies and Response-Driven Refinement</title>
+    <updated>2026-08-20T01:07:24Z</updated>
+    <link href="https://arxiv.org/abs/2608.17546v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.17546v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Testing RESTful APIs requires generating sequences of API calls that satisfy dependencies among operations, parameters, and runtime-created resources. Recent LLM-based approaches infer such dependencies and generate test sequences from OpenAPI specifications, but they often treat LLM-inferred relationships as correct without execution-based validation. This can introduce spurious dependencies, miss feasible operation chains, and produce infeasible tests. In this paper, we propose APIPilot}, an execution-validated framework for REST API testing. APIPilot first derives candidate producer-consumer dependencies from OpenAPI specifications using structural heuristics and LLM-based semantic reasoning. It then treats these dependencies as hypotheses and validates them through concrete API executions before using them for test generation. The validated dependencies are organized into a dependency graph from which APIPilot constructs coverage-aware workflows via bounded top-k graph traversal, separating semantic dependency inference from sequence construction. To improve subsequent tests, APIPilot further performs response-driven refinement: runtime responses are analyzed to update resource pools, adjust input-generation constraints, and prune or revise invalid dependency mappings. Empirical evaluation on 16 real-world REST API services shows that APIPilot achieves 92.3% operation coverage, up to 58.6% code coverage, and an 88.1% workflow execution success rate, outperforming both LLM-based and traditional REST API testing baselines. APIPilot also detects 197 unique 5xx failures and specification-execution mismatches, demonstrating the benefit of grounding dependency inference in execution feedback.</summary>
+    <category term="cs.SE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-18T09:07:10Z</published>
+    <arxiv:comment>Under review</arxiv:comment>
+    <arxiv:primary_category term="cs.SE"/>
+    <author>
+      <name>Tu Nguyen</name>
+    </author>
+    <author>
+      <name>Thanh Nguyen</name>
+    </author>
+    <author>
+      <name>Huy Nguyen</name>
+    </author>
+    <author>
+      <name>Viet Nguyen</name>
+    </author>
+    <author>
+      <name>Tien N. Nguyen</name>
+    </author>
+    <author>
+      <name>Vu Nguyen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.14280v1</id>
+    <title>LLM-Assisted LDPC Decoding via Syndrome-Verified Semantic Priors</title>
+    <updated>2026-08-14T13:06:41Z</updated>
+    <link href="https://arxiv.org/abs/2608.14280v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.14280v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Semantic communication exploits the meaning of the payload, which bit-level processing discards. When channel decoding fails on a natural language payload, the errors appear as corrupted characters in the recovered text. A large language model (LLM) infers the intended characters from the semantic context, but it can also produce incorrect corrections. Applying them directly introduces new bit errors when the LLM modifies characters incorrectly. In this paper, we propose an LLM-assisted decoding framework for low-density parity-check (LDPC) codes. Rather than trusting LLM predictions, the decoder evaluates the modified characters jointly against the parity-check constraints and admits only the accepted corrections as verified semantic priors. These priors are injected as soft updates to the channel log-likelihood ratios, preserving the original channel evidence without modifying the decoder. A subsequent belief propagation pass distributes the injected evidence across the check nodes, recovering not only the injected bits but also the residual errors that the LLM fails to correct. Simulations demonstrate a 73% bit error rate reduction over a conventional decoder at 2.0 dB, whereas doubling its iterations to the same budget yields only 21%. The verification maintains an injection precision above 0.88 despite inaccurate LLM predictions, demonstrating that semantic knowledge can be reliably translated into physical-layer reliability gains.</summary>
+    <category term="eess.SP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-14T13:06:41Z</published>
+    <arxiv:primary_category term="eess.SP"/>
+    <author>
+      <name>Sojeong Park</name>
+    </author>
+    <author>
+      <name>Hyeonsu Lyu</name>
+    </author>
+    <author>
+      <name>Jaehyun Choi</name>
+    </author>
+    <author>
+      <name>Hyun Jong Yang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.08606v1</id>
+    <title>Mitigating Gender Bias in English to Romanian Machine Translation</title>
+    <updated>2026-08-09T09:38:59Z</updated>
+    <link href="https://arxiv.org/abs/2608.08606v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.08606v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Machine translation (MT) systems often fail to correctly translate gender, especially when converting from a gender-neutral language like English to a gendered target language such as Romanian. This bias results in translations that default to masculine forms or reinforce gender stereotypes. We propose a hybrid pipeline to mitigate this issue by combining large language model (LLM)-based gender classification with neural machine translation (NMT). Our system uses a fine-tuned LLM to detect the intended gender of target words in English sentences and insert inline gender hint tags. These tagged sentences are then passed to a Transformer model fine-tuned to generate morphologically correct Romanian translations. To support this, we introduce three novel datasets for gender disambiguation and translation. Our approach improves gender accuracy on the WinoMT and WinoGender benchmarks by over 40 percentage points compared to a baseline MT system. This is the first method to explicitly address and evaluate gender bias in English-Romanian MT using both LLM inference and tag-aware translation.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-09T09:38:59Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Ioana Grigore</name>
+    </author>
+    <author>
+      <name>Sergiu Nisioi</name>
+    </author>
+    <arxiv:doi>10.1007/978-3-032-29532-3_11</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1007/978-3-032-29532-3_11" title="doi"/>
+  </entry>
+</feed>

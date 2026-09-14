@@ -1,0 +1,49 @@
+[
+  {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/comments/5644444616",
+    "html_url": "https://github.com/vllm-project/vllm/issues/56569#issuecomment-5644444616",
+    "issue_url": "https://api.github.com/repos/vllm-project/vllm/issues/56569",
+    "id": 5644444616,
+    "node_id": "IC_kwDOI7xefs8AAAABUG9jyA",
+    "user": {
+      "login": "zydansen",
+      "id": 228304756,
+      "node_id": "U_kgDODZundA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/228304756?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/zydansen",
+      "html_url": "https://github.com/zydansen",
+      "followers_url": "https://api.github.com/users/zydansen/followers",
+      "following_url": "https://api.github.com/users/zydansen/following{/other_user}",
+      "gists_url": "https://api.github.com/users/zydansen/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/zydansen/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/zydansen/subscriptions",
+      "organizations_url": "https://api.github.com/users/zydansen/orgs",
+      "repos_url": "https://api.github.com/users/zydansen/repos",
+      "events_url": "https://api.github.com/users/zydansen/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/zydansen/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "created_at": "2026-09-12T07:23:33Z",
+    "updated_at": "2026-09-12T07:23:33Z",
+    "body": "Update: this is **not** a GLM/tokenizer issue — please close this. Apologies for the noise.\n\nRoot cause: a **network-edge WAF** between our client and the server was resetting the TCP\nconnection (zero response bytes) whenever the request body contained a text pattern it\nmatched as a SQL-injection signature, e.g. `and 2023/` (the word \"and\" + space + digits + slash,\nas found in ordinary file paths such as `2023/2024/2025.md`).\n\nWhat misled us: the failure also reproduced on `/tokenize`, which pointed us at the tokenizer.\nIt was in fact a false lead — the WAF reset the request before it ever reached the server.\n\nWhy we are sure it was not the model/tokenizer:\n- The same request to a **nonexistent path** was also reset, while the benign variant\n  returned the server's normal `404` — the reset happened outside the application.\n- The same request from a host **not** behind the WAF returned `400 Bad Request` from the server.\n- After the WAF policy was corrected, the original failing payload tokenizes and serves normally.\n\nSorry for the false report. Please close.",
+    "author_association": "NONE",
+    "pin": null,
+    "reactions": {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/comments/5644444616/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "performed_via_github_app": null,
+    "minimized": null
+  }
+]

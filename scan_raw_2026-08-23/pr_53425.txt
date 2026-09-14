@@ -1,0 +1,28 @@
+#### PR #53425 [Bugfix][DSv4] SM12x FlashInfer sparse MLA kernel block size 64
+STATE:open merged:no
+## Purpose
+
+FlashInfer SM120 DSV4 decode is compiled for 64-token pages (`_DECODE_DSV4_PAGE_BLOCK_SIZE = 64` on flashinfer main). `DeepseekV4SparseMLABackend` / `DeepseekV4IndexerBackend` still advertised `[256]`, so `select_common_block_size` could not split manager `--block-size 256` into kernel pages. Isolated page-64 cosine vs torch on GB10 was 0.99966; listing 256 skipped the specialized decode kernel.
+
+Keep `--block-size 256` (C128 storage is `block_size/128 = 2`; SWA pages are already 64). On capability family 120 return `[64]`. SM100 stays `[256]`.
+
+`FLASHINFER_MLA_SPARSE_DSV4` inherits the base method (it was a hard-coded `[256]` override).
+
+Not a duplicate of:
+- #52499 (spec-decode query rank / `num_tokens > 64`)
+- #41834 (does not change these kernel block sizes)
+- flashinfer-ai/flashinfer#4380 (TOPK 192/256 dispatch, already merged)
+
+## Test Plan
+
+```bash
+pytest tests/v1/attention/test_dsv4_kernel_block_size.py -q
+```
+
+## Test Result
+
+2x DGX Spark GB10, TP=2, DeepSeek-V4-Flash-0731, `FLASHINFER_MLA_SPARSE_DSV4`, DSpark k=5, manager `block_size=256`, kernel page 64. Greedy `"The capital of France is"` (`temperature=0`, 32 tok): `" Paris. The capital of Spain is Madrid..."`. First token `' Paris'` logprob -0.244. KV 561,703 tokens at util 0.81.
+
+
+Made with [Cursor](https://cursor.com)
+

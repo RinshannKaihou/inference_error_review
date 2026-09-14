@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/huggingface/transformers/issues/48428",
+  "repository_url": "https://api.github.com/repos/huggingface/transformers",
+  "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/48428/labels{/name}",
+  "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/48428/comments",
+  "events_url": "https://api.github.com/repos/huggingface/transformers/issues/48428/events",
+  "html_url": "https://github.com/huggingface/transformers/issues/48428",
+  "id": 5298413481,
+  "node_id": "I_kwDOCUB6oc8AAAABO89fqQ",
+  "number": 48428,
+  "title": "RoPE corruption due to TF32 on B200 (possibly others) when using `torch.set_float32_matmul_precision(\"high\")`",
+  "user": {
+    "login": "Conzel",
+    "id": 38732545,
+    "node_id": "MDQ6VXNlcjM4NzMyNTQ1",
+    "avatar_url": "https://avatars.githubusercontent.com/u/38732545?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Conzel",
+    "html_url": "https://github.com/Conzel",
+    "followers_url": "https://api.github.com/users/Conzel/followers",
+    "following_url": "https://api.github.com/users/Conzel/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Conzel/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Conzel/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Conzel/subscriptions",
+    "organizations_url": "https://api.github.com/users/Conzel/orgs",
+    "repos_url": "https://api.github.com/users/Conzel/repos",
+    "events_url": "https://api.github.com/users/Conzel/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Conzel/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 3817266200,
+      "node_id": "MDU6TGFiZWwzODE3MjY2MjAw",
+      "url": "https://api.github.com/repos/huggingface/transformers/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": null
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-31T09:06:05Z",
+  "updated_at": "2026-08-31T14:45:51Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### System Info\n\n- `transformers` version: 4.51.3\n- Platform: Linux\n- Python version: 3.10.19\n- PyTorch version (GPU?): torch 2.7.0a0+79aa174 (torch.version.cuda 12.9)\n- GPU: reproduced on NVIDIA B200 (Blackwell, sm_100, capability 10.0); not reproduced on A100-SXM4-80GB (capability 8.0)\n- Using GPU in script?: yes\n\n### Description\n\nThe rotary-embedding angle computation\n\n```python\nfreqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)\n```\n\nin `Qwen3RotaryEmbedding.forward` (and derived functions, Llama, Qwen2/3, Mistral, etc.) is a float32 matrix multiply. The surrounding `torch.autocast(..., enabled=False)` block correctly forces fp32 dtype, but does not control the multiplication backend. When `torch.set_float32_matmul_precision(\"high\")` is set, the runtime may dispatch this matmul to a GEMM tensor-core kernel which may be run in TF32 (depending on architecture). This is for example the case when ran on B200 with batch size > 1.\n\nTF32 truncates the fp32 mantissa from 23 to 10 bits. This is problematic for the position ids: TF32 can only represent every integer exactly up to `2^11 = 2048`. Beyond that the grid spacing exceeds 1, so `position_ids` such as `2049` get truncated (to `2048`). This causes large errors in RoPE computations, see reproduction below.\n\n#### Possible fixes\n\n1. Locally force the fp32 backend around the angle computation:\n```python\n   with torch.backends.cuda.matmul.allow_tf32_ctx(False):   # or set allow_tf32=False around this block\n       freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(1, 2)\n```\n\n2. Avoid the matmul: \n```python\n   freqs = (position_ids_expanded.float().transpose(1, 2) * inv_freq_expanded.float().transpose(1, 2))\n```\n\nI tested out both on B200/A100 and confirmed that this fixes the issue. \n\n#### Possibly related reports\n\n- [thinking-machines-lab/batch_invariant_ops#23](https://github.com/thinking-machines-lab/batch_invariant_ops/issues/23), reproduces the identical RoPE corruption and error magnitude\n- [ByteDance-Seed/VeOmni#959](https://github.com/ByteDance-Seed/VeOmni/pull/959)\n\n\n### Who can help?\n\n@ArthurZucker \n\n### Information\n\n- [ ] The official example scripts\n- [x] My own modified scripts\n\n### Tasks\n\n- [ ] An officially supported task in the `examples` folder (such as GLUE/SQuAD, ...)\n- [x] My own task or dataset (give details below)\n\n### Reproduction\n\nRun the following on B200:\n\n```python\nimport torch\nfrom transformers import Qwen3Config\nfrom transformers.models.qwen3.modeling_qwen3 import Qwen3RotaryEmbedding\n\ncfg = Qwen3Config(hidden_size=1024, num_attention_heads=8, num_key_value_heads=8,\n                  head_dim=128, rope_theta=1e7, max_position_embeddings=8192)\nre = Qwen3RotaryEmbedding(cfg).cuda()\npos = torch.arange(0, 4096, device=\"cuda\")\nx = torch.zeros(1, 4096, 1, dtype=torch.bfloat16, device=\"cuda\")\n\ndef cos_for(prec, bs):\n    torch.set_float32_matmul_precision(prec)\n    pid = pos[None, :].expand(bs, -1)          # matmul batch = bs\n    with torch.no_grad():\n        c, _ = re(x, pid)\n    return c.float()\n\nfor bs in (1, 2, 4):\n    d = (cos_for(\"high\", bs) - cos_for(\"highest\", bs)).abs()[:, 2048:].max().item()\n    print(f\"Qwen3RotaryEmbedding  bs={bs}  | high-vs-highest @2048-4096 = {d:.5f}\")\n```\n\nOutputs (depending on GPU used):\n\n```\n# A100-SXM4-80GB\nQwen3RotaryEmbedding  bs=1  | high-vs-highest @2048-4096 = 0.00000\nQwen3RotaryEmbedding  bs=2  | high-vs-highest @2048-4096 = 0.00000\nQwen3RotaryEmbedding  bs=4  | high-vs-highest @2048-4096 = 0.00000\n\n# NVIDIA B200\nQwen3RotaryEmbedding  bs=1  | high-vs-highest @2048-4096 = 0.00000\nQwen3RotaryEmbedding  bs=2  | high-vs-highest @2048-4096 = 1.28516\nQwen3RotaryEmbedding  bs=4  | high-vs-highest @2048-4096 = 1.28516\n\n```\n\n### Expected behavior\n\nThe RoPE angle matmul must be computed in true IEEE fp32 regardless of the global `float32_matmul_precision` setting, matching the intent of the existing `autocast(enabled=False)` guard. RoPE output numbers between GPU architectures should match (up to corresponding floating point precision).",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/huggingface/transformers/issues/48428/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/48428/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

@@ -1,0 +1,535 @@
+{
+  "total_count": 5,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/56646",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/56646/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/56646/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/56646/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/56646",
+      "id": 5437056271,
+      "node_id": "I_kwDOI7xefs8AAAABRBLlDw",
+      "number": 56646,
+      "title": "2-node TP: MambaModelConfig's derived mamba_cache_mode never reaches the remote rank — cross-worker KV-spec assert with --enable-prefix-caching on hybrid GDN/mamba models",
+      "user": {
+        "login": "dysangel",
+        "id": 1111467,
+        "node_id": "MDQ6VXNlcjExMTE0Njc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1111467?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dysangel",
+        "html_url": "https://github.com/dysangel",
+        "followers_url": "https://api.github.com/users/dysangel/followers",
+        "following_url": "https://api.github.com/users/dysangel/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dysangel/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dysangel/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dysangel/subscriptions",
+        "organizations_url": "https://api.github.com/users/dysangel/orgs",
+        "repos_url": "https://api.github.com/users/dysangel/repos",
+        "events_url": "https://api.github.com/users/dysangel/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dysangel/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 3,
+      "created_at": "2026-09-13T00:36:38Z",
+      "updated_at": "2026-09-13T10:23:54Z",
+      "closed_at": "2026-09-13T10:23:54Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Description\n\nOn a 2-node TP deployment (`--nnodes 2`, mp backend) of a hybrid GDN/mamba model, enabling `--enable-prefix-caching` crashes at engine init with:\n\n```\nAssertionError: The KV cache specs for the same layer are different across workers. This is not supported yet.\n```\n\n**Root cause (diagnosed with an instrumented assert):** with prefix caching enabled, `MambaModelConfig.verify_and_update_config` upgrades `mamba_cache_mode` from `\"none\"` to `\"align\"` **in-process on the head**. The mutated config reaches the head's *local* worker via IPC, but the **remote node's process constructs its config from CLI args** and never sees the derived value — it stays `\"none\"`, so its mamba block size falls back to `max_model_len`. The two ranks then report different `MambaSpec`s for the same layers and the merge assert fires.\n\nInstrumented output (the only two differing fields of an otherwise identical spec):\n\n```\nlayer=language_model.model.layers.0.linear_attn\nrank 0: MambaSpec(block_size=1600,   ..., mamba_cache_mode='align', ...)\nrank 1: MambaSpec(block_size=262144, ..., mamba_cache_mode='none',  ...)\n                                                        # 262144 == max_model_len\n```\n\n## Workaround\n\nPass the derived value explicitly so both ranks parse it from the CLI:\n\n```\n--enable-prefix-caching --mamba-cache-mode align\n```\n\nVerified working on our 2×GB10 deployment (hybrid GDN + MTP speculative decoding, Model Runner V2): clean boot, prefix-cache hits confirmed via `vllm:prefix_cache_hits_total` (align-mode block-granularity hits on repeated prefixes).\n\n## Environment\n\n- 2× NVIDIA DGX Spark (GB10), TP2 over RoCE, `--distributed-executor-backend mp`, `--nnodes 2`\n- Hybrid linear-attention (GDN) + full-attention model, mamba hybrid KV cache, MTP spec decode k=3, enforce-eager\n- Reproduced deterministically; happy to provide more of the config if useful\n\nThe bug should affect **any** mamba/GDN hybrid (Qwen3-Next-class architectures and derivatives) on multi-node TP with prefix caching, independent of our specific model fork.\n\n## Suggested fix direction\n\nMake the derivation reach every rank — either run `verify_and_update_config` (or equivalent normalization) in the remote node's config-construction path, or broadcast the head's normalized cache config to workers instead of reconstructing from raw args. We plan to root-cause the exact asymmetry (which code path skips the derivation on the remote node) and follow up with a PR referencing this issue.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/56646/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/56646/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/56506",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/56506/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/56506/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/56506/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/56506",
+      "id": 5428134530,
+      "node_id": "I_kwDOI7xefs8AAAABQ4rCgg",
+      "number": 56506,
+      "title": "[RFC]: DeepSeek-V4.1-Flash performance on ROCm",
+      "user": {
+        "login": "Fangzhou-Ai",
+        "id": 31551580,
+        "node_id": "MDQ6VXNlcjMxNTUxNTgw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/31551580?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Fangzhou-Ai",
+        "html_url": "https://github.com/Fangzhou-Ai",
+        "followers_url": "https://api.github.com/users/Fangzhou-Ai/followers",
+        "following_url": "https://api.github.com/users/Fangzhou-Ai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Fangzhou-Ai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Fangzhou-Ai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Fangzhou-Ai/subscriptions",
+        "organizations_url": "https://api.github.com/users/Fangzhou-Ai/orgs",
+        "repos_url": "https://api.github.com/users/Fangzhou-Ai/repos",
+        "events_url": "https://api.github.com/users/Fangzhou-Ai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Fangzhou-Ai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 5471987301,
+          "node_id": "LA_kwDOI7xefs8AAAABRifmZQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/performance",
+          "name": "performance",
+          "color": "3DDD26",
+          "default": false,
+          "description": "Performance-related issues",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 6114440385,
+          "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+          "name": "rocm",
+          "color": "B60205",
+          "default": false,
+          "description": "Related to AMD ROCm",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 6478559908,
+          "node_id": "LA_kwDOI7xefs8AAAABgib6pA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/RFC",
+          "name": "RFC",
+          "color": "DE9220",
+          "default": false,
+          "description": "",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 8746007475,
+          "node_id": "LA_kwDOI7xefs8AAAACCU17sw",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/deepseek",
+          "name": "deepseek",
+          "color": "1995FE",
+          "default": false,
+          "description": "Related to DeepSeek models",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 9988761457,
+          "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+          "name": "quantization",
+          "color": "62bfab",
+          "default": false,
+          "description": "",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 10799676958,
+          "node_id": "LA_kwDOI7xefs8AAAACg7X-Hg",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/DSv4",
+          "name": "DSv4",
+          "color": "be3bfa",
+          "default": false,
+          "description": "",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12141724842,
+          "node_id": "LA_kwDOI7xefs8AAAAC07QEqg",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/DSv4.1",
+          "name": "DSv4.1",
+          "color": "2c52b7",
+          "default": false,
+          "description": "Related to DeepSeek-V4.1 models",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 9,
+      "created_at": "2026-09-11T19:19:25Z",
+      "updated_at": "2026-09-13T06:24:06Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "COLLABORATOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Motivation\n\nDeepSeek-V4.1-Flash leaves a lot of the device on the table on AMD MI355X (gfx950). Measured on an 8x MI355X node, TP4, MXFP4 MoE + DSpark MTP:\n\n| concurrency | out tok/s | out tok/s per GPU | TTFT p50 | ITL p50 | E2EL p50 |\n|---:|---:|---:|---:|---:|---:|\n| 1 | 35.89 | 8.97 | 0.898 | 0.0256 | 15.03 |\n| 2 | 49.10 | 12.27 | 0.940 | 0.0267 | 17.22 |\n| 4 | 86.99 | 21.75 | 0.634 | 0.0271 | 5.55 |\n| 8 | 164.69 | 41.17 | 0.609 | 0.0307 | 12.10 |\n| 16 | 292.60 | 73.15 | 0.684 | 0.0332 | 14.61 |\n| 32 | 469.41 | 117.35 | 0.825 | 0.0477 | 17.57 |\n\nThe shape of that table is the telling part. Going from concurrency 1 to 32 costs only **1.9x** in ITL (0.0256 -> 0.0477) while delivering **13x** more output per GPU, so the device is nowhere near saturated: there is a large fixed cost per decode step that concurrency merely amortises. A captured decode trace says what that cost is. At a single-stream ITL of 25.6 ms, a decode step issues **14,020 kernel launches**, and 85% of each layer's 350 launches are attributable to the mHC block - bookkeeping on a 4x4 matrix.\n\n| launches/layer | share | source |\n|---:|---:|---|\n| 162 | 48.6% | mHC sinkhorn loop |\n| 122 | 36.6% | mHC pre/post mix + eager RMSNorm |\n| 24 | 7.2% | MoE / FFN (already fused) |\n| 12 | 3.6% | dtype casts/copies |\n| 6 | 1.8% | attention + fused norm/quant |\n| 4 | 1.2% | TP collective |\n| 3 | 0.9% | other |\n\n> **Trace methodology, since it affects what the numbers can support.** The trace had to be captured with `--enforce-eager`: with CUDA graphs on, roctracer's HSA queue interposition deadlocks against hipGraph replay on this ROCm build (the first step after `/start_profile` never completes and the workers spin in `queue_interposition.cpp` waiting on an HSA signal). So **only the launch counts and kernel composition should be read as load-bearing** - those are graph-invariant, since a graph replays the kernel sequence it captured rather than merging kernels. All wall-clock, occupancy and idle-gap figures from that trace are inflated by eager dispatch plus profiler overhead and are deliberately not used for any claim here. The throughput and ITL numbers above are from normal graph-enabled serving runs, not from the traced run.\n\nThis is purely a performance question - accuracy is already where it should be. Recording it here as the standard for the work below, since every item in this RFC is a performance change that has to hold accuracy. gsm8k 5-shot via lm-eval, same node and configuration:\n\n| | strict-match | flexible-extract |\n|---|---:|---:|\n| baseline | 0.9704 ± 0.0047 | 0.9697 ± 0.0047 |\n| with #56503 | 0.9727 ± 0.0045 | 0.9719 ± 0.0045 |\n| with #56503 + #56513 | 0.9735 ± 0.0044 | 0.9727 ± 0.0045 |\n\nHarness gate is 0.91. Anything landing against this RFC should be checked against the numbers above rather than just the gate, since a change can pass 0.91 while still having broken something.\n\nWhat follows is grouped by optimization direction. Each item is verified against the code rather than assumed, and several turn out to be different from what they look like from the outside.\n\n---\n\n## 1. mHC seam fusion\n\nThe largest single direction, since 85% of per-layer launches live here.\n\n### 1.1 mHC pre -> AITER\n\n`vllm/models/deepseek_v4_1/amd/model.py` imports `mhc_pre_delayed_torch` / `mhc_post_torch` directly, so every sublayer seam spends ~141 launches Sinkhorn-normalizing a 4x4 matrix. V4 already dispatches through `MHCPreOp` / `MHCPostOp` and reaches AITER; V4.1 was never migrated, because it collapses each sublayer's input with the *previous* sublayer's pre-mix and AITER's `mhc_pre` neither returns its pre-mix nor accepts an incoming one.\n\nMerged as #56503: 141 -> 4 launches per seam, worst relative error 1.2e-5, gsm8k unchanged.\n\nAt concurrency 1 that moved ITL p50 from 25.58 ms to 6.89 ms. Read that as directional only, not as a 3.7x per-token speedup: the agentic trace is time-driven, so the faster run sampled a different and longer segment (mean input 168,856 -> 206,458 tokens, mean output 954 -> 1,683). The confound runs against the result, but a clean figure needs a fixed-request-count replay. Details in the PR.\n\n### 1.2 Fused mHC post+pre for V4.1\n\n`deepseek_v4/amd/model.py` has 4 references to `MHCFusedPostPreOp` / `mhc_fused_post_pre`; `deepseek_v4_1/amd/model.py` has **zero**. `mhc_fused_post_pre_gemm_sqrsum` applies the post step and projects the resulting residual in one kernel, and has gfx950-specific tuning (`_mhc_fused_config_gfx950_256`). It needs the same `pre_mix` plumbing #56503 added, so it is a direct follow-on rather than separate work.\n\nSizing this honestly: because the delayed formulation still needs the pre-mix epilogue and the delayed collapse, folding in the post takes the seam from 6 launches to 5, not to 2. Measured on gfx950, all-reduce excluded: 5 -> 4.\n\nAbove 1024 tokens AITER's own heuristic prefers separate kernels, so this is a decode-path win by construction. The name misleads here: `mhc_fused_post_pre_large_m` is *not* a fused kernel, it is plain `mhc_post` + `mhc_pre` with a non-temporal store hint (`store_nt=0` above `8 * num_cu`) and `large_m_splitk=True`, neither of which the fused kernel can express. Once the residual stops fitting in cache there is nothing left for fusion to save.\n\nAddressed by #56513 (draft). Measured at 1.28% lower mean ITL at concurrency 1, 95% CI [0.07%, 2.48%], as a two-way crossover over both halves of the node with a fixed 24-request replay -- the two GPU sets here differ by 0.96%, so a single-orientation A/B cannot resolve an effect this size. One loose end that change does not close: its fallback is the plain post plus delayed pre, so it asks for neither large-m tuning. Inert between 1024 and 2048 tokens, but a real miss at prefill, which reaches 16384 tokens here. Needs a `store_nt` argument on the shared `mhc_post` wrapper that V4 also uses.\n\nNote `_AITER_MHC_FUSED_RMSNORM_SIZES = {1280, 2560, 4096, 7168}` excludes V4.1-Flash's `hidden_size=5120`, so the fused-RMSNorm variant does not apply here; extending that set, or the kernel's supported sizes, is a separate question.\n\n**Parallel ROCm work on the same seam.** #56342 reaches 1.1/1.2 by a different route: instead of dispatching the AMD path through AITER, it fixes the TileLang `mhc_pre_big_fuse*` kernels on 64-wide wavefronts and moves V4.1's AMD path onto the fused TileLang kernels. Its own measurement is that the switch without the wavefront fix is a 91.1% -> 23.7% gsm8k regression, so both halves land together. That makes it and #56503/#56513 two answers to the same question -- which backend owns the V4.1 AMD mHC seam -- and they should be reconciled before either goes further.\n\n### 1.3 Fused all-reduce + mHC post\n\nWorth being explicit about why this, and not all-reduce + RMSNorm, which is the more obvious proposal. Three reasons, in increasing order of decisiveness:\n\n1. **The ROCm AR+RMSNorm pass exists and auto-enables.** `RocmAiterAllReduceFusionPass` is selected when `fuse_allreduce_rms` is set and AITER is enabled (`vllm/compilation/passes/pass_manager.py:176-180`), and `enable_allreduce_rms_fusion` returns true on ROCm for TP>1 (`vllm/config/vllm.py:171-185`). Our server duly logs `Enabled custom fusions: ..., allreduce_rms, ...`.\n2. **But it is an Inductor FX pattern matcher, and this model is invisible to it.** There is no `@support_torch_compile` anywhere under `vllm/models/deepseek_v4_1/` (verified: zero matches), so the pass never sees the model graph. \"Enabled\" in that log is misleading.\n3. **And the pattern is not in the model anyway.** V4.1's decoder has no `all_reduce -> RMSNorm` seam. The TP all-reduce lives inside `_o_proj` / `_bpre_attn_gemm(..., reduce_tp=True)`, and what follows it is the **mHC post block**. Contrast `deepseek_v32/amd/model.py`, which does call `fused_allreduce_rms_norm` explicitly.\n\nThe fusion that does apply is already written and unused: `aiter/ops/custom_all_reduce.py` defines `fused_allreduce_mhc_post_only`, `_one_stage` and `_split` plus `launch_*` wrappers, backed by the prebuilt `aiter/jit/module_fused_ar_mhc.so`. vLLM has **zero** references to any of them. At 4 collective launches per layer, wiring this removes both the collective and the post kernel from each seam.\n\nProposal: add `rocm_aiter_ops.fused_allreduce_mhc_post` and call it from the V4.1 AMD seam. Separately, `docs/design/fusions.md:101-107` still documents AR+RMSNorm as NVIDIA Hopper/Blackwell + FlashInfer only and should be corrected now that the AITER path exists.\n\n**Correction: 1.2 and 1.3 are alternatives, not additive.** Both consume the same post step -- 1.2 folds it forward into the pre projection, 1.3 folds it backward into the collective -- so whichever lands, the other has nothing left to fuse. Each is worth one launch out of six. AITER ships only `fused_allreduce_mhc_post_{only,one_stage,split}`; there is no AR+post+pre kernel that would get both. 1.3 also needs the un-reduced attention output, which today is consumed inside `_o_proj`, so it means plumbing a deferred-all-reduce contract through `DeepseekV4Attention.forward` for both the attention and MoE seams.\n\nGiven equal payoff, I am pursuing 1.2 (self-contained) and leaving 1.3 unclaimed. It becomes clearly worthwhile if someone adds a three-way AR+post+pre kernel, which would take the seam to 4.\n\n---\n\n## 2. Multi-stream overlap\n\nThe interesting direction, because the code is already written and currently does nothing on the decode path.\n\n### 2.1 Existing overlap is disabled by breakable-cudagraph capture\n\nV4.1 attention **already** overlaps three aux streams (`vllm/models/deepseek_v4_1/attention.py`): input projections via `execute_in_parallel` (`793-801`), Q/SWA-cache-insert against the compressor forward (`688-697`), and indexer prep against `compressor.insert_cache` (`713-720`). V4.1 AMD even allocates them unconditionally - `aux_stream_list = [torch.cuda.Stream() for _ in range(3)]` (`amd/model.py:376-380`) - with no `is_rocm()` gate, unlike V4 AMD which disables them outright for hang reasons (`deepseek_v4/amd/model.py:964-968`).\n\nBut both overlap helpers drop to sequential execution during breakable CUDA graph capture:\n\n```python\n# vllm/utils/multi_stream_utils.py\nif aux_stream is not None:\n    from vllm.compilation.breakable_cudagraph import BreakableCUDAGraphCapture\n    if BreakableCUDAGraphCapture.is_active():\n        aux_stream = None\n```\n\nOur runs log `Breakable CUDA graph enabled`. Because the decode graph is **captured** serially, every replay is serial too, so on the decode path all of this overlap is dead. Prefill, uncaptured, still gets it.\n\nThe ask is therefore to make the existing overlap survive capture - record the aux streams into the graph, or exempt these regions - and then confirm gfx950 does not reproduce the hangs that caused V4 AMD to disable aux streams. The stale comments at `attention.py:429-430` (\"Will be None on ROCm for now\") and `690` (\"sequential on ROCm\") describe V4, not V4.1, and should be fixed alongside.\n\nOne genuine scheduling gap remains beyond that: `indexer_op` -> `forward_mqa` is fully serialized (`attention.py:817-829`). The top-k indices are a hard dependency, but MLA prep could plausibly be hoisted to overlap the indexer.\n\nOn terminology: there is no `CSA2` in the tree. CSA/HCA refers to the compressor path, and V4.1's `DeepseekCompressor` supports `compress_ratio` 1 and 2 only (ratio-4/128 is v4.0 CuTe-DSL and explicitly not wired).\n\n### 2.2 DeepSeek MoE gets neither stream overlap nor kernel fusion\n\nThe generic `MoERunner` supports shared-expert overlap on the aux stream (`SharedExpertsOrder.MULTI_STREAM_OVERLAPPED`, gated `is_cuda_alike()` plus a 256-token threshold), and Inkling's AMD MoE uses `maybe_execute_in_parallel` for exactly this. DeepSeek AMD MoE uses neither, because it is meant to get shared-expert fusion at the kernel level via `fuse_heterogeneous_shared_expert`.\n\nThat fusion requires **all** of gfx950, `tensor_parallel_size == 8`, and `moe_backend == \"aiter\"` (`deepseek_v4/amd/model.py:210-231`). At TP4 with `aiter_triton_mxfp4_bf16` we satisfy only the first, so the shared expert is simply serialized against the routed experts. Either relax the fusion gate or enable the aux-stream path for DeepSeek on ROCm. Note this interacts with 2.1: while overlap is serialized during capture, the stream option buys nothing.\n\n**Correction: relaxing the TP8 gate is not sufficient.** Reading the gate and AITER together, `fuse_heterogeneous_shared_expert` is pinned to DeepSeek-V4-Pro's geometry, not merely to TP8:\n\n- `_heterogeneous_shared_expert_enabled` also requires `hidden_size == 7168` and `moe_intermediate_size == 3072`. V4.1-Flash is 5120 / 2304.\n- It requires the shared expert as block-128 FP8 (`weight_block_size == [128, 128]`). V4.1-Flash ships it as FP8 E4M3 with **32x32** E8M0 scales -- `layers.N.ffn.shared_experts.w1.weight` is `[2304, 5120]` with `.scale` `[72, 160]` -- and `_prepare_native_fp8_shared_expert` validates the `(2*inter/128, hidden/128)` scale shape before expanding it to FHMoE's 1x32 layout, so it raises on ours rather than falling back.\n- AITER's tuned config has no row for us. `aiter/configs/tuned_fhmoe.csv` is 12 rows, every one `model_dim=7168, inter_dim=384, expert=385, topk=7` -- V4-Pro at TP8, since 3072/8 = 384, which is what the `i384` in `supports_dsv4_i384_fhmoe()` names. That helper probes only that tuple.\n\nThe homogeneous alternative is closed too: `VLLM_ROCM_USE_AITER_FUSION_SHARED_EXPERTS` runs `is_shared_expert_quant_fse_compatible`, which requires a Quark MXFP4 OCP export and returns *\"DeepSeek-v4 FSE is only implemented/tested with Quark MXFP4\"* for this DeepSeek-native `quant_method: fp8` / `expert_dtype: fp4` checkpoint. The heterogeneous kernel exists precisely because FP8-shared-plus-FP4-routed cannot fuse homogeneously, which is our case, just locked to the wrong geometry.\n\nTraces agree with the reading: no `flydsl_*` kernel appears anywhere in a decode step, AITER's dispatch reports `expert=384, topk=6` rather than 385/7, and the server logs `no tuned FlyDSL config for ('gfx950', 256, M, 5120, 640, 384, 6, ...), using heuristic FlyDSL fallback`.\n\nSo the kernel-level route needs three things, not one: relax the geometry and TP gates, add a block-32 -> 1x32 expansion for the shared scales, and tune FHMoE for `(5120, 640, 385, 7)`. The aux-stream route is the cheaper ask.\n\n---\n\n## 3. GEMM autotuning\n\nCheapest direction here, and the failure mode is worse than \"untuned\". On a lookup miss AITER sets `libtype=\"torch\", solidx=0` (`aiter/tuned_gemm.py:215-233`), and `torch_gemm` is plain `F.linear` (`415-451`) - not hipBLASLt, which is a separate `libtype`. A miss is a full drop out of the tuned-kernel path.\n\nWe see ~**1,220 such calls per decode step**, all from indexer/compressor shapes:\n\n```\nshape is M:128, N:128, K:512 ... not found tuned config in\n/tmp/aiter_configs/bf16_tuned_gemm.csv, will use default config! using torch solution:0\n```\n\nplus `M:10, N:32320, K:5120` and `N:32, K:5120`. The shipped `aiter/configs/bf16_tuned_gemm.csv` has gfx950 rows, but not for these shapes.\n\nThe tooling already exists: `AITER_TUNE_GEMM=1` collects missed shapes into `bf16_untuned_gemm.csv` (`tuned_gemm.py:239-269`), and `aiter/utility/pretune.py` / `base_tuner.py` turn that into tuned rows. Proposal: run the collection over a representative V4.1-Flash decode and prefill sweep, then upstream the resulting gfx950 rows to `aiter/configs/`.\n\n---\n\n## 4. MoE backend selection and tuning\n\nTwo halves of one question: are we on the right MoE backend, and is it tunable?\n\n- In-tree gfx950 configs for this model's expert count **do exist**, but only for the FlyDSL/CK path: `E=384,N=256` and `E=384,N=512` with `device_name=AMD_Instinct_MI355X` / `MI355_OAM`, `dtype=int4_w4a16` (+ `backend=flydsl` variants).\n- Our recipe forces `--moe-backend aiter_triton_mxfp4_bf16`, which resolves to `AiterW4A16ExpertsMonolithic` -> Triton `moe_gemm_a16w4`. That path takes **heuristic** kernel configs (`get_kernel_config_triton/gluon`), and AITER ships no gfx950 `a16w4` tuned dispatch tree (only `a8w4/DEFAULT.json`). None of the configs above apply to us.\n- Meanwhile the ROCm oracle, under `moe_backend=auto`, explicitly prefers the other one for this routing method: *\"DeepSeek-V4 on ROCm: prefer AITER FlyDSL MoE (better perf + accuracy after shuffle/TP-offset fixes), with Triton-unfused as fallback\"* (`oracle/mxfp4.py:690-701`).\n- And `benchmarks/kernels/benchmark_moe.py` cannot tune our backend even if we wanted to: its dtype choices are `auto`, `fp8_w8a8`, `int8_w8a16`, `int4_w4a16` - no MXFP4 mode (`benchmark_moe.py:1075`).\n\nProposal, in order: A/B `auto` / `aiter` against the forced `aiter_triton_mxfp4_bf16` on gfx950 and fix the recipe if FlyDSL wins, since tuned configs already exist for it; then add an MXFP4 mode to `benchmark_moe.py` so the Triton `a16w4` path can be tuned at all; then upstream gfx950 `a16w4` configs.\n\nNote #56543 (DNM) proposes the opposite for the same code path -- pinning `backend=\"triton\"` for both AITER W4A16 MoE GEMMs on gfx942/gfx950 -- so the A/B result above is worth reconciling against it before either lands.\n\n---\n\n## 5. Prefill top-k combine falls back to Torch\n\n`deepseek_v4_1/amd/rocm.py:175-186` uses ordinary Torch indexing because the Triton kernel inherited from V4 \"can issue an out-of-bounds access for V4.1's mixed prefill metadata\" on gfx950. Prefill-only and small tensors, but it is a known-missing gfx950-safe kernel and TTFT has room.\n\nAddressed by #56638, which re-enables `_combine_topk_swa_indices_kernel` with the three unsafe behaviours fixed in place. It also notes the fallback is not merely slow: `repeat_interleave` on a tensor syncs to the host, so the Torch path cannot be graph-captured at all.\n\n---\n\n## 6. DSA sparse indexer\n\nNot in the original write-up, and on a newer nightly it is the second-largest block of the decode step after the MoE GEMMs. Splitting it out of the single \"indexer/topk\" bucket a category summary produces, at 131k context, MoE on the CK a8w4 path:\n\n| | conc 1 | conc 4 | conc 16 |\n|---|---:|---:|---:|\n| mqa logits (fp8 paged) | 0.148 | 0.405 | 1.534 |\n| candidate mask | 0.048 | 0.133 | 0.464 |\n| candidate select | 0.059 | 0.072 | 0.118 |\n| topk per row | 0.485 | 0.527 | 0.838 |\n| **indexer total** | **0.741** | **1.138** | **2.954** |\n| **share of step** | **4.1%** | **6.2%** | **11.4%** |\n\nThe composition inverts with concurrency: at 1 the top-k dominates and is launch-bound, at 16 the MQA logits GEMM does. Full detail and method in [this comment](https://github.com/vllm-project/vllm/issues/56506#issuecomment-5647767775).\n\n### 6.1 Candidate mask sized by the workspace, not the context\n\n`apply_candidate_mask` receives the `[rows, max_model_len]` logits workspace unsliced, so its grid was 1024 programs per row when ~128 have work, and cost tracked rows while ignoring context. Columns at or past a row's `end` are never read: `top_k_per_row_decode` bounds its scan by the same ends, which is also why the no-candidate path skips the mask entirely and reads the same workspace safely.\n\nAddressed by #56628: 2.7x / 4.3x / 6.0x on the kernel at concurrency 1 / 4 / 16, gsm8k 0.9727 / 0.9719.\n\n### 6.2 `next_n` is spent on program count instead of the GEMM tile\n\nThe largest single item at concurrency 16 (1.534 ms/step, 5.9% of the step) is `deepgemm_fp8_paged_mqa_logits`. AITER launches `grid = batch * next_n * SplitKV`, so with DSpark 5-token MTP the kernel issues six independent M=32 MFMAs per K block where one M=192 would do.\n\nIts own M-scaling, measured at constant K traffic, is monotone: per unit of work M=64 is 1.27x more efficient than M=32, and M=128 is 1.53x. We sit at the worst point of that curve.\n\nFiled as [ROCm/aiter#5477](https://github.com/ROCm/aiter/issues/5477). It has to be an AITER change -- the kernel is 2213 lines of hand-scheduled Gluon, `next_n` is not a constexpr there, and a plain-Triton reimplementation of the same algorithm runs 2.2x slower, so the call site cannot reach it.\n\nTwo things ruled out on the way, recorded so nobody repeats them. The `grid = batch * next_n * SplitKV` shape looks like it streams K `next_n` times, but building both variants in Triton shows the shared-K version requests 5.2x fewer HBM bytes and is *slightly slower* -- the re-reads are already absorbed by cache. And `VarCtxSchedule`, the persistent-grid variant that looks made for our ragged contexts, is 1.7x slower.\n\n### 6.3 gfx950 decode top-k tunings are unreachable at `index_topk = 512`\n\n`csrc/libtorch_stable/sampler.cu` has two gfx950-specific configurations and both are gated on `topK == 1024`; this model sets 512, so every decode falls to the generic `multipleBlocksPerRowConfig = 10` path. The trace confirms it: `vllm::topKPerRowDecode<512, true, true, false>`. Asking the op for `topK = 1024` is *faster* than 512 at our shapes despite twice the output (0.0508 vs 0.0632 ms at concurrency 16), so the gate looks like tuning rather than a correctness bound. Worth roughly 0.2 ms/step; needs a C++ rebuild to confirm, and I would rather know whether the `== 1024` is deliberate first.\n\nThe other three routes are closed on ROCm: `cooperative_topk` and `persistent_topk` both accept `topk_tokens` of 512 but are gated on `is_cuda()`, and AITER's decode top-k is excluded twice in `_get_aiter_top_k_kernel` (by `compress_ratio <= 1` for five of the eight indexer layers, and by the 64k compressed-length bound for the rest). That bound also computes a different quantity in the FULL and non-FULL branches -- `max_model_len` undivided versus `max_seq_len // compress_ratio` -- which should be reconciled even though fixing it unlocks nothing here.\n\n### 6.4 FP4 MQA logits\n\nAITER ships `flydsl_pa_mqa_logits_fp4` and variants. Four things sit in the way: `dsa_indexer_uses_fp4()` raises unless `is_device_capability_family(100)`; `forward_hip` asserts `not self.use_fp4_cache`; there is no FP4 indexer K-cache insert on ROCm (the unfused path asserts, and AITER's `indexer_k_quant_and_cache` has no FP4 mode); and the kernel wants a pre-swizzled `q_scale`.\n\nSizing this was initially done by traffic accounting -- halve the K read, halve the kernel -- and that is wrong. At `next_n = 6` this kernel is not HBM-bandwidth bound: doubling `heads` doubles the compute at constant K bytes for only 1.5x the time, and removing 5.2x of the K reads changes nothing. So FP4 remains worth having for the memory footprint, but should not be sized as a decode-time win until measured. Accuracy is the larger risk either way, since the indexer picks which 512 tokens attention sees.\n\n---\n\n## 7. MXFP8 dense-linear path\n\nNot in the original write-up, and after #56503 it is the largest block of the decode step outside the MoE and the indexer. The dense projections (MLA `fused_wqa_wkv` / `wq_b` / `wo_a` / `wo_b`, the indexer projections, the compressor, and the shared-expert MLP) are MXFP8 and run `RocmDotScaledMxfp8LinearKernel`.\n\nMethod, since it bounds what these numbers support: rank-0 graph-captured decode traces at 131k context, MoE on the CK a8w4 path, `ROCPROFILER_QUEUE_INTERPOSITION=0`, eight decode steps sampled after all lanes are confirmed decoding by client-side SSE counting. Figures are summed kernel durations divided by steps. That basis is inflated -- at concurrency 1 it sums to 17.4 ms/step against a client-measured unprofiled step of 12.9 ms -- so **only launch counts and relative composition should be read as load-bearing**, not absolute times. Where a claim needs an absolute number it comes from a separate graph-replay microbenchmark, noted inline.\n\nWhere the step goes, at concurrency 1 and 32:\n\n| group | c1 | c32 | launches/step (c32) |\n|---|---:|---:|---:|\n| sparse indexer | 1.05 | 6.14 | 146 |\n| MoE experts (CK a8w4) | 1.20 | 5.92 | 92 |\n| long tail of small elementwise ops | 4.11 | 4.96 | 880 |\n| **MXFP8 weight dequant (per step)** | **2.15** | **4.47** | 360 |\n| MXFP8 linear (quant + GEMM) | 2.13 | 3.98 | 397 |\n| MLA attention core | 0.89 | 3.16 | 142 |\n| BF16 Tensile GEMMs | 1.23 | 2.73 | 163 |\n| TP all-reduce | 0.73 | 2.72 | 98 |\n| mHC / hyper-connection | 2.05 | 2.57 | 460 |\n| MoE sort / route / quant | 1.45 | 1.82 | 229 |\n\nThe step still issues **2,850 launches at concurrency 1 and 3,064 at 32**, of which 89% and 75% respectively are shorter than 10 us. The dispatch-bound thesis in the Motivation survives #56503; it just moved.\n\n### 7.1 The MXFP8 weight is dequantized on every forward\n\n`RocmDotScaledMxfp8LinearKernel.apply_weights` needs `K % 128 == 0` for `tl.dot_scaled`, and where that fails it rebuilds a BF16 copy of a constant weight per step:\n\n```python\nw_bf16 = dequant_mxfp8_to_bf16(layer.weight, layer.weight_scale)\nout = torch.nn.functional.linear(x2d, w_bf16).to(x.dtype)\n```\n\nOn V4.1-Flash this fires on the shared expert's row-parallel `down_proj`, whose K is sharded while `gate_up`'s stays at 5120: `moe_intermediate_size` 2304 gives 576 at TP4 and 288 at TP8, neither divisible by 128, so TP4 and TP8 pay it on every layer while TP1 and TP2 never see it.\n\n`dequant_mxfp8_to_bf16` is six pointwise kernels with an FP32 intermediate, so it is far off what the bytes justify -- about 97 us per layer in these traces. The `exp2_kernel_vectorized4` launch count is an unambiguous fingerprint for it: 43.4 per step at concurrency 1 and 45.9 at 32, one per layer, flat in concurrency because the work is weight-sized. Summed over the signature kernels it is 2.09 -> 4.33 ms/step, a steady 11-12% of kernel time at every concurrency measured.\n\nAddressed by #56560, which converts once in `process_weights_after_loading` and dispatches on the weight's element size, as `EmulationMxfp8LinearKernel` already does. Reported at 4.6% / 2.3% lower median TPOT at concurrency 1 / 8 with `exp2_kernel_vectorized4` going to exactly zero, and 0.11 GiB more weight memory per rank. Its only failing check is the `pre-run-check` label gate, not a test.\n\n### 7.2 The activation quant is a separate launch per GEMM\n\n`_mxfp8_dot_scaled_linear` calls `mxfp8_e4m3_quantize` and then the GEMM, so the pair `_kernel.kd` -> `_mxfp8_linear_kernel.kd` is the most frequent back-to-back chain in the step: 187.2 occurrences at concurrency 1 and 198.2 at 32, and adjacency is 100% -- every quant launch is immediately followed by its GEMM. The quant kernel is dispatch-floor rather than work: it moves 92 KB at M=6 (11 ns of traffic at 8 TB/s) and its marginal cost measures 4.4 us, matching the 4.15 us the trace attributes to it. AITER's `per_1x32_mx_quant_hip` measures 2.05 us against the Triton kernel's 2.04 us on the same shape, so swapping implementations is not the lever.\n\n**The obvious fix does not work.** Folding the quant into the GEMM prologue -- recomputing the per-32 E8M0 scale in registers inside the K-loop and feeding `tl.dot_scaled` directly -- is numerically correct and **0.28-0.89x**, i.e. up to 3.5x slower. It is not the redundant work across N-tiles, which is the intuitive explanation: sweeping N from 16 to 1280 (grid_n 1 to 80) holds the ratio flat at 0.41-0.45x, so it is just as slow when the activation is quantized exactly once. The in-register quant adds 26 us on top of a 12 us GEMM to save a 4.4 us launch, against roughly 0.3 us of actual arithmetic, and a ~100-config tile sweep got no further than 0.71x. That gap is how Triton lowers the reshape-and-reduce on gfx950, not something tuning reaches. Recorded so nobody repeats it.\n\n**The producer side works.** Asking the trace what *produces* these activations: `aiter::add_rmsnorm_quant_kernel` immediately precedes the quant 78.6 times per step at concurrency 1 and 83.1 at 32. That kernel already normalizes and quantizes, so folding the MX quant into it costs no redundant work. AITER supports this today in principle -- `rmsnorm2d_fwd_with_add_dynamicquant` routes a 1-byte E8M0 scale plus a `group_size` to the HIP `add_rmsnorm_quant`, which is exactly the format `tl.dot_scaled` consumes.\n\nIt was blocked by one arithmetic detail. The kernel picks `thread_data_size` from the hidden size and then asserts `group_size % thread_data_size == 0`; hidden 5120 lands in the `n <= 6144` band at `thread_data_size = 24`, and 32 does not divide 24, so it aborts. Confirmed across the ladder: 1024, 2048, 4096 and 6272-8192 all accept group 32, and only 5120 and 6144 -- the two `tds=24` sizes -- are rejected. This is a latent AITER bug rather than a missing feature, since the existing `per_1x32` MXFP4 test path hits it too; it survived because the test's default `-n` sweep skips that band entirely.\n\nFixed by [ROCm/aiter#5480](https://github.com/ROCm/aiter/pull/5480), which mirrors the group-aware config selection the `n <= 8192` branch already uses into the `n <= 6144` band, reusing instantiations that branch already relies on. It is strictly additive: `group_size == 0` and multiples of 24 keep today's config. With it, hidden 5120 emits MXFP8 matching a reference MX quantizer on 99.7% of block scales, within one E4M3 ULP dequantized, residual bit-exact, and AITER's own MXFP4 test passes at 5120 and 6144 where it previously aborted.\n\nWorth **1.49x at M=8 rising to 1.77x at M=256** on the norm-plus-quant pair (2.2 us and 4.1 us saved per occurrence, graph-replay latency with the replay floor amortized over 64 copies per graph). At step level that is ~175 us at concurrency 1 and ~343 us at 32, so about **1% of kernel time** -- less than the quant kernel's full 4.5%/2.2% share, because the fused norm is itself ~0.9 us more expensive than the plain one and only ~80 of the ~190 quant calls have this producer. It also removes ~80 of the 2,850-3,064 launches per step.\n\nStill open: the vLLM side needs an op returning the norm's `(fp8, E8M0 scale)` pair and a `RocmDotScaledMxfp8LinearKernel` entry point that accepts a pre-quantized activation instead of quantizing internally. And the remaining ~107 quant calls per step have different producers -- `elementwise_kernel_manual_unroll` (45/step) and another Triton kernel (43/step) -- each needing its own fusion.\n\n### 7.3 The GEMM itself is already at its ceiling\n\nRecording this so nobody re-tunes it. At decode shapes the kernel reaches 13-24% of the 8 TB/s weight-read roof, and its time is flat in N -- at M=6, K=5120 a 6.6 MB weight and a 13.1 MB weight both take 5.4 us -- so cost tracks K-loop iterations, not work. A ~100-config sweep over `BLOCK_N`, `BLOCK_K`, warps and stages found the shipped `_select_cfg` choice already optimal, best alternative 1.07x. Naive split-K is 2-8x worse: the FP32 output atomics dominate.\n\nThe alternatives, graph-replay microbenchmarked at N=1280, K=5120 (us per call, quant included where applicable):\n\n| M (capture size) | Triton MXFP8 | BF16 hipBLASLt | AITER block-128 FP8 |\n|---:|---:|---:|---:|\n| 8 | 7.7 | 6.7 | 17.2 |\n| 128 | 13.7 | **10.1** | 15.8 |\n| 256 | 19.0 | **12.7** | 15.9 |\n\nSo BF16 wins 1.2-1.5x at the capture sizes DSpark reaches at concurrency 16 and 32 and is a wash at 1, at the cost of doubling these weights. AITER's block-128 CK GEMM is flat in M and loses at every decode size, which also means requantizing the checkpoint to block-128 to reach the `gemm_a8w8_blockscale_bpreshuffle` path in `_bpre_attn_gemm` would not help decode. Two routes are simply closed on gfx950: AITER's native `gemm_a8w8_mxfp8` / `gemm_a8w4_mxfp8` are gfx1250 asm and hard-fail, and `torch._scaled_mm` rejects the MX scaling config on torch `2.12.0+git6bbd260`.\n\n---\n\n## Tracking\n\n- [x] mHC pre -> AITER (#56503, merged)\n- [ ] Fused mHC post+pre for V4.1 (#56513) -- reconcile with #56342, which moves the AMD seam onto fused TileLang kernels instead\n- [ ] Large-m tunings (`store_nt`, `large_m_splitk`) on the unfused mHC seam\n- [ ] ~~Fused all-reduce + mHC post~~ -- alternative to the above, not additive; unclaimed\n- [ ] Make multi-stream overlap survive breakable-cudagraph capture\n- [ ] Shared-expert overlap or fusion gate for DeepSeek MoE on ROCm -- the kernel route needs the geometry/TP gates relaxed **and** a block-32 shared-scale path **and** an FHMoE tuning for `(5120, 640, 385, 7)`; aux stream is the cheaper ask\n- [ ] Tuned GEMM rows for gfx950\n- [x] MoE backend A/B -- plain `aiter` (CK a8w4) beats the pinned Triton name by 4-9% of decode, accuracy held; MXFP4 tuning support still open\n- [ ] gfx950-safe prefill top-k combine kernel (#56638, open)\n- [ ] DSA candidate mask sized by workspace rather than live context (#56628, open)\n- [ ] Fuse `next_n` into the MQA logits GEMM tile ([ROCm/aiter#5477](https://github.com/ROCm/aiter/issues/5477)) -- largest remaining indexer item\n- [ ] Relax the `topK == 1024` gate on the gfx950 decode top-k configurations, or retune the block-count policy for k=512\n- [ ] Reconcile the FULL and non-FULL branches of `max_compressed_seq_len`\n- [ ] Dequantize the MXFP8 weight once when `dot_scaled` cannot be used (#56560, open) -- 11-12% of kernel time\n- [ ] Consume the norm's MXFP8 output directly instead of re-quantizing -- ~80 of the ~190 launch pairs per step, worth ~1% of kernel time; AITER dispatch fix done, vLLM plumbing open\n- [x] ~~Fuse the MXFP8 activation quant into the GEMM prologue~~ -- measured 0.28-0.89x; the in-register MX reduce costs 26 us to save a 4.4 us launch, independent of N-tile redundancy\n- [x] MXFP8 GEMM tile selection and alternative backends -- shipped config already optimal; BF16 wins 1.2-1.5x at the c16/c32 capture sizes, AITER native MX is gfx1250-only\n- [ ] FP4 MQA logits on ROCm: sm_100 gate, `forward_hip` assert, FP4 cache insert, swizzled q_scale -- footprint win, decode-time benefit unmeasured\n\nThe three mHC items are cheapest done in order, since each reuses the `pre_mix` plumbing introduced by the one before it.\n\nHappy to take several of these on. Flagging where I would particularly like maintainer input before writing code: **multi-stream** (is serializing overlap during breakable-cudagraph capture deliberate, and what is the intended fix?), **MoE shared experts** (relax the TP8 / `moe_backend==\"aiter\"` gate, or enable the aux-stream path for DeepSeek?), and **MoE backend** (is forcing `aiter_triton_mxfp4_bf16` for V4.1-Flash on gfx950 intentional, given the oracle prefers FlyDSL for DeepSeek-V4 routing?).\n\n### Environment\n\nMI355X x8 (gfx950, 256 CU, 288 GiB), ROCm 7.x, vLLM `0.28.1rc1.dev398+g79a7108d9`, torch `2.12.0+git6bbd260`, DeepSeek-V4.1-Flash (40 layers, hidden 5120, 384 routed experts / 6 per token, MXFP4 MoE + MXFP8 dense, DSpark 5-token MTP), TP4, `FULL_AND_PIECEWISE` cudagraph mode.\n\n### Before submitting a new issue...\n\n- [x] I have made sure that the title and body are clear and self-contained, and that I have searched for related issues and RFCs.\n\n\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/56506/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/56506/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/56417",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/56417/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/56417/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/56417/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/56417",
+      "id": 5421518829,
+      "node_id": "I_kwDOI7xefs8AAAABQyXP7Q",
+      "number": 56417,
+      "title": "[Bug]: extract_hidden_states uses first-column feedback for multi-token outputs",
+      "user": {
+        "login": "lingxiao-huang",
+        "id": 153699837,
+        "node_id": "U_kgDOCSlF_Q",
+        "avatar_url": "https://avatars.githubusercontent.com/u/153699837?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/lingxiao-huang",
+        "html_url": "https://github.com/lingxiao-huang",
+        "followers_url": "https://api.github.com/users/lingxiao-huang/followers",
+        "following_url": "https://api.github.com/users/lingxiao-huang/following{/other_user}",
+        "gists_url": "https://api.github.com/users/lingxiao-huang/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/lingxiao-huang/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/lingxiao-huang/subscriptions",
+        "organizations_url": "https://api.github.com/users/lingxiao-huang/orgs",
+        "repos_url": "https://api.github.com/users/lingxiao-huang/repos",
+        "events_url": "https://api.github.com/users/lingxiao-huang/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/lingxiao-huang/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 5135047172,
+          "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": "Something isn't working",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-09-11T07:16:19Z",
+      "updated_at": "2026-09-11T09:51:50Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\n<details>\n<summary>The output of <code>python collect_env.py</code></summary>\n\n```text\nroot@scsk-4090-1-vllm-test-0:~# python collect_env.py\nTraceback (most recent call last):\n  File \"/home/jovyan/collect_env.py\", line 20, in <module>\n    from vllm.envs import environment_variables\n  File \"/home/jovyan/com/ocr/NuExtract3/NuExtract3/lib/python3.11/site-packages/vllm/__init__.py\", line 14, in <module>\n    import vllm.env_override  # noqa: F401\n    ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jovyan/com/ocr/NuExtract3/NuExtract3/lib/python3.11/site-packages/vllm/env_override.py\", line 90, in <module>\n    from vllm.utils.torch_utils import is_torch_equal, is_torch_equal_or_newer\n  File \"/home/jovyan/com/ocr/NuExtract3/NuExtract3/lib/python3.11/site-packages/vllm/utils/torch_utils.py\", line 72, in <module>\n    PIN_MEMORY = is_pin_memory_available()\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jovyan/com/ocr/NuExtract3/NuExtract3/lib/python3.11/site-packages/vllm/utils/platform_utils.py\", line 45, in is_pin_memory_available\n    from vllm.platforms import current_platform\n  File \"/home/jovyan/com/ocr/NuExtract3/NuExtract3/lib/python3.11/site-packages/vllm/platforms/__init__.py\", line 277, in __getattr__\n    _current_platform = resolve_obj_by_qualname(platform_cls_qualname)()\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jovyan/com/ocr/NuExtract3/NuExtract3/lib/python3.11/site-packages/vllm/utils/import_utils.py\", line 109, in resolve_obj_by_qualname\n    module = importlib.import_module(module_name)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/conda/lib/python3.11/importlib/__init__.py\", line 126, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jovyan/com/ocr/NuExtract3/NuExtract3/lib/python3.11/site-packages/vllm/platforms/cuda.py\", line 23, in <module>\n    import vllm._C_stable_libtorch  # noqa\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nImportError: libcudart.so.13: cannot open shared object file: No such file or directory\n```\n\n</details>\n\n\n### 🐛 Describe the bug\n\n# [Bug] extract_hidden_states uses first-column feedback for multi-token outputs\n\n## Summary\n\nWhen using `extract_hidden_states` with async scheduling, I observed reproducible duplicated digits and punctuation in generated answers. I traced this to `ExtractHiddenStatesProposer.prepare_next_token_ids_padded()`: it reads only column 0 of `sampled_token_ids`, although a decoding iteration can produce two valid sampled tokens with `num_speculative_tokens=1`.\n\nFor a non-discarded row `[15, 18]`, the original helper returns:\n\n~~~text\nactual:   valid_count=1, next_token_id=15\nexpected: valid_count=2, next_token_id=18\n~~~\n\nBoth tokens can already be included in the valid output sent to the scheduler. The helper therefore reports different progress and a different continuation token from the committed output.\n\nA local fix that reuses `eagle_prepare_next_token_padded_kernel` restored the exact healthy baseline token IDs on three document samples, including a four-request sequence with diagnostic tracing disabled. Hidden extraction remained enabled, and two-token output steps still occurred.\n\n## Environment\n\n<!-- Replace the TODO fields before submitting. Use the Python environment actually used by vllm serve. -->\n\n- **Installed vLLM version / wheel or commit:** TODO — paste the actual build identity below.\n- **Model:** NuExtract3, 4B multimodal checkpoint. **Exact model repository and revision:** TODO.\n- **Hardware / driver / CUDA / PyTorch:** TODO — include collect_env output.\n- **Tensor parallelism:** 1.\n- **Relevant source:** the first-column implementation is present in the [v0.26.0 Hidden proposer source](https://docs.vllm.ai/en/v0.26.0/api/vllm/v1/spec_decode/extract_hidden_states/). This source reference is separate from the installed-build information requested above.\n- No third-party `vllm-hook` plugin was loaded in the tested NuExtract3 environment.\n\nRelevant configuration:\n\n| Setting | Value |\n|---|---|\n| `max_model_len` | 65536 |\n| `max_num_batched_tokens` | 65536 |\n| `max_num_seqs` | 1 |\n| `gpu_memory_utilization` | 0.88 |\n| dtype | bfloat16 |\n| Chunked prefill / prefix caching | Both disabled |\n| Async scheduling | Enabled in the observed runtime |\n| CUDA Graph | Default; also tested with `--enforce-eager` |\n| Native `qwen3_next_mtp` | Disabled |\n| Request sampling | temperature=0.2, seed=0, thinking disabled |\n| Request output limit | 16384; the core short reproductions did not reach it |\n| Client logprobs / prompt_logprobs | Not requested |\n| HTTP token IDs | Requested and saved directly |\n| Hidden export | Same-request prompt + decode, `include_output_tokens=true` |\n\nSpeculative configuration:\n\n~~~json\n{\n  \"method\": \"extract_hidden_states\",\n  \"num_speculative_tokens\": 1,\n  \"draft_model_config\": {\n    \"hf_config\": {\n      \"eagle_aux_hidden_state_layer_ids\": [32]\n    }\n  }\n}\n~~~\n\nThe connector was `ExampleHiddenStatesConnector`, with `kv_role=kv_producer`, synchronization locking enabled, and eight writer threads.\n\n<details>\n<summary>Environment output</summary>\n\nRun this in the serving environment:\n\n~~~bash\npython -m vllm.collect_env\n~~~\n\n~~~text\nTODO: paste the actual collect_env output here.\n~~~\n\n</details>\n\n## Minimal helper-level reproducer\n\nThe installed function was tested directly with small CUDA tensors; in particular, `[15, 18]` produced `count=1,next=15` before the fix and `count=2,next=18` after it.\n\nBelow is a reduced harness for that interface. It calls the actual installed helper, without constructing a model or running the scheduler. Only the backup buffer and request metadata are lightweight stand-ins.\n\n**Execution status of this newly packaged harness:** TODO — run it in the affected serving environment and replace this note with the actual output before submitting. The end-to-end results below come from the completed investigation, not from an execution of this newly packaged script.\n\nSave as `repro_hidden_feedback.py`, then run:\n\n~~~bash\npython repro_hidden_feedback.py\n~~~\n\n~~~python\nimport hashlib\nimport inspect\nimport json\nimport sys\nfrom types import SimpleNamespace\n\nimport torch\nimport vllm\nfrom vllm.v1.spec_decode.extract_hidden_states import (\n    ExtractHiddenStatesProposer,\n)\n\nif not torch.cuda.is_available():\n    raise SystemExit(\"This reproducer requires a CUDA-capable vLLM environment.\")\n\ndevice = torch.device(\"cuda\")\nbackup_token = 42\n\nclass BackupBuffer:\n    \"\"\"Only the buffer interface used by the real helper is needed.\"\"\"\n\n    def __init__(self, size):\n        self.host = torch.empty(size, dtype=torch.int32, device=\"cpu\")\n        self.np = self.host.numpy()\n        self.gpu = torch.empty(size, dtype=torch.int32, device=device)\n\n    def copy_to_gpu(self, size):\n        self.gpu[:size].copy_(self.host[:size])\n\nrows = [\n    [15, -1],  # one valid output in two slots\n    [15, 18],  # two different valid outputs\n    [15, 15],  # two identical valid outputs\n    [0, -1],   # token ID 0 is valid\n    [-1, -1],  # no valid output: use backup\n    [15, 18],  # discarded request: count 0 and use backup\n]\ndiscard_flags = [False, False, False, False, False, True]\nsize = len(rows)\nrequest_ids = [f\"request-{i}\" for i in range(size)]\n\nfake_proposer = SimpleNamespace(backup_next_token_ids=BackupBuffer(size))\nbatch = SimpleNamespace(\n    num_reqs=size,\n    req_ids=request_ids,\n    num_tokens_no_spec=[1] * size,\n    vocab_size=256,\n)\nrequests = {\n    request_id: SimpleNamespace(get_token_id=lambda position: backup_token)\n    for request_id in request_ids\n}\nsampled = torch.tensor(rows, dtype=torch.int32, device=device)\ndiscard = torch.tensor(discard_flags, dtype=torch.bool, device=device)\n\nhelper = ExtractHiddenStatesProposer.prepare_next_token_ids_padded\nsource = inspect.getsource(helper)\nprint(json.dumps({\n    \"python\": sys.executable,\n    \"vllm_version\": vllm.__version__,\n    \"helper_module\": inspect.getfile(helper),\n    \"helper_source_sha256\": hashlib.sha256(source.encode()).hexdigest(),\n}, indent=2))\n\nwith torch.inference_mode():\n    next_ids, counts = helper(\n        fake_proposer, sampled, requests, batch, discard\n    )\n\n# Synchronization here is intentional: this is a standalone function test,\n# not a hook inserted into a running generation loop.\nobserved = {\n    \"valid_counts\": counts.cpu().tolist(),\n    \"next_ids\": next_ids.cpu().tolist(),\n}\nexpected = {\n    \"valid_counts\": [1, 2, 2, 1, 0, 0],\n    \"next_ids\": [15, 18, 15, 0, backup_token, backup_token],\n}\nprint(json.dumps({\"observed\": observed, \"expected\": expected}, indent=2))\nassert observed == expected, \"Hidden feedback does not match valid sampled outputs\"\n~~~\n\nFor the linked first-column implementation, the values predicted by the code are:\n\n~~~text\nvalid_counts = [1, 1, 1, 1, 0, 1]\nnext_ids     = [15, 15, 15, 0, 42, 42]\n~~~\n\nThe two-valid-token rows expose the main issue. The discarded row also checks consistency with the existing EAGLE feedback contract.\n\n## Expected behavior\n\nFor each non-discarded request, the helper should:\n\n1. Count all valid sampled output columns.\n2. Return the last valid sampled token as the continuation token.\n3. Return count 0 and a backup token when there are no valid sampled outputs.\n4. Return count 0 and a backup token for a discarded request.\n\nUnused output slots are `-1`; token ID 0 is valid.\n\n`num_speculative_tokens=1` constrains the draft length. It does not imply that the rejection sampler can only return one valid output token: an accepted draft plus an additional target-model token can produce two outputs.\n\n## Source-level findings\n\nThe relevant function is:\n\n~~~text\nvllm/v1/spec_decode/extract_hidden_states.py\nExtractHiddenStatesProposer.prepare_next_token_ids_padded\n~~~\n\nThe implementation selects:\n\n~~~python\nsampled = sampled_token_ids[:, 0]\n~~~\n\nIt computes the valid count from that single column and also selects the continuation token from that column. Its comment assumes a one-column sampled result because the speculative length is one. See the [official source](https://docs.vllm.ai/en/v0.26.0/api/vllm/v1/spec_decode/extract_hidden_states/).\n\nBy contrast, the [existing EAGLE feedback kernel](https://docs.vllm.ai/en/v0.26.0/api/vllm/v1/spec_decode/utils/) counts all valid columns, selects the last valid token, and handles discard/backup cases. The [base proposer](https://docs.vllm.ai/en/v0.26.0/api/vllm/v1/spec_decode/llm_base_proposer/) already uses it.\n\nThe Hidden branch in [GPUModelRunner](https://docs.vllm.ai/en/v0.26.0/api/vllm/v1/worker/gpu_model_runner/) passes the helper outputs to `_copy_valid_sampled_token_count()`. The count participates in subsequent async state corrections, and the continuation token is stored for subsequent input preparation. These are execution inputs, not just logging metadata.\n\n## End-to-end observations\n\nWith the same document, template, decoding parameters, and seed, enabling the Hidden path produced errors such as:\n\n| Field | Healthy baseline, Hidden off | Hidden on, before fix |\n|---|---|---|\n| Previous balance | `277.79` | `277..79` |\n| Previous reading | `40036` | `400336` |\n| Usage quantity | `669` | `6699` |\n\nThe malformed output was already present in the original token ID sequence. It was not introduced by HTTP detokenization or JSON repair.\n\nFor the short `we-energies-sample-bill` case:\n\n| Metric | Hidden off | Hidden on, before fix | Hidden on, after local fix |\n|---|---:|---:|---:|\n| HTTP output token count, including stop token | 326 | 332 | 326 |\n| Token IDs equal to Hidden-off baseline | — | No | Yes, every ID |\n| ExtractBench Value F1 | 1.0 | 0.5238 | 1.0 |\n| Strict JSON | Yes | No | Yes |\n| Hidden export | Not requested | Successful | Successful |\n\nThe first differing output ID was at zero-based index 29, in the account number, before the later malformed decimal.\n\nCommit-side tracing showed that every formal append matched the valid output received by the scheduler. Concatenating those appends exactly reconstructed the final HTTP sequence:\n\n| Run | One-token appends | Two-token appends | Total append calls | Total output tokens |\n|---|---:|---:|---:|---:|\n| Before fix | 320 | 6 | 326 | 332 |\n| After fix | 314 | 6 | 320 | 326 |\n\nThus, the fix did **not** work by suppressing two-token outputs or deleting repeated tokens after generation.\n\nAfter removing the diagnostic hooks, this request sequence also passed:\n\n| Request order | Document | Patched output |\n|---:|---|---|\n| 1 | we-energies | 326 IDs, exactly equal to baseline and the traced fixed run; strict JSON |\n| 2 | ti_spec | 1301 IDs, exactly equal to baseline; strict JSON |\n| 3 | hingham | 487 IDs, exactly equal to baseline; Value F1=0.8846, its healthy baseline |\n| 4 | we-energies again | Same IDs as request 1 and baseline; Value F1=1.0 |\n\nHidden remained enabled. For the fixed we-energies run, the exported completion IDs matched the HTTP output IDs except for the final sampled token; the same-request export succeeded. Vector-by-vector numerical validation is separate and not claimed here.\n\nThe end-to-end data require the original document and extraction template. The helper reproducer above isolates the feedback contract without those inputs.\n\n## Controls already tested\n\n- The failure occurs on the first business request after a fresh restart.\n- Independent restarts reproduced the same bad we-energies token sequence.\n- Turning off native MTP without enabling Hidden did not reproduce the degradation.\n- Requesting logprobs without Hidden did not reproduce it; the failing Hidden runs did not request logprobs.\n- The Hidden-off control used the same 65536 window and disabled chunked prefill/prefix caching.\n- Default and `--enforce-eager` produced identical IDs within each Hidden-on/off group.\n- A separate default-mode bridge run at utilization 0.90 reproduced the same bad 332-ID sequence as utilization 0.88.\n- Observation-only tracing preserved the unpatched output IDs; the local fix remained effective after those hooks were removed.\n\n## Local fix and proposed regression coverage\n\nThe only functional change for the fixed runs was to replace the Hidden helper's first-column logic with the existing `eagle_prepare_next_token_padded_kernel`, preserving the existing backup-token preparation.\n\nThe change returns both:\n\n- the full valid sampled-output count;\n- the last valid sampled token.\n\nIt also follows the kernel's discard behavior. The `propose()` return slice `[:, :1]` was left unchanged, as were the sampler, scheduler append logic, connector, model weights, and request sampling parameters.\n\nActual GPU function tests passed for two valid outputs, discarded requests, token ID 0, and mixed batches. The end-to-end evidence supports the **feedback-interface fix as a whole**; I have not separately isolated a count-only fix from a continuation-token-only fix.\n\nSuggested regression cases:\n\n- `[15, -1]` → count 1, next 15.\n- `[15, 18]` → count 2, next 18.\n- `[15, 15]` → count 2, next 15.\n- Token ID 0 remains valid.\n- No valid outputs → count 0, backup.\n- Discarded request → count 0, backup.\n- Mixed rows and repeated helper calls do not mix request state.\n\n<!-- TODO: attach the exact locally tested patch diff. Do not substitute an untested rewrite for the patch used in the reported runs. -->\n\nCould the Hidden proposer reuse the existing feedback kernel, with these cases added as regression tests?\n\n## Evidence boundaries and related work\n\n- Async CPU getter logs were not reliably aligned to GPU production iterations by a simple incrementing log ID. I do **not** claim a directly observed per-iteration GPU feedback value from those logs. The evidence is the real helper's behavior, the observed multi-token result shape/content, the caller's consumption of this interface, and the local-fix regression results.\n- Exact token-ID recovery is an observed result for these test cases, not a general claim that different speculative paths must share an identical seeded random-number trajectory.\n- The post-fix checks cover three distinct documents and a four-request sequence. Full-dataset post-fix regression and all-model/all-version coverage are not claimed.\n- This appears separate from [PR #38610](https://github.com/vllm-project/vllm/pull/38610). That fix addresses `propose()` returning the wrong draft shape, as described in the [official advisory](https://github.com/vllm-project/vllm/security/advisories/GHSA-83vm-p52w-f9pw). This issue concerns the feedback helper consuming sampled outputs, and the local fix does not change the draft-return slice.\n- I have not established the complete affected-version range or confirmed whether current main contains a separate fix.\n\n\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/56417/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/56417/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/56396",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/56396/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/56396/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/56396/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/56396",
+      "id": 5420359662,
+      "node_id": "I_kwDOI7xefs8AAAABQxQf7g",
+      "number": 56396,
+      "title": "[Bug]: DeepSeek-V4.1-Flash: SimpleCPUOffloadConnector crashes with `assert block_size % hash_block_size == 0` (block_size=8, hash_block_size=32)",
+      "user": {
+        "login": "H100-H200-B200",
+        "id": 246281047,
+        "node_id": "U_kgDODq3zVw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/246281047?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/H100-H200-B200",
+        "html_url": "https://github.com/H100-H200-B200",
+        "followers_url": "https://api.github.com/users/H100-H200-B200/followers",
+        "following_url": "https://api.github.com/users/H100-H200-B200/following{/other_user}",
+        "gists_url": "https://api.github.com/users/H100-H200-B200/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/H100-H200-B200/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/H100-H200-B200/subscriptions",
+        "organizations_url": "https://api.github.com/users/H100-H200-B200/orgs",
+        "repos_url": "https://api.github.com/users/H100-H200-B200/repos",
+        "events_url": "https://api.github.com/users/H100-H200-B200/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/H100-H200-B200/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 5135047172,
+          "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": "Something isn't working",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 8746007475,
+          "node_id": "LA_kwDOI7xefs8AAAACCU17sw",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/deepseek",
+          "name": "deepseek",
+          "color": "1995FE",
+          "default": false,
+          "description": "Related to DeepSeek models",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 10799676958,
+          "node_id": "LA_kwDOI7xefs8AAAACg7X-Hg",
+          "url": "https://api.github.com/repos/vllm-project/vllm/labels/DSv4",
+          "name": "DSv4",
+          "color": "be3bfa",
+          "default": false,
+          "description": "",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-09-11T04:27:03Z",
+      "updated_at": "2026-09-11T18:21:56Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Your current environment\n\n## Environment\n\n- Hardware: 8 × H100 80GB (HBM3), CUDA 13\n- vLLM version: `0.1.dev20904+g179dd0fa9` (image `vllm/vllm-openai:deepseekv41-flash-0909`)\n- Model: DeepSeek-V4.1-Flash (fp8, hybrid KV cache: MLA full-attention group @ block_size 32 + SWA/circular-buffer group @ block_size 8; DSpark MTP speculative decoding)\n- Python 3.12, TP=8, EP=8\n\n### 🐛 Describe the bug\n\n## Summary\n\nServing `DeepSeek-V4.1-Flash` (hybrid KV: full-attention MLA + sliding-window/circular-buffer groups) with the `SimpleCPUOffloadConnector` crashes the EngineCore on the **first scheduled request** with:\n\n```\n(EngineCore pid=536) [ASSERT-DEBUG] resolve_block_hashes: block_size=8, hash_block_size=32, modulo=8   <-- our instrumented print, see note below\n(EngineCore pid=536) ERROR ... assert block_size % hash_block_size == 0\nAssertionError\n```\n\n(The `[ASSERT-DEBUG]` line is **not** stock vLLM output — we volume-mounted a patched `kv_cache_utils.py` into the container that prints `block_size`/`hash_block_size`/modulo just before the assert, since the bare `AssertionError` carries no values. Stock vLLM produces only the assert line; details in *Extra context*.)\n\nNote `block_size (8) < hash_block_size (32)` — the call asks `resolve_block_hashes` to view 32-token-granularity hashes at a *finer* 8-token granularity, but the function only supports the coarsening direction (`block_size >= hash_block_size`, enforced by the divisibility assert). With 8 < 32 the assert `8 % 32 == 0` can never hold, so the crash is deterministic on the first request.\n\n## Deploy command (paths/ports/keys elided)\n\n```bash\ndocker run --gpus all --privileged --ipc=host --net=host \\\n  <model-volume-mounts> \\\n  vllm/vllm-openai:deepseekv41-flash-0909 \\\n  vllm serve <model-path> \\\n  --tokenizer-mode deepseek_v41 \\\n  --enable-expert-parallel \\\n  --tensor-parallel-size 8 \\\n  --max-num-seqs 32 \\\n  --gpu-memory-utilization 0.9 \\\n  --tool-call-parser deepseek_v41 \\\n  --enable-auto-tool-choice \\\n  --reasoning-parser deepseek_v41 \\\n  --mm-encoder-tp-mode data \\\n  --compilation-config '{\"cudagraph_capture_sizes\": [1, 2, 4, 6, 8, 12, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160]}' \\\n  --speculative-config '{\"method\":\"dspark\",\"num_speculative_tokens\":5,\"draft_sample_method\":\"probabilistic\",\"rejection_sample_method\":\"block\",\"enable_adaptive_verification\":true}' \\\n  --enable-prompt-tokens-details \\\n  --kv-transfer-config '{\"kv_connector\":\"SimpleCPUOffloadConnector\",\"kv_role\":\"kv_both\",\"kv_connector_extra_config\":{\"cpu_bytes_to_use_per_rank\":118111600640,\"lazy_offload\":false}}'\n```\n\nNote on `--compilation-config`: the default cudagraph capture sizes (up to 512 with profiling) OOM on this model+hardware, so capture sizes are explicitly capped at 160.\n\n## Reproduction\n\n1. Start the server with the command above. Startup completes normally (weights load, CPU offload pool allocates, CUDA graphs capture, \"Application startup complete\").\n2. Send any request that triggers KV offload bookkeeping (e.g. a chat completion with a long prompt).\n3. EngineCore crashes immediately in the scheduler step:\n\n```\n(EngineCore pid=536) [ASSERT-DEBUG] resolve_block_hashes: block_size=8, hash_block_size=32, modulo=8\nTraceback (most recent call last):\n  File \".../vllm/v1/engine/core.py\", line 1430, in run_busy_loop\n    self._process_engine_step()\n  File \".../vllm/v1/core/sched/scheduler.py\", line 1373, in schedule\n    meta = self._build_kv_connector_meta(self.connector, scheduler_output)\n  File \".../vllm/distributed/kv_transfer/kv_connector/v1/simple_cpu_offload_connector.py\", line 268, in build_connector_meta\n    return self.scheduler_manager.build_connector_meta(scheduler_output)\n  File \".../vllm/v1/simple_kv_offload/manager.py\", line 453, in build_connector_meta\n    store_gpu, store_cpu, store_req_ids, store_meta = self.prepare_store_specs(...)\n  File \".../vllm/v1/simple_kv_offload/manager.py\", line 523, in prepare_store_specs\n    return self._prepare_eager_store_specs(scheduler_output)\n  File \".../vllm/v1/simple_kv_offload/manager.py\", line 638, in _prepare_eager_store_specs\n    self._select_eager_blocks_to_store(state, block_ids_by_group)\n  File \".../vllm/v1/simple_kv_offload/manager.py\", line 720, in _select_eager_blocks_to_store\n    resolved_hashes = resolve_block_hashes(\n  File \".../vllm/v1/core/kv_cache_utils.py\", line 2788, in resolve_block_hashes\n    assert block_size % hash_block_size == 0\nAssertionError\n```\n\n## Root cause analysis\n\nThe offload path mixes up per-group block geometry with the global hash granularity:\n\n1. `resolve_kv_cache_block_sizes()` (`vllm/v1/core/kv_cache_utils.py:~726-792`) computes for multi-group models:\n   - `hash_block_size = gcd(group_block_sizes)` over **prefix-cacheable** groups — for DSV4.1-Flash: gcd(32, 8) = 8? No — in our crash the resolved `hash_block_size=32` and the group's `group_size=8`, meaning the SWA/circular-buffer group (block_size 8) was **excluded** from the hashing_sizes GCD (its `prefix_cacheable` is False for `CircularBufferSpec`/Kpool-tail style specs), so `hash_block_size` followed the full-attention group (32).\n   - `SimpleCPUOffloadScheduler` stores this as `self.hash_block_size` and asserts `self.block_size % self.hash_block_size == 0` at init (manager.py:129) — which passes because `self.block_size` is the **scheduler** block size (LCM), not any single group's size.\n\n2. At request time, `_select_eager_blocks_to_store()` (manager.py:720) iterates **all** KV cache groups — including the non-prefix-cacheable SWA group — and calls:\n   ```python\n   resolved_hashes = resolve_block_hashes(\n       request.block_hashes, self.hash_block_size, group_size)\n   ```\n   with `group_size = 8` (the SWA group) and `hash_block_size = 32`.\n\n3. `resolve_block_hashes()` (kv_cache_utils.py:2770-2789) only supports viewing fine hashes at a **coarser** granularity (`block_size >= hash_block_size`, enforced by the assert). Receiving `block_size(8) < hash_block_size(32)` violates its contract.\n\nTwo contributing bugs:\n- `_select_eager_blocks_to_store` passes a group-local block size into a function whose contract assumes the caller wants a **scheduler-level** view; for groups with `block_size < hash_block_size` the call is meaningless (there are no per-group hashes at 8-token granularity — hashes only exist at 32-token boundaries).\n- The init-time assert (manager.py:129) checks the wrong invariant (`scheduler_block_size % hash_block_size == 0`), which is trivially true and hides the per-group mismatch until the first request.\n\n## Suggested fixes\n\nAny of these would unblock DSV4.1-Flash-class hybrid models; (1)+(2) together are probably the right combination:\n\n1. **Skip hash resolution for non-prefix-cacheable groups** in `_select_eager_blocks_to_store` (and the lazy variant): the SWA/circular-buffer group's KV is windowed/evicted anyway, so offloading it by content hash is not meaningful. Only resolve hashes for groups whose `kv_cache_spec.prefix_cacheable` is True and whose `block_size >= hash_block_size`.\n\n2. **Clamp per-group block size in the manager**: when calling `resolve_block_hashes`, pass `max(group_size, self.hash_block_size)` or round `group_size` up to a multiple of `hash_block_size`, mirroring what `BlockHashListWithBlockSize` does for the coarser direction.\n\n3. **Harden `resolve_block_hashes`**: replace the bare assert with a descriptive error, and/or support the `block_size < hash_block_size` direction by returning the finest available view with an offset warning — though semantically this case should be prevented by the caller (fix 1).\n\n## Extra context\n\n- Same model + same image **without** `--kv-transfer-config` serves and benchmarks fine (stable under 100K-prefix prefix-repetition load, and single-batch decode TPS ~330-350 tok/s with DSpark), so the regression is specific to the CPU offload connector path.\n- An equivalent sglang deployment with hierarchical cache (`--enable-hierarchical-cache`, host pool ~127 GB/rank paged) serves the same workload without issue, for comparison.\n- We patched `kv_cache_utils.py` inside the container with a debug print before the assert to capture the failing values (`block_size=8, hash_block_size=32, modulo=8`), which is how the numbers above were obtained.\n\n---\n*This issue report was generated with AI assistance.*\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/56396/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/56396/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/vllm-project/vllm/issues/56361",
+      "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+      "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/56361/labels{/name}",
+      "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/56361/comments",
+      "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/56361/events",
+      "html_url": "https://github.com/vllm-project/vllm/issues/56361",
+      "id": 5418874736,
+      "node_id": "I_kwDOI7xefs8AAAABQv13cA",
+      "number": 56361,
+      "title": "[Usage]: per-request metrics count parallel-sampling children, usage counts the request",
+      "user": {
+        "login": "GuoCheng24",
+        "id": 224264187,
+        "node_id": "U_kgDODV3_-w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/224264187?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/GuoCheng24",
+        "html_url": "https://github.com/GuoCheng24",
+        "followers_url": "https://api.github.com/users/GuoCheng24/followers",
+        "following_url": "https://api.github.com/users/GuoCheng24/following{/other_user}",
+        "gists_url": "https://api.github.com/users/GuoCheng24/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/GuoCheng24/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/GuoCheng24/subscriptions",
+        "organizations_url": "https://api.github.com/users/GuoCheng24/orgs",
+        "repos_url": "https://api.github.com/users/GuoCheng24/repos",
+        "events_url": "https://api.github.com/users/GuoCheng24/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/GuoCheng24/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 3,
+      "created_at": "2026-09-11T00:41:06Z",
+      "updated_at": "2026-09-11T09:24:19Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Summary\n\nFor a request with `n > 1`, eleven per-request metrics are recorded once per *child*\nrequest, while two others and the OpenAI `usage` block are recorded once per *user* request.\nA single `n=4` completion increments `vllm:request_params_n_count` by 1 and\n`vllm:e2e_request_latency_seconds_count` by 4 — two vLLM per-request metrics giving different\nanswers for how many requests finished — and adds four times the prompt to\n`vllm:prompt_tokens_total` while `usage.prompt_tokens` reports it once.\n\n`ParentRequest.observe_finished_request()` already carries the de-duplication and applies it\nto exactly two metrics, which are exactly the two the design doc lists under *Future Work →\nParallel Sampling*. I could not tell whether the remaining eleven are meant to count\nchildren, so I am filing this as a question rather than as a bug.\n\n### Reproduction\n\n`vllm==0.28.0`, `Qwen2.5-0.5B-Instruct`, one RTX 4090,\n`--enforce-eager --enable-prefix-caching --enable-prompt-tokens-details`.\nPrompt `\"Write one sentence about the sea, then stop.\"` (10 tokens, `cached_tokens` 0, so no\nprefix-cache interference), `max_tokens=32`, one request each at `n=1` and `n=4`:\n\n| | `n=1` | `n=4` |\n|---|---|---|\n| `usage.prompt_tokens` in the response | 10 | **10** |\n| `vllm:request_params_n_count` | +1 | **+1** |\n| `vllm:request_max_num_generation_tokens_count` | +1 | **+1** |\n| `vllm:e2e_request_latency_seconds_count` | +1 | **+4** |\n| `vllm:request_prompt_tokens_count` | +1 | +4 |\n| `vllm:request_generation_tokens_count` | +1 | +4 |\n| `vllm:time_to_first_token_seconds_count` | +1 | +4 |\n| `vllm:request_queue_time_seconds_count` | +1 | +4 |\n| `vllm:request_prefill_time_seconds_count` | +1 | +4 |\n| `vllm:request_decode_time_seconds_count` | +1 | +4 |\n| `vllm:request_inference_time_seconds_count` | +1 | +4 |\n| `vllm:request_time_per_output_token_seconds_count` | +1 | +4 |\n| `vllm:request_params_max_tokens_count` | +1 | +4 |\n| `vllm:request_prefill_kv_computed_tokens_count` | +1 | +4 |\n| `vllm:prompt_tokens_total` | +10 | **+40** |\n\n(`http_request_duration_highr_seconds_count`, from the `prometheus_fastapi_instrumentator`\nmiddleware rather than from vLLM, stays at +1 in both — included only to note that the\nHTTP layer and the engine layer on the same `/metrics` endpoint report different request\ncounts for the same traffic.)\n\nThree repeats of the `n=4` case gave identical deltas for all fourteen counters above. The split is\nthe same eleven-and-two at `n=2` and `n=8`, with `prompt_tokens_total` at exactly 2× and 8×;\nthe same under `stream=true`; the same on `/v1/chat/completions` (43-token prompt, `n=4`,\n`prompt_tokens_total` +172); and the same on `vllm==0.10.1.1`, with the nine of these metrics\nthat existed then. `block_size` is 16 here, as reported by `vllm:cache_config_info`.\n\n```python\nimport json, urllib.request, re, time\nop = urllib.request.build_opener(urllib.request.ProxyHandler({}))\nB = \"http://127.0.0.1:8000\"\n\ndef metrics():\n    out = {}\n    for line in op.open(B + \"/metrics\").read().decode().splitlines():\n        if line.startswith(\"#\"):\n            continue\n        m = re.match(r'^([a-zA-Z_:][\\w:]*)(\\{[^}]*\\})?\\s+([-\\d.eE+]+)$', line.strip())\n        if m:\n            out[m.group(1)] = out.get(m.group(1), 0.0) + float(m.group(3))\n    return out\n\nfor n in (1, 4):\n    a = metrics()\n    rq = urllib.request.Request(B + \"/v1/completions\", headers={\"Content-Type\": \"application/json\"},\n        data=json.dumps({\"model\": \"...\", \"prompt\": \"Write one sentence about the sea, then stop.\",\n                         \"max_tokens\": 32, \"n\": n, \"temperature\": 0.9, \"seed\": 77}).encode())\n    r = json.load(op.open(rq)); time.sleep(2.5); b = metrics()\n    print(f\"n={n}  usage.prompt_tokens={r['usage']['prompt_tokens']}\")\n    for k in (\"vllm:prompt_tokens_total\", \"vllm:e2e_request_latency_seconds_count\",\n              \"http_request_duration_highr_seconds_count\", \"vllm:request_params_n_count\"):\n        print(f\"   {k:<46} +{b.get(k,0) - a.get(k,0):.0f}\")\n```\n\n### Where it comes from\n\n`ParentRequest` expands `n` into `n` separate `EngineCoreRequest`s with ids\n`f\"{index}_{request_id}\"`, so the finished-request path in\n`OutputProcessor._update_stats_from_finished()` runs once per child. The one place that\nknows about the parent is `ParentRequest.observe_finished_request()` in\n`vllm/v1/engine/parallel_sampling.py`:\n\n```python\n# Child requests finished, we can now record to iteration stats\nif parent_req is None or not parent_req.child_requests:\n    iteration_stats.max_num_generation_tokens_iter.append(num_generation_tokens)\n    iteration_stats.n_params_iter.append(n_param)\n```\n\nThose two are `vllm:request_max_num_generation_tokens` and `vllm:request_params_n`, and they\nare the two metrics `docs/design/metrics.md` names under *Future Work → Parallel Sampling*.\nNothing else on that path is parent-aware.\n\n### Why it matters\n\nTwo consequences, stated as narrowly as I can support them:\n\n- **Every latency histogram is weighted by `n`.** The percentile *values* do not move: at\n  `n=4` the parent's wall clock was 0.572 s and `vllm:e2e_request_latency_seconds_sum` rose\n  2.261 s over 4 observations, i.e. 0.565 s each, because the children run in lockstep and\n  finish together. What moves is the weight — an `n=4` request contributes four observations\n  and an `n=1` request one, to `e2e_request_latency`, `time_to_first_token`,\n  `request_queue_time` and the rest — so on mixed traffic every latency percentile is taken\n  over a sample in which parallel-sampling requests are over-represented `n`-fold.\n\n- **`prompt_tokens_total` sits between two other numbers and matches neither.** On a cold\n  282-token prompt at `n=4`, with prefix caching on: `usage.prompt_tokens` 282,\n  `vllm:request_prefill_kv_computed_tokens_sum` **+312**, and `vllm:prompt_tokens_total`\n  **+1128**. The children do share the prefill — `prefix_cache_hits` +816 = 272 × 3, the\n  three later children each hitting the 17 aligned blocks and recomputing only the 10-token\n  tail — so 312 is the work and 282 is the prompt, while 1128 is 282 × 4. The doc describes\n  `prompt_tokens_total` as *\"Total number of prompt tokens processed\"*. At `n=1` all three\n  agree at 282.\n\nThe `usage` block is internally consistent at `n>1`: `prompt_tokens` and `cached_tokens` are\nboth per user request and agree with each other. The parent/child boundary falls exactly\nbetween `usage` and `/metrics`.\n\n### Question\n\nIs per-child recording intended for these eleven, with `request_params_n` and\n`request_max_num_generation_tokens` being the only two meant to become parent-aware? If so,\nwould you take a documentation note next to `vllm:e2e_request_latency_seconds` and\n`vllm:prompt_tokens_total` saying they count child requests under parallel sampling, so they\nare not read as per-user-request?\n\nIf it is not intended, I am happy to open a PR, but I would rather hear the direction first,\nbecause the two obvious versions differ a lot: routing the finished-request path through the\nsame `parent_req.child_requests` check would change the meaning of existing series, whereas\nadding parent-level series alongside them would not.\n\nRelated: #55634 is the same boundary on the abort path, where the engine counters move and\nthe per-request ones do not.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/vllm-project/vllm/issues/56361/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/56361/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

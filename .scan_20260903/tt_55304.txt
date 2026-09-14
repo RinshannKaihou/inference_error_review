@@ -1,0 +1,60 @@
+### 55304 [closed] ttnn.div silently ignores dtype=: every dispatch passes std::nullopt in the output-dtype slot, including the branch that just validated it
+### Summary
+
+`ttnn.div` accepts a `dtype=` argument, validates it in one branch, and then never applies it. Every dispatch inside `div` hardcodes `std::nullopt` in the output-dtype position, so the result always comes back in the input's dtype with no error and no warning.
+
+Measured on **ttsim** (tenstorrent/ttsim v1.10.3, `libttsim_bh.so`, Blackhole) with the prebuilt tt-metal `v0.79.0-dev20260902` ubuntu22.04 debs and SFPI 7.72.0:
+
+```
+a = full([1,1,32,32], 7.0) bfloat16, b = full([1,1,32,32], 2.0) bfloat16
+
+ttnn.div(a, b)                                             -> dtype=BFLOAT16  val=3.5
+ttnn.div(a, b, dtype=ttnn.float32)                         -> dtype=BFLOAT16  val=3.5
+ttnn.div(a, b, rounding_mode="floor", dtype=ttnn.int32)    -> dtype=BFLOAT16  val=3.0
+```
+
+The requested `float32` and `int32` are both silently discarded.
+
+### Cause
+
+`ttnn/cpp/ttnn/operations/eltwise/binary/device/binary_composite_op.cpp` — `div` takes `output_dtype` (`:154`) but every call site passes `std::nullopt` in that argument slot instead of forwarding it:
+
+```cpp
+if (rounding_mode == "floor") {
+    return ttnn::detail::invoke_binary_ng(
+        input,
+        value,
+        binary::BinaryOpType::DIV_FLOOR,
+        std::nullopt,            // <-- output_dtype position
+        output_mem_config,
+        ...
+}
+if (rounding_mode == "trunc") {
+    return ttnn::detail::invoke_binary_ng(
+        input, value, binary::BinaryOpType::DIV_TRUNC,
+        std::nullopt,            // <-- again
+        ...
+}
+// rounding_mode = None
+TT_FATAL(
+    (!output_dtype.has_value() || output_dtype == DataType::FLOAT32),
+    "Incorrect output_dtype value for Integer Division(rounding_mode=None) ; valid input values are None or "
+    "ttnn.float32");
+return ttnn::detail::invoke_binary_ng(
+    input, value, binary::BinaryOpType::DIV,
+    std::nullopt,                // <-- and again, even though it was just validated
+    ...
+```
+
+and on the non-int32 rounding path (`:253`):
+
+```cpp
+std::optional<Tensor> divided = ttnn::divide(
+    input,
+    value,
+    std::nullopt,                // <-- output_dtype position
+    output_mem_config,
+    ...
+```
+
+The `TT_FATAL` at the `rounding_mode = None` branch is the c

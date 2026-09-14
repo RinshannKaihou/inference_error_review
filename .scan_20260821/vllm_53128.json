@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53128",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53128/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53128/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53128/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/53128",
+  "id": 5205336131,
+  "node_id": "I_kwDOI7xefs8AAAABNkMgQw",
+  "number": 53128,
+  "title": "[Bug][KVOffload] PD Multi Tier discards parked KV after a fixed 60s, so a queued consumer recomputes",
+  "user": {
+    "login": "nilig",
+    "id": 36198131,
+    "node_id": "MDQ6VXNlcjM2MTk4MTMx",
+    "avatar_url": "https://avatars.githubusercontent.com/u/36198131?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/nilig",
+    "html_url": "https://github.com/nilig",
+    "followers_url": "https://api.github.com/users/nilig/followers",
+    "following_url": "https://api.github.com/users/nilig/following{/other_user}",
+    "gists_url": "https://api.github.com/users/nilig/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/nilig/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/nilig/subscriptions",
+    "organizations_url": "https://api.github.com/users/nilig/orgs",
+    "repos_url": "https://api.github.com/users/nilig/repos",
+    "events_url": "https://api.github.com/users/nilig/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/nilig/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-08-20T15:51:12Z",
+  "updated_at": "2026-08-21T19:45:42Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\nvLLM `main` (nightly `5a4c8d99`), plus #52912 applied. Two instances,\nprefill and decode, each running `OffloadingConnector` with\n`TieringOffloadingSpec` (CPU primary + `p2p` secondary tier).\n\n### Describe the bug\n\nA PD Multi Tier producer discards stored KV 60 s after `submit_store` when no\n`FetchMsg` has bound the `kv_request_id` yet, so a consumer whose fetch is\nissued later finds nothing, burns its own 30 s load deadline, and recomputes\nthe prompt.\n\n`_UNBOUND_STORE_TIMEOUT_S = 60.0` (`vllm/v1/kv_offload/tiering/p2p/manager.py`)\nis a fixed timer counted from store time. Nothing ties it to whether the\nconsumer's request still exists or is merely queued behind other work, so the\nreap can fire while the request it belongs to is perfectly alive. When the\nlate fetch arrives, the consumer waits out `_LOAD_TIMEOUT_S = 30.0`\n(`.../p2p/session/client.py`) before falling back to recompute.\n\nThis is separate from #52808 and is not addressed by #52912; that fix makes a\nwarm producer cascade its blocks, this is about how long those blocks survive\nwhile the peer has not asked for them yet.\n\nReproduced with two vLLM instances and three curls - no router, no proxy, no\nscheduler involved. The only difference between the two cases is how long the\nconsumer waits before fetching:\n\n| case | consumer fetch delay | consumer leg | bytes pulled |\n| --- | ---: | ---: | ---: |\n| control | 5 s (inside the park) | 0.30 s | 580,962,816 |\n| late | 65 s (past the park) | 38.31 s | 0 |\n\nProducer log for the late case:\n\n```\nP2P <producer-ip>:7777: unbound store kv_request_id=park-late-39 timed out\nafter 60s without a fetch - failing 1 job(s)\n```\n\n### Why this fires in practice\n\nThe 60 s clock does not start when prefill completes - it starts at the\nproducer's FIRST stored chunk. `_build_store_jobs` iterates\n`scheduler_output.num_scheduled_tokens` (in-flight requests), `complete_store`\ncascades each finished store job to the secondary tiers every step, and\n`_reap_unbound_stores` keys off `batches[0].submitted_at`, the oldest batch,\nthen pops the whole `kv_request_id`.\n\nMeasured on an idle H200 with a 98 K-token producer leg: HTTP returned in\n6.7 s, the first batch parked at +1 s, and with no fetch sent the reap fired\nat first-park + 60 s rather than completion + 60 s (the two predictions\ndiffer by 6 s in that setup; the log lands on the former).\n\nSo the failing condition is not decoder queueing. The real budget is\nfirst-chunk-to-fetch < 60 s, where the fetch only happens after the remaining\nprefill, the producer's HTTP return, proxy dispatch, decode admission, and\nthe decode scheduler's lookup/flush. The producer's own prefill spends the\nbudget first: 6.7 s of it idle at 98 K tokens, 13.3 s under mild concurrent\nload on the same GPU. At real concurrency on long prompts the sum passes\n60 s with the decoder never queueing at all. Each occurrence costs a 30 s\nstall plus a full prompt recompute, which feeds back into the load that\ncaused the delay.\n\nBoth leg-dispatch orders lose, so this cannot be fixed by the caller:\n\n- dispatch the legs concurrently and the fetch can arrive **before** the\n  store, so demand parks and the consumer burns its 30 s deadline. This is\n  what llm-d/llm-d-router#2451 fixes on the routing-proxy side, by running\n  the prefill leg to completion before dispatching decode\n- dispatch them sequentially, as that PR does and as the NIXL path already\n  did, and the fetch can arrive **after** the 60 s reap - this issue\n\nA post-reap fetch is also not rejected: the reap adds the id to\n`_failed_req_ids`, but the fetch-bind path never consults that set (it feeds\nonly the consumer-side `lookup()` and dead-session teardown, despite the\nreap docstring saying otherwise). The late fetch binds, finds nothing, and\nparks silently until the consumer's 30 s deadline.\n\n### Steps to reproduce\n\nTwo instances, `PF` = producer, `DE` = consumer, both with the tiering spec\nand a `p2p` secondary tier.\n\n```sh\nM=<model>; ID=park-$$\nPROMPT=$(awk 'BEGIN{p=\"unique-'$ID' \";for(i=0;i<900;i++) p=p \"alpha bravo charlie delta echo \";print p}')\n\n# producer leg: stores KV under ID, parks it (no peer has fetched yet)\ncurl -s -o /dev/null -w 'producer http=%{http_code} t=%{time_total}\\n' \\\n  -X POST \"http://$PF:8000/v1/completions\" -H 'Content-Type: application/json' \\\n  -d \"{\\\"model\\\":\\\"$M\\\",\\\"prompt\\\":\\\"$PROMPT\\\",\\\"max_tokens\\\":1,\\\"temperature\\\":0,\\\"kv_transfer_params\\\":{\\\"remote_decoder\\\":{\\\"kv_request_id\\\":\\\"$ID\\\"}}}\"\n\nsleep 65     # 5 reproduces the working control\n\ncurl -s -o /dev/null -w 'consumer http=%{http_code} t=%{time_total}\\n' \\\n  -X POST \"http://$DE:8200/v1/completions\" -H 'Content-Type: application/json' \\\n  -d \"{\\\"model\\\":\\\"$M\\\",\\\"prompt\\\":\\\"$PROMPT\\\",\\\"max_tokens\\\":4,\\\"temperature\\\":0,\\\"kv_transfer_params\\\":{\\\"remote_prefiller\\\":{\\\"kv_request_id\\\":\\\"$ID\\\",\\\"remote_host\\\":\\\"$PF\\\",\\\"remote_port\\\":7777}}}\"\n\n# watch vllm:kv_offload_load_bytes_total on the consumer across the pair\n```\n\nWith `sleep 5` the consumer pulls the blocks in ~0.3 s. With `sleep 65` it\ntransfers nothing and returns after ~38 s.\n\n### The NIXL path already solves this\n\n`NixlConnector` faces the same question - how long does P hold blocks that D\nhas not read yet - and answers it with a renewable lease rather than a fixed\ntimer:\n\n- `_kv_lease_duration` (`nixl/base_scheduler.py`), default **30 s**,\n  configurable via `kv_lease_duration`\n- `_heartbeat_interval = _kv_lease_duration // 6`, and D sends periodic\n  lease-renewal heartbeats to P for every request it still intends to read\n- `decoder_kv_blocks_ttl`, default 480 s, for the client-driven turn-2 case\n\nSo NIXL's nominal pin is *shorter* than the tier's 60 s, yet a queued consumer\nnever loses its blocks: the lease is tied to consumer liveness, and only a\nconsumer that has actually gone away lets it lapse. The p2p tier has no\nequivalent - no renewal, no way for the consumer to signal intent, and no\nconfig knob - so it cannot distinguish \"the peer is still queued\" from \"the\npeer will never come\".\n\n### Suggested direction\n\nTie the parked store's lifetime to the consumer's liveness instead of a fixed\ninterval from store time. A few shapes that would work:\n\n- adopt the NIXL contract: let the consumer renew the parked store the way D\n  renews P's lease, so a queued request keeps its KV and a dead one releases\n  it promptly\n- failing that, let the consumer register intent for a `kv_request_id` before\n  it is admitted, so the producer knows a peer is coming\n- at minimum make the interval configurable like `kv_lease_duration` is,\n  since the right value depends on the deployment's admission latency\n\nWorth surfacing the reap as its own counter either way - today it is only a\nwarning line, so operators see the consumer's recompute without the producer\nside that explains it.\n\ncc @liranschour\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53128/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53128/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

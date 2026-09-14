@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54839",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54839/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54839/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54839/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54839",
+  "id": 5316566764,
+  "node_id": "I_kwDOI7xefs8AAAABPORe7A",
+  "number": 54839,
+  "title": "[Bug]: /v1/unload_lora_adapter never removes the adapter from the engine",
+  "user": {
+    "login": "wseaton",
+    "id": 16678729,
+    "node_id": "MDQ6VXNlcjE2Njc4NzI5",
+    "avatar_url": "https://avatars.githubusercontent.com/u/16678729?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/wseaton",
+    "html_url": "https://github.com/wseaton",
+    "followers_url": "https://api.github.com/users/wseaton/followers",
+    "following_url": "https://api.github.com/users/wseaton/following{/other_user}",
+    "gists_url": "https://api.github.com/users/wseaton/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/wseaton/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/wseaton/subscriptions",
+    "organizations_url": "https://api.github.com/users/wseaton/orgs",
+    "repos_url": "https://api.github.com/users/wseaton/repos",
+    "events_url": "https://api.github.com/users/wseaton/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/wseaton/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-01T20:36:10Z",
+  "updated_at": "2026-09-01T20:47:41Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\nvLLM main (0.27.2rc0 at c0adee9231), Qwen/Qwen3-0.6B, `--enable-lora --max-loras 2 --max-cpu-loras 3`, `VLLM_ALLOW_RUNTIME_LORA_UPDATING=1`.\n\n### 🐛 Describe the bug\n\n`POST /v1/unload_lora_adapter` only forgets the name on the frontend. It never tells the engine, so the adapter stays in the worker's GPU slot / CPU cache until LRU eviction gets to it.\n\n`OpenAIServingModels.unload_lora_adapter` just does:\n\n```python\ndel self.lora_requests[lora_name]\nlogger.info(\"Removed LoRA adapter: name '%s'\", lora_name)\n```\n\nNothing under `vllm/entrypoints/` calls `remove_lora`, even though `AsyncLLM.remove_lora` exists and the offline `LLM` API uses it. The Rust frontend's unload does call it, so the two frontends also disagree.\n\nRepro:\n\n1. Load `alice`, `bob`, `carol` via `/v1/load_lora_adapter`.\n2. Unload `bob`. Returns `Success`, gone from `/v1/models`.\n3. Worker still has `bob` on GPU (seen via `list_loras()` or the loaded-adapter metrics from #54830). It only goes away when a later load evicts it.\n\nWhy it matters: a GPU slot stays burned on something nobody can request, and unload + reload under the same name gets a fresh `lora_int_id`, so the worker caches both copies.\n\nExpected: unload calls `engine_client.remove_lora(lora_int_id)` before dropping the registry entry. If keeping the weights cached is intentional, the endpoint should say so and the Rust frontend should match.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54839/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54839/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

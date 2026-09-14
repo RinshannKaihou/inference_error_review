@@ -1,0 +1,69 @@
+[Bug]: SWA store-skip starves eagle groups by one block — offloaded KV can never be loaded back
+STATE: closed
+BODY:
+
+## Summary
+
+`OffloadingConnectorScheduler` skips storing sliding-window blocks that it
+believes can never serve a load hit, keeping only the trailing `tail =
+sliding_window_size_in_blocks` blocks of each alignment segment. For an **eagle**
+(speculative-decode) group the lookup asks for **`tail + 1`** consecutive blocks,
+because the trailing block holds unverified tokens and is discarded afterwards.
+
+The writer stores `tail`; the reader needs `tail + 1`. **A qualifying run cannot
+exist**, so an eagle SWA group returns 0 hits for every request, forever, and
+`if num_hit_blocks == 0: return 0` propagates that to the whole request.
+
+Net effect on a spec-decode model: KV is written to the offload tier
+indefinitely and **never read back**. No error, no warning, no crash — the
+counters just show bytes out and zero bytes in.
+
+## Version
+
+`0.25.2.dev0+g752a3a504` (anemll `dspark-vllm-gx10` fork of vLLM), 2× NVIDIA DGX
+Spark (GB10), TP=2 over RoCE. Model `deepseek-ai/DeepSeek-V4-Flash-0731`
+(5 KV-cache groups: 1 full-attention + 4 sliding-window, one of which is eagle).
+The relevant code is unmodified from upstream `main`.
+
+## The two lines
+
+**Store side** — `_build_store_jobs`:
+
+```python
+alignment_block_count = group_config.alignment_block_count
+tail = group_config.sliding_window_size_in_blocks
+...
+    # Skip SWA blocks that can never serve a load hit:
+    # within each full-attention alignment segment, only the
+    # trailing `tail` blocks are reachable by
+    # _sliding_window_lookup. For DeepSeek V4 with 100K
+    # tokens this reduces SWA stores by ~78%.
+    if alignment_block_count is not None:
+        abs_block_idx = start_block_idx + key_idx
+        pos_in_segment = abs_block_idx % alignment_block_count
+        if pos_in_segment < alignment_block_count - tail:
+            continue
+```
+
+**Lookup side** — `_lookup`:
+
+```python
+required_window = sliding_window_size_in_blocks
+if is_eagle_unverified:
+    required_window += 1
+num_hit_blocks = self._sliding_window_lookup(offload_keys, required_window, ...)
+...
+if is_eagle_unverified:
+    num_hit_blocks -= 1        # discard the volatile trailing block
+```
+
+The comment states the invariant the optimisation depends on — *"only the
+trailing `tail` blocks are reachable by `_sliding_window_lookup`"* — and the
+eagle `+1` breaks it. Both lines are individually correct; they are wrong
+together, which is why nothing fails loudly.
+
+## Observed
+
+For this model `_alignment_block_count` computes
+`per_segment = alignment_tokens // offloaded_block_size = 256 // 64 = 4`, and
+returns it because `sliding_window_size_in_blocks (2) 

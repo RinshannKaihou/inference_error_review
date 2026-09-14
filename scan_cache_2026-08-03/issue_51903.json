@@ -1,0 +1,86 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/51903",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/51903/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/51903/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/51903/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/pull/51903",
+  "id": 5047632465,
+  "node_id": "PR_kwDOI9Wqc87547II",
+  "number": 51903,
+  "title": "[Bug fix] Fix tilize kernel API misuses causing silent wrong data",
+  "user": {
+    "login": "abdulla-TT",
+    "id": 270310340,
+    "node_id": "U_kgDOEBybxA",
+    "avatar_url": "https://avatars.githubusercontent.com/u/270310340?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/abdulla-TT",
+    "html_url": "https://github.com/abdulla-TT",
+    "followers_url": "https://api.github.com/users/abdulla-TT/followers",
+    "following_url": "https://api.github.com/users/abdulla-TT/following{/other_user}",
+    "gists_url": "https://api.github.com/users/abdulla-TT/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/abdulla-TT/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/abdulla-TT/subscriptions",
+    "organizations_url": "https://api.github.com/users/abdulla-TT/orgs",
+    "repos_url": "https://api.github.com/users/abdulla-TT/repos",
+    "events_url": "https://api.github.com/users/abdulla-TT/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/abdulla-TT/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 11525479745,
+      "node_id": "LA_kwDOI9Wqc88AAAACrvjdQQ",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/fix",
+      "name": "fix",
+      "color": "d73a4a",
+      "default": false,
+      "description": "Bug fix"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-03T08:04:14Z",
+  "updated_at": "2026-08-03T12:46:49Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": true,
+  "pull_request": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/pulls/51903",
+    "html_url": "https://github.com/tenstorrent/tt-metal/pull/51903",
+    "diff_url": "https://github.com/tenstorrent/tt-metal/pull/51903.diff",
+    "patch_url": "https://github.com/tenstorrent/tt-metal/pull/51903.patch",
+    "merged_at": null
+  },
+  "body": "### Ticket\n#51215 \n\n### PR Category\nBug fix\n\n### Summary\nFixes findings 1 and 4 from issue #51215 (findings 2 and 3 — the `sort_single_row_multi_core` path — are tracked separately and not included here).\n\n**Finding 1 — `retile.cpp`: missing pack-format reconfiguration before tilize**\nThe retile compute kernel entered the tilize phase without calling `pack_reconfig_data_format` to switch the packer's destination format from `mid_cb` (input format) to `out_cb` (output format). When `ttnn.tilize` changes both tile shape and dtype (e.g. `BFLOAT16 → BFLOAT8_B`), every tile packed into `out_cb` was emitted in the input data format, producing a corrupt output tensor. Fix: insert `pack_reconfig_data_format(mid_cb, out_cb)` immediately before `tilize_init`.\n\n**Finding 4 — `reader_unary_pad_dims_split_rows.cpp`: misaligned column-padding stores**\nThe single-core padding reader cast an arbitrarily-offset L1 address to `uint32_t*` and wrote whole 4-byte words. When the unpadded row size is not a multiple of 4 bytes (e.g. `bfloat16` width=31 → 62 bytes/row), the integer-division loop ran too few iterations (silently dropped the tail bytes) and the misaligned 32-bit stores overwrote the last real input bytes. Fix: replace the naive loop with the alignment-aware `dataflow_kernel_lib::fill_l1_range<elem_size>()` from `kernel_lib/l1_helpers.hpp`, shared by all three padding readers to prevent future divergence.\n\n### Notes for reviewers\n- The alignment-aware fill helper lives in `ttnn/cpp/ttnn/kernel_lib/l1_helpers.hpp` as `dataflow_kernel_lib::fill_l1_range<val_size>`. All three `tilize_with_val_padding` readers now use it; the `both_dims` reader keeps its `common.hpp` include only for `tt_memmove`.\n- The helper clamps `start_addr_4B`/`end_addr_4B` so that short, unaligned ranges (where the aligned interior is empty) never extend the head/tail element-loops outside `[start_addr, end_addr)`.\n- `elem_size` is now passed to the single-core reader as compile-time arg 2; the factory change is in `tilize_with_val_padding_single_core_program_factory.cpp`.\n- Regression tests added for both findings; the FP8 test is gated to Blackhole (`@run_for_blackhole()`).\n\n### CI Status\n_Auto-generated on every push. Badges update live. Click a badge to filter runs by this branch._\n\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/sanity-tests.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/sanity-tests.yaml?query=branch:abdulla/tilize_api_misuse)\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/runtime-sanity-tests.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/runtime-sanity-tests.yaml?query=branch:abdulla/tilize_api_misuse)\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/blackhole-sanity-tests.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/blackhole-sanity-tests.yaml?query=branch:abdulla/tilize_api_misuse)\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/tt-metal-l2-nightly.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/tt-metal-l2-nightly.yaml?query=branch:abdulla/tilize_api_misuse)\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/all-model-tests.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/all-model-tests.yaml?query=branch:abdulla/tilize_api_misuse)\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/pipeline-select.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/pipeline-select.yaml?query=branch:abdulla/tilize_api_misuse)\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/pipeline-select-t3k.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/pipeline-select-t3k.yaml?query=branch:abdulla/tilize_api_misuse)\n- [![](https://github.com/tenstorrent/tt-metal/actions/workflows/pipeline-select-galaxy.yaml/badge.svg?branch=abdulla/tilize_api_misuse)](https://github.com/tenstorrent/tt-metal/actions/workflows/pipeline-select-galaxy.yaml?query=branch:abdulla/tilize_api_misuse)",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/51903/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/51903/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

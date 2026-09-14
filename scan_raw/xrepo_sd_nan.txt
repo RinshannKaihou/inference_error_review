@@ -1,0 +1,15 @@
+3711|Update boto3 to 1.43.64|https://github.com/renzon/antigonovo/pull/3711|2026-08-04T23:02:21Z|open|
+384|feat(webui): preselect the accelerator the machine actually has|https://github.com/shiyu-coder/Kronos/pull/384|2026-08-04T22:58:48Z|open|
+31|fin.shoddy — the finance machine|https://github.com/shoddymills/shoddy/issues/31|2026-08-04T22:58:38Z|open|enhancement
+3081|Update botocore to 1.43.64|https://github.com/ravellys/series_flix/pull/3081|2026-08-04T22:57:27Z|open|
+3080|Update boto3 to 1.43.64|https://github.com/ravellys/series_flix/pull/3080|2026-08-04T22:57:20Z|open|
+366|fix(charts): show all parallel axis values in tooltip|https://github.com/mkobit/bases-chartkit/pull/366|2026-08-04T22:55:53Z|open|
+2334|Update botocore to 1.43.64|https://github.com/raphamoral/djangocurso/pull/2334|2026-08-04T22:53:30Z|open|
+2333|Update boto3 to 1.43.64|https://github.com/raphamoral/djangocurso/pull/2333|2026-08-04T22:53:22Z|open|
+686|fix(deps): update dependency torch to v1.13.1|https://github.com/billsioros/RoughGAN/pull/686|2026-08-04T22:53:22Z|closed|:game_die: dependencies
+3175|Update botocore to 1.43.64|https://github.com/raolbrito/curso-django-rb/pull/3175|2026-08-04T22:52:27Z|open|
+3174|Update boto3 to 1.43.64|https://github.com/raolbrito/curso-django-rb/pull/3174|2026-08-04T22:52:20Z|open|
+5707|feat(ai-providers): log in with a Claude subscription for claude-code runs|https://github.com/decocms/studio/pull/5707|2026-08-04T22:52:00Z|open|
+8267|feat(mcp): support secure host-local endpoints through trusted-private routing|https://github.com/NVIDIA/NemoClaw/issues/8267|2026-08-04T22:51:48Z|open|enhancement,help wanted,integration: openclaw,integration: hermes,area: cli,area: docs,area: e2e,area: integrations,area: networking,area: policy,area: sandbox,area: security,integration: dcode,security
+3355|Update botocore to 1.43.64|https://github.com/raolbrito/curso-django/pull/3355|2026-08-04T22:51:28Z|open|
+3354|Update boto3 to 1.43.64|https://github.com/raolbrito/curso-django/pull/3354|2026-08-04T22:51:21Z|open|

@@ -1,0 +1,24 @@
+TOTAL: 22
+
+[50767] [Bug]: override-generation-config silently ignores presence_penalty / frequency_penalty (missing from available_params whitelist) | state=open | created=2026-08-02
+[50766] [Bugfix] serving_llama70B_tp4 benchmark was silently running at tensor_parallel_size=1 | state=open | created=2026-08-02
+[50671] fix(uva): fix silent input corruption and remote DoS under GPU CC | state=open | created=2026-08-01
+[50649] [ROCm][Bugfix] Kimi-K3 Fix KDA NaN on mixed batches and racy autotune config | state=open | created=2026-08-01
+[50603] [Bug]: gfx1100 (RDNA3): first-call non-determinism + long-seq corruption from Triton paged-attention fallback (ROCm 7.14) | state=open | created=2026-07-31
+[50486] [Misc] Warn when --block-size is silently discarded by backend alignment | state=open | created=2026-07-30
+[50477] [Bug]: gemma4 parser silently ignores named forced tool_choice on 0.26.0 (worked on 0.21.0) | state=open | created=2026-07-30
+[50427] [Bug]: FlexAttention paged K/V offsets overflow int32 once `num_gpu_blocks ≥ 2**31 / (block_size · 2 · num_kv_heads · head_size)` — crash *or* silent wrong output | state=open | created=2026-07-30
+[50376] [CI] Stabilize the EAGLE correctness | state=open | created=2026-07-30
+[50323] [CI] Detect and fail evals on when NaNs appear in logits | state=open | created=2026-07-29
+[50292] VLLM_ATTENTION_BACKEND env var is silently ignored — attention_backend= LLM()/EngineArgs kwarg is the only mechanism that works | state=open | created=2026-07-29
+[50283] [Core] Add --enable-nan-fault-tolerance for NaN detection and request abort | state=open | created=2026-07-29
+[50201] [Kernel] Harden top_k_per_row against NaN and under-filled output | state=open | created=2026-07-29
+[50190] [ROCm][CI] Stabilize ngram and suffix correctness test | state=closed | created=2026-07-28
+[50183] [Bugfix][Spec Decode] Fix NaN handling in rejection sampler tl.argmax | state=open | created=2026-07-28
+[50110] [Test] Make EPD correctness tests configurable for XPU | state=closed | created=2026-07-28
+[50084] [Bug]: NVFP4 KV writes V block scales in the SM100 trtllm-gen swizzle unconditionally, silently corrupting the SM120 FlashInfer XQA route | state=open | created=2026-07-28
+[50067] [Bug]: EngineCore dies silently during warmup on GB10/sm_121 (dense model, FLASH_ATTN); avoided by CUDA_LAUNCH_BLOCKING=1 | state=closed | created=2026-07-28
+[50026] [Bug]: /v1/chat/completions/batch accepts stream: true and returns empty output with HTTP 200; tools are silently dropped | state=open | created=2026-07-27
+[50002] [Core] Zero KV cache when NaN logits detected | state=open | created=2026-07-27
+[49980] [Bug]: FlashInfer builder ValueError 'provided out is the wrong size for the accumulation' with Llama-4 chunked local attention when a prefill exceeds attention_chunk_size and max_num_seqs is small | state=open | created=2026-07-27
+[49924] [Bug][XPU]: GDN attention silently corrupts memory under load — fix merged in vllm-xpu-kernels but requirements/xpu.txt pins a release that predates it | state=closed | created=2026-07-27

@@ -1,0 +1,457 @@
+{
+  "total_count": 5,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/huggingface/transformers/issues/47925",
+      "repository_url": "https://api.github.com/repos/huggingface/transformers",
+      "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/47925/labels{/name}",
+      "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/47925/comments",
+      "events_url": "https://api.github.com/repos/huggingface/transformers/issues/47925/events",
+      "html_url": "https://github.com/huggingface/transformers/issues/47925",
+      "id": 5129788471,
+      "node_id": "I_kwDOCUB6oc8AAAABMcJcNw",
+      "number": 47925,
+      "title": "Module not found - MetaCLIP2Model",
+      "user": {
+        "login": "Yash-g17",
+        "id": 57015747,
+        "node_id": "MDQ6VXNlcjU3MDE1NzQ3",
+        "avatar_url": "https://avatars.githubusercontent.com/u/57015747?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Yash-g17",
+        "html_url": "https://github.com/Yash-g17",
+        "followers_url": "https://api.github.com/users/Yash-g17/followers",
+        "following_url": "https://api.github.com/users/Yash-g17/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Yash-g17/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Yash-g17/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Yash-g17/subscriptions",
+        "organizations_url": "https://api.github.com/users/Yash-g17/orgs",
+        "repos_url": "https://api.github.com/users/Yash-g17/repos",
+        "events_url": "https://api.github.com/users/Yash-g17/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Yash-g17/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 3817266200,
+          "node_id": "MDU6TGFiZWwzODE3MjY2MjAw",
+          "url": "https://api.github.com/repos/huggingface/transformers/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-08-12T10:17:19Z",
+      "updated_at": "2026-08-12T14:07:37Z",
+      "closed_at": "2026-08-12T14:07:37Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### System Info\n\ntransformers - 5.15.0\n\n### Who can help?\n\nImportError: cannot import name 'MetaCLIP2Model' from 'transformers' (python3.11/site-packages/transformers/__init__.py)\n\n\n### Who can help?\n\n_No response_\n\n### Information\n\n- [x] The official example scripts\n- [ ] My own modified scripts\n\n### Tasks\n\n- [x] An officially supported task in the `examples` folder (such as GLUE/SQuAD, ...)\n- [ ] My own task or dataset (give details below)\n\n### Reproduction\n\nimport requests\nimport torch\nfrom PIL import Image\nfrom transformers import AutoProcessor, MetaCLIP2Model\n\nmodel = MetaCLIP2Model.from_pretrained(\"facebook/metaclip-2-worldwide-giant\", torch_dtype=torch.bfloat16, attn_implementation=\"sdpa\")\nprocessor = AutoProcessor.from_pretrained(\"facebook/metaclip-2-worldwide-giant\")\n\nurl = \"http://images.cocodataset.org/val2017/000000039769.jpg\"\nimage = Image.open(requests.get(url, stream=True).raw)\nlabels = [\"a photo of a cat\", \"a photo of a dog\", \"a photo of a car\"]\n\ninputs = processor(text=labels, images=image, return_tensors=\"pt\", padding=True)\n\noutputs = model(**inputs)\nlogits_per_image = outputs.logits_per_image\nprobs = logits_per_image.softmax(dim=1)\nmost_likely_idx = probs.argmax(dim=1).item()\nmost_likely_label = labels[most_likely_idx]\nprint(f\"Most likely label: {most_likely_label} with probability: {probs[0][most_likely_idx].item():.3f}\")\n\n\n### Expected behavior\n\nThe model should load.",
+      "reactions": {
+        "url": "https://api.github.com/repos/huggingface/transformers/issues/47925/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/47925/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/transformers/issues/47917",
+      "repository_url": "https://api.github.com/repos/huggingface/transformers",
+      "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/47917/labels{/name}",
+      "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/47917/comments",
+      "events_url": "https://api.github.com/repos/huggingface/transformers/issues/47917/events",
+      "html_url": "https://github.com/huggingface/transformers/issues/47917",
+      "id": 5128549351,
+      "node_id": "I_kwDOCUB6oc8AAAABMa9z5w",
+      "number": 47917,
+      "title": "TimmWrapperPreTrainedModel: SDPA dispatch fails even though timm uses SDPA internally",
+      "user": {
+        "login": "msnliu",
+        "id": 89792654,
+        "node_id": "MDQ6VXNlcjg5NzkyNjU0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/89792654?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/msnliu",
+        "html_url": "https://github.com/msnliu",
+        "followers_url": "https://api.github.com/users/msnliu/followers",
+        "following_url": "https://api.github.com/users/msnliu/following{/other_user}",
+        "gists_url": "https://api.github.com/users/msnliu/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/msnliu/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/msnliu/subscriptions",
+        "organizations_url": "https://api.github.com/users/msnliu/orgs",
+        "repos_url": "https://api.github.com/users/msnliu/repos",
+        "events_url": "https://api.github.com/users/msnliu/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/msnliu/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 3817266200,
+          "node_id": "MDU6TGFiZWwzODE3MjY2MjAw",
+          "url": "https://api.github.com/repos/huggingface/transformers/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 6,
+      "created_at": "2026-08-12T07:53:16Z",
+      "updated_at": "2026-08-14T09:46:42Z",
+      "closed_at": "2026-08-14T09:46:42Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### System Info\n\n### Describe the bug\n\nLoading a model with a `TimmWrapperModel` sub-backbone (e.g., `facebook/Perception-LM-1B`) with `attn_implementation=\"sdpa\"` fails:\n\n```\nValueError: TimmWrapperModel does not support an attention implementation through\ntorch.nn.functional.scaled_dot_product_attention yet.\n```\n\n`TimmWrapperPreTrainedModel` inherits `_supports_sdpa = False` from `PreTrainedModel`, so `_sdpa_can_dispatch()` raises. But timm models **already use SDPA internally** via `use_fused_attn()` — completely independent of transformers' dispatch. \n\n### Evidence \n\n1. **timm uses SDPA internally** — `timm/layers/attention.py`: `self.fused_attn = use_fused_attn()` → calls `F.scaled_dot_product_attention`\n2. **TimmWrapper delegates to timm** — modeling_timm_wrapper.py forward: `self.timm_model.forward_features(pixel_values, **kwargs)`, no `attn_implementation` passed\n3. **SDPA dispatch gate** — modeling_utils.py `_sdpa_can_dispatch`: `if not self._supports_sdpa: raise ValueError(...)`\n\n### Why a load-time dynamic check doesn't work\n\n`_sdpa_can_dispatch` is called in `PreTrainedModel.__init__`, but `self.timm_model` is created **after** `super().__init__()`. Reversing the order would break initialization.\n\n### Reproduction\n\n**Env**:\ntorch 2.14.0.dev20260719+xpu\ntorchaudio 2.11.0.dev20260720+xpu\ntorchvision 0.29.0.dev20260720+xpu\ntransformers 5.15.0.dev0\n\n**Running directory**: /HuggingFace_OOB\n\n**Command**:\npython benchmarks/transformers/run_benchmarks.py   --model-id facebook/Perception-LM-1B   --task multimodal-lm --level 1 --device xpu --dtype torch.bfloat16   -b 1 -s 1024 -n 1024 -w 1 -i 3\n\n**Error log**:\nTraceback (most recent call last):\n  File \"/home/msnliu/projection_ovis/HuggingFace_OOB/benchmarks/transformers/run_benchmarks.py\", line 226, in <module>\n    timestamp, results = runner.run_benchmarks(\n                         ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/miniforge3/envs/hfoob/lib/python3.12/site-packages/torch/utils/_contextlib.py\", line 124, in decorate_context\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/projection_ovis/HuggingFace_OOB/benchmarks/transformers/framework/benchmark_runner.py\", line 2142, in run_benchmarks\n    self.setup_benchmark(model_id, config)\n  File \"/home/msnliu/projection_ovis/HuggingFace_OOB/benchmarks/transformers/framework/benchmark_runner.py\", line 1257, in setup_benchmark\n    self.model = self.auto_model_class.from_pretrained(\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/models/auto/auto_factory.py\", line 402, in from_pretrained\n    return model_class.from_pretrained(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/modeling_utils.py\", line 4305, in from_pretrained\n    model = cls(config, *model_args, **model_kwargs)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/models/perception_lm/modeling_perception_lm.py\", line 302, in __init__\n    self.model = PerceptionLMModel(config)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/models/perception_lm/modeling_perception_lm.py\", line 169, in __init__\n    self.vision_tower = AutoModel.from_config(config.vision_config)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/models/auto/auto_factory.py\", line 248, in from_config\n    return model_class._from_config(config, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/modeling_utils.py\", line 1540, in _from_config\n    model = cls(config, **kwargs)\n            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/models/timm_wrapper/modeling_timm_wrapper.py\", line 158, in __init__\n    super().__init__(config)\n  File \"/home/msnliu/transformers-pr46196/src/transformers/modeling_utils.py\", line 1346, in __init__\n    self.config._attn_implementation_internal = self._check_and_adjust_attn_implementation(\n                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/modeling_utils.py\", line 1904, in _check_and_adjust_attn_implementation\n    applicable_attn_implementation = self.get_correct_attn_implementation(\n                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/msnliu/transformers-pr46196/src/transformers/modeling_utils.py\", line 1960, in get_correct_attn_implementation\n    raise e\n  File \"/home/msnliu/transformers-pr46196/src/transformers/modeling_utils.py\", line 1957, in get_correct_attn_implementation\n    self._sdpa_can_dispatch(is_init_check)\n  File \"/home/msnliu/transformers-pr46196/src/transformers/modeling_utils.py\", line 1753, in _sdpa_can_dispatch\n    raise ValueError(\n**ValueError: TimmWrapperModel does not support an attention implementation through torch.nn.functional.scaled_dot_product_attention yet**. Please request the support for this architecture: https://github.com/huggingface/transformers/issues/28005. If you believe this error is a bug, please open an issue in Transformers GitHub repository and load your model with the argument `attn_implementation=\"eager\"` meanwhile. Example: `model = AutoModel.from_pretr\n\n### Expected behavior\n\nexpect to run successfully without any bugs",
+      "reactions": {
+        "url": "https://api.github.com/repos/huggingface/transformers/issues/47917/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/47917/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/transformers/issues/47914",
+      "repository_url": "https://api.github.com/repos/huggingface/transformers",
+      "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/47914/labels{/name}",
+      "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/47914/comments",
+      "events_url": "https://api.github.com/repos/huggingface/transformers/issues/47914/events",
+      "html_url": "https://github.com/huggingface/transformers/issues/47914",
+      "id": 5128201838,
+      "node_id": "I_kwDOCUB6oc8AAAABMaombg",
+      "number": 47914,
+      "title": "caching_allocator_warmup crashes with AttributeError when loading bitsandbytes-quantized model with PEFT adapter",
+      "user": {
+        "login": "LiaoBill",
+        "id": 14993957,
+        "node_id": "MDQ6VXNlcjE0OTkzOTU3",
+        "avatar_url": "https://avatars.githubusercontent.com/u/14993957?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/LiaoBill",
+        "html_url": "https://github.com/LiaoBill",
+        "followers_url": "https://api.github.com/users/LiaoBill/followers",
+        "following_url": "https://api.github.com/users/LiaoBill/following{/other_user}",
+        "gists_url": "https://api.github.com/users/LiaoBill/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/LiaoBill/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/LiaoBill/subscriptions",
+        "organizations_url": "https://api.github.com/users/LiaoBill/orgs",
+        "repos_url": "https://api.github.com/users/LiaoBill/repos",
+        "events_url": "https://api.github.com/users/LiaoBill/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/LiaoBill/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 3817266200,
+          "node_id": "MDU6TGFiZWwzODE3MjY2MjAw",
+          "url": "https://api.github.com/repos/huggingface/transformers/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 4,
+      "created_at": "2026-08-12T07:10:41Z",
+      "updated_at": "2026-08-13T01:29:58Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### System Info\n\n- `transformers` version: 5.1.0\n- Platform: Windows-11-10.0.26200-SP0\n- Python version: 3.12.11\n- Huggingface_hub version: 1.27.0\n- Safetensors version: 0.8.0\n- Accelerate version: 1.14.0\n- Accelerate config:    not found\n- DeepSpeed version: not installed\n- PyTorch version (GPU?): 2.5.1+cu124 (True)\n- Tensorflow version (GPU?): not installed (NA)\n- Flax version (CPU?/GPU?/TPU?): not installed (NA)\n- Jax version: not installed\n- JaxLib version: not installed\n- bitsandbytes version: 0.50.0\n\n\n### Who can help?\n\n@SunMarc  @MekkCyber \n\n\n### Information\n\n- [ ] The official example scripts\n- [ ] My own modified scripts\n\n### Tasks\n\n- [ ] An officially supported task in the `examples` folder (such as GLUE/SQuAD, ...)\n- [ ] My own task or dataset (give details below)\n\n### Reproduction\n\n```\nfrom transformers import AutoModelForCausalLM, BitsAndBytesConfig\nfrom peft import PeftModel\n\nquant_config = BitsAndBytesConfig(load_in_8bit=True)\nbase_model = AutoModelForCausalLM.from_pretrained(\n    \"meta-llama/Meta-Llama-3-8B-Instruct\",\n    quantization_config=quant_config,\n    device_map=\"auto\",\n)\n# Next call triggers _load_pretrained_model again via load_adapter\nmodel = PeftModel.from_pretrained(base_model, \"some-peft-adapter\")\n```\n\n\nTraceback:\n```\nFile \"transformers/modeling_utils.py\", line 4677, in caching_allocator_warmup\n    total_byte_count = get_total_byte_count(model, accelerator_device_map, hf_quantizer)\nFile \"transformers/modeling_utils.py\", line 4634, in get_total_byte_count\n    param = model.get_parameter_or_buffer(param_name)\nFile \"transformers/modeling_utils.py\", line 4550, in get_parameter_or_buffer\n    raise AttributeError(f\"`{target}` is neither a parameter, buffer, nor extra state.\")\nAttributeError: `layers.0.self_attn.q_proj.base_layer.SCB` is neither a parameter, buffer, nor extra state.\n```\n\n### Expected behavior\n\nA clear and concise description of what you would expect to happen:\nLoading a PEFT adapter on top of a bitsandbytes-quantized model should succeed.\n\nNow, `caching_allocator_warmup` (introduced in 5.x) crashes because `expanded_device_map` includes entries like `layers.0.self_attn.q_proj.base_layer.SCB`, which are bitsandbytes internal tensors stored as plain Python attributes on `Int8Params` (not registered via `register_parameter()`/`register_buffer()`), so `get_parameter_or_buffer()` cannot find them.\n\n`caching_allocator_warmup` already exempts HQQ and Quark by skipping the warmup entirely for those quantization methods, but `BITS_AND_BYTES` is missing from that exemption list, I add that to the list fix the problem #47919 \n\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/huggingface/transformers/issues/47914/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/47914/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/transformers/issues/47893",
+      "repository_url": "https://api.github.com/repos/huggingface/transformers",
+      "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/47893/labels{/name}",
+      "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/47893/comments",
+      "events_url": "https://api.github.com/repos/huggingface/transformers/issues/47893/events",
+      "html_url": "https://github.com/huggingface/transformers/issues/47893",
+      "id": 5118086757,
+      "node_id": "I_kwDOCUB6oc8AAAABMQ_OZQ",
+      "number": 47893,
+      "title": "ModuleNotFoundError: Could not import module 'MistralForSequenceClassification'",
+      "user": {
+        "login": "cqray1990",
+        "id": 32585434,
+        "node_id": "MDQ6VXNlcjMyNTg1NDM0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/32585434?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/cqray1990",
+        "html_url": "https://github.com/cqray1990",
+        "followers_url": "https://api.github.com/users/cqray1990/followers",
+        "following_url": "https://api.github.com/users/cqray1990/following{/other_user}",
+        "gists_url": "https://api.github.com/users/cqray1990/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/cqray1990/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/cqray1990/subscriptions",
+        "organizations_url": "https://api.github.com/users/cqray1990/orgs",
+        "repos_url": "https://api.github.com/users/cqray1990/repos",
+        "events_url": "https://api.github.com/users/cqray1990/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/cqray1990/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 3817266200,
+          "node_id": "MDU6TGFiZWwzODE3MjY2MjAw",
+          "url": "https://api.github.com/repos/huggingface/transformers/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-11T08:12:10Z",
+      "updated_at": "2026-08-11T11:01:50Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### System Info\n\ntransformers 5.10, 5.5.3\n\n### Who can help?\n\nenvs/verl_env/lib/python3.12/site-packages/transformers/utils/import_utils.py\", line 2295, in __getattr__\n    raise ModuleNotFoundError(\nModuleNotFoundError: Could not import module 'MistralForSequenceClassification'. Are this object's requirements defined correctly?\n\n\n### Information\n\n- [ ] The official example scripts\n- [ ] My own modified scripts\n\n### Tasks\n\n- [ ] An officially supported task in the `examples` folder (such as GLUE/SQuAD, ...)\n- [ ] My own task or dataset (give details below)\n\n### Reproduction\n\nenvs/verl_env/lib/python3.12/site-packages/transformers/utils/import_utils.py\", line 2295, in __getattr__\n    raise ModuleNotFoundError(\nModuleNotFoundError: Could not import module 'MistralForSequenceClassification'. Are this object's requirements defined correctly?\n\n\n### Expected behavior\n\n.",
+      "reactions": {
+        "url": "https://api.github.com/repos/huggingface/transformers/issues/47893/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/47893/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/transformers/issues/47879",
+      "repository_url": "https://api.github.com/repos/huggingface/transformers",
+      "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/47879/labels{/name}",
+      "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/47879/comments",
+      "events_url": "https://api.github.com/repos/huggingface/transformers/issues/47879/events",
+      "html_url": "https://github.com/huggingface/transformers/issues/47879",
+      "id": 5111551106,
+      "node_id": "I_kwDOCUB6oc8AAAABMKwUgg",
+      "number": 47879,
+      "title": "Error during video handling with Gemma4 (E2B-Instruct)",
+      "user": {
+        "login": "anand-kumar-consulting",
+        "id": 230746825,
+        "node_id": "U_kgDODcDqyQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/230746825?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/anand-kumar-consulting",
+        "html_url": "https://github.com/anand-kumar-consulting",
+        "followers_url": "https://api.github.com/users/anand-kumar-consulting/followers",
+        "following_url": "https://api.github.com/users/anand-kumar-consulting/following{/other_user}",
+        "gists_url": "https://api.github.com/users/anand-kumar-consulting/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/anand-kumar-consulting/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/anand-kumar-consulting/subscriptions",
+        "organizations_url": "https://api.github.com/users/anand-kumar-consulting/orgs",
+        "repos_url": "https://api.github.com/users/anand-kumar-consulting/repos",
+        "events_url": "https://api.github.com/users/anand-kumar-consulting/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/anand-kumar-consulting/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 3817266200,
+          "node_id": "MDU6TGFiZWwzODE3MjY2MjAw",
+          "url": "https://api.github.com/repos/huggingface/transformers/labels/bug",
+          "name": "bug",
+          "color": "d73a4a",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-08-10T15:09:59Z",
+      "updated_at": "2026-08-14T13:59:27Z",
+      "closed_at": "2026-08-14T13:59:27Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### System Info\n\n- `transformers` version: 5.15.0.dev0\n- Platform: Linux-6.18.33.1-microsoft-standard-WSL2-x86_64-with-glibc2.43\n- Python version: 3.13.14\n- Huggingface_hub version: 1.24.0\n- Safetensors version: 0.8.0\n- Accelerate version: 1.14.0\n- Accelerate config:    not found\n- DeepSpeed version: not installed\n- PyTorch version (accelerator?): 2.13.0+cu132 (CUDA)\n- Using distributed or parallel set-up in script?: No\n- Using GPU in script?: Not clear.\n- GPU type: NVIDIA GeForce RTX 4080 Laptop GPU\n\n### Who can help?\n\n@molbap @guarin\n\nThe issue is with the vision model (Gemma4-E2B-IT)\n\n### Information\n\n- [ ] The official example scripts\n- [ ] My own modified scripts\n\n### Tasks\n\n- [ ] An officially supported task in the `examples` folder (such as GLUE/SQuAD, ...)\n- [ ] My own task or dataset (give details below)\n\n### Reproduction\n\n```\nFile \".../transformers/models/gemma4/modeling_gemma4.py\", line 2344, in forward\nvideo_features = video_features.to(inputs_embeds.device, inputs_embeds.dtype)\n                 ^^^^^^^^^^^^^^^^^\nAttributeError: 'tuple' object has no attribute 'to'\n```\n\nThe error is resolved on changing the code to:\n```\nvideo_features = video_features[0].to(inputs_embeds.device, inputs_embeds.dtype)\n```\n\n### Expected behavior\n\nThe code works well by making the aforementioned change (which should be default behaviour).",
+      "reactions": {
+        "url": "https://api.github.com/repos/huggingface/transformers/issues/47879/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 1
+      },
+      "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/47879/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "completed",
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

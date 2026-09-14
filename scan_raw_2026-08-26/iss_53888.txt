@@ -1,0 +1,31 @@
+Sleep level=1 wake silently corrupts LoRA state (NemotronH NVFP4/Marlin, TP=2, WSL2): fixed-seed generation diverges after wake, adapter stops applying, no error raised
+STATE: open
+BODY:
+
+## Environment
+
+- vLLM 0.27.1, `vllm/vllm-openai` image digest `sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967` (created 2026-08-11)
+- Model: `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (`NemotronHForCausalLM`), served weight-only FP4 via the Marlin fallback on SM89
+- `--tensor-parallel-size 2` on 2x RTX 4090, `--enable-lora --max-lora-rank 16 --lora-modules` (one adapter), `--enforce-eager --no-enable-prefix-caching --enable-sleep-mode`, `VLLM_SERVER_DEV_MODE=1`
+- Docker inside WSL2 (kernel 6.18.33.1, driver 610.88, Windows 11 26220). WSL2 may be load-bearing; happy to run diagnostics.
+
+## What happens
+
+Probe design: fixed-seed generation recorded before sleep, compared token-for-token after wake, with the adapter unchanged.
+
+- `POST /sleep?level=1`: clean. `is_sleeping` reports true, VRAM actually frees (cards settle to 1.7GB + 0.9GB).
+- `POST /wake_up`: the engine comes back answering, but corrupted. One GPU restores about 3GB lighter than its pre-sleep residency, the LoRA adapter silently stops applying (base and adapter routes return the same tokens), and both routes diverge from their own pre-sleep fixed-seed baselines. Both models answered questions that were not asked. No error, no log line, HTTP 200 throughout.
+
+Level 2 behaves per its contract (discard weights, wake needs a re-push; wake without one generates from uninitialized weights). The bug report is level 1 only: state that claims to be restored, is not, and nothing fails loudly.
+
+## Why it matters
+
+Any adapter-swap RL loop or serve-train alternation that trusts level-1 sleep gets a silently wrong policy after the first cycle. Our workaround is a full engine stop/start between phases, which also makes the adapter swap a clean `--lora-modules` load. A wake that cannot restore state should fail loudly instead of serving corrupted weights.
+
+## Repro sketch
+
+1. Serve the NVFP4 checkpoint TP=2 with one LoRA adapter and sleep mode enabled.
+2. Record fixed-seed completions for base and adapter routes.
+3. `POST /sleep?level=1`, confirm `is_sleeping`, `POST /wake_up`.
+4. Re-run the fixed-seed completions and compare bytes; check per-GPU residency against pre-sleep.
+

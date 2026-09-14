@@ -1,0 +1,104 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54621",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54621/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54621/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54621/events",
+  "html_url": "https://github.com/vllm-project/vllm/pull/54621",
+  "id": 5304277369,
+  "node_id": "PR_kwDOI7xefs8AAAABBpq9lQ",
+  "number": 54621,
+  "title": "[Bugfix][Spec Decode] Seed both-XD-RoPE drafting from the xdrope positions buffer",
+  "user": {
+    "login": "he-yufeng",
+    "id": 40085740,
+    "node_id": "MDQ6VXNlcjQwMDg1NzQw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/40085740?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/he-yufeng",
+    "html_url": "https://github.com/he-yufeng",
+    "followers_url": "https://api.github.com/users/he-yufeng/followers",
+    "following_url": "https://api.github.com/users/he-yufeng/following{/other_user}",
+    "gists_url": "https://api.github.com/users/he-yufeng/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/he-yufeng/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/he-yufeng/subscriptions",
+    "organizations_url": "https://api.github.com/users/he-yufeng/orgs",
+    "repos_url": "https://api.github.com/users/he-yufeng/repos",
+    "events_url": "https://api.github.com/users/he-yufeng/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/he-yufeng/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 6915642480,
+      "node_id": "LA_kwDOI7xefs8AAAABnDRUcA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/speculative-decoding",
+      "name": "speculative-decoding",
+      "color": "6A493C",
+      "default": false,
+      "description": ""
+    },
+    {
+      "id": 8745986032,
+      "node_id": "LA_kwDOI7xefs8AAAACCU0n8A",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/llama",
+      "name": "llama",
+      "color": "0055CC",
+      "default": false,
+      "description": "Related to Llama models"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-31T19:55:52Z",
+  "updated_at": "2026-08-31T19:56:29Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": false,
+  "pull_request": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/pulls/54621",
+    "html_url": "https://github.com/vllm-project/vllm/pull/54621",
+    "diff_url": "https://github.com/vllm-project/vllm/pull/54621.diff",
+    "patch_url": "https://github.com/vllm-project/vllm/pull/54621.patch",
+    "merged_at": null
+  },
+  "body": "Fixes #54555.\n\n## Purpose\n\nThe both-XD-RoPE config (target model `uses_xdrope_dim > 0` and draft model `uses_xdrope_dim > 0`) allocates `xdrope_positions` instead of the 1D `positions` buffer, but the draft loop seeds `positions` from `self.positions` for anything that is not `uses_mrope`, so the first both-XD-RoPE drafter with `num_speculative_tokens >= 2` raises `AttributeError` on its first speculative step. The seed now reads from `xdrope_positions` for that config, and `_update_positions_dependent_metadata` takes the slot coordinate from dim 0 for both multi-dim flavors: XD-RoPE decode positions are the absolute token index on every dim by construction (`get_rope_state` builds XD-RoPE with `has_delta=False`, so `_prepare_rope_positions_kernel` uses `orig_pos`), which is exactly what the slot math needs.\n\nNo model in main implements `get_xdrope_input_positions` yet, so this path cannot be exercised end-to-end today; the fix lands ahead of the first XD-RoPE drafter (HunYuan-VL family per the runner comment) instead of inside it. Non-XD-RoPE paths are byte-for-byte unchanged.\n\n## Test Plan\n\nNew `tests/v1/spec_decode/test_xdrope_seed_positions.py`: the seed reads the xdrope buffer for the both-XD-RoPE config (and never touches the missing 1D buffer), the M-RoPE and plain paths keep their buffers, `_uses_multidim_positions` covers both flavors and excludes a target-xdrope/non-xdrope-draft mix, and `_update_positions_dependent_metadata` feeds dim 0 to the slot kernel for the both-XD-RoPE config (kernel stubbed, CPU-only).\n\n## Verification\n\n- `.venv/bin/python -m pytest tests/v1/spec_decode/test_xdrope_seed_positions.py tests/v1/spec_decode/test_llm_base_proposer.py -q` -> 8 passed on current main (`810bc32`).\n- `ruff check` and `ruff format --check` clean on both files.\n- Not run: end-to-end drafting with an XD-RoPE checkpoint (none exists in main yet); the fix is exercised at the proposer state level above.\n\nThis change was prepared with AI assistance (Kimi K3); the crash mechanism was verified by reading the buffer init, the seed path, and the XD-RoPE decode position contract before writing the fix.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54621/reactions",
+    "total_count": 2,
+    "+1": 1,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 1
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54621/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

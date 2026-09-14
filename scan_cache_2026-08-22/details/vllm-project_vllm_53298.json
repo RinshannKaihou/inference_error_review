@@ -1,0 +1,113 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53298",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53298/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53298/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53298/events",
+  "html_url": "https://github.com/vllm-project/vllm/pull/53298",
+  "id": 5216395487,
+  "node_id": "PR_kwDOI7xefs8AAAABAk_Kqw",
+  "number": 53298,
+  "title": "[Bugfix][KV Connector] Restore state after KV load rejection",
+  "user": {
+    "login": "Lewis-panda",
+    "id": 116704255,
+    "node_id": "U_kgDOBvTD_w",
+    "avatar_url": "https://avatars.githubusercontent.com/u/116704255?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Lewis-panda",
+    "html_url": "https://github.com/Lewis-panda",
+    "followers_url": "https://api.github.com/users/Lewis-panda/followers",
+    "following_url": "https://api.github.com/users/Lewis-panda/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Lewis-panda/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Lewis-panda/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Lewis-panda/subscriptions",
+    "organizations_url": "https://api.github.com/users/Lewis-panda/orgs",
+    "repos_url": "https://api.github.com/users/Lewis-panda/repos",
+    "events_url": "https://api.github.com/users/Lewis-panda/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Lewis-panda/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 9306392211,
+      "node_id": "LA_kwDOI7xefs8AAAACKrRGkw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/kv-connector",
+      "name": "kv-connector",
+      "color": "4417cb",
+      "default": false,
+      "description": ""
+    },
+    {
+      "id": 10292436636,
+      "node_id": "LA_kwDOI7xefs8AAAACZXoenA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/mrv2",
+      "name": "mrv2",
+      "color": "7E1A2D",
+      "default": false,
+      "description": "Model Runner V2 specific"
+    },
+    {
+      "id": 11777487818,
+      "node_id": "LA_kwDOI7xefs8AAAACvf4zyg",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/scheduler",
+      "name": "scheduler",
+      "color": "f5d1c9",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-21T17:03:19Z",
+  "updated_at": "2026-08-21T17:04:01Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": true,
+  "pull_request": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/pulls/53298",
+    "html_url": "https://github.com/vllm-project/vllm/pull/53298",
+    "diff_url": "https://github.com/vllm-project/vllm/pull/53298.diff",
+    "patch_url": "https://github.com/vllm-project/vllm/pull/53298.patch",
+    "merged_at": null
+  },
+  "body": "## Purpose\n\nFixes #49250.\n\nWhen a synchronous external KV load is rejected under\n`kv_load_failure_policy=\"recompute\"`, scheduler state is rewound but Model\nRunner V2 can retain the old device-side computed-token offset. With\noverlapping batches, output already in flight can also mutate reset scheduler\nstate or be delivered after the request has been rescheduled. The result does\nnot match full recomputation.\n\nThis change:\n\n- marks the exact in-flight token positions stale and clears speculative and\n  placeholder state when a failed load is recomputed;\n- propagates an explicit `rewound_req_ids` marker with cached-request data;\n- applies the scheduler's absolute computed-token offset to Model Runner V2's\n  device-side request state only for those explicit rollbacks; and\n- adds focused scheduler and worker regression tests, including a multi-token\n  speculative async frame.\n\nThere is no connector-specific special case.\n\nThis is materially different from #49252. That PR's scheduler fix derives a\nframe count from `num_output_placeholders - 1` and explicitly scopes out\nspeculative decoding and diffusion. This change uses the existing exact\n`num_in_flight_tokens` accounting and an explicit CPU-to-GPU rewind signal; it\nwas validated with EAGLE3. The difference was documented on #49250 before this\ndraft was opened.\n\n## Test Plan\n\n```bash\npython -m pytest -q \\\n  tests/v1/kv_connector/unit/test_kv_load_failure_recovery.py \\\n  tests/v1/worker/test_gpu_model_runner_v2.py\n\nruff check \\\n  tests/v1/kv_connector/unit/test_kv_load_failure_recovery.py \\\n  tests/v1/worker/test_gpu_model_runner_v2.py \\\n  vllm/v1/core/sched/output.py \\\n  vllm/v1/core/sched/scheduler.py \\\n  vllm/v1/worker/gpu/model_runner.py\n\nruff format --check \\\n  tests/v1/kv_connector/unit/test_kv_load_failure_recovery.py \\\n  tests/v1/worker/test_gpu_model_runner_v2.py \\\n  vllm/v1/core/sched/output.py \\\n  vllm/v1/core/sched/scheduler.py \\\n  vllm/v1/worker/gpu/model_runner.py\n\ngit diff --check origin/main...HEAD\n```\n\nGPU negative-control protocol:\n\n1. Run greedy decoding without a KV connector and record token IDs.\n2. Use a connector that promises a block-aligned synchronous load and rejects\n   it before copying KV.\n3. Compare clean-base and patched output against the no-connector baseline for\n   sync, async, and async EAGLE3 scheduling.\n4. Repeat with real `LMCacheConnectorV1`, injecting a one-shot failure in a\n   16-token retrieval before KV is copied.\n\n## Test Result\n\n- Focused tests: **16 passed**.\n- Ruff check and format: **passed** for all five changed files.\n- `git diff --check`: **passed**.\n- Rebased cleanly onto `main` at `fe76112ff2`; focused tests and static checks\n  were rerun after the final rebase.\n\nSingle-GPU negative control (NVIDIA RTX 5060 Ti, Model Runner V2 asserted,\ngreedy token-ID comparison):\n\n| Configuration | Clean base | Patched |\n|---|---:|---:|\n| Controlled rejection, sync | differs from baseline | exact, 2/2 |\n| Controlled rejection, async | differs from baseline | exact, 2/2 |\n| EAGLE3 async, 2 draft tokens | differs from baseline | exact, 2/2 |\n| Real LMCache rejection, sync | differs from scratch | exact |\n| Real LMCache rejection, async | differs from scratch | exact |\n\nThe sync, async, EAGLE3, and real-LMCache async smoke cases were rerun after the\npreceding main rebase and remained exact. The final intervening upstream commit\nonly changes ROCm/DeepSeek files; the five files in this PR were unchanged.\n\nNot covered: multi-GPU pipeline parallelism, hybrid KV cache manager, layerwise\nLMCache loading, or multi-request shared-block recovery. A separate ordinary\nLMCache-hit fused-layout corruption observed on this stack is outside this\nchange's scope; the forced-failure test rejects before any cached KV copy.\n\nAI assistance disclosure: OpenAI Codex assisted with the investigation,\nimplementation, and test orchestration. The human submitter reviewed all five\nchanged files, understands the change, and accepts maintenance responsibility.\n\n---\n<details>\n<summary> Essential Elements of an Effective PR Description Checklist </summary>\n\n- [x] The purpose of the PR, such as \"Fix some issue (link existing issues this PR will resolve)\".\n- [x] The test plan, such as providing test command.\n- [x] The test results, such as pasting the results comparison before and after, or e2e results\n- [ ] (Optional) The necessary documentation update, such as updating `supported_models.md` and `examples` for a new model.\n</details>\n\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53298/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53298/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

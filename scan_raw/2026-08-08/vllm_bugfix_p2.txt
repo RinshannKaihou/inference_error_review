@@ -1,0 +1,40 @@
+#51382 | 2026-08-07 | [Bugfix][Build] Pin minimal DeepGEMM SM120 and SITU revision
+#51380 | 2026-08-07 | [ROCm][Bugfix] Use BF16 MLA prefill for short prompts
+#51373 | 2026-08-07 | [Bugfix] Fix/gdn flashinfer fp32 qkv cast
+#51370 | 2026-08-07 | [Bugfix][GDN] Fall back to recurrent prefill for float32 inputs
+#51368 | 2026-08-07 | [Bugfix] Fix DeepSeek V4 mHC broadcast buffer for dummy load and weight refit
+#51364 | 2026-08-07 | [Bugfix] glm47 tool parser: tolerate missing opening <arg_value> tag
+#51363 | 2026-08-07 | [Bugfix][Attention] Forward per-head FP8 descales through FA4
+#51362 | 2026-08-07 | [BugFix][Mooncake] Fix Mooncake saves from sparse Mamba block tables
+#51361 | 2026-08-07 | [Bugfix][NIXL] Allow heterogeneous non-MLA KV region sizes
+#51359 | 2026-08-07 | [Bugfix] Initialize DeepGemmQuantScaleFMT oracle lazily; bound QuantFP8 UE8M0 packed path to group_size 128
+#51358 | 2026-08-07 | [Bugfix][Mooncake] Save exact Mamba boundary states
+#51353 | 2026-08-07 | [Bugfix] Keep top-level quantization_config when benchmark_moe descends via --model-prefix
+#51338 | 2026-08-07 | [Bugfix][Spec Decode] Trust checkpoint-declared method over path-name heuristics
+#51328 | 2026-08-07 | [Bugfix] Use per-group slot_mapping in ExtractHiddenStatesProposer
+#51318 | 2026-08-06 | [Bugfix][DSv4] Make the C128A decode topk row stride capture-stable
+#51317 | 2026-08-06 | [Bugfix][KV Offload] Reclaim `/dev/shm` region leak on SIGKILL
+#51312 | 2026-08-06 | [CI/Build][BugFix][The Rock] Apply upstream torchao fix for python 3.14 compatibility to torchao
+#51307 | 2026-08-06 | [Bugfix] Gemma4 parser: decode JSON/Python string literals inside containers
+#51306 | 2026-08-06 | [Bugfix] Fix structured outputs on the V2 CPU model runner
+#51302 | 2026-08-06 | [Bugfix][Model] deepseek-vl2: restore original DeepseekV2Config defaults for omitted language_config fields
+#51299 | 2026-08-06 | [BugFix] Apply length caps in check_stop even when min_tokens is not reached
+#51296 | 2026-08-06 | [Bugfix] Align deepseek v4 parser thinking default with tokenizer
+#51295 | 2026-08-06 | [Bugfix] Fix hybrid attention cache miss due to eagle drop
+#51291 | 2026-08-06 | [ROCm][Bugfix] Restore AITER-compatible Triton 3.7 pin
+#51287 | 2026-08-06 | [Bugfix] Disable async scheduling when VLLM_BATCH_INVARIANT=1
+#51269 | 2026-08-06 | [Bugfix] Add missing dflash_config to DSpark speculators config
+#51268 | 2026-08-06 | [Bugfix] Handle nested dicts in RoPE _make_hashable for caching
+#51262 | 2026-08-06 | [Bugfix][DeepSeek V4] Handle trailing system messages in prompt rendering
+#51260 | 2026-08-06 | [Bugfix] Skip fetching revision for model when model and weights_model are different
+#51259 | 2026-08-06 | [Bugfix] Import each packed IPC export once on the consumer side
+#51256 | 2026-08-06 | [BugFix] Reserve the bonus query slot in DFlash scheduling budget
+#51254 | 2026-08-06 | [Bugfix][SM120] Round DSpark SWA index width up to a dispatchable decode topk
+#51252 | 2026-08-06 | [Bugfix] Size sparse-indexer prefill buffer by compress_ratio for DeepSeek-V4
+#51249 | 2026-08-06 | [Bugfix][Model] Add missing fused_qkv_a_proj to Kimi-Linear packed_modules_mapping
+#51230 | 2026-08-06 | [Bugfix] MiniMax-M3: structured output silently ignored with thinking enabled (scheduler reasoning-end gate never fires)
+#51228 | 2026-08-06 | [Bugfix][Core] Make EncoderDecoderCacheManager slot release idempotent
+#51227 | 2026-08-06 | [Bugfix][KV Offload] Clean up resources after initialization failure
+#51222 | 2026-08-06 | [Bugfix][EPD][Model Runner V2] Skip gather mm embeddings for encoder only instance
+#51219 | 2026-08-06 | [Bugfix] Close usage telemetry HTTP sessions
+#51218 | 2026-08-06 | [Bugfix] Report FULL_ATTENTION for uniform-base UniformTypeKVCacheSpecs groups instead of UNKNOWN

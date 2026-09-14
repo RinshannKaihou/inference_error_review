@@ -1,0 +1,86 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53329",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53329/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53329/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53329/events",
+  "html_url": "https://github.com/vllm-project/vllm/pull/53329",
+  "id": 5218859213,
+  "node_id": "PR_kwDOI7xefs8AAAABAm8nNw",
+  "number": 53329,
+  "title": "[Bugfix][KV Offload] Defer request-level cascade of in-flight primary keys",
+  "user": {
+    "login": "almogtavor",
+    "id": 70065337,
+    "node_id": "MDQ6VXNlcjcwMDY1MzM3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/70065337?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/almogtavor",
+    "html_url": "https://github.com/almogtavor",
+    "followers_url": "https://api.github.com/users/almogtavor/followers",
+    "following_url": "https://api.github.com/users/almogtavor/following{/other_user}",
+    "gists_url": "https://api.github.com/users/almogtavor/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/almogtavor/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/almogtavor/subscriptions",
+    "organizations_url": "https://api.github.com/users/almogtavor/orgs",
+    "repos_url": "https://api.github.com/users/almogtavor/repos",
+    "events_url": "https://api.github.com/users/almogtavor/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/almogtavor/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-21T23:05:14Z",
+  "updated_at": "2026-08-22T22:48:59Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": false,
+  "pull_request": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/pulls/53329",
+    "html_url": "https://github.com/vllm-project/vllm/pull/53329",
+    "diff_url": "https://github.com/vllm-project/vllm/pull/53329.diff",
+    "patch_url": "https://github.com/vllm-project/vllm/pull/53329.patch",
+    "merged_at": null
+  },
+  "body": "## Purpose\n\nFixes #53062.\n\n`TieringOffloadingManager._cascade_existing_blocks_to_request_level_tiers` keeps only keys whose primary-tier `lookup` is `HIT`. A `HIT_PENDING` key, present in the primary tier with its write still in flight, is dropped permanently: `prepare_store` already excluded it as present so `complete_store` never cascades it, the cascade drops it for not being readable, and the scheduler then advances `next_stored_chunk_idx` past the chunk so nothing offers it again. For a P2P producer leg nothing is parked under its `kv_request_id`, and the peer waits out `_LOAD_TIMEOUT_S` and recomputes.\n\nThe fix treats `HIT_PENDING` as \"not yet\" rather than \"never\": park those keys on the request, retry them once per step from `on_schedule_end()` next to `_flush_pending_promotions()`, and hold the request from finalization while any are parked.\n\nThe park is bounded without a timeout. `CPUOffloadingManager.complete_store(success=False)` removes the block and frees it, so a failed write resolves the key to `MISS` on the next retry; a successful one resolves it to `HIT`. Every parked key leaves the set, which is what `test_cascade_drops_deferred_keys_whose_primary_write_failed` pins. `has_pending_work()` also reports parked keys so the engine keeps ticking until they drain.\n\n### Reachability\n\nThe cascade is currently unreachable on `main`: no secondary tier returns `OffloadPolicy.REQUEST_LEVEL`, so `request_level_tiers` is always empty. #52912 is what makes the path live for the PD producer leg. This PR is independent of it and needs no rebase, but the bug only reaches users once #52912 lands.\n\n## Test Plan\n\nThree tests in `tests/v1/kv_offload/tiering/test_tiering_offloading.py`, on the existing `manager_setup` fixture:\n\n- `test_cascade_supply_behavior_declared_for_every_lookup_result` is the guard proposed as `_CASCADE_SUPPLY_BEHAVIOR` in #53083. A table declares `supply` / `defer` / `drop` per `LookupResult` and the test drives a real `TieringOffloadingManager` with a stubbed primary lookup, parametrized over `list(LookupResult)`, so a new member fails the suite until someone declares it.\n- `test_cascade_defers_keys_whose_primary_write_is_in_flight` is the reproduction: one request leaves a GPU to primary write open, a second request-level request calls `prepare_store` on the same keys, and the peer must be offered them once the write lands.\n- `test_deferred_cascade_holds_request_from_finalization` covers the request finishing while keys are still parked, which on `main` tears the secondary tiers down before the peer is ever served.\n\n```bash\n.venv/bin/python -m pytest tests/v1/kv_offload/tiering/test_tiering_offloading.py -q\n```\n\n## Test Result\n\nRun on one H100, `vllm/vllm-openai` container, source overlaid on `main`.\n\nBoth new behavioral tests fail on `main` for the right reason. `test_cascade_defers_keys_whose_primary_write_is_in_flight` fails on its substantive assertion:\n\n```\n>       assert self._cascaded_keys_for(ctx.req_id) == [set(keys)]\nE       AssertionError: assert [] == [{b'0\\x00\\x00...x00\\x00\\x00'}]\nE         Right contains one more item: {b'0\\x00\\x00\\x00\\x00', b'1\\x00\\x00\\x00\\x00', b'2\\x00\\x00\\x00\\x00'}\n```\n\nBefore the fix: `6 failed, 1 passed`. After: `55 passed` for the file.\n\nWider suite, `tests/v1/kv_offload`:\n\n| | passed | failed | errors |\n|---|--:|--:|--:|\n| `main` | 490 | 6 | 36 |\n| this PR | 497 | 6 | 36 |\n\nThe 6 failures and 36 errors are identical on both sides and are environmental in this container (`test_gpu_worker.py` needs a GPU worker, `test_fs_tier.py` and the two factory tests need writable paths and dynamic module loading). No test changes state because of this PR.\n\n`ruff check` and `ruff format --check` (v0.14.0, the pinned pre-commit rev) pass on both changed files.\n\n## Notes\n\n- #53087 rewrites 103 lines of the same `tiering/manager.py` for a different bug (#49829, unbounded `HIT_PENDING` waits in `lookup()`). The two do not overlap functionally: that one bounds the tiering manager's own `lookup()`, this one changes what the cascade does with the primary tier's `lookup()`. Whichever lands second will need a small rebase.\n- AI assistance was used for this change.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53329/reactions",
+    "total_count": 2,
+    "+1": 1,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 1
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53329/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53868",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53868/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53868/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53868/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/53868",
+  "id": 5255826683,
+  "node_id": "I_kwDOI7xefs8AAAABOUWM-w",
+  "number": 53868,
+  "title": "[Bug] SimpleCPUOffloadConnector (eager, TP=2, nightly dev1214): engine wedges at Running:0 / Waiting:3 (1 capacity + 2 deferred) — independent data point for the #45406 stranding family, with py-spy stacks from the wedged state",
+  "user": {
+    "login": "greatyingzi",
+    "id": 20220018,
+    "node_id": "MDQ6VXNlcjIwMjIwMDE4",
+    "avatar_url": "https://avatars.githubusercontent.com/u/20220018?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/greatyingzi",
+    "html_url": "https://github.com/greatyingzi",
+    "followers_url": "https://api.github.com/users/greatyingzi/followers",
+    "following_url": "https://api.github.com/users/greatyingzi/following{/other_user}",
+    "gists_url": "https://api.github.com/users/greatyingzi/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/greatyingzi/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/greatyingzi/subscriptions",
+    "organizations_url": "https://api.github.com/users/greatyingzi/orgs",
+    "repos_url": "https://api.github.com/users/greatyingzi/repos",
+    "events_url": "https://api.github.com/users/greatyingzi/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/greatyingzi/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-26T10:09:43Z",
+  "updated_at": "2026-08-26T10:09:43Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Summary\n\nReproduced the exact wedge family described in #45406's second trigger (FCFS + async KV-load parked requests stranded behind an unschedulable queue head), but with `SimpleCPUOffloadConnector` (eager mode, CPU backend) on a recent nightly — providing an independent production data point with py-spy stacks and live `/metrics` from the wedged state.\n\n### Environment\n\n- vLLM: `0.26.1rc1.dev1214+gf6130145c` (nightly wheel, 2026-08-26)\n- Hardware: 2× RTX 3090, TP=2, 128 GB host RAM, Ubuntu 22.04\n- Model: hybrid linear-attention/full-attention 27B (GDN-style, 64 layers, `full_attention_interval=4`), fp8 KV cache, `block_size=1648`\n- Server flags (relevant): `--kv-offloading-size 60 --kv-offloading-backend native` (→ `SimpleCPUOffloadConnector` via `VLLM_USE_SIMPLE_KV_OFFLOAD=1`, eager mode), `--max-num-seqs 6`, `--max-num-batched-tokens 4096`, `--enable-prefix-caching --enable-chunked-prefill`, MTP-style speculative decoding (dflash, 7 tokens), `VLLM_PREFIX_CACHE_RETENTION_INTERVAL=1648`\n- Load: sustained agentic traffic (~270 requests/hour, short-to-medium prompts, heavy prefix reuse — external prefix cache hit rate 84.7% right before the wedge)\n\n**Local patch disclosure:** we carry three small local patches to `vllm/v1/simple_kv_offload/manager.py` (store-side hash registration — the fix for our own report #53498 — plus a final-flush-on-request-finish). None of them touch the load path, the scheduler, or the promotion logic. Notably, the hash-registration patch *enables* CPU-cache lookups that always miss on stock main (#53498), which is what makes the async-load path (`get_num_new_matched_tokens` → `WAITING_FOR_REMOTE_KVS`) reachable in the first place on this connector. The stranding mechanism itself is scheduler-side and reachable with other connectors on stock main per #45406's FCFS reproduction with `OffloadingConnector`.\n\n### Symptom\n\nEngine wedged silently at 17:51 local time: no ERROR/WARNING lines, `/metrics` still served, `/health` green. Live metrics from the wedged state:\n\n```\nvllm:num_requests_running{...} 0.0\nvllm:num_requests_waiting{...} 3.0\nvllm:num_requests_waiting_by_reason{...,reason=\"capacity\"} 1.0\nvllm:num_requests_waiting_by_reason{...,reason=\"deferred\"} 2.0\n```\n\n`Running: 0, Waiting: 3 (1 capacity + 2 deferred)` — the deferred pair matches `WAITING_FOR_REMOTE_KVS`-style parked async loads (they had just matched CPU-resident prefix blocks), the capacity request is the unschedulable head. GPU KV usage was high (~80%+) right before the collapse after a burst of long-prompt requests.\n\npy-spy on EngineCore main thread, two samples 10 s apart (engine alive, not deadlocked on a lock — busy-looping):\n\n```\nThread 153859 (active): \"MainThread\"\n    _process_engine_step (vllm/v1/engine/core.py:1477)   # the `time.sleep(0.001)` yield branch\n    run_busy_loop (vllm/v1/engine/core.py:1413)\n    run_engine_core (vllm/v1/engine/core.py:1354)\n```\n\ni.e. `step_fn()` keeps returning `model_executed=False` while `scheduler.has_requests()` is true — `schedule()` produces nothing schedulable every step, forever. Workers spin in `shm_broadcast.acquire_read`. Only a restart recovers; after restart with identical config and continued traffic the engine is healthy again.\n\n### Analysis\n\nSame structural pattern as #45388/#45406: the waiting-queue traversal hits the capacity-blocked head and `break`s; the two parked async-KV-load requests behind it are never reached by `_try_promote_blocked_waiting_request()`, so their `finished_recving`/load-completion signals are never consumed; nothing is running, so no blocks are ever freed; `schedule()` returns an empty step indefinitely while the engine reports healthy. #44560's admission gate doesn't cover this because the load requests were already admitted and re-queued via `skipped_waiting` when the async load was issued.\n\nWe did not capture `VLLM_LOGGING_LEVEL=DEBUG` in the incident window (production); the py-spy dumps and metric snapshots above were captured live during the wedge and are available in full if useful.\n\n### Suggested direction\n\nMerge #45406 (defense-in-depth skip-past-unschedulable-head when `self.running` is empty), and consider a watchdog: if `num_requests_running == 0` while `num_requests_waiting > 0` with `reason=\"deferred\"` persists for N seconds, log at WARNING/ERROR (and/or expose it in `/health`) — a healthy-idle engine has waiting=0; this combination is always a wedge.\n\n### Related\n\n- #45406 — the fix PR (not merged); its second FCFS trigger is this exact mechanism\n- #45388 / #42371 — original symptom family\n- #44560 — admission-gate fix that this path bypasses (post-admission re-queue)\n- #53498 — our prior report on SimpleCPUOffloadConnector hash registration (whose fix unmasks this path on this connector)\n\nBefore submitting:\n- [x] Searched existing issues (this is a data-point report supporting an existing open PR, not a duplicate bug report)\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53868/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53868/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

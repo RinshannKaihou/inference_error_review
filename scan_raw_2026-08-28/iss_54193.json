@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54193",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54193/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54193/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54193/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54193",
+  "id": 5276882370,
+  "node_id": "I_kwDOI7xefs8AAAABOobVwg",
+  "number": 54193,
+  "title": "[Bug]: KV offloading connector: finished-request store watermark includes a KV slot never written by any forward pass (silent cross-request poisoning with offload_prompt_only=False)",
+  "user": {
+    "login": "tomylin890",
+    "id": 5244177,
+    "node_id": "MDQ6VXNlcjUyNDQxNzc=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/5244177?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/tomylin890",
+    "html_url": "https://github.com/tomylin890",
+    "followers_url": "https://api.github.com/users/tomylin890/followers",
+    "following_url": "https://api.github.com/users/tomylin890/following{/other_user}",
+    "gists_url": "https://api.github.com/users/tomylin890/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/tomylin890/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/tomylin890/subscriptions",
+    "organizations_url": "https://api.github.com/users/tomylin890/orgs",
+    "repos_url": "https://api.github.com/users/tomylin890/repos",
+    "events_url": "https://api.github.com/users/tomylin890/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/tomylin890/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-28T09:39:44Z",
+  "updated_at": "2026-08-28T09:39:44Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\nObserved on `main` (also present in our fork based on f561eca). Scheduler-side logic only; independent of backend/hardware. Found while validating decode-side offloading (`offload_prompt_only=False`) for a hybrid-attention model in production, but the mechanism is model-agnostic.\n\n### 🐛 Describe the bug\n\n**Summary:** when a request finishes, the offloading connector's store watermark is `req.num_tokens`, which includes the final sampled token — a position whose KV-cache slot was **never written by any forward pass**. If the generation ends exactly on a block boundary, that block is offloaded as \"complete\" under its content hash, and any later request that reuses the same content loads a block whose last KV slot is garbage. Silent cross-request KV poisoning: no crash, no error, only degraded continuations.\n\n**Where:** `vllm/distributed/kv_transfer/kv_connector/v1/offloading/scheduler.py`, in the per-step store-jobs walk:\n\n```python\nif req.status is RequestStatus.FINISHED_ABORTED:\n    num_tokens_after_batch = req.num_computed_tokens\nelif req.is_finished():\n    num_tokens_after_batch = req.num_tokens          # <-- includes the sampled token\n```\n\n(currently around line 1266 on `main`; the `FINISHED_ABORTED` branch above it is correct.)\n\n**Mechanism:**\n\n1. A request finishes at `num_tokens = n`. The token at position `n-1` (EOS / stop token) was *sampled* from the forward pass of position `n-2`; position `n-1` itself is never forwarded, so its KV slot is never written.\n   - Plain decode: the slot holds stale/uninitialized values.\n   - **Speculative decoding makes it worse:** the slot holds the KV of the first *rejected* draft token — in-distribution values, so nothing looks wrong even if you inspect the cache.\n2. With `offload_prompt_only=False`, `_calc_num_offloadable_tokens` does not clamp to the prompt, so the watermark `n` covers the final block. If `n` is block-aligned, the final block is considered complete and gets stored under its content hash. The hash is computed over token **ids**, which are all valid — including the sampled token — so the stored block is fully addressable.\n3. A later request whose token stream matches that content — the standard multi-turn pattern of re-sending the full transcript (the sampled stop token is part of the assistant message) — gets an offload HIT and loads the block. The last slot of the loaded block is the never-written garbage, now serving as real KV for a *different* request.\n\n**Trigger conditions:** `offload_prompt_only=False` (opt-in) × finish landing exactly on a block boundary (~1/block_size of requests, so routine at scale) × content reuse across requests (multi-turn / shared transcripts). With the default `offload_prompt_only=True` the clamp to `num_prompt_tokens` keeps the bug dormant (every prompt position is computed by prefill, so the prompt side is safe).\n\n**Why it's hard to catch:** the poisoned slot is one token's KV out of a full block; retrieval-style tests (needle) pass, and with spec decode the values are statistically plausible. It only shows up as occasional quality degradation of continuations that rewarm across the poisoned boundary — which is exactly the workload decode offloading exists for.\n\n**Suggested fix** (what we run in production):\n\n```python\nelif req.is_finished():\n    # Drained frontier: the final sampled token's KV slot is never written\n    # by a forward pass (with spec decode it holds the first rejected\n    # draft's KV). max() keeps the full prompt, which prefill did compute.\n    num_tokens_after_batch = max(req.num_prompt_tokens, req.num_tokens - 1)\n```\n\nUnit-test contract that pins it: a request finishing exactly at a block boundary must store nothing for the final block (and, one token past the boundary, must store only up to the boundary). Existing tests that expect the final block to be stored at finish encode the poisoning behavior and need the corresponding adjustment.\n\nHappy to send a PR with the fix + tests if the maintainers agree with the analysis.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and checked the documentation and FAQ.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54193/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54193/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

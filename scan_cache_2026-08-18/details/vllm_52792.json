@@ -1,0 +1,108 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/52792",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/52792/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/52792/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/52792/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/52792",
+  "id": 5183934755,
+  "node_id": "I_kwDOI7xefs8AAAABNPyRIw",
+  "number": 52792,
+  "title": "[Bug][ROCm] Kimi-K3 (KimiLinear/GDN hybrid) + ngram spec-decode: GPU memory access fault on concurrent mixed spec/non-spec batches (single-stream works after fixing a strided `state_indices` slice)",
+  "user": {
+    "login": "skimanwhite",
+    "id": 241471738,
+    "node_id": "U_kgDODmSQ-g",
+    "avatar_url": "https://avatars.githubusercontent.com/u/241471738?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/skimanwhite",
+    "html_url": "https://github.com/skimanwhite",
+    "followers_url": "https://api.github.com/users/skimanwhite/followers",
+    "following_url": "https://api.github.com/users/skimanwhite/following{/other_user}",
+    "gists_url": "https://api.github.com/users/skimanwhite/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/skimanwhite/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/skimanwhite/subscriptions",
+    "organizations_url": "https://api.github.com/users/skimanwhite/orgs",
+    "repos_url": "https://api.github.com/users/skimanwhite/repos",
+    "events_url": "https://api.github.com/users/skimanwhite/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/skimanwhite/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6114440385,
+      "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+      "name": "rocm",
+      "color": "B60205",
+      "default": false,
+      "description": "Related to AMD ROCm"
+    },
+    {
+      "id": 11639749480,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7aA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/kimi",
+      "name": "kimi",
+      "color": "78d0bd",
+      "default": false,
+      "description": null
+    },
+    {
+      "id": 11639749575,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7xw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/k3",
+      "name": "k3",
+      "color": "e429eb",
+      "default": false,
+      "description": null
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-18T16:15:12Z",
+  "updated_at": "2026-08-18T16:15:22Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\n<details>\n<summary>collect_env output (summary; full output attached)</summary>\n\n- vLLM: `0.1.dev19253+g5f76ae224.d20260727` — the official ROCm Kimi-K3 image `vllm/vllm-openai-rocm:kimi-k3`, with aiter built from source at `ROCm/aiter@e8f438a748d27d5350b9a2d63c8e1cffc2626f52` (2026-08-17)\n- PyTorch: 2.11.0+gitd0c8b1f (ROCm 7.2.53211), Python 3.12.13, Ubuntu 22.04.5\n- Hardware: 8× AMD Instinct MI300X (gfx942), single node, TP=8\n- Model: `nota-ai/Kimi-K3-Nota-Global-Pruned-25` (MXFP4). Note: expert-pruned K3 variant — the pruning affects MoE expert counts only; the KDA/GDN and MLA attention layers are architecturally identical to stock Kimi-K3, and the files involved in this bug (`vllm/models/kimi_k3/amd/ops/third_party/kda/fused_recurrent.py`, `vllm/model_executor/layers/mamba/gdn/kimi_gdn_linear_attn.py`, `vllm/v1/attention/backends/gdn_attn.py`) were verified byte-identical to the image's stock copies before testing.\n\n</details>\n\n### 🐛 Describe the bug\n\nEnabling ngram speculative decoding on Kimi-K3 (KimiLinear hybrid: 69 KDA/GatedDeltaNet recurrent layers + 24 MLA layers) produces **two distinct failures** on the ROCm build:\n\n**Failure 1 (root-caused, workaround proven): strided `state_indices` rejected by the KDA single-token decode kernel.**\n\nThe first decode request after enabling `--speculative-config '{\"method\":\"ngram\",\"num_speculative_tokens\":6,\"prompt_lookup_max\":4,\"prompt_lookup_min\":2}'` dies on every TP worker:\n\n```\nFile \".../vllm/model_executor/layers/mamba/gdn/kimi_gdn_linear_attn.py\", line 609, in _forward\n    core_attn_out_non_spec, _ = fused_recurrent_kda_packed_decode(\nFile \".../vllm/models/kimi_k3/amd/ops/third_party/kda/fused_recurrent.py\", line 564, in fused_recurrent_kda_packed_decode\n    raise ValueError(\"`state_indices` must be contiguous and one-dimensional.\")\n```\n\nDiagnostics show `state_indices` arrives as **ndim=1, shape=(1,), stride=(7,)** — a strided column-slice of the block table (`block_table_tensor[~spec_mask, 0]`, row-stride = num_speculative_tokens+1 = 7). Without spec-decode the mask is all-true and the slice comes out contiguous, which is why only the spec path trips it. The data itself is correct (one read-only state-slot index per request); only the layout is strided, so a compacting copy is lossless:\n\n```python\n# fused_recurrent_kda_packed_decode, before the strict guard:\nif state_indices.ndim != 1 or state_indices.stride(0) != 1:\n    if state_indices.ndim == 1:\n        state_indices = state_indices.contiguous()   # <- fix\n    else:\n        raise ValueError(\"`state_indices` must be contiguous and one-dimensional.\")\n```\n\nWith this in place, **single-stream ngram spec-decode works and is a large win**: mean acceptance length 5.45/5.41/4.80 (num_spec=6), accepted throughput up to **33.8 tok/s** vs 25.7 tok/s baseline on retrieval-shaped prompts, output exactness verified at temp=0 against a 200k-context needle suite (50/50 facts, identical to non-spec).\n\n**Failure 2 (the blocker, unresolved): GPU memory access fault under concurrent mixed spec/non-spec batches.**\n\nWith the workaround in place, running **≥8 concurrent requests** through the same server GPU-faults all 8 devices within ~a minute:\n\n```\nMemory access fault by GPU node-7 (Agent handle: 0x15c8c3d0) on address 0x73862f600000. Reason: Unknown.\nMemory access fault by GPU node-9 (Agent handle: 0x170d4d00) on address 0x7210ff200000. Reason: Unknown.\n... (all 8 GPUs)\nGPU core dump failed\n(EngineCore pid=543) ERROR ... Worker proc VllmWorker-2 died unexpectedly (exit code: None), shutting down executor.\n```\n\nThe fault correlates with batches that mix spec-accepted and non-spec requests (the spec-decode metrics immediately before the fault show acceptance collapsing as the batch mixes). Our read: the concurrent spec+non-spec KDA recurrent-state indexing walks state out of bounds — the single-request `.contiguous()` read is benign, but the multi-request spec path has a deeper state-indexing bug. We deliberately stopped patching at this point (GPU-fault-class bugs are yours to own, not something downstream should whack-a-mole).\n\n### Repro\n\n```bash\n# image: vllm/vllm-openai-rocm:kimi-k3  (+ aiter main built from source, see env)\npython3 -m vllm.entrypoints.openai.api_server \\\n  --model nota-ai/Kimi-K3-Nota-Global-Pruned-25 \\\n  --tensor-parallel-size 8 --max-model-len 655360 \\\n  --gpu-memory-utilization 0.95 --max-num-seqs 64 --block-size 128 \\\n  --no-enable-prefix-caching --language-model-only --trust-remote-code \\\n  --speculative-config '{\"method\":\"ngram\",\"num_speculative_tokens\":6,\"prompt_lookup_max\":4,\"prompt_lookup_min\":2}'\n# env: VLLM_ROCM_USE_AITER=1 VLLM_ROCM_USE_AITER_MLA=0 HSA_ENABLE_IPC_MODE_LEGACY=0\n#      VLLM_ROCM_QUICK_REDUCE_QUANTIZATION=FP NCCL_CUMEM_ENABLE=0\n#      PYTORCH_HIP_ALLOC_CONF=expandable_segments:False\n```\n\n1. Single `/v1/completions` request → Failure 1 (ValueError) on stock code; works with the `.contiguous()` workaround at 33.8 tok/s accepted throughput.\n2. 8+ concurrent `/v1/completions` requests (mixed lengths) → Failure 2 (GPU memory access fault, all devices) within ~1 minute.\n\n### The question for maintainers\n\nSince our image was built (2026-07-27), this exact path has been reworked on main: #50649 *\"Fix KDA NaN on mixed batches and racy autotune config\"*, #50654 *\"Fused kernel for KDA decode\"*, #51862 *\"Remove prefill pipeline stall in chunk KDA\"* — and `kimi_gdn_linear_attn.py` now materializes the non-spec batch via `index_select` (which would also fix Failure 1 by construction).\n\n- **Does the current main/next kimi-k3 ROCm image fix the concurrent mixed spec/non-spec KDA fault (Failure 2)?** #50649's NaN fix touches mixed batches but the symptom we see is an OOB fault, not NaN.\n- If it's believed fixed, we're happy to validate a new `vllm/vllm-openai-rocm:kimi-k3` (or nightly rocm) image on our 8×MI300X node and report back — ngram spec is worth ~30% end-to-end on this model and is currently the only spec-decode path that works on gfx942 (draft-model/DSpark and aiter-MLA paths are gfx950-only).\n\nFull logs available: complete ValueError traceback (all 8 workers), the strided-shape diagnostic, spec-decode metrics leading into the fault, and the GPU-fault log. Full bundle (secret gist): https://gist.github.com/skimanwhite/135d50e01ce9da029ba01bdaa4d10ba0\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/52792/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/52792/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

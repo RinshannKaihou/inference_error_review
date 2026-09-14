@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/37283",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/37283/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/37283/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/37283/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/37283",
+  "id": 5303696728,
+  "node_id": "I_kwDOLCAjRs8AAAABPB_9WA",
+  "number": 37283,
+  "title": "[Bug] A non-object entry in a tool-call array discards the valid calls beside it",
+  "user": {
+    "login": "elbourne12345",
+    "id": 93987676,
+    "node_id": "U_kgDOBZojXA",
+    "avatar_url": "https://avatars.githubusercontent.com/u/93987676?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/elbourne12345",
+    "html_url": "https://github.com/elbourne12345",
+    "followers_url": "https://api.github.com/users/elbourne12345/followers",
+    "following_url": "https://api.github.com/users/elbourne12345/following{/other_user}",
+    "gists_url": "https://api.github.com/users/elbourne12345/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/elbourne12345/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/elbourne12345/subscriptions",
+    "organizations_url": "https://api.github.com/users/elbourne12345/orgs",
+    "repos_url": "https://api.github.com/users/elbourne12345/repos",
+    "events_url": "https://api.github.com/users/elbourne12345/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/elbourne12345/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-31T18:48:44Z",
+  "updated_at": "2026-08-31T18:48:44Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\nWhen a tool-call array contains an entry that is valid JSON but not an object, the valid tool calls beside it are silently discarded.\n\n```\n[{\"name\": \"get_weather\", \"arguments\": {\"city\": \"Paris\"}}, \"junk\"]\n  -> no tool calls at all, though the first entry is a well-formed call\n```\n\nThe model asked for the weather correctly; that request is lost because an unrelated entry sat next to it in the array. No crafted input is needed — only a model emitting a slightly malformed array, which is ordinary behaviour.\n\n### Cause\n\n`BaseFormatDetector.parse_base_json` reads `act.get(\"name\")` without checking that `act` is an object (`python/sglang/srt/function_call/base_format_detector.py:83`):\n\n```python\nresults = []\nfor act in action:\n    name = act.get(\"name\")\n```\n\nA non-object entry raises `AttributeError`:\n\n```\n[1, 2]   -> AttributeError: 'int' object has no attribute 'get'\n[\"x\"]    -> AttributeError: 'str' object has no attribute 'get'\n[null]   -> AttributeError: 'NoneType' object has no attribute 'get'\n[[]]     -> AttributeError: 'list' object has no attribute 'get'\n```\n\nOn the chat path `serving_chat.py:2145` catches that and returns `ToolCallProcessingResult(None, ...)`, dropping every call in the response.\n\nThis looks like a missed branch rather than absent error handling: the same function already defines what to do with an unusable entry a few lines below, and it is not \"abort the batch\" —\n\n```python\nif not (name and name in tool_indices):\n    logger.warning(f\"Model attempted to call undefined function: {name}\")\n    if not envs.SGLANG_FORWARD_UNKNOWN_TOOLS.get():\n        continue  # skip this entry, keep the rest\n```\n\nAn unknown tool name is skipped and parsing continues. A non-object entry should behave the same way.\n\n### Secondary: `/parse_function_call` returns HTTP 500\n\nThe same `AttributeError` reaches the HTTP layer uncaught. `/parse_function_call` (`http_server.py:1632`) passes `obj.text` straight from the request body to `parse_non_stream` with no `try/except` — unlike `/abort_request` above it. `parse_non_stream` (`function_call_parser.py:138`) has no guard either, and the only registered exception handlers are for `HTTPException` and `RequestValidationError`, so it reaches Starlette's default handler.\n\nThat half is arguably just error handling — the input is malformed and rejecting it is correct. It is included because it is the quickest way to observe the exception, and because a 500 is the wrong way to reject a well-formed request.\n\n### Scope\n\nReproduced through `FunctionCallParser.parse_non_stream()` for `qwen25`, `llama3`, `mistral` and `trinity`. Detectors with their own `try/except` (e.g. `hermes`, `deepseekv3`) are unaffected.\n\nThe discarded-valid-call effect applies to parsers whose payload between the markers is itself a JSON array (`qwen25`, `trinity`). `llama3` separates calls with `;` and mistral's `[` is part of its `bot_token`, so neither accepts an array there — for those two the uncaught exception is the only effect.\n\n---\n\n\n### Reproduction\n\n\n\n```python\nfrom sglang.srt.entrypoints.openai.protocol import Function, Tool\nfrom sglang.srt.function_call.function_call_parser import FunctionCallParser\n\ntools = [Tool(type=\"function\", function=Function(\n    name=\"get_weather\", parameters={\"type\": \"object\", \"properties\": {}}))]\n\nparser = FunctionCallParser(tools=tools, tool_call_parser=\"qwen25\")\n\n# the valid call is lost because of the entry beside it\nparser.parse_non_stream(\n    '<tool_call>\\n[{\"name\": \"get_weather\", \"arguments\": {\"city\": \"Paris\"}}, \"junk\"]\\n</tool_call>'\n)\n# AttributeError: 'str' object has no attribute 'get'\n\n# minimal form\nparser.parse_non_stream('<tool_call>\\n[1, 2]\\n</tool_call>')\n# AttributeError: 'int' object has no attribute 'get'\n```\n\nAgainst a running server:\n\n```bash\ncurl -X POST http://localhost:30000/parse_function_call \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"text\": \"<tool_call>\\n[1, 2]\\n</tool_call>\",\n       \"tool_call_parser\": \"qwen25\",\n       \"tools\": [{\"type\": \"function\",\n                  \"function\": {\"name\": \"get_weather\",\n                               \"parameters\": {\"type\": \"object\", \"properties\": {}}}}]}'\n```\n\n### Environment\n\n\n\n```\nPython: 3.10.12 (main, Jul 15 2026, 23:40:17) [GCC 11.4.0]\nCUDA available: True\nGPU 0: NVIDIA L4\nGPU 0 Compute Capability: 8.9\nCUDA_HOME: /usr/local/cuda\nNVCC: Cuda compilation tools, release 12.9, V12.9.41\nCUDA Driver Version: 580.173.02\nPyTorch: 2.13.0+cu130\nsglang: 0.0.0.dev50+g549166b81\nsglang-kernel: 0.4.6.post1\nflashinfer_python: 0.6.18\nflashinfer_cubin: Module Not Found\nflashinfer_jit_cache: Module Not Found\ntriton: 3.7.1\ntransformers: 5.12.1\ntorchao: Module Not Found\nnumpy: 2.2.6\naiohttp: 3.14.3\nfastapi: 0.141.1\nhuggingface_hub: 1.29.0\ninteregular: 0.3.3\nmodelscope: 1.39.1\norjson: 3.12.0\noutlines: 0.1.11\npackaging: 26.3\npsutil: 7.2.2\npydantic: 2.13.5\npython-multipart: 0.0.32\npyzmq: 27.2.0\nuvicorn: 0.52.4\nuvloop: 0.22.1\nvllm: Module Not Found\nxgrammar: 0.2.1\nopenai: 2.6.1\ntiktoken: 0.14.0\nanthropic: 1.2.0\nlitellm: Module Not Found\ntorchcodec: 0.15.0\nNVIDIA Topology: \n\t\u001B[4mGPU0\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID\u001B[0m\nGPU0\t X \t0-7\t0\t\tN/A\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n\nHypervisor vendor:: KVM\nulimit soft: 1024\n```\n\n\n---",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/37283/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/37283/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

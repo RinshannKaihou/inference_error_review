@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54641",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54641/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54641/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54641/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54641",
+  "id": 5305413303,
+  "node_id": "I_kwDOI7xefs8AAAABPDoutw",
+  "number": 54641,
+  "title": "[Bug]: Identity entry in packed_modules_mapping silently disables layer_quant_config (Quark)",
+  "user": {
+    "login": "stefanskiasan",
+    "id": 69960390,
+    "node_id": "MDQ6VXNlcjY5OTYwMzkw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/69960390?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/stefanskiasan",
+    "html_url": "https://github.com/stefanskiasan",
+    "followers_url": "https://api.github.com/users/stefanskiasan/followers",
+    "following_url": "https://api.github.com/users/stefanskiasan/following{/other_user}",
+    "gists_url": "https://api.github.com/users/stefanskiasan/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/stefanskiasan/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/stefanskiasan/subscriptions",
+    "organizations_url": "https://api.github.com/users/stefanskiasan/orgs",
+    "repos_url": "https://api.github.com/users/stefanskiasan/repos",
+    "events_url": "https://api.github.com/users/stefanskiasan/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/stefanskiasan/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6114440385,
+      "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+      "name": "rocm",
+      "color": "B60205",
+      "default": false,
+      "description": "Related to AMD ROCm"
+    },
+    {
+      "id": 9988761457,
+      "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+      "name": "quantization",
+      "color": "62bfab",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-31T22:10:28Z",
+  "updated_at": "2026-08-31T22:12:50Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### The bug\n\nAn identity entry in `packed_modules_mapping` — a mapping of a module to itself, e.g.\n`\"gate_up_proj\": [\"gate_up_proj\"]` — silently disables `layer_quant_config` for that module. The\nlayer falls back to `global_quant_config` instead, so a mixed-precision checkpoint gets built with\nthe wrong scheme and fails at weight load with a shape mismatch.\n\nIn `vllm/model_executor/layers/quantization/quark/quark.py`, both lookup paths treat\n`shard_name == layer_name` as \"no shard information available\":\n\n```python\n# get_layer_quant_config_from_name\nshard_name = layer_name.replace(proj_name, shard_proj_name)\nif shard_name != layer_name:\n    config = self.get_layer_quant_config_from_name(shard_name)\nelse:\n    config = None                      # <-- identity entry -> no config\n\n# _find_matched_config\nif shard_name == layer_name:\n    config = fallback_config           # <-- identity entry -> global scheme\n```\n\nFor a genuine fusion (`fused_qkv_a_proj` -> `[q_a_proj, kv_a_proj_with_mqa]`) that is right: the\nshard names differ, and the entries are looked up individually. For an identity entry the\nsubstitution is a no-op, and the code concludes there is nothing to look up — even though\n`layer_quant_config` may contain the layer under its own name.\n\n### Who this affects\n\nIdentity entries are an established pattern in-tree, not a mistake by checkpoint authors:\n\n```\nvllm/model_executor/models/plamo3.py:375     \"gate_up_proj\": [\"gate_up_proj\"],\nvllm/model_executor/models/glm4_1v.py:1769   \"gate_up_proj\": [\"gate_up_proj\"],\nvllm/model_executor/models/molmo.py:1313     \"gate_up_proj\": [\"gate_up_proj\"],  # language model\n```\n\nAny Quark checkpoint that uses `layer_quant_config` to give one of these modules a different\nscheme than the global one is affected. It is silent until load: no warning, no log line, just the\nglobal scheme applied where a per-layer scheme was specified.\n\n### Reproduction\n\nGLM-5.3-Flash, Quark MXFP4 checkpoint with `layer_quant_config` marking the dense MLPs as\nblock-FP8 while the MoE experts are MXFP4:\n\n```\nAssertionError: language_model.model.layers.0.mlp.gate_up_proj shard=0\n  param=(24576, 2048)/torch.uint8      <- built as MXFP4 from global_quant_config\n  loaded=(12288, 4096)/torch.float8_e4m3fn   <- checkpoint has FP8\n```\n\nThe sibling `down_proj` (not in `packed_modules_mapping`) resolves correctly to\n`QuarkW8A8Fp8PerBlock` in the same model; only `gate_up_proj` takes the fallback. Traced with a\nprint in `get_scheme`:\n\n```\n[TRACE] ...layers.0.mlp.gate_up_proj -> QuarkOCP_MX     dtype=fp4    packed=True\n[TRACE] ...layers.0.mlp.down_proj    -> QuarkW8A8Fp8PerBlock dtype=fp8_e4m3 packed=False\n```\n\nand the mapping itself:\n\n```\n[TRACE-MAP] gate_up_proj -> ['gate_up_proj']\n[TRACE-MAP]   shard gate_up_proj: name=...layers.0.mlp.gate_up_proj  same=True  hit=False\n```\n\n`hit=False` although the key is present in `layer_quant_config`.\n\n### Fix\n\nLook the layer up directly when the shard name is the layer name. Extracting the direct lookup out\nof `get_layer_quant_config_from_name` into a small helper and calling it from both places is\nenough:\n\n```python\ndef _direct_layer_quant_config(self, layer_name: str) -> dict[str, Any] | None:\n    layer_quant_config = cast(dict[str, Any],\n                              self.quant_config.get(\"layer_quant_config\") or {})\n    for name_pattern, config in layer_quant_config.items():\n        matches = (layer_name in name_pattern if \"*\" not in name_pattern\n                   else fnmatch.fnmatch(layer_name, name_pattern))\n        if matches:\n            return config\n    return None\n```\n\nthen in `get_layer_quant_config_from_name` use it for the `shard_name == layer_name` branch, and in\n`_find_matched_config` try it before falling back to `fallback_config`. Behaviour for genuine\nfusions and for models without identity entries is unchanged.\n\nI am happy to open a PR with this plus a regression test if the approach looks right. Verified\nlocally on ROCm (gfx950, ROCm 7.2.3) with GLM-5.3-Flash; after the change `gate_up_proj` resolves\nto `QuarkW8A8Fp8PerBlock` and the shape mismatch is gone.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54641/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54641/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

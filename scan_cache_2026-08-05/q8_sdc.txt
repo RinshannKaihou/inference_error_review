@@ -1,0 +1,32 @@
+TOTAL: 930
+
+- #2172 [open] 2026-08-05T23:01:59Z Update botocore to 1.43.65
+  https://github.com/rafael1717y/projeto_condominio/pull/2172
+  labels: 
+- #2171 [open] 2026-08-05T23:01:49Z Update boto3 to 1.43.65
+  https://github.com/rafael1717y/projeto_condominio/pull/2171
+  labels: 
+- #5597 [open] 2026-08-05T22:58:04Z Update botocore to 1.43.65
+  https://github.com/paulobueno/django-pythonpro/pull/5597
+  labels: 
+- #5596 [open] 2026-08-05T22:57:52Z Update boto3 to 1.43.65
+  https://github.com/paulobueno/django-pythonpro/pull/5596
+  labels: 
+- #4 [open] 2026-08-05T22:56:05Z Implement LLM inference pipeline with CadQuery code generation and self-correction loop
+  https://github.com/sgohils/Ez-3d/pull/4
+  labels: 
+- #2659 [open] 2026-08-05T22:55:58Z Update botocore to 1.43.65
+  https://github.com/mssacramento/curso-django/pull/2659
+  labels: 
+- #2658 [open] 2026-08-05T22:55:50Z Update boto3 to 1.43.65
+  https://github.com/mssacramento/curso-django/pull/2658
+  labels: 
+- #3136 [open] 2026-08-05T22:55:08Z feat(triage): --author filter on triage:queue and triage:classify
+  https://github.com/deftai/directive/pull/3136
+  labels: 
+- #2666 [open] 2026-08-05T22:54:56Z Update botocore to 1.43.65
+  https://github.com/Moronicwb/curso-django/pull/2666
+  labels: 
+- #2665 [open] 2026-08-05T22:54:49Z Update boto3 to 1.43.65
+  https://github.com/Moronicwb/curso-django/pull/2665
+  labels: 

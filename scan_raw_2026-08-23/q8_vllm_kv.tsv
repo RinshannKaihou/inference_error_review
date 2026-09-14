@@ -1,0 +1,10 @@
+53474	2026-08-23T19:36:28Z	open	PR	[KV Offload] Size node-local shared regions by local_world_size
+53460	2026-08-23T13:07:33Z	closed	PR	[Model] Fix KV cache layout and optimize Dots3 NOTE Omni encoders
+53441	2026-08-23T06:41:55Z	open	PR	fix(docker): build lmcache from source in KV-connectors images to match shipped torch ABI
+53423	2026-08-23T02:23:31Z	open	PR	[Feature] Add first-class KV hints request envelope for programmatic KV management
+53360	2026-08-22T07:11:13Z	open	PR	[KV Connector][NIXL] Support pipeline-parallel producers on the pull path (incl. hybrid-Mamba)
+53351	2026-08-22T04:35:38Z	closed	PR	[ROCm][CI] Restore attention coverage after KV-cache layout refactor
+53333	2026-08-21T23:37:37Z	open	PR	[Core][KV Connector][NIXL] Defer pull posting until after model launch
+53330	2026-08-21T23:05:53Z	open	PR	[Bugfix][KV Offload] Guard P2P supply against consumer demand
+53329	2026-08-21T23:05:14Z	open	PR	[Bugfix][KV Offload] Defer request-level cascade of in-flight primary keys
+53324	2026-08-21T21:33:58Z	open	PR	[KV Connector] Support MooncakeStore with hybrid DCP prefix caching

@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53095",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53095/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53095/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53095/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/53095",
+  "id": 5202434222,
+  "node_id": "I_kwDOI7xefs8AAAABNhbYrg",
+  "number": 53095,
+  "title": "[Bug] NixlPushConnector heartbeat fails to renew KV leases",
+  "user": {
+    "login": "usberkeley",
+    "id": 150880684,
+    "node_id": "U_kgDOCP5BrA",
+    "avatar_url": "https://avatars.githubusercontent.com/u/150880684?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/usberkeley",
+    "html_url": "https://github.com/usberkeley",
+    "followers_url": "https://api.github.com/users/usberkeley/followers",
+    "following_url": "https://api.github.com/users/usberkeley/following{/other_user}",
+    "gists_url": "https://api.github.com/users/usberkeley/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/usberkeley/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/usberkeley/subscriptions",
+    "organizations_url": "https://api.github.com/users/usberkeley/orgs",
+    "repos_url": "https://api.github.com/users/usberkeley/repos",
+    "events_url": "https://api.github.com/users/usberkeley/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/usberkeley/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-20T10:34:03Z",
+  "updated_at": "2026-08-20T14:47:25Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### 🐛 Describe the bug\nRequests initially succeed. Under higher concurrency, for example Batch=128, some requests remain stuck on the Decode side.\n\nThe Prefill worker later reports:\nReleasing expired KV blocks for request chatcmpl-5621e013-40d7-4414-9bd8-7c0c0f9202af-811c5361 which were retrieved by 0 remote worker(s) before lease expired.\n\nKV transfer metrics show no successful transfer for affected requests:\nNum successful transfers=0\n\n### Environment\n  - vLLM image: `vllm/vllm-openai:v0.27.1`\n  - Connector: `NixlPushConnector`\n  - Model: `Hy3-FP8`\n  - Prefill: TP=2, `kv_role=kv_producer`\n  - Decode: TP=2, `kv_role=kv_consumer`\n  - Cross-node P/D deployment using UCX\n  - Proxy based on:\n    `examples/disaggregated/disaggregated_serving/disagg_proxy_pushconnector_demo.py`\n  - Default `kv_lease_duration`: 30 seconds\n\n  Prefill configuration:\n\n  ```json\n  {\n    \"kv_connector\": \"NixlPushConnector\",\n    \"kv_role\": \"kv_producer\",\n    \"engine_id\": \"prefill-engine-1\",\n    \"kv_load_failure_policy\": \"fail\"\n  }\n\n  Decode configuration:\n\n  {\n    \"kv_connector\": \"NixlPushConnector\",\n    \"kv_role\": \"kv_consumer\",\n    \"engine_id\": \"decode-engine-1\",\n    \"kv_load_failure_policy\": \"fail\"\n  }\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53095/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53095/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

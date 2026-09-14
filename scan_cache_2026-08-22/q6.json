@@ -1,0 +1,85 @@
+{
+  "total_count": 1,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/11381",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/11381/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/11381/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/11381/events",
+      "html_url": "https://github.com/triton-lang/triton/pull/11381",
+      "id": 5203911407,
+      "node_id": "PR_kwDOAWaHXs8AAAABAa9p3A",
+      "number": 11381,
+      "title": "[Release][Cherry-Pick] [AMD] Support blocked/shared order mismatch for direct-to-LDS (#10928)",
+      "user": {
+        "login": "AlexAUT",
+        "id": 3915112,
+        "node_id": "MDQ6VXNlcjM5MTUxMTI=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/3915112?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/AlexAUT",
+        "html_url": "https://github.com/AlexAUT",
+        "followers_url": "https://api.github.com/users/AlexAUT/followers",
+        "following_url": "https://api.github.com/users/AlexAUT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/AlexAUT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/AlexAUT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/AlexAUT/subscriptions",
+        "organizations_url": "https://api.github.com/users/AlexAUT/orgs",
+        "repos_url": "https://api.github.com/users/AlexAUT/repos",
+        "events_url": "https://api.github.com/users/AlexAUT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/AlexAUT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-20T13:26:44Z",
+      "updated_at": "2026-08-20T17:54:12Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "draft": false,
+      "pull_request": {
+        "url": "https://api.github.com/repos/triton-lang/triton/pulls/11381",
+        "html_url": "https://github.com/triton-lang/triton/pull/11381",
+        "diff_url": "https://github.com/triton-lang/triton/pull/11381.diff",
+        "patch_url": "https://github.com/triton-lang/triton/pull/11381.patch",
+        "merged_at": null
+      },
+      "body": "Cherry-pick to fix a compiler crash:\r\n- https://github.com/triton-lang/triton/pull/10928",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/11381/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/11381/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

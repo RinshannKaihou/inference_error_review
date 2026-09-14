@@ -1,0 +1,119 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53831",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/53831",
+  "id": 5253005618,
+  "node_id": "I_kwDOI7xefs8AAAABORqBMg",
+  "number": 53831,
+  "title": "[Bug]: DeepSeek-V4-Flash tool_choice=auto silently drops tool calls at deep reasoning_effort (xhigh/max) — distinct from #41132/#51914",
+  "user": {
+    "login": "shreshth-tahoe",
+    "id": 150284442,
+    "node_id": "U_kgDOCPUomg",
+    "avatar_url": "https://avatars.githubusercontent.com/u/150284442?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/shreshth-tahoe",
+    "html_url": "https://github.com/shreshth-tahoe",
+    "followers_url": "https://api.github.com/users/shreshth-tahoe/followers",
+    "following_url": "https://api.github.com/users/shreshth-tahoe/following{/other_user}",
+    "gists_url": "https://api.github.com/users/shreshth-tahoe/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/shreshth-tahoe/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/shreshth-tahoe/subscriptions",
+    "organizations_url": "https://api.github.com/users/shreshth-tahoe/orgs",
+    "repos_url": "https://api.github.com/users/shreshth-tahoe/repos",
+    "events_url": "https://api.github.com/users/shreshth-tahoe/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/shreshth-tahoe/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 8746007475,
+      "node_id": "LA_kwDOI7xefs8AAAACCU17sw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/deepseek",
+      "name": "deepseek",
+      "color": "1995FE",
+      "default": false,
+      "description": "Related to DeepSeek models"
+    },
+    {
+      "id": 10799676958,
+      "node_id": "LA_kwDOI7xefs8AAAACg7X-Hg",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/DSv4",
+      "name": "DSv4",
+      "color": "be3bfa",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "closed",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-26T03:27:39Z",
+  "updated_at": "2026-08-26T03:49:49Z",
+  "closed_at": "2026-08-26T03:49:49Z",
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Summary\n\nWith `--enable-auto-tool-choice --tool-call-parser deepseek_v4 --reasoning-parser deepseek_v4` on DeepSeek-V4-Flash-0731, requests with `tool_choice=\"auto\"` and a **deep** reasoning-effort tier (`xhigh`/`max`) return `finish_reason=\"stop\"` with **empty `content` and no `tool_calls`** at a high rate — the model reasons about which tool to call, then emits nothing further. This reproduces on live traffic, not just synthetic probing, and is fully gated by two independent, cleanly-separable variables: reasoning-effort tier and `tool_choice`.\n\nThis is not the DSML-markup-leak bug in #51914/#48931/#49117 (no malformed/partial DSML wrapper appears in `content` in most failures — `content` is `null` or whitespace-only) and not #41132/PR #41199 (that was `response_format=json_object` + thinking leaking into the `reasoning` field; already fixed and present in the version below). This looks like a related-but-distinct interaction: the reasoning→action decoding boundary isn't being handled for the *tool-calling* grammar the way it apparently was for the *structured-output* grammar.\n\n### Environment\n\n- vLLM: `0.26.1rc1.dev132+ga4e3552ec`\n- Model: `deepseek-ai/DeepSeek-V4-Flash-0731`, served as `deepseek-v4-flash-0731`\n- Hardware: 2x B200 (sm_100), `--data-parallel-size 2 --enable-expert-parallel`\n- Serve flags (abbreviated to the relevant ones):\n  ```\n  --enable-auto-tool-choice --reasoning-parser deepseek_v4 --tool-call-parser deepseek_v4\n  --kv-cache-dtype fp8 --attention-config '{\"use_fp4_indexer_cache\": true}'\n  --speculative-config '{\"method\":\"dspark\",\"num_speculative_tokens\":7,\"draft_sample_method\":\"greedy\"}'\n  ```\n  Speculative decoding (DSpark) is enabled. I have **not** isolated whether disabling it changes the failure rate — that requires a restart I haven't done yet. Flagging as an open variable, not a ruled-out one.\n\n### Reproduction\n\n```python\nimport json, urllib.request\n\nURL = \"http://<endpoint>/v1/chat/completions\"\nTOOLS = [{\"type\": \"function\", \"function\": {\n    \"name\": \"run_shell\", \"description\": \"Run a shell command.\",\n    \"parameters\": {\"type\": \"object\", \"properties\": {\"command\": {\"type\": \"string\"}}, \"required\": [\"command\"]},\n}}]\nMSG = [{\"role\": \"user\", \"content\": \"List the files in the current directory using a tool call. Do not describe it in prose, just call the tool.\"}]\n\ndef call(effort, tool_choice):\n    body = {\n        \"model\": \"deepseek-v4-flash-0731\", \"messages\": MSG, \"tools\": TOOLS,\n        \"tool_choice\": tool_choice, \"temperature\": 1.0, \"top_p\": 1.0,\n        \"reasoning_effort\": effort, \"max_tokens\": 2048, \"stream\": False,\n    }\n    req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={\"Content-Type\": \"application/json\"})\n    with urllib.request.urlopen(req, timeout=60) as r:\n        d = json.load(r)\n    msg = d[\"choices\"][0][\"message\"]\n    return d[\"choices\"][0][\"finish_reason\"], msg.get(\"content\"), msg.get(\"tool_calls\")\n```\n\n### Results (isolated, N=20-25 per cell, non-streaming)\n\n| `reasoning_effort` | `tool_choice` | clean tool_calls | failure mode |\n|---|---|---|---|\n| `low` (shallow tier) | `auto` | 20/20 (100%) | — |\n| `max` (deep tier) | `auto` | ~40-50% (varies with background load; as low as ~20% under concurrent traffic, up to ~50% isolated) | `finish_reason=stop`, `content` empty/null, `tool_calls: null` |\n| `max` (deep tier) | `required` | 25/25 (100%) | — |\n\nA representative failing response:\n\n```json\n{\"finish_reason\": \"stop\", \"content\": \"\\n\\n\", \"tool_calls\": null}\n```\n\nOthers in the same batch returned `content: null` with populated `reasoning`/`reasoning_content` (the model correctly decided to call `run_shell`, described its plan in the reasoning trace, then stopped instead of emitting the DSML block):\n\n```json\n{\n  \"finish_reason\": \"stop\",\n  \"content\": null,\n  \"reasoning\": \"The user wants me to list the files in the current directory using a tool call. I'll use the run_shell tool with the `ls` command.\",\n  \"tool_calls\": null\n}\n```\n\nThis is not truncation: `max_tokens=2048` was never close to being hit. Failing completions run **8-43 `completion_tokens`**; clean completions on the identical prompt run **46-88**. The model is sampling an early stop right at the reasoning→action boundary, not being cut off after a longer generation.\n\n`temperature`/`top_p` do not appear to move this meaningfully — an interleaved, load-controlled comparison (`top_p=1.0` vs `0.95`, same reasoning effort, alternating single calls) gave 17% vs 25% clean over n=12 each, well within noise given background load variance, and far smaller than the effort/tool_choice effect sizes above.\n\n### What I'd like to know\n\n- Is this a known, already-tracked variant of #41132's fix, or a distinct gap (structured-output grammar got the reasoning-aware fix in #41199, tool-calling's constrained-decoding path apparently didn't)?\n- Is `--enable-auto-tool-choice`'s decoding path for this model unconstrained (relies on the model spontaneously emitting DSML markup) as opposed to `tool_choice=required`'s grammar-constrained path? If so, is there a lighter-weight fix than full grammar constraints — e.g. suppressing EOS immediately after the reasoning-close token when tools are offered and `tool_choice=auto`?\n- Any known interaction with DSpark speculative decoding here specifically (as opposed to the DSML-wrapper-corruption reports in #51914)?\n\nHappy to run additional repros (streaming vs non-streaming, DSpark on/off, other tool schemas) against our endpoint if useful.\n",
+  "closed_by": {
+    "login": "shreshth-tahoe",
+    "id": 150284442,
+    "node_id": "U_kgDOCPUomg",
+    "avatar_url": "https://avatars.githubusercontent.com/u/150284442?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/shreshth-tahoe",
+    "html_url": "https://github.com/shreshth-tahoe",
+    "followers_url": "https://api.github.com/users/shreshth-tahoe/followers",
+    "following_url": "https://api.github.com/users/shreshth-tahoe/following{/other_user}",
+    "gists_url": "https://api.github.com/users/shreshth-tahoe/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/shreshth-tahoe/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/shreshth-tahoe/subscriptions",
+    "organizations_url": "https://api.github.com/users/shreshth-tahoe/orgs",
+    "repos_url": "https://api.github.com/users/shreshth-tahoe/repos",
+    "events_url": "https://api.github.com/users/shreshth-tahoe/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/shreshth-tahoe/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53831/timeline",
+  "performed_via_github_app": null,
+  "state_reason": "completed",
+  "pinned_comment": null
+}

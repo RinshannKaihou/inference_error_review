@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55075",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55075/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55075/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55075/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/55075",
+  "id": 5313048856,
+  "node_id": "I_kwDOI9Wqc88AAAABPK6xGA",
+  "number": 55075,
+  "title": "[Bug] layer_norm/rms_norm_pre_all_gather 2D core grid path: same wide-row L1 over-allocation, plus a hang at H=1024 W=1024",
+  "user": {
+    "login": "Aswinmcw",
+    "id": 156493059,
+    "node_id": "U_kgDOCVPlAw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/156493059?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/Aswinmcw",
+    "html_url": "https://github.com/Aswinmcw",
+    "followers_url": "https://api.github.com/users/Aswinmcw/followers",
+    "following_url": "https://api.github.com/users/Aswinmcw/following{/other_user}",
+    "gists_url": "https://api.github.com/users/Aswinmcw/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/Aswinmcw/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/Aswinmcw/subscriptions",
+    "organizations_url": "https://api.github.com/users/Aswinmcw/orgs",
+    "repos_url": "https://api.github.com/users/Aswinmcw/repos",
+    "events_url": "https://api.github.com/users/Aswinmcw/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/Aswinmcw/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5150031476,
+      "node_id": "LA_kwDOI9Wqc88AAAABMvc-dA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 6124153767,
+      "node_id": "LA_kwDOI9Wqc88AAAABbQcrpw",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/ttnn",
+      "name": "ttnn",
+      "color": "fef2c0",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-01T14:25:55Z",
+  "updated_at": "2026-09-01T14:25:55Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Summary\n\n`LayerNormPreAllGather2DProgramFactory` (the `use_2d_core_grid=True` path) carries the same\nper-row `x^2` buffer over-allocation that #54697 reports for the default factory, and hits the\nsame L1 limit at a wide `fp32_dest_acc_en` row.\n\nSeparately, and blocking validation of that path, the 2D path **hangs** on an ordinary shape.\nBoth are described below; the hang is the more serious of the two and may warrant its own issue.\n\n### 1. L1 over-allocation at wide rows\n\n```python\nimport torch, ttnn\ndev = ttnn.open_device(device_id=0)\ncfg = ttnn.WormholeComputeKernelConfig(\n    math_fidelity=ttnn.MathFidelity.HiFi2, math_approx_mode=False,\n    fp32_dest_acc_en=True, packer_l1_acc=True)\nx  = torch.randn((1, 1, 32, 4096), dtype=torch.bfloat16)\ntt = ttnn.from_torch(x, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT,\n                     device=dev, memory_config=ttnn.DRAM_MEMORY_CONFIG)\nttnn.rms_norm_pre_all_gather(tt, compute_kernel_config=cfg, dtype=ttnn.bfloat16,\n                             use_2d_core_grid=True)\n```\n\nObserved on wormhole:\n\n```\nStatically allocated dataflow buffers ... grow to 1725632 B\nwhich is beyond max L1 size of 1499136 B\n```\n\nCause is the same as #54697: `intermed0_tiles = Wt * double_buffer_constant` sizes `x^2` at a\nfull row, doubled, and since #52081 that buffer is fp32 when `fp32_dest_acc_en` is set. The 2D\nfactory additionally allocates `PRE2D_X2_MERGE` (`cores_y` tiles), which is why its total is\nslightly higher than the 1D path's 1684672 B at the same shape.\n\nThe 2D compute kernel (`layernorm_pre_allgather_2d.cpp`) has the same fill-to-`Wt`-then-single-\n`BulkWaitBulkPop`-reduce structure as the 1D one, so the same adaptive sizing applies: keep the\ndouble buffer where the program fits L1, fall back to a single buffer only where it does not.\n\nConfirmed that works — with adaptive sizing applied to this factory:\n\n| shape (`use_2d_core_grid=True`) | before | after |\n|---|---|---|\n| H=32 W=1024 | runs | runs, PCC 0.9993 |\n| H=32 W=2048 | runs | runs, PCC 0.9987 |\n| H=32 W=4096 | **fails to allocate** | **runs, PCC 0.9977** |\n\nNote the budget should be L1 above the reserved base\n(`l1_size_per_core - get_base_allocator_addr(HalMemType::L1)`), matching what\n`validate_dataflow_buffer_region` compares against, and should stay a function of shape/dtypes/\ndevice config only — sizing from `lowest_occupied_compute_l1_address` would make the program\ndepend on state the program-cache key does not cover.\n\n### 2. Pre-existing hang on a tall ordinary shape\n\nThe same call at `H=1024, W=1024` — a width well inside L1, nothing to do with the allocation\nabove — deadlocks the device:\n\n```\nTIMEOUT: device timeout, potential hang detected, the device is unrecoverable\n```\n\nThis is **not** caused by any buffer-sizing change: it reproduces on an unmodified tree. It is\nwhy the L1 fix above has not been landed for this path — a basic shape deadlocks before the path\ncan be characterised.\n\nReproduce by taking the snippet in section 1 and using `(1, 1, 1024, 1024)` for the input shape.\n`TT_METAL_OPERATION_TIMEOUT_SECONDS=45` makes it fail fast instead of hanging indefinitely; the\ndevice needs a `tt-smi -r` afterwards.\n\n### Context\n\n`use_2d_core_grid` is opt-in and is not set by any traced model configuration currently in the\nsweeps, which is likely why neither problem has been noticed. #54697 / #54698 cover the default\nfactory only.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55075/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55075/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

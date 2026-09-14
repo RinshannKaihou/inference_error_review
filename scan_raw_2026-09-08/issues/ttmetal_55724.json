@@ -1,0 +1,100 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55724",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55724/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55724/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55724/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/55724",
+  "id": 5385915987,
+  "node_id": "I_kwDOI9Wqc88AAAABQQaOUw",
+  "number": 55724,
+  "title": "[Bug] ttnn.sigmoid_bw returns a zero gradient for x >= 6.25 (bf16) / 16.75 (fp32): s * (1 - s) cancels once s rounds to 1",
+  "user": {
+    "login": "badnikhil",
+    "id": 72620320,
+    "node_id": "MDQ6VXNlcjcyNjIwMzIw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/72620320?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/badnikhil",
+    "html_url": "https://github.com/badnikhil",
+    "followers_url": "https://api.github.com/users/badnikhil/followers",
+    "following_url": "https://api.github.com/users/badnikhil/following{/other_user}",
+    "gists_url": "https://api.github.com/users/badnikhil/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/badnikhil/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/badnikhil/subscriptions",
+    "organizations_url": "https://api.github.com/users/badnikhil/orgs",
+    "repos_url": "https://api.github.com/users/badnikhil/repos",
+    "events_url": "https://api.github.com/users/badnikhil/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/badnikhil/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6471843668,
+      "node_id": "LA_kwDOI9Wqc88AAAABgcB_VA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/op_cat:%20eltwise",
+      "name": "op_cat: eltwise",
+      "color": "8555FE",
+      "default": false,
+      "description": "Eltwise operations"
+    },
+    {
+      "id": 7139963093,
+      "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+      "name": "community",
+      "color": "2DEB44",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-08T11:08:27Z",
+  "updated_at": "2026-09-08T11:56:41Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "parent_issue_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55250",
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Describe the bug\n\n`ttnn.sigmoid_bw` returns a gradient of exactly `0` for every input above `6.25` in bfloat16 and `16.75` in float32, although `d/dx sigmoid(x) = sigmoid(x) * sigmoid(-x)` is an ordinary normal float out to `|x| = 87.34`, where it is still `1.2e-37`.\n\nThe composite forms the derivative as `s * (1 - s)`\n([`unary_backward.cpp#L467-L480`](https://github.com/tenstorrent/tt-metal/blob/main/ttnn/cpp/ttnn/operations/eltwise/unary_backward/unary_backward.cpp#L467-L480)):\n\n```cpp\nTensor sig_result = ttnn::sigmoid(input, ..., SigmoidMode::ACCURATE, output_mem_config);\nTensor rsub_term = ttnn::rsub(sig_result, 1.0f, std::nullopt, output_mem_config);\nTensor prod_term_1 = ttnn::multiply(sig_result, rsub_term, std::nullopt, output_mem_config);\ngrad_tensor.emplace_back(ttnn::multiply(prod_term_1, grad, std::nullopt, output_mem_config));\n```\n\n`s = sigmoid(x)` tends to `1` from below and rounds to **exactly** `1` as soon as `1 - s` falls below half an ULP of `1` — below `2^-9` for bfloat16 and `2^-25` for float32. `rsub(s, 1)` is then exactly `0` and the whole gradient goes with it. The information is not in `s` any more, so no amount of accuracy in the forward `sigmoid` can recover it; the derivative has to be written without the subtraction.\n\nThe identity `sigmoid'(x) = sigmoid(x) * sigmoid(-x)` gives the same function with no cancellation: `sigmoid(-x)` *is* `1 - s`, evaluated directly.\n\n### Repro\n\n```python\nimport torch, ttnn\n\ndevice = ttnn.open_device(device_id=0)\nx = torch.tensor([[5.0, 10.0, 16.75, 20.0, 30.0, 60.0, 85.0]], dtype=torch.float32)\nt = ttnn.from_torch(x, dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\ng = ttnn.from_torch(torch.ones_like(x), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\n\nprint(ttnn.to_torch(ttnn.sigmoid_bw(g, t)[0]))\n# tensor([[6.6480e-03, 4.5357e-05, 0., 0., 0., 0., 0.]])\nxd = x.double()\nprint(torch.sigmoid(xd) * torch.sigmoid(-xd))\n# tensor([[6.6481e-03, 4.5396e-05, 5.3158e-08, 2.0612e-09, 9.3576e-14, 8.7565e-27, 1.2161e-37]])\n```\n\n### Observed vs expected\n\nfloat32, gradient `1`, golden `sigmoid(x) * sigmoid(-x)` in float64. ULP is the integer distance between float32 bit patterns:\n\n| input | got | want | ULP |\n|---|---|---|---|\n| 5 | 0.006648033 | 0.006648057 | 51 |\n| 10 | 4.535708e-05 | 4.539581e-05 | 10,647 |\n| 16.75 | **0** | 5.315785e-08 | 862,212,012 |\n| 20 | **0** | 2.061154e-09 | 822,977,587 |\n| 30 | **0** | 9.357623e-14 | 701,675,270 |\n| 60 | **0** | 8.756511e-27 | 338,522,313 |\n| 85 | **0** | 1.216099e-37 | 36,013,792 |\n\nbfloat16, gradient `1`, ULP between bfloat16 bit patterns:\n\n| input | got | want | ULP |\n|---|---|---|---|\n| 3 | 0.04467773 | 0.04516602 | 2 |\n| 4 | 0.01916504 | 0.0177002 | 12 |\n| 6.25 | **0** | 0.001922607 | 15,100 |\n| 6.28125 | **0** | 0.001861572 | 15,092 |\n| 10 | **0** | 4.529953e-05 | 14,398 |\n| 40 | **0** | 4.255494e-18 | 8,861 |\n| 85 | **0** | 1.219575e-37 | 550 |\n\nThe relative error over the zeroed band is 100%. The rows below the threshold show the same cancellation more mildly: at `x = 10` in float32 the gradient is already 10,647 ULP off, entirely because `1 - s` has thrown away most of its significant bits.\n\n### Affected input range\n\nAll 65,536 bfloat16 bit patterns as the input, gradient `1`, counting inputs whose exact gradient is a normal float but whose result is exactly zero (subnormal inputs excluded):\n\n| dtype | zeros where the golden is normal | affected range | max ULP | mean ULP |\n|---|---|---|---|---|\n| bfloat16 | 487 | `[6.25, 87]` | 15,100 | 80.08 |\n| float32 | 297 | `[16.75, 87]` | 862,212,012 | 2,511,838 |\n\nThe gradient is symmetric, so the same information is lost on the negative side too — there it is recovered because `s` itself is accurate for `x < 0`; only the `1 - s` half of the product is destroyed.\n\n### Which architectures\n\nAll of them. `sigmoid_bw` is a host-side composite in `ttnn/cpp/ttnn/operations/eltwise/unary_backward/unary_backward.cpp`, so Wormhole and Blackhole build the same op graph and produce the same values. It is independent of the SFPU sigmoid kernel work in #53258 / #55061 / #54602: the loss is in the composite's algebra, not in the LUT.\n\n### How it was verified\n\nttsim Blackhole v1.10.6 (`TT_METAL_SIMULATOR=libttsim_bh.so`, slow dispatch). Exhaustive sweep of all 65,536 bfloat16 bit patterns as the input with an all-ones gradient, in both bfloat16 and float32, against `sigmoid(x) * sigmoid(-x)` evaluated in float64. Subnormal inputs (flushed by the hardware) are excluded.\n\n`test_backward_sigmoid.py::test_bw_sigmoid` does not catch it: it draws inputs from `[-1, 1]` and asserts PCC at 0.90.\n\n![sigmoid_bw before/after](https://raw.githubusercontent.com/badnikhil/tt-metal/pr-assets/tt-metal-sigmoid-bw.png)\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55724/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55724/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

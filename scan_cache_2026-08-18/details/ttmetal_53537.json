@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53537",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53537/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53537/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53537/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/53537",
+  "id": 5183097363,
+  "node_id": "I_kwDOI9Wqc88AAAABNO_KEw",
+  "number": 53537,
+  "title": "Cached programs' static CB region is never re-validated against live L1 on a cache hit",
+  "user": {
+    "login": "ebanerjeeTT",
+    "id": 212577785,
+    "node_id": "U_kgDODKut-Q",
+    "avatar_url": "https://avatars.githubusercontent.com/u/212577785?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/ebanerjeeTT",
+    "html_url": "https://github.com/ebanerjeeTT",
+    "followers_url": "https://api.github.com/users/ebanerjeeTT/followers",
+    "following_url": "https://api.github.com/users/ebanerjeeTT/following{/other_user}",
+    "gists_url": "https://api.github.com/users/ebanerjeeTT/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/ebanerjeeTT/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/ebanerjeeTT/subscriptions",
+    "organizations_url": "https://api.github.com/users/ebanerjeeTT/orgs",
+    "repos_url": "https://api.github.com/users/ebanerjeeTT/repos",
+    "events_url": "https://api.github.com/users/ebanerjeeTT/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/ebanerjeeTT/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5150031476,
+      "node_id": "LA_kwDOI9Wqc88AAAABMvc-dA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 5160457472,
+      "node_id": "LA_kwDOI9Wqc88AAAABM5ZVAA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/metal",
+      "name": "metal",
+      "color": "EAB5BE",
+      "default": false,
+      "description": "tt-metal issue"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-18T14:46:16Z",
+  "updated_at": "2026-08-18T14:46:16Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Summary\n\nA program's statically allocated circular buffers are placed and validated exactly once, on the program-cache miss. On every subsequent cache hit the cached `Program` is reused with only its buffer addresses patched. If L1 occupancy has grown downward past the cached CB region end in the meantime, the CBs overlap the resident L1 buffer and corrupt it **silently** — the check that would have caught it does not run.\n\n## Mechanism\n\n`validate_circular_buffer_region()` is reached only through `compile_and_allocate()` (`tt_metal/impl/program/program.cpp:2662`) and `ConfigureDeviceWithProgram` (`tt_metal/impl/host_api/tt_metal.cpp:1059`). The ttnn cache-hit path reaches neither:\n\n```\nhandle_mesh_adapter_cache_hit             ttnn/api/ttnn/device_operation.hpp:254\n  -> validate_on_program_cache_hit/miss      (op-level validate, not CB placement)\n  -> WorkloadFactory::apply_descriptor       (patches addresses only)\n  -> enqueue_mesh_workload\n```\n\nNothing invalidates the program cache when an L1 buffer is allocated — only `Device::close()` and an explicit `clear_program_cache()`.\n\n## Repro sketch\n\n1. Run an op on a shape whose CB region ends high in L1, with L1 otherwise free. This is a miss: the program is built and validated.\n2. Allocate an interleaved-L1 tensor large enough that `lowest_occupied_compute_l1_address()` drops below that CB region end. Fill it with known data.\n3. Re-run the identical op. This is a hit. No throw.\n4. Read the L1 tensor back: contents are corrupted where the CBs overlapped.\n\nStep 4 is the assertion that matters. Asserting only on the op's own output passes vacuously, because the output is typically not the memory that gets overwritten.\n\n## Suggested fix\n\nCheap guard on the hit path: each `CircularBufferAllocator` already knows its region end, so cache the program-wide maximum at build time and compare it against `device->lowest_occupied_compute_l1_address()` on the hit. That is one allocator query plus one integer comparison per dispatch. Throwing the same diagnostic the miss path throws would already be a large improvement over silent corruption; forcing a rebuild would be better still.\n\nIf a per-dispatch allocator query is unacceptable on the hot path, gating the check behind the watcher/debug build would at least make the class of bug findable.\n\n## Why this is worth fixing centrally\n\nThe hazard has two flavours and the second is spreading:\n\n- Every op with static CBs has the weak form: the plan is a pure function of the cache key, but the frontier can still move underneath a cached entry.\n- A growing number of ops have the strong form, where the plan itself is chosen from live L1 and so differs between the miss and later hits. Native untilize does this today via `UntilizeOperationAttributes::enough_space_height` (derived from `is_enough_space()` → `get_max_l1_space()`); `transpose`, `matmul_utilities` and `reshard_rm_program_factory` budget against the same helper.\n\nPer-op mitigations exist — folding the live-L1-derived selector into the cache identity works, and native untilize effectively does it by accident since `enough_space_height` is an attribute and the default reflection hash includes it. But doing that op by op costs a per-dispatch allocator query each time and leaves the weak form unaddressed everywhere.\n\n## Context\n\nSurfaced by Copilot review on #53399, which fixes the miss-path version of this for `untilize_codegen`. That PR is monotone-safe with respect to this issue (the CB tier it selects is never larger than the whole-of-L1 tier `main` selects), so it narrows the window without closing it.\n\nRelated: #53399\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53537/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53537/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

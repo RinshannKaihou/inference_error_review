@@ -1,0 +1,417 @@
+{
+  "total_count": 5,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/36889",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/36889/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/36889/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/36889/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/36889",
+      "id": 5280362652,
+      "node_id": "I_kwDOLCAjRs8AAAABOrvwnA",
+      "number": 36889,
+      "title": "[DFLASH] Mamba state cache silently caps effective concurrency on hybrid-KDA models — 5 state slots/request, info-level log only (+75% throughput hidden behind one flag)",
+      "user": {
+        "login": "beastllama",
+        "id": 108938230,
+        "node_id": "U_kgDOBn5D9g",
+        "avatar_url": "https://avatars.githubusercontent.com/u/108938230?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/beastllama",
+        "html_url": "https://github.com/beastllama",
+        "followers_url": "https://api.github.com/users/beastllama/followers",
+        "following_url": "https://api.github.com/users/beastllama/following{/other_user}",
+        "gists_url": "https://api.github.com/users/beastllama/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/beastllama/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/beastllama/subscriptions",
+        "organizations_url": "https://api.github.com/users/beastllama/orgs",
+        "repos_url": "https://api.github.com/users/beastllama/repos",
+        "events_url": "https://api.github.com/users/beastllama/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/beastllama/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-08-28T16:48:11Z",
+      "updated_at": "2026-08-28T20:18:04Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\nOn hybrid linear-attention models (GLM-5.3-Flash: 34 KDA layers) with `--speculative-algorithm DFLASH`, each running request needs `1 + speculative_num_draft_tokens` mamba state slots. When the static-memory fraction is tight (large weights relative to VRAM — e.g. a 320B NVFP4 model on 2x DGX Spark), the derived `max_mamba_cache_size` can resolve far below `max_running_requests x (1+D)`, and the scheduler silently caps effective concurrency with only an info-level log line:\n\n```\nmax_running_requests is capped to 2 by the mamba state cache (max_mamba_cache_size=10, 5 state slots per request).\n```\n\nEverything else still *looks* like an 8-stream server: `--max-running-requests 8` is accepted, `/get_server_info` reports 8, requests are admitted and queue. The throughput curve flattens at ~2 streams and is easy to misread as a hardware bandwidth ceiling. We shipped exactly that misreading in a published recipe before finding the log line.\n\n## Measured impact (2x DGX Spark GB10, TP=2, GLM-5.3-Flash NVFP4 + DFlash2 drafter, D=5)\nc-sweep, 12 distinct code prompts, 400 max_tokens, temp 0, stream:false, warmed, stock clocks:\n\n| concurrency | capped (10 slots -> 2 streams) | fixed (40 slots) |\n|---|---|---|\n| c1 | 37.3 | 36.9 |\n| c8 | 47.3 | **80.3** (8/8 concurrent) |\n| c12 | 48.8 | **85.4** |\n\n+75% aggregate at c12 from configuration alone. The fix on our rig:\n`--max-mamba-cache-size 40 --mamba-ssm-dtype bfloat16 --mem-fraction-static 0.90`\n(bf16 ssm halves the per-slot cost, which is what makes 40 slots fit inside the fraction; measured cost ~6% single-stream decode from shorter accept lengths.)\n\n## Suggestions (any one of these would have saved us a day)\n1. When speculative decoding is enabled, derive the mamba cache floor from `max_running_requests x (1 + num_draft_tokens)` and fail loudly (or warn at WARNING level) if it cannot be met — same spirit as the existing draft-weights accounting in `_profile_available_bytes`.\n2. Or: surface the effective cap in `/get_server_info` (e.g. `effective_max_running_requests`) so operators and load balancers can see the real ceiling.\n3. Docs: a note in the speculative-decoding docs that hybrid-mamba models multiply state-slot cost by (1+D).\n\nHappy to PR any of the three if maintainers have a preference. Full ladder and configs: https://github.com/beastllama/GLM-5.3-Flash-DFlash2-SGLang-2x-DGX-Spark\n\nEnv: SGLang @ PR #36507 branch (aa8c950a3 base), 2x DGX Spark (GB10 sm_121, aarch64), CUDA 13, TP=2/nnodes=2.\nRelated: #36830 (fp8-KV on GB10), #36507 (GLM-5.3 support).\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/36889/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/36889/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/36886",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/36886/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/36886/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/36886/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/36886",
+      "id": 5279969321,
+      "node_id": "I_kwDOLCAjRs8AAAABOrXwKQ",
+      "number": 36886,
+      "title": "[Bug] DCP in GLM-5.3-Flash: index-K cache OOB corruption crash past max_total_num_tokens; output quality still degraded after sizing fix",
+      "user": {
+        "login": "junliu-mde",
+        "id": 197999892,
+        "node_id": "U_kgDOC809FA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/197999892?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/junliu-mde",
+        "html_url": "https://github.com/junliu-mde",
+        "followers_url": "https://api.github.com/users/junliu-mde/followers",
+        "following_url": "https://api.github.com/users/junliu-mde/following{/other_user}",
+        "gists_url": "https://api.github.com/users/junliu-mde/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/junliu-mde/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/junliu-mde/subscriptions",
+        "organizations_url": "https://api.github.com/users/junliu-mde/orgs",
+        "repos_url": "https://api.github.com/users/junliu-mde/repos",
+        "events_url": "https://api.github.com/users/junliu-mde/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/junliu-mde/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-28T15:58:09Z",
+      "updated_at": "2026-08-28T16:42:14Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Checklist\n\n- [x] 1. I have searched related issues but cannot get the expected help.\n- [x] 2. The bug has not been fixed in the latest version.\n- [x] 3. Please note that if the bug-related issue you submitted lacks corresponding environment info and a minimal reproducible demo, it will be challenging for us to reproduce and address it, affecting the efficiency of resolving the issue.\n- [x] 4. If the issue you raised is not a bug but a question, please raise a discussion at https://github.com/sgl-project/sglang/discussions/new/choose Otherwise, it will be closed.\n- [x] 5. Please use English, otherwise it will be closed.\n\n## Describe the bug\n\n**TL;DR** — `--dcp-size 8` on GLM-5.3-Flash (DSA), commit `033446bb05f`:\n\n1. **Crash**: the DSA index-K cache is sized per-rank (`index_buf_size = size`) but written/read with the allocator's DCP-virtual locs (no `%dcp` / `//dcp` anywhere on that path, unlike the main c-KV kernel). Once cumulative allocation crosses `max_total_num_tokens`, writes go out of bounds and corrupt neighboring buffers — random victim kernel crashes (6 distinct signatures observed), deterministic trigger point. Fix: size index-K to the virtual loc space, same treatment #33348 gave the draft pool. Validated diff below.\n2. **Quality**: with the crash fixed, DCP still degrades outputs — chain-of-thought inflates 4–9×, details garble. Removing only `--dcp-size 8 --dcp-comm-backend ag_rs` restores quality.\n\nQuality comparison — same node / weights / args, the only change is removing `--dcp-size 8 --dcp-comm-backend ag_rs`; `/v1/chat/completions`, temperature 0, `max_tokens` 2000; \"reasoning\" = character length of `reasoning_content`:\n\n| # | Prompt | H100 DCP | H100 no-DCP |\n|---|---|---|---|\n| 1 | `9.11 和 9.9 哪个大？直接回答。` (which is larger, 9.11 or 9.9?) | verdict correct, but the explanation is incoherent: invents `9.1 = 9.40` and compares `0.9 > 0.9`; reasoning 2836 | clean: `9.9 = 9.90，而 9.90 > 9.11`; reasoning 778 |\n| 2 | `把这句话翻译成英文：今天天气很好，我们去公园散步吧。` (translate: nice weather, let's walk in the park) | `\"let's go out for a walk!\"` — **\"公园 / the park\" is dropped**; reasoning 1209 | `\"Let's go for a walk in the park.\"` — complete; reasoning 674 |\n| 3 | `一个水池有甲乙两个进水管，甲单独灌满要6小时，乙单独灌满要4小时，两管同开需要几小时灌满？` (two pipes fill a pool in 6h / 4h; together?) | reasoning balloons to 5447 chars, **exceeds the 2000-token budget, content comes back empty**; at temperature 0.7 it misreads the task as a meeting-distance problem and claims the problem statement is incomplete | correct: `1/6 + 1/4 = 5/12` → 2.4 h; reasoning 612 |\n\n<details>\n<summary>Raw outputs, verbatim (temperature 0)</summary>\n\nPrompt 1 — H100 DCP (`finish_reason=stop`, reasoning 2836 chars):\n\n> **9.9 更大。**  比较过程：  - **9.1** = 9.40（小数点后第一位是 9，即 0.9） - 换算成同单位：9.10 vs 9.90  因为 0.9 > 0.9 中的比较实际上是 **9.10 vs 9.90**（把 0.10 看作 0.10 = 10/100 的量级差异），所以…\n\nPrompt 1 — H100 no-DCP (`finish_reason=stop`, reasoning 778 chars):\n\n> **9.9 大。**  因为 9.9 = 9.90，而 9.90 > 9.11（比较小数部分：0.90 > 0.11）。\n\nPrompt 2 — H100 DCP (`finish_reason=stop`, reasoning 1209 chars):\n\n> **Translation:**  \"The weather is so nice today—let's go out for a walk!\"  或者更完整地翻译：  **\"The weather is so nice today, let's go out for a walk!\"**\n\n(both variants drop \"公园 / the park\")\n\nPrompt 2 — H100 no-DCP (`finish_reason=stop`, reasoning 674 chars):\n\n> **The weather is nice today. Let's go for a walk in the park.**  也可以说： - \"It's a beautiful day today. Let's take a stroll in the park.\"\n\nPrompt 3 — H100 DCP (`finish_reason=length`, reasoning 5447 chars): `content` is empty — the whole 2000-token budget is consumed by reasoning. At temperature 0.7 an earlier sample did answer, and misread the task:\n\n> 看到题目后我发现这是一道行程问题（相遇问题），但题目条件似乎不完整。让我帮你梳理一下：…**不过题目信息似乎不完整**，我需要更多条件才能求解…\n\nPrompt 3 — H100 no-DCP (`finish_reason=stop`, reasoning 612 chars):\n\n> # 解题过程  **思路：** 把水池总量看作单位\"1\"，分别求出两管每小时的工作效率。  **第一步：求每管的效率** - 甲管每小时灌：1 ÷ 6 = **1/6** - 乙管每小时灌：1 ÷ 4 = **1/4**  **第二步：求两管合开的效率**  $$\\frac{1}{6} + \\frac{1}{4}…\n\nA healthy reference deployment of the same checkpoint (different cluster, no DCP) matches the no-DCP column closely (reasoning 610–875 chars, same correct answers). MTP is not the variable: speculative EAGLE stays enabled on both sides, and verification is lossless at temperature 0.\n</details>\n\n<details>\n<summary>Defect 1 details: root cause and evidence</summary>\n\nUnder DCP the paged allocator hands out virtual locs in `[0, max_total_num_tokens * dcp_size)` (`PagedTokenToKVPoolAllocator(size * dcp, page * dcp)`, `kv_cache_configurator.py`). The main c-KV write localizes in-kernel (`set_mla_kv_buffer_kernel`: `loc % DCP_WORLD_SIZE == DCP_RANK` + `loc // DCP_WORLD_SIZE`, `sglang/kernels/ops/kvcache/mla_buffer.py`). The DSA index-K cache does not:\n\n- write: `Indexer._store_index_k_cache` uses raw `forward_batch.out_cache_loc` (fused and fallback paths), no rank filter, no division;\n- read: top-k reads via metadata page tables that also carry untranslated virtual locs;\n- but `DSATokenToKVPool.index_buf_size` defaults to the per-rank `size` (`memory_pool.py`).\n\nWrite and read agree in virtual space (every rank stores every token — replication, which top-k over the full sequence needs), so everything works until cumulative allocation first crosses `max_total_num_tokens`. From then on index-K writes (132 B/token/DSA-layer) land past the buffer and corrupt whatever the caching allocator placed next. Victim differs run to run — ATen `index_put` device assert, `causal_conv1d` illegal read, DeepGEMM fault, `chunk_gla` fault, VocabParallelEmbedding id assert — while the trigger is deterministic (±1 prefill chunk; 642,752 @ `--mem-fraction-static 0.75`, 493,120 @ 0.71).\n\nBefore the fix: 3 concurrent 300K-token `/generate` requests crash 5/5 exactly at the crossing. After: repeated 3×300K waves run clean.\n\nTriage note for the quality defect: GLM-5.3-Flash `layer_types` places `linear_attention` (KDA, mamba state, no paged KV) at layers 0–2; DSA layers are `[3, 7, 11, ..., 43]`. Per-layer tensor diffs covering only the first three layers cannot see a paged-KV/metadata divergence.\n</details>\n\n<details>\n<summary>Validated fix (diff against 033446bb05f) and memory cost</summary>\n\n```diff\ndiff --git a/python/sglang/srt/mem_cache/kv_cache_configurator.py b/python/sglang/srt/mem_cache/kv_cache_configurator.py\nindex 16214ffe301..804440bcde2 100644\n--- a/python/sglang/srt/mem_cache/kv_cache_configurator.py\n+++ b/python/sglang/srt/mem_cache/kv_cache_configurator.py\n@@ -330,6 +330,15 @@ class KVCacheConfigurator:\n         pool_size = max_total_num_tokens + self.pool_page_size - physical_page_size\n         return pool_size, physical_page_size\n \n+    def _dsa_index_buf_size(self, size: int) -> Optional[int]:\n+        # The DSA index-K cache is read and written with the allocator's\n+        # virtual locs untranslated even on the DCP-sharded target (unlike\n+        # the main c-KV, which set_mla_kv_buffer localizes in-kernel), so\n+        # it must span the virtual loc space. Draft sizes are already\n+        # virtual via loc_space_scale.\n+        scale = get_parallel().attn_dcp_size // self.loc_space_scale\n+        return size * scale if scale > 1 else None\n+\n     def _derive_pool_sizes(self, *, config: MemoryPoolConfig) -> _PoolSizes:\n         max_total_num_tokens = config.max_total_num_tokens\n         max_running_requests = config.max_running_requests\n@@ -1359,6 +1368,9 @@ class KVCacheConfigurator:\n                     self.layer_info.start_layer, self.layer_info.end_layer\n                 )\n             ]\n+        index_buf_size = self._dsa_index_buf_size(max_total_num_tokens)\n+        if index_buf_size is not None:\n+            pool_kwargs[\"index_buf_size\"] = index_buf_size\n         token_to_kv_pool = PoolCls(\n             max_total_num_tokens,\n             page_size=pool_page_size,\n@@ -1625,6 +1637,7 @@ class KVCacheConfigurator:\n                             for layer_id in full_attention_layer_ids\n                         ]\n                     ),\n+                    index_buf_size=self._dsa_index_buf_size(max_total_num_tokens),\n                 )\n                 if dsa_index_kpool > 1:\n                     extra_args.update(\ndiff --git a/python/sglang/srt/mem_cache/memory_pool.py b/python/sglang/srt/mem_cache/memory_pool.py\nindex 16ad8c6722f..f6a48dcacce 100644\n--- a/python/sglang/srt/mem_cache/memory_pool.py\n+++ b/python/sglang/srt/mem_cache/memory_pool.py\n@@ -3736,6 +3736,7 @@ class HybridLinearKVPool(KVCache):\n         tail_extra_slots: int = 0,\n         max_running_requests: Optional[int] = None,\n         skip_topk_layers: Optional[List[bool]] = None,\n+        index_buf_size: Optional[int] = None,\n         start_layer: Optional[int] = None,\n         layer_shard_rank: Optional[int] = None,\n         layer_shard_size: int = 1,\n@@ -3843,6 +3844,7 @@ class HybridLinearKVPool(KVCache):\n                 tail_extra_slots=tail_extra_slots,\n                 max_running_requests=max_running_requests,\n                 skip_topk_layers=skip_topk_layers,\n+                index_buf_size=index_buf_size,\n                 **pool_kwargs,\n             )\n         else:\n@@ -3901,6 +3903,10 @@ class HybridLinearKVPool(KVCache):\n     def index_head_dim(self) -> Optional[int]:\n         return getattr(self.full_kv_pool, \"index_head_dim\", None)\n \n+    @property\n+    def index_buf_size(self) -> Optional[int]:\n+        return getattr(self.full_kv_pool, \"index_buf_size\", None)\n+\n     @property\n     def quant_block_size(self) -> Optional[int]:\n         return getattr(self.full_kv_pool, \"quant_block_size\", None)\n```\n\n- `HybridLinearKVPool` must accept and forward `index_buf_size` — GLM-5.3-Flash constructs its DSA pool inside it, which currently falls back to the per-rank default.\n- Memory cost on H100-80GB: 132 B × 11 DSA layers × 8 ≈ 5 GB/GPU extra. We also needed `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` and `--mem-fraction-static 0.68`, otherwise the draft-extend DeepGEMM masked-GEMM workspace (2.32 GiB contiguous) OOMs after fragmentation.\n</details>\n\n## Reproduction\n\n<details>\n<summary>Server command, model revision, crash and quality repro</summary>\n\nSingle node, 8×H100:\n\n```\npython3 -m sglang.launch_server \\\n  --model-path zai-org/GLM-5.3-Flash --tp-size 8 --ep-size 8 \\\n  --dcp-size 8 --dcp-comm-backend ag_rs \\\n  --mem-fraction-static 0.70 --max-running-requests 48 \\\n  --max-mamba-cache-size 240 --mamba-ssm-dtype bfloat16 \\\n  --cuda-graph-max-bs-decode 16 --chunked-prefill-size 8192 \\\n  --kv-cache-dtype bfloat16 \\\n  --dsa-prefill-backend tilelang --dsa-decode-backend tilelang \\\n  --moe-runner-backend deep_gemm \\\n  --speculative-algorithm EAGLE --speculative-num-steps 5 \\\n  --speculative-eagle-topk 1 --speculative-num-draft-tokens 6 \\\n  --speculative-adaptive \\\n  --reasoning-parser glm45 --tool-call-parser glm47\n```\n\nModel revision: `3f1971b7b5f7a528c9c4ef6212c8785298a8c24a`.\n\nCrash (defect 1): send 3 concurrent 300K-token `/generate` requests so cumulative allocation crosses `max_total_num_tokens`:\n\n```python\nimport json, threading, urllib.request\nbarrier = threading.Barrier(3)\ndef hit(i):\n    payload = json.dumps({\n        \"input_ids\": [1300 + i] + [1000] * 299999,\n        \"sampling_params\": {\"max_new_tokens\": 8, \"temperature\": 0},\n    }).encode()\n    barrier.wait()\n    r = urllib.request.urlopen(urllib.request.Request(\n        \"http://localhost:30000/generate\", data=payload,\n        headers={\"Content-Type\": \"application/json\"}), timeout=1500)\n    print(i, json.loads(r.read())[\"meta_info\"])\nts = [threading.Thread(target=hit, args=(i,)) for i in range(3)]\n[t.start() for t in ts]; [t.join() for t in ts]\n# Run a second wave with different token ids to cross the line again.\n```\n\nQuality (defect 2): ask the three prompts in the table at temperature 0 with and without `--dcp-size 8 --dcp-comm-backend ag_rs`; compare `reasoning_content` length and answer fidelity.\n</details>\n\n## Environment\n\n<details>\n<summary>Versions and hardware</summary>\n\n- image `lmsysorg/sglang:glm-5.3-flash` = sglang `0.0.0.dev1+g033446bb05` (commit `033446bb05f`, PR #36507 branch)\n- torch 2.13.0+cu130, triton 3.7.1, CUDA 13.0, driver 590.48.01\n- 8 × NVIDIA H100 80GB HBM3, single node\n- python 3.12\n</details>\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/36886/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/36886/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/36840",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/36840",
+      "id": 5276933617,
+      "node_id": "I_kwDOLCAjRs8AAAABOoed8Q",
+      "number": 36840,
+      "title": "TBO unreachable for GLM-5.3-Flash (DSA+mamba hybrid): silent --enable-dp-attention reset + missing Glm5NextDecoderLayer strategy",
+      "user": {
+        "login": "Burlesque1",
+        "id": 11853736,
+        "node_id": "MDQ6VXNlcjExODUzNzM2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/11853736?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Burlesque1",
+        "html_url": "https://github.com/Burlesque1",
+        "followers_url": "https://api.github.com/users/Burlesque1/followers",
+        "following_url": "https://api.github.com/users/Burlesque1/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Burlesque1/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Burlesque1/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Burlesque1/subscriptions",
+        "organizations_url": "https://api.github.com/users/Burlesque1/orgs",
+        "repos_url": "https://api.github.com/users/Burlesque1/repos",
+        "events_url": "https://api.github.com/users/Burlesque1/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Burlesque1/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 2,
+      "created_at": "2026-08-28T09:46:11Z",
+      "updated_at": "2026-08-28T10:41:57Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Environment\n\n- sglang: `0.0.0.dev1+g033446bb05` (dev build from image 1.0.0.270), editable install at `/sgl-workspace`\n- Hardware: single node, 4x H20 (SM90), NVLink; `--tp-size 4`\n- Model: GLM-5.3-Flash (HF, arch `Glm5NextForConditionalGeneration`) — hybrid DSA + mamba + FP8 MoE (289 experts)\n- Other flags: `--context-length 16384 --mem-fraction-static 0.95 --max-running-requests 40 --moe-runner-backend triton`\n\n## Problem\n\n`--enable-two-batch-overlap` cannot be enabled for this model, and the first failure mode is actively misleading.\n\n### 1. Misleading error: `--enable-dp-attention` is silently reset\n\n```\n--enable-two-batch-overlap\n```\n→\n```\nValueError: When enabling two batch overlap without an EP a2a backend (moe_a2a_backend='none'),\n--enable-dp-attention is required (DeepSeek-V4 non-EP DP TBO path).\n```\n\nAdding the flag it asks for changes nothing:\n\n```\n--enable-two-batch-overlap --enable-dp-attention\n```\n→ the **identical** ValueError.\n\nCause: `_data_parallelism_defaults` post-process in `arg_groups/overrides.py` resets `enable_dp_attention=False` (and `enable_dp_lm_head=False`) whenever `dp_size == 1`, with no warning:\n\n```python\n@register_post_process\ndef _data_parallelism_defaults(view: Any) -> dict:\n    if view.dp_size == 1 and view.ep_join_mode != \"scale\":\n        return {\"enable_dp_attention\": False, \"enable_dp_lm_head\": False}\n    return {}\n```\n\nSo `_check_two_batch_overlap()` then tells the user to add exactly the flag that was passed and silently dropped. Suggest either warning on the silent reset, or an error that names `--dp-size` when TBO is requested with `dp_size == 1`.\n\n### 2. With `--dp-size 4`, capture crashes: `filter_batch` rejects mamba fields\n\nWith `--tp-size 4 --dp-size 4 --enable-dp-attention --enable-two-batch-overlap`, validation passes and the model loads, but decode CUDA graph capture dies on all ranks:\n\n```\nException: 2 errors happen:\nField mamba_track_indices has value, but is not yet supported ...\nField mamba_track_mask has value, but is not yet supported ...\n```\n\n`TboForwardBatchPreparer.filter_batch` gates on a hand-enumerated field list, and GLM-5.3-Flash is a DSA + mamba hybrid whose `ForwardBatch` always carries `mamba_track_indices` / `mamba_track_mask`. TBO is therefore unreachable for this model.\n\nLocally we added the mamba fields to the per-seq slice list in `filter_batch` (slicing by `start_seq_index:end_seq_index`, same as `seq_lens`). The gate then passes, but capture hits the next blocker:\n\n### 3. No TBO operations strategy for `Glm5NextDecoderLayer`\n\n```\nFile \".../batch_overlap/operations_strategy.py\", line 77, in init_new_tbo\n    raise NotImplementedError\n```\n\n`OperationsStrategy.init_new_tbo` dispatches only on `DeepseekV2DecoderLayer`, `Qwen3MoeDecoderLayer`, `MiMoV2DecoderLayer`, `DeepseekV4DecoderLayer`; `Glm5NextDecoderLayer` (plain `nn.Module`, no op_* decomposition) has no strategy. Full TBO support for this hybrid layer (DSA attention + mamba + FP8 MoE) would require an operations decomposition, not a small patch.\n\n## Request\n\n1. Fix the silent reset / misleading error interaction so TBO failure tells users they need `--dp-size` (or warn when `enable_dp_attention` is dropped).\n2. Consider TBO support for `Glm5NextForConditionalGeneration` (DSA + mamba hybrid): `filter_batch` mamba-field handling and an operations strategy for `Glm5NextDecoderLayer`.\n\nRelated: #36829 (EAGLE3/MTP draft for the same model is also blocked).\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/36840/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/36822",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/36822/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/36822/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/36822/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/36822",
+      "id": 5276258544,
+      "node_id": "I_kwDOLCAjRs8AAAABOn1Q8A",
+      "number": 36822,
+      "title": "[Bug] GPTQ Marlin MoE fails or produces NaNs with BF16 and tensor parallelism",
+      "user": {
+        "login": "EanWang211123",
+        "id": 246409163,
+        "node_id": "U_kgDODq_nyw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/246409163?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/EanWang211123",
+        "html_url": "https://github.com/EanWang211123",
+        "followers_url": "https://api.github.com/users/EanWang211123/followers",
+        "following_url": "https://api.github.com/users/EanWang211123/following{/other_user}",
+        "gists_url": "https://api.github.com/users/EanWang211123/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/EanWang211123/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/EanWang211123/subscriptions",
+        "organizations_url": "https://api.github.com/users/EanWang211123/orgs",
+        "repos_url": "https://api.github.com/users/EanWang211123/repos",
+        "events_url": "https://api.github.com/users/EanWang211123/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/EanWang211123/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-28T08:22:12Z",
+      "updated_at": "2026-08-28T08:22:12Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\nGPTQ Marlin MoE has two correctness issues when serving BF16 models with tensor parallelism.\n\nFirst, `w13_scales` and `w2_scales` are always allocated as `torch.float16` instead of following `params_dtype`. For BF16 models, this causes the hidden states and scales to use different dtypes, triggering an assertion in the Marlin MoE kernel:\n\n```text\nAssertionError: moe_wna16_marlin_gemm assumes hidden_states.dtype\n(torch.bfloat16) == w1_scale.dtype (torch.float16)\n```\n\nSecond, the `w2_scales` shape and loading behavior are incorrect when tensor parallelism and act-order (`desc_act=True`) are enabled. Each TP rank requires the full `w2` scale table in this case, but the current logic allocates or loads a TP-sharded version. This can introduce invalid scales and propagate NaNs to the output logits, causing errors such as:\n\n```text\nAssertion `probability tensor contains either inf, nan or element < 0` failed.\n```\n\nor:\n\n```text\nNaN detected! sampler: next_token_logits\n```\n\n## Expected behavior\n\n- Scale tensors should use `params_dtype`.\n- With `desc_act=True`, each TP rank should load the full `w2` scale table.\n- Without act-order, each TP rank should load only its local `w2` scale partition.\n\n## Proposed fix\n\nThe fix is proposed in [PR #35955](https://github.com/sgl-project/sglang/pull/35955).\n\n\n### Reproduction\n\nUDA_VISIBLE_DEVICES=4,5 sglang serve --model-path /models/TheBloke/laser-dolphin-mixtral-2x7b-dpo-GPTQ/ --tp-size 2 --mem-fraction-static 0.85 --host 0.0.0.0 --port 31346\n\n### Environment\n\nPython: 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]\nCUDA available: True\nGPU 0,1,2,3,4,5,6,7: NVIDIA GeForce RTX 4090\nGPU 0,1,2,3,4,5,6,7 Compute Capability: 8.9\nCUDA_HOME: /usr/local/cuda\nNVCC: Cuda compilation tools, release 13.0, V13.0.88\nCUDA Driver Version: 580.105.08\nPyTorch: 2.13.0+cu130\nsglang: 0.0.0.dev16963+g35d1d844f\nsglang-kernel: 0.4.6.post1\nflashinfer_python: 0.6.17\nflashinfer_cubin: 0.6.17\nflashinfer_jit_cache: Module Not Found\ntriton: 3.7.1\ntransformers: 5.12.1\ntorchao: 0.17.0+cu130\nnumpy: 2.3.5\naiohttp: 3.14.1\nfastapi: 0.138.1\nhuggingface_hub: 1.21.0\ninteregular: 0.3.3\nmodelscope: 1.37.1\norjson: 3.11.9\noutlines: 0.1.11\npackaging: 26.2\npsutil: 7.2.2\npydantic: 2.13.4\npython-multipart: 0.0.32\npyzmq: 27.1.0\nuvicorn: 0.49.0\nuvloop: 0.22.1\nvllm: Module Not Found\nxgrammar: 0.2.1\nopenai: 2.6.1\ntiktoken: 0.13.0\nanthropic: 0.112.0\nlitellm: Module Not Found\ntorchcodec: 0.15.0\nNVIDIA Topology:\n        GPU0    GPU1    GPU2    GPU3    GPU4    GPU5    GPU6    GPU7    NIC0    NIC1    NIC2    NIC3    CPU Affinity    NUMA Affinity   GPU NUMA ID\nGPU0     X      PIX     NODE    NODE    SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A\nGPU1    PIX      X      NODE    NODE    SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A\nGPU2    NODE    NODE     X      PIX     SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A\nGPU3    NODE    NODE    PIX      X      SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A\nGPU4    SYS     SYS     SYS     SYS      X      PIX     NODE    NODE    SYS     SYS     NODE    NODE    24-47,72-95     1               N/A\nGPU5    SYS     SYS     SYS     SYS     PIX      X      NODE    NODE    SYS     SYS     NODE    NODE    24-47,72-95     1               N/A\nGPU6    SYS     SYS     SYS     SYS     NODE    NODE     X      PIX     SYS     SYS     NODE    NODE    24-47,72-95     1               N/A\nGPU7    SYS     SYS     SYS     SYS     NODE    NODE    PIX      X      SYS     SYS     NODE    NODE    24-47,72-95     1               N/A\nNIC0    NODE    NODE    NODE    NODE    SYS     SYS     SYS     SYS      X      PIX     SYS     SYS\nNIC1    NODE    NODE    NODE    NODE    SYS     SYS     SYS     SYS     PIX      X      SYS     SYS\nNIC2    SYS     SYS     SYS     SYS     NODE    NODE    NODE    NODE    SYS     SYS      X      PIX\nNIC3    SYS     SYS     SYS     SYS     NODE    NODE    NODE    NODE    SYS     SYS     PIX      X\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n\nNIC Legend:\n\n  NIC0: mlx5_0\n  NIC1: mlx5_1\n  NIC2: mlx5_2\n  NIC3: mlx5_3\n\n\nulimit soft: 65535\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/36822/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/36822/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/36807",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/36807/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/36807/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/36807/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/36807",
+      "id": 5275441257,
+      "node_id": "I_kwDOLCAjRs8AAAABOnDYaQ",
+      "number": 36807,
+      "title": "[Bug] fast_topk_v2 can silently return wrong top-k sets when a radix threshold bucket exceeds its 4096-entry candidate buffer (k=2048, long rows)",
+      "user": {
+        "login": "zkyue",
+        "id": 51477259,
+        "node_id": "MDQ6VXNlcjUxNDc3MjU5",
+        "avatar_url": "https://avatars.githubusercontent.com/u/51477259?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/zkyue",
+        "html_url": "https://github.com/zkyue",
+        "followers_url": "https://api.github.com/users/zkyue/followers",
+        "following_url": "https://api.github.com/users/zkyue/following{/other_user}",
+        "gists_url": "https://api.github.com/users/zkyue/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/zkyue/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/zkyue/subscriptions",
+        "organizations_url": "https://api.github.com/users/zkyue/orgs",
+        "repos_url": "https://api.github.com/users/zkyue/repos",
+        "events_url": "https://api.github.com/users/zkyue/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/zkyue/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 4,
+      "created_at": "2026-08-28T06:40:26Z",
+      "updated_at": "2026-08-28T10:57:19Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n## Describe the bug\n\n`sgl_kernel.fast_topk_v2` (`topk_kernel` in `python/sglang/kernels/aot/csrc/elementwise/topk.cu`) can return silently wrong top-k index sets when the coarse-radix threshold bucket of a row contains more than 4096 candidates. No error is raised, the output has the normal shape and exactly `k` valid indices, but some of them are not in the true top-k. In the reproduction below, at 64 rows x 256K columns with k=2048, **all 64 rows return wrong top-k sets, with 6-42 of the 2048 selected entries per row absent from the true top-k** (and 98-157 per row at 64 x 1M). Which selections are wrong is nondeterministic run to run. (Overflow makes corruption *possible*, not certain: if the overflowing bucket is dominated by ties at the k-th value boundary, any k tied candidates are valid and the output may still be correct. For continuous score distributions every measured row past the cliff is wrong.)\n\n### Mechanism\n\nLine numbers are at current main (`6480cce9bc`), file `python/sglang/kernels/aot/csrc/elementwise/topk.cu`:\n\n- The kernel builds a 256-bin coarse histogram over the fp16-high-byte key of each score (pass 1), then re-scans the row (pass 2): scores strictly above the threshold bin go directly to the output; scores *in* the threshold bin are staged into a fixed shared-memory candidate buffer for radix refinement.\n- The candidate buffer holds `SMEM_INPUT_SIZE = kSmem / (2 * sizeof(int)) = 4096` entries on CUDA (L38, L96). The sizing comment (L35-L37) records the underlying assumption — \"Each radix pass needs at most ~TopK candidates in the threshold bin, so 4K entries per round ... is sufficient\" — but for long rows the threshold bucket is much larger than `k`, which is exactly the overflow case.\n- Pass 2 stores a candidate only `if (C10_LIKELY(pos < SMEM_INPUT_SIZE))` (L173). Once the threshold bucket exceeds 4096 entries, the remaining candidates are **silently dropped**, and their contributions to the fused refinement histogram are lost with them, so the subsequent threshold selection operates on a truncated population.\n- `num_input` is clipped rather than flagged (L192); the refinement rounds carry the same silent-drop guard (L239), though the demonstrated candidate loss happens at the pass-2 staging (L173) — after the clip, the staged population is already at most 4096.\n- The kernel still emits exactly `k` valid, duplicate-free indices, so ordinary downstream shape/range/count checks do not detect the corruption. Which candidates survive depends on `atomicAdd` arrival order, so the wrong output is also nondeterministic run to run (repeated calls on the same input changed the selected index sets in roughly 40 of 64 rows in our runs).\n- (On CUDA `kSmem` is 32KB. ROCm builds parameterize it via `SGL_TOPK_DYNAMIC_SMEM_BYTES` — 6144 entries on gfx942, 16384 on gfx95x/gfx1250 — so the same defect exists with a later cliff.)\n\n### When it triggers\n\nThe coarse key keeps only 2 mantissa bits, so buckets are wide. Whether a given workload overflows depends on how many scores share the bucket containing the k-th value, which grows with row length and with the concentration of the score distribution. With standard-normal synthetic scores at k=2048 that bucket holds ~1.1K candidates at 64K columns (correct output), ~4.3K at 256K columns (every row wrong), and ~5.1K at 1M columns (every row wrong); other smooth distributions sit lower at the same length (in our measurements exponential and logistic scores at 256K columns peaked around ~3.1K candidates and stayed correct), while distributions concentrated near the k-th bucket can cross the cliff earlier. Real-world exposure therefore depends on both the score distribution and on which top-k path a workload routes through.\n\n### Why it matters\n\n- k=2048 is the only k this kernel supports (`TopK = 2048`, L23) and is the DeepSeek V3.2 DSA configuration. In current routing, the affected AOT entry points are reachable as follows: `fast_topk_v2` is the `DSATopKBackend.SGL_KERNEL` unfused path (`topk_func` in `python/sglang/srt/layers/attention/dsa/dsa_topk_backend.py`), taken whenever top-k fusion is off (`SGLANG_DSA_FUSE_TOPK=0` or `force_unfused_topk`); the fused AOT variants are the legacy branches of `topk_transform`, reached only by calls that miss the JIT v2 dispatch predicates (e.g. PAGED calls with `batch_idx_list` set, or the RAGGED prefill-CP path). With all-default settings, eligible PAGED and RAGGED calls route to the separate JIT v2 kernels (`_topk_transform_v2_paged` / `_topk_transform_v2_ragged`) instead — those have a closely related fixed-buffer truncation defect of their own, reported in #35257 (`kMaxNumTie` tie buffer in `topk_impl.cuh`); the bug reported here is in the AOT kernel in `topk.cu`, a separate file and code path, so this is not a duplicate of that report.\n- The fused variants `topk_transform_decode_kernel` (L270), `topk_transform_prefill_kernel` (L301), and `topk_transform_prefill_ragged_kernel` (L353) call the same `fast_topk_cuda_tl` device function (L287, L339, L370) and inherit the defect.\n- `python/sglang/kernels/aot/tests/test_topk.py` parametrizes `seq_len` only up to 65536, which stays below the cliff, so CI does not catch this.\n- The file header notes the adaptation \"fix[ed] the potential illegal memory access\"; the bounds guard indeed removes the out-of-bounds write, but converts it into silent wrong results.\n\n### Possible directions for a fix\n\n1. Spill overflowing candidates to a global-memory workspace and have the refinement rounds walk both parts (correct; needs a workspace argument).\n2. Detect overflow after pass 2 and fall back to refinement passes that re-read the full row instead of the candidate buffer (correct; in-kernel; the slow path only runs when triggered). As qualitative context from our own radix-select kernel work (not benchmarked on this kernel), a guarded fallback of this kind typically costs a low single-digit percentage on inputs below the cliff.\n3. At minimum, detect overflow and fail loudly instead of returning corrupted indices.\n\n## Reproduction\n\nSelf-contained; needs only `torch` and the `sglang-kernel` wheel (reproduced with the stock `0.4.6.post1+cu130` wheel, whose `topk.cu` is byte-identical to current main):\n\n```python\n# fast_topk_v2 can return silently wrong top-k results when the radix\n# threshold bucket of a row holds more than 4096 candidates (the kernel's\n# fixed shared-memory candidate buffer, SMEM_INPUT_SIZE = kSmem / 8 = 4096).\n# Overflowing candidates are silently dropped instead of spilled.\n# Requires: torch + sglang-kernel (stock wheel), one CUDA GPU.\nimport torch\nfrom sgl_kernel import fast_topk_v2\n\nB, L, K = 64, 256 * 1024, 2048  # k=2048: the DeepSeek V3.2 sparse-attention k\n\ntorch.manual_seed(0)\nscore = torch.randn(B, L, device=\"cuda\", dtype=torch.float32)\nlengths = torch.full((B,), L, device=\"cuda\", dtype=torch.int32)\n\nidx = fast_topk_v2(score, lengths, K)  # [B, K] int32\ntorch.cuda.synchronize()\n\n# validity: in range, no duplicates per row\nassert 0 <= int(idx.min()) and int(idx.max()) < L\nsrt = idx.long().sort(dim=1).values\nassert not (srt[:, 1:] == srt[:, :-1]).any(), \"duplicate indices in a row\"\n\n# tie-robust comparison: the multiset of selected scores must equal torch.topk's\ngot = score.gather(1, idx.long()).sort(dim=1, descending=True).values\nref = torch.topk(score, K, dim=1, sorted=True).values\nrow_wrong = (got != ref).any(dim=1)\n\n\ndef multiset_excess(a, b):\n    # Exact count of selected values absent from the reference multiset\n    # (a, b: equal-length lists sorted descending; two-pointer merge).\n    i = j = excess = 0\n    la, lb = len(a), len(b)\n    while i < la and j < lb:\n        if a[i] == b[j]:\n            i += 1\n            j += 1\n        elif a[i] > b[j]:\n            excess += 1\n            i += 1\n        else:\n            j += 1\n    return excess + (la - i)\n\n\nexcess_per_row = torch.tensor(\n    [multiset_excess(got[r].tolist(), ref[r].tolist()) for r in range(B)],\n    device=row_wrong.device,\n)\n\n# mechanism: population of the coarse-histogram bucket holding the k-th value.\n# convert_to_uint8() in topk.cu: fp16 bit pattern, sign-flipped, high byte.\nbits = score.to(torch.float16).view(torch.int16).to(torch.int32) & 0xFFFF\nkey = torch.where(bits & 0x8000 != 0, bits ^ 0xFFFF, bits | 0x8000)\nbins = (key >> 8) & 0xFF\nkth_idx = torch.topk(score, K, dim=1).indices[:, -1:]\nkth_bin = bins.gather(1, kth_idx.long())\nbucket_pop = (bins == kth_bin).sum(dim=1)\n\nprint(f\"shape: {B} rows x {L} cols, k={K}\")\nprint(\n    f\"threshold-bucket population per row: min={int(bucket_pop.min())} \"\n    f\"median={int(bucket_pop.median())} max={int(bucket_pop.max())} \"\n    f\"(candidate buffer capacity: 4096)\"\n)\nprint(f\"rows with wrong top-k set: {int(row_wrong.sum())}/{B}\")\nif row_wrong.any():\n    e = excess_per_row[row_wrong]\n    print(\n        f\"wrong selections per wrong row (values not in the true top-k\"\n        f\" multiset): min={int(e.min())} max={int(e.max())}\"\n    )\n```\n\nOutput on one B200 (same qualitative outcome on repeated runs, with per-row counts varying because the drop is arrival-order dependent):\n\n```\nshape: 64 rows x 262144 cols, k=2048\nthreshold-bucket population per row: min=4178 median=4327 max=4448 (candidate buffer capacity: 4096)\nrows with wrong top-k set: 64/64\nwrong selections per wrong row (values not in the true top-k multiset): min=6 max=42\n```\n\nThe comparison is tie-robust (it compares selected-score multisets, not index sets, so legitimate ties at the k-th boundary do not count as errors). Control points with the same script: at `L = 65536` (the maximum the unit tests cover) it reports 0/64 wrong rows; at `L = 1048576` it reports 64/64 wrong rows with 98-157 wrong selections per row. Behavior is stable across seeds (tested seeds 0-3).\n\n## Environment\n\n```\nPython: 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]\nCUDA available: True\nGPU 0,1,2,3,4,5,6,7: NVIDIA B200\nGPU 0,1,2,3,4,5,6,7 Compute Capability: 10.0\nCUDA_HOME: /usr/local/cuda\nNVCC: Cuda compilation tools, release 13.3, V13.3.33\nCUDA Driver Version: 590.48.01\nPyTorch: 2.13.0+cu130\nsglang: 0.5.18\nsglang-kernel: 0.4.6.post1+cu130\nflashinfer_python: 0.6.17\ntriton: 3.7.1\ntransformers: 5.12.1\nnumpy: 2.3.5\n```\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/36807/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/36807/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

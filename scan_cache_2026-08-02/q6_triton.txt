@@ -1,0 +1,3 @@
+TOTAL: 1
+
+[11147] [FRONTEND] Remove exponential scratch from nested-loop lowering | state=open | created=2026-08-02

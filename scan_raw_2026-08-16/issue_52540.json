@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/52540",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/52540/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/52540/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/52540/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/52540",
+  "id": 5165361948,
+  "node_id": "I_kwDOI7xefs8AAAABM-ErHA",
+  "number": 52540,
+  "title": "[Bug]: ModelOpt NVFP4 on SM120 dies or wedges under sustained load with CUDA graphs (not the NVFP4 GEMM backend)",
+  "user": {
+    "login": "yavarb",
+    "id": 6343213,
+    "node_id": "MDQ6VXNlcjYzNDMyMTM=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/6343213?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/yavarb",
+    "html_url": "https://github.com/yavarb",
+    "followers_url": "https://api.github.com/users/yavarb/followers",
+    "following_url": "https://api.github.com/users/yavarb/following{/other_user}",
+    "gists_url": "https://api.github.com/users/yavarb/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/yavarb/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/yavarb/subscriptions",
+    "organizations_url": "https://api.github.com/users/yavarb/orgs",
+    "repos_url": "https://api.github.com/users/yavarb/repos",
+    "events_url": "https://api.github.com/users/yavarb/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/yavarb/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 9988761457,
+      "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+      "name": "quantization",
+      "color": "62bfab",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-08-16T17:05:33Z",
+  "updated_at": "2026-08-16T19:30:50Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\n<details>\n<summary>Environment</summary>\n\n- GPU: 2x NVIDIA RTX PRO 6000 Blackwell Workstation Edition (sm120, 96 GB), driver 595.71.05, ECC clean\n- Container: `vllm/vllm-openai` v0.26.0 (`sha256:ffb2d59b1c059a5bd8d781320c9f5189de8293693b7d95da54befddaa54abf52`) and v0.27.1 (`sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967`), podman, `--ipc host`\n- CUDA 13.0.2, torch 2.11.0+cu130, flashinfer 0.6.14\n- Model: Qwen3.8-27B quantized by ModelOpt 0.47.0.dev0 to `MIXED_PRECISION`. 193 layers NVFP4 (all 64 `mlp.{gate,up,down}_proj` plus `lm_head`), 208 layers FP8 (`linear_attn.*`, `self_attn.*`), `kv_cache_quant_algo: FP8`. Architecture `Qwen3_5ForConditionalGeneration` (hybrid GDN linear attention with full attention every 4th layer), hidden 5120, ffn 17408, vocab 248320, 64 layers.\n- vLLM resolves this to `quantization=modelopt_mixed` and selects `FlashInferCutlassNvFp4LinearKernel` for the NVFP4 GEMMs, `FlashInferFP8ScaledMMLinearKernel` for FP8, and the `FLASHINFER` attention backend.\n\n</details>\n\n### 🐛 Describe the bug\n\nServing a ModelOpt-NVFP4 checkpoint on SM120 dies under sustained batch load, reliably, on two vLLM releases. The same base model quantized to FP8 and served from the same image with the same attention backend is stable. The failure is specific to the NVFP4 build. I have not isolated the mechanism, and two backends I suspected are now ruled out by measurement (see the update comment below).\n\n**One thing that is measured but is not the cause.** `flashinfer.mm_fp4` hands the CUTLASS FP4 GEMM a fixed 32 MiB shared workspace, and on SM120 the kernel asks for 34 MiB at every M from 1 to 256 for this model's fused gate/up projection (5120 → 34816). Every decode-sized call therefore takes a fallback branch in `csrc/fp4_gemm_cutlass_sm120.cu` that allocates a private workspace and releases it right after an asynchronous launch, including inside CUDA graph capture. That is filed as https://github.com/flashinfer-ai/flashinfer/issues/4549 with a fix in https://github.com/flashinfer-ai/flashinfer/pull/4550. Raising the shared workspace so the fallback never fires does **not** stop the crash: the patched build failed after 15.0 minutes against 16.5 for the unpatched one. Recording it here so nobody else spends the window I spent on it.\n\n**Symptoms, for searchability.** Two failure modes, both with CUDA graphs enabled:\n\n| vLLM | spec decode | time to failure | error |\n|---|---|---|---|\n| v0.26.0 | none | 16 min 35 s | illegal memory access |\n| v0.27.1 | none | 21 min 32 s | illegal memory access |\n| v0.26.0 | MTP, 3 tokens | not recorded | misaligned address |\n| v0.26.0 | none | 8 s, on a boot right after a prior fault | illegal memory access in `BatchPrefillWithPagedKVCache` |\n\nThe exception always surfaces at an asynchronous synchronization point, so the reported frame is never the offending kernel:\n\n```\nFile \"vllm/v1/worker/gpu_model_runner.py\", line 314, in get_output\n    self.async_copy_ready_event.synchronize()\ntorch.AcceleratorError: CUDA error: an illegal memory access was encountered\n```\n\nThe second mode is a wedge. The engine stops making progress without raising anything, `/v1/models` still returns 200 in about a millisecond, `/v1/chat/completions` never returns, and the GPU sits at 100% utilization. `py-spy` shows the engine thread blocked in a kernel launch that never returns, and the driver reports `Xid 8 ... GPU is probably locked` only much later. `dmesg` records MMU faults at wild addresses, `faulted @ 0x4_00000000` and `0xf_00001000`, both `FAULT_PDE`.\n\n**Differential.** The same base model quantized to FP8, same box, same image, same FlashInfer attention backend, CUDA graphs on, prefix caching on, `--max-model-len 262144`, logged 10,282 completions across 35 hours with no illegal-address or misaligned-address error. The NVFP4 build dies after roughly 570 completions. Both GPUs produce the NVFP4 fault and ECC is clean on both. `--enforce-eager` reduces the rate roughly tenfold without eliminating it.\n\nWe also swept the NVFP4 GEMM for memory-safety problems and found none: every layer shape in the model, every M from 1 to 8192, all 32 SM120 CUTLASS FP4 tactics, under `compute-sanitizer --tool memcheck` with `PYTORCH_NO_CUDA_MEMORY_CACHING=1`, with both a zeroed and a randomly poisoned workspace. Those runs cannot catch this defect, because disabling the caching allocator turns every free into a synchronizing `cudaFree`.\n\n### Workarounds available today from vLLM\n\nEither of these avoids the fallback path without a FlashInfer patch:\n\n1. `VLLM_DISABLED_KERNELS=FlashInferCutlassNvFp4LinearKernel`, which falls through to vLLM's native `CutlassNvFp4LinearKernel`. On our workload that reached 0.65 completions per second against 0.67 for the FlashInfer kernel, and 50 deterministic classification prompts returned byte-identical answers, so the swap does not change results. Soak results below.\n2. `--enforce-eager`, which reduces the failure rate roughly tenfold without removing it, and costs more than the kernel swap.\n\nSwapping to `CutlassNvFp4LinearKernel` does not fix the failure, so quarantining the FlashInfer kernel on SM12x would not be a fix either. Both workarounds above are partial.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/52540/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/52540/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

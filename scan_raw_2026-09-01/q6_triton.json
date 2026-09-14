@@ -1,0 +1,97 @@
+{
+  "total_count": 1,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/triton-lang/triton/issues/11526",
+      "repository_url": "https://api.github.com/repos/triton-lang/triton",
+      "labels_url": "https://api.github.com/repos/triton-lang/triton/issues/11526/labels{/name}",
+      "comments_url": "https://api.github.com/repos/triton-lang/triton/issues/11526/comments",
+      "events_url": "https://api.github.com/repos/triton-lang/triton/issues/11526/events",
+      "html_url": "https://github.com/triton-lang/triton/issues/11526",
+      "id": 5306437012,
+      "node_id": "I_kwDOAWaHXs8AAAABPEnNlA",
+      "number": 11526,
+      "title": "[Regression] Increased SMEM usage with tf32x3 GEMM (3.6 -> 3.8)",
+      "user": {
+        "login": "kainzhong",
+        "id": 44538064,
+        "node_id": "MDQ6VXNlcjQ0NTM4MDY0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/44538064?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/kainzhong",
+        "html_url": "https://github.com/kainzhong",
+        "followers_url": "https://api.github.com/users/kainzhong/followers",
+        "following_url": "https://api.github.com/users/kainzhong/following{/other_user}",
+        "gists_url": "https://api.github.com/users/kainzhong/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/kainzhong/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/kainzhong/subscriptions",
+        "organizations_url": "https://api.github.com/users/kainzhong/orgs",
+        "repos_url": "https://api.github.com/users/kainzhong/repos",
+        "events_url": "https://api.github.com/users/kainzhong/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/kainzhong/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 125679820,
+          "node_id": "MDU6TGFiZWwxMjU2Nzk4MjA=",
+          "url": "https://api.github.com/repos/triton-lang/triton/labels/bug",
+          "name": "bug",
+          "color": "fc2929",
+          "default": true,
+          "description": null
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 7,
+      "created_at": "2026-09-01T00:48:16Z",
+      "updated_at": "2026-09-01T19:33:41Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Describe the bug\n\nWe noticed that triton 3.8 allocates more SMEM for tf32x3 GEMM, on L40 it makes the configs that were once working now crash due to allocated SMEM exceeds L40's capacity.\n\nHere's a repro script. To reproduce, create 2 virtual python envs with triton 3.6 and 3.8, and run this script:\n\n```\n\"\"\"Minimal repro of the Triton 3.8 tf32x3 shared-memory regression.\n\nSingle tile, 1 warp, 2 pipeline stages -- ~127 lines of TTGIR.\nCompile-only: no GPU and no torch needed.\n\n    ./venv-3.6/bin/python minimal.py     -> tf32 1536  tf32x3 1536\n    ./venv-3.8/bin/python minimal.py     -> tf32 1536  tf32x3 3072\n\"\"\"\nimport triton\nimport triton.language as tl\nfrom triton.backends.compiler import GPUTarget\nfrom triton.compiler import ASTSource\n\nBLOCK_M, BLOCK_N, STEP_K = 16, 16, 16\nWARPS, STAGES = 1, 2\n\n\n@triton.jit\ndef kernel(x_ptr, w_ptr, o_ptr, K,\n           BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,\n           STEP_K: tl.constexpr, PRECISION: tl.constexpr):\n    # one CTA, one output tile:  o[16,16] = sum_k x[16,k] @ w[16,k].T\n    offs_m = tl.arange(0, BLOCK_M)\n    offs_n = tl.arange(0, BLOCK_N)\n    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)\n    for k in range(0, K, STEP_K):\n        ks = k + tl.arange(0, STEP_K)\n        x = tl.load(x_ptr + offs_m[:, None] * K + ks[None, :])   # bf16\n        w = tl.load(w_ptr + offs_n[:, None] * K + ks[None, :])   # fp32\n        acc = tl.dot(x.to(tl.float32), tl.trans(w, (1, 0)), acc,\n                     input_precision=PRECISION, out_dtype=tl.float32)\n    tl.store(o_ptr + offs_m[:, None] * BLOCK_N + offs_n[None, :], acc)\n\n\ndef build(precision):\n    src = ASTSource(\n        fn=kernel,\n        signature={\"x_ptr\": \"*bf16\", \"w_ptr\": \"*fp32\", \"o_ptr\": \"*fp32\", \"K\": \"i32\",\n                   \"BLOCK_M\": \"constexpr\", \"BLOCK_N\": \"constexpr\",\n                   \"STEP_K\": \"constexpr\", \"PRECISION\": \"constexpr\"},\n        constexprs={\"BLOCK_M\": BLOCK_M, \"BLOCK_N\": BLOCK_N,\n                    \"STEP_K\": STEP_K, \"PRECISION\": precision},\n    )\n    return triton.compile(src, target=GPUTarget(\"cuda\", 89, 32),\n                          options={\"num_warps\": WARPS, \"num_stages\": STAGES})\n\n\nif __name__ == \"__main__\":\n    v = triton.__version__\n    for prec in (\"tf32\", \"tf32x3\"):\n        k = build(prec)\n        path = f\"min-{v}-{prec}.mlir\"\n        open(path, \"w\").write(k.asm[\"ttgir\"])\n        n = k.asm[\"ttgir\"].count(\"ttg.local_alloc\")\n        print(f\"triton {v}  {prec:<7} shared={k.metadata.shared:>6}  \"\n              f\"local_allocs={n}  -> {path}\")\n```\n\n```\n  $ ./venv-3.6/bin/python minimal.py\n  triton 3.6.0  tf32    shared=  1536  local_allocs=2  -> min-3.6.0-tf32.mlir\n  triton 3.6.0  tf32x3  shared=  1536  local_allocs=2  -> min-3.6.0-tf32x3.mlir\n\n  $ ./venv-3.8/bin/python minimal.py\n  triton 3.8.0  tf32    shared=  1536  local_allocs=2  -> min-3.8.0-tf32.mlir\n  triton 3.8.0  tf32x3  shared=  3072  local_allocs=4  -> min-3.8.0-tf32x3.mlir\n```\n\nThis bug only affects tf32x3. I did some investigation that I'll attach below.\n\n### Environment details\n\nTriton: 3.8.0\nGPU: not arch specific -- this is a MLIR issue. This script also reproduces the bug on Blackwell. Also I suspect you can directly see the problem from IR without running it.",
+      "reactions": {
+        "url": "https://api.github.com/repos/triton-lang/triton/issues/11526/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/triton-lang/triton/issues/11526/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

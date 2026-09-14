@@ -1,0 +1,1 @@
+54252	open	compressed-tensors config collapses GDN linear-attention token distinctness (qwen4exp/hybrid MoE models produce garbage; identical weights clean under fp8 config)	https://github.com/vllm-project/vllm/issues/54252	2026-08-28T18:59:11Z	issue

@@ -1,0 +1,122 @@
+[Bug] GPTQ Marlin MoE fails or produces NaNs with BF16 and tensor parallelism
+### Checklist
+
+- [x] I searched related issues but found no solution.
+- [x] The bug persists in the latest version.
+- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.
+- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.
+- [x] Please use English. Otherwise, it will be closed.
+
+### Describe the bug
+
+GPTQ Marlin MoE has two correctness issues when serving BF16 models with tensor parallelism.
+
+First, `w13_scales` and `w2_scales` are always allocated as `torch.float16` instead of following `params_dtype`. For BF16 models, this causes the hidden states and scales to use different dtypes, triggering an assertion in the Marlin MoE kernel:
+
+```text
+AssertionError: moe_wna16_marlin_gemm assumes hidden_states.dtype
+(torch.bfloat16) == w1_scale.dtype (torch.float16)
+```
+
+Second, the `w2_scales` shape and loading behavior are incorrect when tensor parallelism and act-order (`desc_act=True`) are enabled. Each TP rank requires the full `w2` scale table in this case, but the current logic allocates or loads a TP-sharded version. This can introduce invalid scales and propagate NaNs to the output logits, causing errors such as:
+
+```text
+Assertion `probability tensor contains either inf, nan or element < 0` failed.
+```
+
+or:
+
+```text
+NaN detected! sampler: next_token_logits
+```
+
+## Expected behavior
+
+- Scale tensors should use `params_dtype`.
+- With `desc_act=True`, each TP rank should load the full `w2` scale table.
+- Without act-order, each TP rank should load only its local `w2` scale partition.
+
+## Proposed fix
+
+The fix is proposed in [PR #35955](https://github.com/sgl-project/sglang/pull/35955).
+
+
+### Reproduction
+
+UDA_VISIBLE_DEVICES=4,5 sglang serve --model-path /models/TheBloke/laser-dolphin-mixtral-2x7b-dpo-GPTQ/ --tp-size 2 --mem-fraction-static 0.85 --host 0.0.0.0 --port 31346
+
+### Environment
+
+Python: 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]
+CUDA available: True
+GPU 0,1,2,3,4,5,6,7: NVIDIA GeForce RTX 4090
+GPU 0,1,2,3,4,5,6,7 Compute Capability: 8.9
+CUDA_HOME: /usr/local/cuda
+NVCC: Cuda compilation tools, release 13.0, V13.0.88
+CUDA Driver Version: 580.105.08
+PyTorch: 2.13.0+cu130
+sglang: 0.0.0.dev16963+g35d1d844f
+sglang-kernel: 0.4.6.post1
+flashinfer_python: 0.6.17
+flashinfer_cubin: 0.6.17
+flashinfer_jit_cache: Module Not Found
+triton: 3.7.1
+transformers: 5.12.1
+torchao: 0.17.0+cu130
+numpy: 2.3.5
+aiohttp: 3.14.1
+fastapi: 0.138.1
+huggingface_hub: 1.21.0
+interegular: 0.3.3
+modelscope: 1.37.1
+orjson: 3.11.9
+outlines: 0.1.11
+packaging: 26.2
+psutil: 7.2.2
+pydantic: 2.13.4
+python-multipart: 0.0.32
+pyzmq: 27.1.0
+uvicorn: 0.49.0
+uvloop: 0.22.1
+vllm: Module Not Found
+xgrammar: 0.2.1
+openai: 2.6.1
+tiktoken: 0.13.0
+anthropic: 0.112.0
+litellm: Module Not Found
+torchcodec: 0.15.0
+NVIDIA Topology:
+        GPU0    GPU1    GPU2    GPU3    GPU4    GPU5    GPU6    GPU7    NIC0    NIC1    NIC2    NIC3    CPU Affinity    NUMA Affinity   GPU NUMA ID
+GPU0     X      PIX     NODE    NODE    SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A
+GPU1    PIX      X      NODE    NODE    SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A
+GPU2    NODE    NODE     X      PIX     SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A
+GPU3    NODE    NODE    PIX      X      SYS     SYS     SYS     SYS     NODE    NODE    SYS     SYS     0-23,48-71      0               N/A
+GPU4    SYS     SYS     SYS     SYS      X      PIX     NODE    NODE    SYS     SYS     NODE    NODE    24-47,72-95     1               N/A
+GPU5    SYS     SYS     SYS     SYS     PIX      X      NODE    NODE    SYS     SYS     NODE    NODE    24-47,72-95     1               N/A
+GPU6    SYS     SYS     SYS     SYS     NODE    NODE     X      PIX     SYS     SYS     NODE    NODE    24-47,72-95     1               N/A
+GPU7    SYS     SYS     SYS     SYS     NODE    NODE    PIX      X      SYS     SYS     NODE    NODE    24-47,72-95     1               N/A
+NIC0    NODE    NODE    NODE    NODE    SYS     SYS     SYS     SYS      X      PIX     SYS     SYS
+NIC1    NODE    NODE    NODE    NODE    SYS     SYS     SYS     SYS     PIX      X      SYS     SYS
+NIC2    SYS     SYS     SYS     SYS     NODE    NODE    NODE    NODE    SYS     SYS      X      PIX
+NIC3    SYS     SYS     SYS     SYS     NODE    NODE    NODE    NODE    SYS     SYS     PIX      X
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks
+
+NIC Legend:
+
+  NIC0: mlx5_0
+  NIC1: mlx5_1
+  NIC2: mlx5_2
+  NIC3: mlx5_3
+
+
+ulimit soft: 65535
+

@@ -1,0 +1,46 @@
+[Bug] [ROCm] DeepSeek-V4-Flash FP8 on MI300X (gfx942): output degrades with context length — coherent <100 tokens, garbage by ~300, NIAH 0/3
+STATE: open
+BODY:
+### Checklist
+
+- [x] 1. I have searched related issues but cannot get the expected help.
+- [x] 2. The bug has not been fixed in the latest version I have available (see Environment).
+- [x] 3. Environment info and reproduction are included below.
+- [x] 4. This is a bug report, not a question.
+- [x] 5. English.
+
+## Describe the bug
+
+DeepSeek-V4-Flash (block-FP8) on 8x MI300X (gfx942), TP8, produces **correct output at short context and progressively degraded output as prompt length grows**. It never crashes, never NaNs, and emits no error — the text simply decays.
+
+Length sweep, single node, greedy (`temperature=0`), same trailing question with increasing neutral filler prepended:
+
+| prompt length | continuation | verdict |
+| ---: | --- | --- |
+| ~13 tok | `" blue and the grass is green"` | correct |
+| ~103 tok | `". The sky is blue"` | correct |
+| ~303 tok | `".. A."` | broken |
+| ~603 tok | `"..."` | broken |
+| ~1503 tok | `"\n.84."` | broken |
+
+Factual probe (prompt ends `"... Rome is the capital of"`, expected `" Italy"`):
+
+| ~130 | ~230 | ~250 | ~270 | ~290 | ~310 | ~330 |
+| --- | --- | --- | --- | --- | --- | --- |
+| ` Italy` | ` Italy` | ` Italy` | ` Italy` | ` Italy` | ` France` | ` Italy` |
+
+Note this is **not a hard cliff at a page/window boundary** — `" Italy"` appears and disappears across 230–330 tokens. The degradation is smooth and probabilistic with length, which looks like a compounding numerical error rather than a discrete indexing bug.
+
+Needle-in-a-haystack: **0/3 hits at every length tested**, including 3k. Above ~2048 tokens the output is additionally **non-deterministic** across identical greedy requests; below that it is deterministic-but-wrong.
+
+## What we have already ruled out
+
+We replaced each DSA component with an alternate or reference implementation. **Every one of these produces byte-identical wrong output** (`cont@1500 == "\n.84."`):
+
+| swap | how | cont@1500 |
+| --- | --- | --- |
+| baseline | — | `\n.84.` |
+| whole compressor implementation | `SGLANG_OPT_USE_OLD_COMPRESSOR=1` | `\n.84.` |
+| non-paged indexer | non-paged path | `\n.84.` |
+| **core MLA attention** | tilelang sparse attention backend | `\n.84.` |
+| CUDA-path norm + o

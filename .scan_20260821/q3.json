@@ -1,0 +1,211 @@
+{
+  "total_count": 2,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/35564",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/35564/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/35564/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/35564/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/35564",
+      "id": 5197011600,
+      "node_id": "I_kwDOLCAjRs8AAAABNcQakA",
+      "number": 35564,
+      "title": "[Bug]  8 tool-call parsers give wrong or missing calls in token-by-token streaming",
+      "user": {
+        "login": "kvcache670",
+        "id": 264492208,
+        "node_id": "U_kgDOD8PUsA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/264492208?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/kvcache670",
+        "html_url": "https://github.com/kvcache670",
+        "followers_url": "https://api.github.com/users/kvcache670/followers",
+        "following_url": "https://api.github.com/users/kvcache670/following{/other_user}",
+        "gists_url": "https://api.github.com/users/kvcache670/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/kvcache670/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/kvcache670/subscriptions",
+        "organizations_url": "https://api.github.com/users/kvcache670/orgs",
+        "repos_url": "https://api.github.com/users/kvcache670/repos",
+        "events_url": "https://api.github.com/users/kvcache670/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/kvcache670/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-19T20:48:32Z",
+      "updated_at": "2026-08-19T20:48:32Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\nUse one of these parsers with streaming on:\n`cohere_command4, gemma4, glm, glm45, glm47, minimax-m2, mistral, step3`.\nLet the output have a call with empty `{}` (or very simple) arguments.\nGive the text to `parse_streaming_increment` one character at a time.\nThen compare the result with `detect_and_parse` on the same text. The results do not agree.\nThese are the failure modes:\n\n```\nminimax-m2        final: {0: get_weather {}}      streamed: {}                # the call is gone\nmistral           final: {0: gw {}, 1: gw {}}     streamed: {0: gw {}}        # the 2nd call is gone\ncohere_command4 / gemma4: the call gets tool_index=1, not 0                   # index shift\nglm / glm45 / glm47:      {\"get_weather\": 123} streams as {\"get_weather\": \"123\"}   # int -> str\nstep3             final: 1 call with args         streamed: one more call, with empty args\n```\n\nEach marker is one token in the applicable model vocabulary.\nThus real detokenized streaming makes these increments. This is not an unusual mid-marker division.\n\n**Expected:** the sum of the streamed deltas must be equal to the `detect_and_parse` result.\nNote: vLLM had the same bug class in its xlam / hunyuan_a13b parsers.\nSome of these sglang parsers are ports of vLLM parsers.\n\n### Reproduction\n\n\n<details><summary><code>reproduce_streaming_empty_args.py</code></summary>\n\n```python\n#!/usr/bin/env python3\n\"\"\"8 tool-call detectors lose arguments (or whole calls) when the output is\nstreamed token-by-token, whenever a call with empty/simple arguments is\ninvolved. Non-streaming detect_and_parse on the same text is correct.\n\n    pip install \"sglang[all]==0.5.17\"   (CPU is enough)\n    python reproduce_streaming_empty_args.py     # exit 1 = bug present\n\"\"\"\nimport json\nimport warnings\n\nwarnings.filterwarnings(\"ignore\")\n\nfrom sglang.srt.entrypoints.openai.protocol import Function, Tool\nfrom sglang.srt.function_call.function_call_parser import FunctionCallParser\n\n\ndef tool(name):\n    return Tool(type=\"function\", function=Function(\n        name=name, parameters={\"type\": \"object\", \"properties\": {}}))\n\n\nTOOLS = [tool(\"get_weather\"), tool(\"f\")]\n\nCASES = {\n    \"cohere_command4\":\n        '<|START_ACTION|>[{\"tool_name\": \"f\", \"parameters\": {}}]<|END_ACTION|>',\n    \"gemma4\": \"<|tool_call>call:f{}<tool_call|>\",\n    \"glm\": \"<tool_call>get_weather\\n<arg_key>get_weather</arg_key>\\n\"\n           \"<arg_value>123</arg_value>\\n</tool_call>\",\n    \"glm45\": \"<tool_call>get_weather\\n<arg_key>get_weather</arg_key>\\n\"\n             \"<arg_value>123</arg_value>\\n</tool_call>\",\n    \"glm47\": \"<tool_call>get_weather<arg_key>get_weather</arg_key>\"\n             \"<arg_value>123</arg_value></tool_call>\",\n    \"minimax-m2\": '<minimax:tool_call><invoke name=\"get_weather\">'\n                  \"</invoke></minimax:tool_call>\",\n    \"mistral\": '[TOOL_CALLS] [{\"name\": \"get_weather\", \"arguments\": {}}, '\n               '{\"name\": \"get_weather\", \"arguments\": {}}]',\n    \"step3\": \"<｜tool_calls_begin｜><｜tool_call_begin｜>function<｜tool_sep｜>\"\n             '<steptml:invoke name=\"get_weather\"></steptml:invoke>'\n             \"<｜tool_call_end｜><｜tool_call_begin｜>function<｜tool_sep｜>\"\n             '<steptml:invoke name=\"get_weather\">'\n             '<steptml:parameter name=\"get_weather\">hello</steptml:parameter>'\n             \"</steptml:invoke><｜tool_call_end｜><｜tool_calls_end｜>\",\n}\n\n\ndef stream(name, chunks):\n    d = FunctionCallParser.ToolCallParserEnum[name]()\n    calls = {}\n    for chunk in list(chunks) + [\"\", \"\"]:  # trailing flushes, as serving does\n        r = d.parse_streaming_increment(chunk, TOOLS)\n        for c in r.calls:\n            e = calls.setdefault(c.tool_index, [\"\", \"\"])\n            if c.name:\n                e[0] = c.name\n            if c.parameters:\n                e[1] += c.parameters\n    return calls\n\n\ndef jeq(a, b):\n    try:\n        return json.loads(a or \"null\") == json.loads(b or \"null\")\n    except Exception:\n        return a == b\n\n\nbad = 0\nfor name, text in CASES.items():\n    d = FunctionCallParser.ToolCallParserEnum[name]()\n    final = {i: [c.name, c.parameters]\n             for i, c in enumerate(d.detect_and_parse(text, TOOLS).calls)}\n    streamed = stream(name, list(text))  # one character per increment\n    same = len(streamed) == len(final) and all(\n        streamed.get(i, [\"\", \"\"])[0] == final[i][0]\n        and jeq(streamed.get(i, [\"\", \"\"])[1], final[i][1]) for i in final)\n    tag = \"OK \" if same else \"BUG\"\n    print(f\"{tag} {name:16s} final={final}\")\n    if not same:\n        print(f\"    streamed={streamed}\")\n        bad += 1\n\nraise SystemExit(1 if bad else 0)\n```\n\n</details>\n\n### Environment\n\n\n```\nPython: 3.12.13 (main, Jun 23 2026, 15:18:55) [Clang 22.1.3 ]\nCUDA available: True\nGPU 0: NVIDIA GeForce RTX 4090\nGPU 0 Compute Capability: 8.9\nCUDA_HOME: /usr/local/cuda\nNVCC: Cuda compilation tools, release 12.9, V12.9.86\nCUDA Driver Version: 580.173.02\nPyTorch: 2.11.0+cu130\nsglang: 0.5.17\nsglang-kernel: 0.4.5\nflashinfer_python: 0.6.15.post1\nflashinfer_cubin: Module Not Found\nflashinfer_jit_cache: Module Not Found\ntriton: 3.6.0\ntransformers: 5.12.1\ntorchao: 0.17.0\nnumpy: 2.3.5\naiohttp: 3.14.3\nfastapi: 0.141.1\nhuggingface_hub: 1.28.0\ninteregular: 0.3.3\nmodelscope: 1.39.1\norjson: 3.12.0\noutlines: 0.1.11\npackaging: 26.3\npsutil: 7.2.2\npydantic: 2.14.0b1\npython-multipart: 0.0.32\npyzmq: 27.1.0\nuvicorn: 0.52.4\nuvloop: 0.22.1\nvllm: Module Not Found\nxgrammar: 0.2.1\nopenai: 2.6.1\ntiktoken: 0.14.0\nanthropic: 0.124.0\n```\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/35564/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/35564/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/sgl-project/sglang/issues/35257",
+      "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+      "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/35257/labels{/name}",
+      "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/35257/comments",
+      "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/35257/events",
+      "html_url": "https://github.com/sgl-project/sglang/issues/35257",
+      "id": 5178448703,
+      "node_id": "I_kwDOLCAjRs8AAAABNKjbPw",
+      "number": 35257,
+      "title": "[Bug] DSA top-k v2: tie-overflow selection is not exact — silently returns wrong top-k members (follow-up to #30512 / #30645)",
+      "user": {
+        "login": "dahaobenhao",
+        "id": 99774612,
+        "node_id": "U_kgDOBfJwlA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/99774612?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dahaobenhao",
+        "html_url": "https://github.com/dahaobenhao",
+        "followers_url": "https://api.github.com/users/dahaobenhao/followers",
+        "following_url": "https://api.github.com/users/dahaobenhao/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dahaobenhao/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dahaobenhao/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dahaobenhao/subscriptions",
+        "organizations_url": "https://api.github.com/users/dahaobenhao/orgs",
+        "repos_url": "https://api.github.com/users/dahaobenhao/repos",
+        "events_url": "https://api.github.com/users/dahaobenhao/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dahaobenhao/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+        {
+          "login": "DarkSharpness",
+          "id": 76582120,
+          "node_id": "MDQ6VXNlcjc2NTgyMTIw",
+          "avatar_url": "https://avatars.githubusercontent.com/u/76582120?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/DarkSharpness",
+          "html_url": "https://github.com/DarkSharpness",
+          "followers_url": "https://api.github.com/users/DarkSharpness/followers",
+          "following_url": "https://api.github.com/users/DarkSharpness/following{/other_user}",
+          "gists_url": "https://api.github.com/users/DarkSharpness/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/DarkSharpness/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/DarkSharpness/subscriptions",
+          "organizations_url": "https://api.github.com/users/DarkSharpness/orgs",
+          "repos_url": "https://api.github.com/users/DarkSharpness/repos",
+          "events_url": "https://api.github.com/users/DarkSharpness/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/DarkSharpness/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        }
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-18T05:32:06Z",
+      "updated_at": "2026-08-18T06:24:25Z",
+      "closed_at": null,
+      "assignee": {
+        "login": "DarkSharpness",
+        "id": 76582120,
+        "node_id": "MDQ6VXNlcjc2NTgyMTIw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/76582120?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/DarkSharpness",
+        "html_url": "https://github.com/DarkSharpness",
+        "followers_url": "https://api.github.com/users/DarkSharpness/followers",
+        "following_url": "https://api.github.com/users/DarkSharpness/following{/other_user}",
+        "gists_url": "https://api.github.com/users/DarkSharpness/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/DarkSharpness/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/DarkSharpness/subscriptions",
+        "organizations_url": "https://api.github.com/users/DarkSharpness/orgs",
+        "repos_url": "https://api.github.com/users/DarkSharpness/repos",
+        "events_url": "https://api.github.com/users/DarkSharpness/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/DarkSharpness/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "\n## Summary\n\nPR #30512 and #30645 fixed the *crash/validity* symptoms of threshold-bin tie\noverflow in the fused DSA top-k v2 kernel (all output slots written, no `-1`\ninside the valid prefix, inf-boundary handling). However the *exactness* gap\nremains, on `main` as of `ea27e3d`: when more than `kMaxNumTie = 2048`\nelements fall into the threshold coarse bin, the collect pass keeps whichever\n2048 arrive first (`atomicAdd` order — scheduling-dependent, value-independent)\nand the exact tie-break then runs on that arbitrary subset:\n\n```cpp\n// topk_impl.cuh (main @ ea27e3d, L595 / L618; same in v0.5.15–v0.5.17)\nconst auto count_eq = atomicAdd(&smem->count_eq, 1);\nif (count_eq < kMaxNumTie) [[likely]]\n  smem->tie.values[count_eq] = {val, idx};       // overflow: value silently dropped\n...\nconst auto tie_count = min(equal_count, kMaxNumTie);  // select from truncated subset\n```\n\nElements in one coarse bin share only the top fp16 bits — they are *not*\nfp32-equal — so the dropped candidates can be genuinely larger than the kept\nones. The kernel then returns indices that are not the true top-k, with no\nerror or flag, and sparse attention reads wrong KV positions. Note\n`count_eq` already holds the true bin population, so the overflow is\ndetectable for free; it is just not acted on.\n\nThis is distinct from the ReLU-degenerate exact-tie case discussed in #30645\n(thousands of positions on one exact value — there any subset is acceptable).\nOur comparison below is against the `torch.topk` **fp32 score multiset**, i.e.\nexact ties with different indices are accepted; the mismatches are real value\nlosses.\n\n## Evidence on real workloads\n\nGLM-5.2-FP8, 8xB200 TP8, official v0.5.17 image, ~1M-token contexts. We dumped\nreal indexer score rows (~21 top-k layers x 2 adjacent decode steps = 42 rows\nper workload) and compared kernel output to `torch.topk` fp32 multisets:\n\n| workload (1M ctx, batch=1) | rows not exact |\n|---|---|\n| real model logits (synthetic prompt) | 3 / 42 |\n| SGLang source-code corpus | 2 / 42 |\n| Gutenberg novels corpus | 2 / 42 |\n\nAdditional data points:\n\n- Measured threshold-band candidate populations on these rows reach\n  **4.7k–31k** vs the 2048 buffer; on the worst rows the output missed\n  **1084–1591 of 2048** true top-k members (measured on the same mechanism in\n  the v0.5.15 era).\n- In a 32K–1M x batch 1–32 microbench matrix, 9 of 21 cells were not exact on\n  at least one of five real-score inputs (64K–512K, batch 2–8 included).\n- #30512's own device-side diagnostic corroborates trigger frequency: 41\n  overflowing rows within a ~9-minute GLM-5.2 bench (`equal_count` up to 1536\n  vs the then-1024 cap).\n\n## Reproduction\n\n### A. Suggested minimal repro (synthetic, no model)\n\nSketch adapted from our validation harness — construct one row where >2048\nfp32-distinct values share one fp16 coarse bin:\n\n```python\nimport torch\nfrom sglang.kernels.ops.attention.dsv4.topk import plan_topk_v2, topk_transform_512_v2\n\nN, TOPK, PAGE = 262_144, 2048, 64\ndev = \"cuda\"\n\nscores = torch.full((1, N), -100.0, dtype=torch.float32, device=dev)\nn_narrow = 50_000   # 50k distinct values inside one fp16 bucket\nscores[0, :n_narrow] = 1.0 + torch.arange(n_narrow, device=dev, dtype=torch.float32) * 1e-9\n\nseq_lens = torch.tensor([N], dtype=torch.int32, device=dev)\npage_table = torch.arange((N + PAGE - 1) // PAGE, dtype=torch.int32, device=dev).unsqueeze(0)\nout = torch.full((1, TOPK), -1, dtype=torch.int32, device=dev)\n\nplan = plan_topk_v2(seq_lens)\ntopk_transform_512_v2(scores, seq_lens, page_table, out, PAGE, plan)\n\nref_idx = torch.topk(scores[0], TOPK).indices\nref_phys = page_table[0, ref_idx // PAGE] * PAGE + ref_idx % PAGE\nmissing = set(ref_phys.tolist()) - set(out[0].tolist())\nprint(f\"true top-k members missing from kernel output: {len(missing)} / {TOPK}\")\n```\n\nThe true top-2048 are the *last* 2048 of the narrow band; arrival order keeps\nan arbitrary subset, so `missing > 0` whenever the overflow path is taken.\n(Post-#30512/#30645 the output contains valid indices — the failure is purely\nexactness.) We will follow up with the exact numbers from a fresh run of this\nscript on B200.\n\n### B. Real rows\n\nWe can share the dumped 1M score rows and the multiset-comparison harness used\nfor the table above on request.\n\n## Suggested fix\n\n1. **Minimal**: after collect, if `count_eq > kMaxNumTie`, take a slow path\n   instead of proceeding on the truncated subset. The counter already exists;\n   non-overflowing rows pay nothing.\n2. **Complete**: progressive refinement — on overflow, subdivide the threshold\n   bin by the next bits of the order-preserving fp32 key (12→10→10 covers all\n   32 bits) until the candidate set fits; at full depth, remaining ties are\n   exactly equal fp32 values and any subset is correct. We run this scheme in a\n   production-shaped kernel: 126/126 real rows exact on the three workloads\n   above; the refinement branch is rarely taken so the common path is\n   unaffected.\n\nA narrow-distribution regression test (shape of Repro A) in\n`test/registered/kernels/ops/attention/test_topk_v2.py` would prevent\nreintroduction.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/sgl-project/sglang/issues/35257/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 1
+      },
+      "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/35257/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

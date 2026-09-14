@@ -1,0 +1,9 @@
+54126	2026-08-23T20:54:45Z	open	PR	[silencer] Demote rotary_embedding_llama decode seqlen-mismatch log to debug
+54098	2026-08-23T06:45:29Z	open	PR	fix(ttnn): fix ttnn.remainder incorrect results for large ratios
+54091	2026-08-23T04:26:36Z	open	PR	[Bug fix] Fix off-by-one DRAM shard grid in test_llama_mlp_width_sharded_to_interleaved_pcc_err
+54078	2026-08-22T21:43:37Z	closed	PR	fix(logsigmoid): numerically stable log1p identity (resolves #53787)
+54025	2026-08-22T01:56:29Z	closed	PR	Fix pytest-xdist collection mismatch in test_copy.py; dedupe DRAM grid helper
+54015	2026-08-21T22:42:53Z	closed	PR	Fix pytest-xdist collection mismatch in test_to_memory_config.py
+53720	2026-08-19T22:46:45Z	closed	PR	fix(eltwise): implement numerically stable logaddexp and logaddexp2
+53491	2026-08-18T08:39:56Z	closed	PR	prefill: move sc4 KV-PCC leg budget to shield team
+53476	2026-08-18T06:09:30Z	closed	PR	[Bug fix] Fix incorrect int32 results for ttnn.remainder and ttnn.fmod with a scalar operand

@@ -1,0 +1,35 @@
+#### PR #53458 [Bugfix][Spec Decode] Only create draft_id_to_target_id when draft vocab differs
+STATE:open merged:no
+## Purpose
+
+We found a bug that makes full-vocab EAGLE3 drafters (`draft_vocab_size == target vocab_size`, e.g. `Inferact/MiniMax-M3-EAGLE3-GQA` and `nvidia/Qwen3-30B-A3B-Thinking-2507-Eagle3`) run a redundant vocab-remapping step after the lm_head, degrading decode performance with no effect on the output.
+
+`compute_logits` in `llama_eagle3.py` has a fast path and a slow path. Full-vocab drafts were meant to take the fast path, but erroneously they never do. On H20, the slow path's `logits_new[:, targets] = logits` is `5x` slower than a plain copy:
+
+```python
+# vllm/model_executor/models/llama_eagle3.py::Eagle3LlamaForCausalLM
+def compute_logits(self, hidden_states):
+    logits = self.logits_processor(self.lm_head, hidden_states)
+    if self.draft_id_to_target_id is None:
+        # full-vocab draft: logits are already in target vocab space
+        return logits
+
+    # reduced-vocab draft: scatter into target vocab space
+    base = torch.arange(self.config.draft_vocab_size, device=logits.device)
+    targets = base + self.draft_id_to_target_id
+    logits_new = logits.new_full(
+        (logits.shape[0], self.config.vocab_size), float("-inf")
+    )
+    logits_new[:, targets] = logits
+    return logits_new
+```
+
+In `__init__`, even when `draft_vocab_size == target vocab_size`, the parameter is still initialized — it is never `None`, so the slow path is always taken:
+
+```python
+# vllm/model_executor/models/llama_eagle3.py::Eagle3LlamaForCausalLM
+def __init__(self, ...):
+    ...
+    self.draft_id_to_target_id = nn.Parameter(
+        torch.zeros(self.config.draft_vocab_size, dtype=
+

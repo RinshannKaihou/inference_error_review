@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/52741",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/52741/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/52741/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/52741/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/52741",
+  "id": 5180580868,
+  "node_id": "I_kwDOI7xefs8AAAABNMlkBA",
+  "number": 52741,
+  "title": "[Bug]: OpenAI `strict` flag on tool definitions is rendered into the model-visible chat template, changing tool-call behaviour",
+  "user": {
+    "login": "datanerdie",
+    "id": 7207924,
+    "node_id": "MDQ6VXNlcjcyMDc5MjQ=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/7207924?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/datanerdie",
+    "html_url": "https://github.com/datanerdie",
+    "followers_url": "https://api.github.com/users/datanerdie/followers",
+    "following_url": "https://api.github.com/users/datanerdie/following{/other_user}",
+    "gists_url": "https://api.github.com/users/datanerdie/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/datanerdie/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/datanerdie/subscriptions",
+    "organizations_url": "https://api.github.com/users/datanerdie/orgs",
+    "repos_url": "https://api.github.com/users/datanerdie/repos",
+    "events_url": "https://api.github.com/users/datanerdie/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/datanerdie/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 6,
+  "created_at": "2026-08-18T10:04:09Z",
+  "updated_at": "2026-08-18T13:24:28Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\nvLLM 0.24.0, `Qwen3.6-27B-FP8`, TP=2 (2× RTX 3090), served via\n`/v1/chat/completions`. Requests below go **directly to vLLM** (no gateway/proxy in\nthe path).\n\n### Describe the bug\n\nThe request-level `strict` flag on a function definition\n(`tools[].function.strict`, part of the OpenAI protocol) is passed through to\n`apply_chat_template()` and therefore serialized verbatim into the `<tools>` block\nthat the model sees.\n\n`strict` is a **server-side decoding directive** — vLLM uses it in\n`vllm/tool_parsers/structural_tag_registry.py::_any_tool_strict()` to decide whether\nto attach structural tags. It is not part of the JSON Schema the model needs. Leaking\nit into the prompt makes it model-visible, and the model reacts to it.\n\n#### 1. The field reaches the prompt (minimal, fully reproducible)\n\nSame request, only `strict` differing, via `/tokenize`:\n\n| `tools[0].function.strict` | prompt tokens |\n|---|---|\n| absent | 411 |\n| `false` | 416 |\n| `true`  | 416 |\n\n`return_token_strs: true` shows it rendered inside the tools block:\n\n```\n...\"required\": [\"city\"]}, \"strict\": false}\n</tools>\n```\n\n#### 2. It measurably degrades tool calling\n\nWith a realistic agent payload (24 tools, ~3.8 KB system prompt, a task where\ncalling a tool is optional), `strict: false` causes the model to emit a **malformed\ntool call as plain text in `content`** — an arguments-only object with no function\nname and no `<tool_call>` wrapper — instead of a real tool call. `finish_reason` is\n`stop`, `tool_calls` is empty.\n\nIdentical request, only `strict` differing, 5 trials each, non-streaming:\n\n| `strict` | `tool_calls` | malformed call leaked into `content` |\n|---|---|---|\n| absent  | **5/5** | 0/5 |\n| `false` | 0/5 | **4/5** |\n\nExample of what lands in `content`:\n\n```json\n{\"command\": \"cat << 'EOF' > \\\"$(dirname '$WORKSPACE')/essay.md\\\"\\n...\", \"description\": \"Write essay to file\"}\n```\n\n#### 3. It is semantic, not prompt-length noise\n\nAdding a **neutral filler string of the same token cost** to every tool description,\nwith `strict` absent, does *not* reproduce it:\n\n| variant (24 tools, 5 trials) | `tool_calls` |\n|---|---|\n| `strict` absent | 4/4 |\n| `strict: false` | **0/4** |\n| `strict` absent + equal-length filler text | 4/4 |\n\nSo it is the *meaning* of `\"strict\": false` in the tools block, not the extra tokens.\n\n#### 4. `strict: false` and absent take the identical server-side path\n\n`_any_tool_strict()` returns `False` for both, so with `tool_choice=\"auto\"` both skip\nstructural tags:\n\n```python\nif tool_choice == \"auto\" and not _any_tool_strict(tools):\n    return None\n```\n\nThe only difference between the two requests is therefore what the **model** sees.\n\n### Expected vs actual\n\n**Expected:** `strict` is consumed by the server to select the decoding strategy and\ndoes not appear in the rendered prompt. `strict: false` and an absent `strict` should\nbe behaviourally identical, as the structural-tag code already treats them.\n\n**Actual:** `strict` is rendered into `<tools>`, and `strict: false` measurably\ndegrades tool-call formatting relative to omitting the field.\n\n### Where it happens\n\n`vllm/renderers/online_renderer.py`:\n\n```python\ntool_dicts = [tool.model_dump() for tool in request.tools]\n...\ntool_dicts=tool_dicts,   # -> apply_chat_template(tools=...)\n```\n\n`model_dump()` is called with no `exclude`, so the whole function object — including\n`strict` — is handed to the chat template, which serializes it into `<tools>`.\n\n### Suggested fix\n\nExclude `strict` from the dicts passed to `apply_chat_template()`. vLLM has already\nconsumed it (`_any_tool_strict()`) before this point, and a chat template has no way\nto know which fields are protocol-level rather than part of the function schema.\n\n### Notes / limitations\n\n- The behavioural degradation (#2) needs a large, realistic tool set. It did **not**\n  reproduce with 2, 3, or 6 tools, nor with the first 16 or 20 tools of the same set\n  — in those cases both variants behave identically. The prompt-leak itself (#1)\n  reproduces minimally with a single tool.\n- I have not tested >0.24.0. Between v0.24.0 and v0.27.1 I could find no merged PR\n  touching this path (#40894 and #42292 are both already ancestors of v0.24.0).\n- This may be as much a chat-template question as a vLLM one, but vLLM controls what\n  is passed to the template.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/52741/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/52741/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

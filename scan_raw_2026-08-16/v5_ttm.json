@@ -1,0 +1,1048 @@
+{
+  "total_count": 192,
+  "incomplete_results": false,
+  "items": [
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53304",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53304/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53304/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53304/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/pull/53304",
+      "id": 5165250224,
+      "node_id": "PR_kwDOI9Wqc87_wF5v",
+      "number": 53304,
+      "title": "conv2d: group-aware L1 weight estimate for grouped/depthwise conv",
+      "user": {
+        "login": "ctxbot",
+        "id": 317392495,
+        "node_id": "U_kgDOEusGbw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317392495?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ctxbot",
+        "html_url": "https://github.com/ctxbot",
+        "followers_url": "https://api.github.com/users/ctxbot/followers",
+        "following_url": "https://api.github.com/users/ctxbot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ctxbot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ctxbot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ctxbot/subscriptions",
+        "organizations_url": "https://api.github.com/users/ctxbot/orgs",
+        "repos_url": "https://api.github.com/users/ctxbot/repos",
+        "events_url": "https://api.github.com/users/ctxbot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ctxbot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 4,
+      "created_at": "2026-08-16T16:37:57Z",
+      "updated_at": "2026-08-16T22:38:38Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "draft": false,
+      "pull_request": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/pulls/53304",
+        "html_url": "https://github.com/tenstorrent/tt-metal/pull/53304",
+        "diff_url": "https://github.com/tenstorrent/tt-metal/pull/53304.diff",
+        "patch_url": "https://github.com/tenstorrent/tt-metal/pull/53304.patch",
+        "merged_at": null
+      },
+      "body": "## Problem\n\n`calculate_L1_usage_for_conv_op()` estimated conv weight memory as `in_channels × kh × kw × out_channels` regardless of `groups`. For grouped/depthwise convolutions the actual weight tensor is `out_channels × (in_channels/groups) × kh × kw`.\n\nAt C=10240, groups=10240, K=4 that overstates weights by ~10,000× (~838 MB vs ~80 KB) and the DRAM auto-slicer reports no valid config.\n\n## Change\n\nWhen `groups > 1`, divide `in_channels_aligned` by `groups` before building the weight-shape estimate. `groups == 1` is unchanged.\n\n## Silicon (2× Blackhole p150a)\n\n| Shape | Result |\n|---|---|\n| C=2560 bf16 | PASS PCC 0.999994 |\n| C=5120 bf8 | PASS PCC 0.999824 |\n| C=64 bf16 | PASS PCC 0.999993 |\n| C=5120 bf16 | still no valid DRAM slice (real CBs, not estimate) |\n| C=10240 bf16 | same — true per-core L1 capacity, T=12 cannot be width-sliced |\n\nRegression test is C=2560, the largest bf16 shape we ran to completion. This PR is an estimate correction, not a C=10240 capacity fix. It does not close #53303.\n\nRefs #53303",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53304/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53304/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53303",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53303/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53303/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53303/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53303",
+      "id": 5165155566,
+      "node_id": "I_kwDOI9Wqc88AAAABM94E7g",
+      "number": 53303,
+      "title": "ttnn.conv1d depthwise conv (groups=10240) hits TT_FATAL in DRAM auto-slice: group-blind L1 weights estimate",
+      "user": {
+        "login": "ctxbot",
+        "id": 317392495,
+        "node_id": "U_kgDOEusGbw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317392495?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ctxbot",
+        "html_url": "https://github.com/ctxbot",
+        "followers_url": "https://api.github.com/users/ctxbot/followers",
+        "following_url": "https://api.github.com/users/ctxbot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ctxbot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ctxbot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ctxbot/subscriptions",
+        "organizations_url": "https://api.github.com/users/ctxbot/orgs",
+        "repos_url": "https://api.github.com/users/ctxbot/repos",
+        "events_url": "https://api.github.com/users/ctxbot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ctxbot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 7139963093,
+          "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+          "name": "community",
+          "color": "2DEB44",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-16T16:14:19Z",
+      "updated_at": "2026-08-16T16:14:34Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Title\n\n`ttnn.conv1d` depthwise conv (groups=10240) hits TT_FATAL in DRAM auto-slice: group-blind L1 weights estimate\n\n## Environment\n\n- pjrt-plugin-tt 1.4.0 wheel — commit `941a6b866a9284cadd4b33e3c4b0dc973b3e8ba5`, built 2026-07-23 (release)\n  - tt-metal `f1f4ff75579ebd7a69c7da52d45368f273026d85`\n  - tt-mlir `6b2d83bbee7bc60e8521b814368d32785df6cd73`\n- torch 2.11.0+cpu, torch-xla 2.9.0+git56f8e61, transformers 5.15.0\n- 2x Blackhole, opened as a 1x2 mesh (`ttnn.open_mesh_device(ttnn.MeshShape(1, 2))`)\n- Same TT_FATAL with pure BF16 activations/weights and with BFP8_B experimental weights — not a dtype-conversion issue.\n\n## Observed\n\nDuring device execution of a Qwen3.5 GDN block's causal depthwise `conv1d`\n(C=10240, kernel 4, seq len 12, i.e. conv2d with input `[1, 1, 12, 10240]`, weight\n`[10240, 1, 1, 4]`, groups=10240, padding 3), the op aborts:\n\n```\nwarning  | Op | Conv2D DRAM doesn't support specifying memory config, as the output will always be DRAM Interleaved (conv2d.cpp:806)\nwarning  | Op | Failed to find valid config with height-slicing. Attempting fallback to width-slicing. (op_slicing.cpp:233)\ncritical | TT_FATAL: DRAM Auto slice could not find valid slice configuration. Tried up to 1 slices for width-slicing on output dimension 15. Available L1: 1395456 bytes. Operation requires more memory than available even with maximum slicing. (assert.hpp:104)\n{TT_FATAL @ ttnn/cpp/ttnn/operations/sliding_window/op_slicing/op_slicing.cpp:266: found_valid_config\n```\n\nAbridged stack (demangled):\n\n```\nttnn::operations::op_slicing::run_sliced_op(...)\nttnn::operations::conv::conv2d::conv2d_DRAM(...)\nttnn::conv2d(...)\nttnn::conv1d(...)\ntt::runtime::ttnn::operations::conv::run(tt::target::ttnn::Conv1dOp const*, ...)\ntt::runtime::ttnn::ProgramExecutor::execute()\ntt::runtime::ttnn::submit(...) / tt::runtime::submit(...)\ntt::pjrt::FlatbufferLoadedExecutableInstance::execute(...)\ntorch_xla::runtime::PjRtComputationClient::ExecuteReplicated(...)\n```\n\nPython surface (torch-xla lazy execution): `RuntimeError: Bad StatusOr access: INTERNAL: Error code: 13`.\n\n## Reproduction\n\nMinimal standalone (reproducer script attached):\n\n```python\nimport torch, ttnn\nfrom ttnn.types import Layout\n\nC, K, T, PAD = 10240, 4, 12, 3   # depthwise causal: pad = K-1, output width = T+2*PAD-K+1 = 15\nmesh = ttnn.open_mesh_device(ttnn.MeshShape(1, 2))\nx = ttnn.from_torch(torch.randn(1, 1, T, C), dtype=ttnn.bfloat16, layout=Layout.ROW_MAJOR, device=mesh)\nw = ttnn.from_torch(torch.randn(C, 1, 1, K), dtype=ttnn.bfloat16, layout=Layout.ROW_MAJOR, device=mesh)\nout = ttnn.conv1d(x, w, mesh, in_channels=C, out_channels=C, batch_size=1,\n                  input_length=T, kernel_size=K, stride=1, padding=PAD, dilation=1, groups=C)\nout.cpu()\n```\n\nVerified: running the snippet above reproduces the fatal (2026-08-16, install per\nEnvironment: pjrt-plugin-tt 1.4.0, tt-metal `f1f4ff75`, tt-mlir `6b2d83bb`,\npython 3.12.13, torch 2.11.0+cpu; the script exits 0 by design when the fatal\nis observed):\n\n```text\nwarning  | Op | Failed to find valid config with height-slicing. Attempting fallback to width-slicing. (op_slicing.cpp:233)\ncritical | Always | TT_FATAL: DRAM Auto slice could not find valid slice configuration. Tried up to 1 slices for width-slicing on output dimension 15. Available L1: 1461504 bytes. Operation requires more memory than available even with maximum slicing. (assert.hpp:104)\n```\n\nPython surface (direct eager `ttnn.conv1d`, no PjRt layer):\n`{TT_FATAL @ ttnn/cpp/ttnn/operations/sliding_window/op_slicing/op_slicing.cpp:266: found_valid_config}`.\n\nSame assert site and fatal text as the torch-xla occurrence above. Only deltas:\nthe `conv2d.cpp:806` memory-config warning does not appear (it fires only when a\nmemory_config is explicitly passed — the runtime path passes one, the eager call\ndoes not), and the available-L1 figure differs by 64.5 KiB (1461504 vs 1395456\nbytes; call-path-dependent L1 accounting). Without the PjRt layer the exception\nsurfaces as the raw TT_FATAL instead of `Bad StatusOr … Error code 13`.\n\nFirst seen through the torch-xla flow (tt-mlir-lowered GDN `conv1d`, 4-layer\nmodel slice, tokens `[1, 12]`), same fatal for BF16 and BFP8_B weights.\n\n## Analysis\n\nSlicing geometry, consistent with the message:\n\n- conv1d lowers to conv2d with H=1; padding 3 on W=12 gives output width\n  `12 + 2*3 - 4 + 1 = 15` → \"output dimension 15\".\n- H=1 admits at most 1 slice; W=15 with 32-wide tiles gives `div_up(15, 32) = 1`\n  → \"Tried up to 1 slices\". Neither spatial axis can reduce the footprint: the\n  memory driver is the channel count, which slicing never touches.\n\nRoot-cause hypothesis (analysis from tt-metal source at the commit above, not yet\nconfirmed on main): `calculate_L1_usage_for_conv_op`\n(`ttnn/cpp/ttnn/operations/conv/conv2d/conv2d_utils.cpp:1007`, `weights_shape`\nat :1051) builds the weights estimate as `{1, 1, in_ch*k*k, out_ch}` =\n`{1, 1, 40960, 10240}` ≈ 838 MB in BF16 — i.e. it ignores `groups`. The true\ndepthwise weight tensor is `out_ch * (in_ch/groups) * kh * kw` = 40960 elements\n≈ 80 KB. The group-blind estimate alone exceeds any slicing budget, producing\n\"Operation requires more memory than available even with maximum slicing\" for a\nconv whose real weights fit easily.\n\n## Workarounds\n\n- Replace the causal depthwise conv with an equivalent tap-shift + (grouped)\n  matmul formulation; verified against `F.conv1d` on CPU with PCC 0.999989.\n- tt-mlir main carries `GroupedConvChannelSplitRewritePattern`\n  (`kMaxGroupedConvChannels = 4096`), which would split this grouped conv at the\n  frontend before it reaches `ttnn.conv1d` as a single C=10240 op.\n\n## Related\n\n- #49793\n- #49768\n- #50475\n\n## Suggested fix\n\nMake the conv L1 usage estimate group-aware in `conv2d_utils.cpp`: when\n`groups > 1`, the weight footprint per slice should be\n`out_ch * (in_ch / groups) * kh * kw` elements rather than\n`in_ch * kh * kw * out_ch`. With the corrected estimate this conv's real weight\nfootprint (~80 KB BF16) fits the per-core L1 budget and the slice search should\nfind a valid config (or run unsliced). Optionally, if the corrected estimate\nstill exceeds the device scale, fail early with a diagnostic that names the\nestimated tensor sizes instead of a doomed \"maximum slicing\" search.",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53303/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53303/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53302",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53302/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53302/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53302/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53302",
+      "id": 5164666278,
+      "node_id": "I_kwDOI9Wqc88AAAABM9aNpg",
+      "number": 53302,
+      "title": "Decide test_moe_routing_setup.py mesh/link/fabric setup for proxy tests ( non GLX tests )",
+      "user": {
+        "login": "nostojicTT",
+        "id": 224749096,
+        "node_id": "U_kgDODWVmKA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/224749096?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/nostojicTT",
+        "html_url": "https://github.com/nostojicTT",
+        "followers_url": "https://api.github.com/users/nostojicTT/followers",
+        "following_url": "https://api.github.com/users/nostojicTT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/nostojicTT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/nostojicTT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/nostojicTT/subscriptions",
+        "organizations_url": "https://api.github.com/users/nostojicTT/orgs",
+        "repos_url": "https://api.github.com/users/nostojicTT/repos",
+        "events_url": "https://api.github.com/users/nostojicTT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/nostojicTT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 10184233926,
+          "node_id": "LA_kwDOI9Wqc88AAAACXwcTxg",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/ds_prefill",
+          "name": "ds_prefill",
+          "color": "663664",
+          "default": false,
+          "description": "DS_prefill tasks"
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-16T14:17:50Z",
+      "updated_at": "2026-08-16T14:17:50Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "parent_issue_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53138",
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "https://github.com/tenstorrent/tt-metal/blob/50a82f835593512c4176546b4af68d7e91315a86/models/demos/deepseek_v3_d_p/tests/pcc/test_moe_routing_setup.py#L51-L111\n\nThere is no need for all of these to exist in order to mimic the GLX codepaths.",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53302/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53302/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53288",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53288/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53288/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53288/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/pull/53288",
+      "id": 5162889101,
+      "node_id": "PR_kwDOI9Wqc87_pEpa",
+      "number": 53288,
+      "title": "Gate Chunked Kimi perf (code_debug 55k, no trace) at +/-5% per chunk",
+      "user": {
+        "login": "kgrujcic-tt",
+        "id": 258820532,
+        "node_id": "U_kgDOD21JtA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/258820532?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/kgrujcic-tt",
+        "html_url": "https://github.com/kgrujcic-tt",
+        "followers_url": "https://api.github.com/users/kgrujcic-tt/followers",
+        "following_url": "https://api.github.com/users/kgrujcic-tt/following{/other_user}",
+        "gists_url": "https://api.github.com/users/kgrujcic-tt/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/kgrujcic-tt/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/kgrujcic-tt/subscriptions",
+        "organizations_url": "https://api.github.com/users/kgrujcic-tt/orgs",
+        "repos_url": "https://api.github.com/users/kgrujcic-tt/repos",
+        "events_url": "https://api.github.com/users/kgrujcic-tt/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/kgrujcic-tt/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 11525576546,
+          "node_id": "LA_kwDOI9Wqc88AAAACrvpXYg",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/test",
+          "name": "test",
+          "color": "bfd4f2",
+          "default": false,
+          "description": "Adds or corrects tests"
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-16T05:32:06Z",
+      "updated_at": "2026-08-16T22:35:30Z",
+      "closed_at": "2026-08-16T22:35:29Z",
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "draft": false,
+      "pull_request": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/pulls/53288",
+        "html_url": "https://github.com/tenstorrent/tt-metal/pull/53288",
+        "diff_url": "https://github.com/tenstorrent/tt-metal/pull/53288.diff",
+        "patch_url": "https://github.com/tenstorrent/tt-metal/pull/53288.patch",
+        "merged_at": "2026-08-16T22:35:28Z"
+      },
+      "body": "### Ticket\nCloses #53287. Untraced counterpart of #53101 (traced twin, ±3%).\n\n### Problem\n`Blaze - Chunked Kimi perf (code_debug 55k, no trace)` printed its per-chunk timing table but never asserted on it — #53101 hard-wired the gate to `use_trace=True`, so a regression on the eager-dispatch path went green. The stated reason was that untraced within-run spread (~20%) is too wide to band. But that spread is *per-iteration*; the median of the 9 post-warmup iterations is stable, and that is what the gate uses.\n\n### Calibration\nPer-chunk `median_time` from every run of this job with a table, 2026-08-11 → 08-15 (32 runs, `bh_sc1_high_power`, many branches). Untraced is flat ~1.09 s/chunk — no depth ramp, the op2op gap swamps it.\n\nBaseline = per chunk, the median over the 10 most recent green runs (2026-08-15, `main`): 31868565025 31868547288 31868532277 31868515545 31868482938 31868467067 31868452031 31868433473 31867986909 31866023124.\n\n| worst single-chunk deviation | those 10 runs | all 32 runs |\n|---|---|---|\n| | 2.9% | **3.2%** |\n\nEvery per-chunk median ever recorded sits in 1.063–1.129 s (6.2% total spread). Replaying all 32 at **±5%: 0 would fail**, worst case using 64% of the band. The issue asked for ±10%; the data does not need it, so this ships the tighter bar and documents the escalation order beside the table — re-center on the midrange first (3.2% → 2.7%, the tail is one-sided), widen to 10% only after.\n\n### Changes\n- Split the baseline table by mode: `KIMI_TRACED_BASELINE_CHUNK_TIMES_S` (numbers untouched) + new `KIMI_UNTRACED_BASELINE_CHUNK_TIMES_S`, with `TRACED_PERF_MARGIN = 0.03` / `UNTRACED_PERF_MARGIN = 0.05`.\n- `kimi_chunked_perf_gate()` replaces the inline `use_trace` fork and returns `(baseline, margin)`. Mode picks the table *and* the band, so #53101's structural guard survives — generalized from \"untraced is never gated\" to \"each mode only sees its own numbers\". `preload_isl > 0` and uncalibrated `(num_layers, n_chunks, num_iters)` stay record-only.\n- `perf_margin` parametrizes as `None` = \"mode default\" (id `margin3pct` → `margin_auto`; no CI `-k` selector uses it); explicit values still override. `print_duration_table` now raises on baseline-without-margin instead of collapsing the band to zero width.\n\nThe accuracy test stays record-only — it has no `is_high_power()` skipif, so it can land on hardware the baselines never covered.\n\n### Test plan\n- [x] Gate resolution unit-checked over 8 parametrizations (both modes × calibrated/uncalibrated/preloaded + override).\n- [x] All 32 historical runs replayed at ±5%: 0 failures.\n- [x] CI, 4 runs x {untraced, traced}. All four **untraced** jobs pass; worst chunk uses 28-53% of the 5% band, matching the historical replay.\n\n| run | ran with | untraced (this PR) | traced (unchanged, ±3%) |\n|---|---|---|---|\n| [31929446467](https://github.com/tenstorrent/tt-metal/actions/runs/31929446467) | ±5% | ✅ worst -2.4% | ✅ worst +0.8% |\n| [31929452341](https://github.com/tenstorrent/tt-metal/actions/runs/31929452341) | ±5% | ✅ worst +1.4% | ✅ worst +0.8% |\n| [31929212372](https://github.com/tenstorrent/tt-metal/actions/runs/31929212372) | ±10% | ✅ worst -1.7% *(inside ±5% too)* | ✅ worst +1.8% |\n| [31929217523](https://github.com/tenstorrent/tt-metal/actions/runs/31929217523) | ±10% | ✅ worst -2.7% *(inside ±5% too)* | ❌ worst +8.3%, 8/11 chunks out |\n\nHistory was squashed to one commit after these ran. The only delta between what CI executed and `93d7faa` is the reverted `blaze_models_prefill_tests.yaml` comment edits — comments in a pipeline file, not executed by anything — so the results above still describe this code.\n\n**The one red job is the traced gate, and it is pre-existing** — `TRACED_PERF_MARGIN` is 3% before and after this PR, and that job's numbers are unrelated to anything here. Run 31929217523's traced job drew a slow/noisy runner: per-chunk stddev 0.043-0.060 s against the usual ≤0.002 s, medians ramping 0.595 → 0.966 s, worst on the deep chunks (+7.2% chunk 9, +6.7% chunk 10) exactly as predicted when #53101 landed. Its own untraced twin in the same run passed with 2.7% to spare, and the traced job passed on the other three runs.\n\nThat is the traced gate's known ~1-in-4 exposure to the pool's slow profile, and the fix is the one this PR demonstrates for untraced: baseline traced off a median-of-N runs rather than the single run 31675454129, and/or give chunks 9-10 their own wider band. Out of scope here — filing separately rather than quietly widening someone else's gate.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53288/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53288/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53285",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53285/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53285/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53285/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53285",
+      "id": 5162590386,
+      "node_id": "I_kwDOI9Wqc88AAAABM7bgsg",
+      "number": 53285,
+      "title": "Input validation via TT_ASSERT is a no-op in Release: polyval reads coeffs[0] out of bounds on an empty vector, complex_tensor loses shape validation entirely",
+      "user": {
+        "login": "botify-service",
+        "id": 262649018,
+        "node_id": "U_kgDOD6e0ug",
+        "avatar_url": "https://avatars.githubusercontent.com/u/262649018?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/botify-service",
+        "html_url": "https://github.com/botify-service",
+        "followers_url": "https://api.github.com/users/botify-service/followers",
+        "following_url": "https://api.github.com/users/botify-service/following{/other_user}",
+        "gists_url": "https://api.github.com/users/botify-service/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/botify-service/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/botify-service/subscriptions",
+        "organizations_url": "https://api.github.com/users/botify-service/orgs",
+        "repos_url": "https://api.github.com/users/botify-service/repos",
+        "events_url": "https://api.github.com/users/botify-service/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/botify-service/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 7139963093,
+          "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+          "name": "community",
+          "color": "2DEB44",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-16T03:46:19Z",
+      "updated_at": "2026-08-16T03:46:28Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Component / Area\n\nttnn eltwise host code — `binary/device/binary_composite_op.cpp` (`polyval`), `complex/complex.cpp` (`complex_tensor`), `ternary/ternary_composite_op.cpp` (`mac`)\n\n### Issue Type (optional)\n\nBad Outputs\n\n### Observed\n\nThree user-facing entry points guard their inputs with `TT_ASSERT`, which is compiled out in\nRelease builds. `tt_stl/tt_stl/assert.hpp:155-168`:\n\n```cpp\n#ifdef DEBUG\n#define TT_ASSERT(condition, ...) \\\n    do { if (not(condition)) [[unlikely]] tt::assert::detail::tt_assert(...); } while (0)\n#else\n#define TT_ASSERT(condition, ...) \\\n    do { (void)(condition); } while (0)   // no-op in Release\n#endif\n```\n\nSo in a Release build — which is what anyone runs — these checks do not exist. The three are not\nequally severe; they are grouped because the cause is one and a fix would touch them together.\n\n---\n\n**1. `polyval` — out-of-bounds read on an empty coefficient vector. This is the one that matters.**\n\n```cpp\n// binary_composite_op.cpp:653-660\nTensor polyval(const Tensor& input_a, const std::vector<float>& coeffs, ...) {\n    TT_ASSERT(!coeffs.empty() && \"coeffs should be 1 or more coefficients\");\n    if (coeffs.size() == 1) {\n        return ttnn::full_like(input_a, coeffs[0]);\n    }\n    Tensor result = ttnn::multiply(input_a, coeffs[0], ...);   // <-- coeffs[0] on an empty vector\n```\n\n`coeffs` comes straight from the caller. With `coeffs = {}` in a Release build the assert vanishes,\n`size() == 1` is false, and `coeffs[0]` reads past the end of an empty `std::vector` — undefined\nbehaviour reached from ordinary Python-level input, not from an internal invariant.\n\nThere is a second latent problem on the next line, currently masked by the first:\n\n```cpp\nfor (int idx = 1; idx < coeffs.size() - 1; idx++) {\n```\n\n`coeffs.size()` is `size_t`, so for an empty vector `coeffs.size() - 1` wraps to `SIZE_MAX`, and\nthe signed/unsigned comparison promotes `idx`. If the `coeffs[0]` read above were fixed without\ntouching this, the loop would still run away. Worth fixing both in one go.\n\nThe guard should be a `TT_FATAL` with an explicit message:\n\n```cpp\n-    TT_ASSERT(!coeffs.empty() && \"coeffs should be 1 or more coefficients\");\n+    TT_FATAL(!coeffs.empty(), \"polyval requires 1 or more coefficients, got 0\");\n```\n\n(Minor, and stated so it is not overclaimed: the `&& \"literal\"` idiom folds the text into the\ncondition rather than passing it as the message argument. It is not lost — `#condition` stringifies\nthe whole expression, so it still prints — but it is not doing what it looks like it is doing.)\n\n---\n\n**2. `complex_tensor` — no shape validation in Release, and the wrong shape kind in Debug.**\n\n```cpp\n// complex.cpp:33-36\nComplexTensor complex_tensor(const Tensor& real, const Tensor& imag) {\n    TT_ASSERT(real.padded_shape() == imag.padded_shape(), \"Tensor shapes of real and imag should be identical\");\n    return ComplexTensor({real, imag});\n}\n```\n\nTwo problems stacked:\n\n- In Release there is no check at all, so a mismatched pair is accepted and the mismatch surfaces\n  later, inside whichever complex op consumes it.\n- Even in Debug it compares `padded_shape()`. Two tensors with *different logical shapes* that pad\n  to the same tile extent — logical `[1,1,32,50]` and `[1,1,32,60]`, both padding to\n  `[1,1,32,64]` — satisfy the assertion while being semantically different shapes. The message says\n  \"Tensor shapes ... should be identical\", which is the logical claim, so the comparison does not\n  test what the message states.\n\nBoth are addressed by the same change:\n\n```cpp\n-    TT_ASSERT(real.padded_shape() == imag.padded_shape(), \"Tensor shapes of real and imag should be identical\");\n+    TT_FATAL(real.logical_shape() == imag.logical_shape(),\n+             \"complex_tensor requires identical real/imag shapes, got {} and {}\",\n+             real.logical_shape(), imag.logical_shape());\n```\n\nThis is the same logical-vs-padded confusion as #53277, #53283 and #53284, which is why I am\nmentioning it here rather than filing it separately.\n\n---\n\n**3. `mac` — lowest severity, listed for completeness.**\n\n```cpp\n// ternary_composite_op.cpp:173-175\n// all scalars\nTT_ASSERT(a_is_scalar && b_is_scalar && c_is_scalar);\nreturn ttnn::add(ttnn::multiply(a, b), c);\n```\n\nThis sits at the end of an if-chain that has already handled every other combination, so the\ncondition is close to tautological and dropping it in Release costs little. It also carries no\nmessage. Flagging it only so a sweep does not have to rediscover it; I would not fix this one on\nits own.\n\n### Expected\n\nInput validation on a public API should hold in the builds people actually run. `TT_FATAL` is the\nmechanism already used for this throughout the same files — `polyval`'s neighbours in\n`binary_composite_op.cpp` use `TT_FATAL` for their argument checks — so this is a consistency fix\nrather than a new convention.\n\nConcretely: `polyval` should reject an empty `coeffs` with a clear error instead of reading out of\nbounds; `complex_tensor` should reject mismatched logical shapes; `mac`'s assert can stay or go.\n\n### Steps to reproduce\n\nI do not have a Tenstorrent card, and the point of this report is that the behaviour differs by\nbuild type, so the repro needs a **Release** build.\n\n```python\nimport ttnn, torch\ndevice = ttnn.open_device(device_id=0)\nx = ttnn.from_torch(torch.randn((1, 1, 32, 32)), dtype=ttnn.bfloat16,\n                    layout=ttnn.TILE_LAYOUT, device=device)\n\n# 1. polyval with no coefficients — expect a clean error, currently UB in Release\ntry:\n    print(ttnn.polyval(x, []))\nexcept Exception as e:\n    print(\"polyval raised (good):\", e)\n\n# 2. complex_tensor with mismatched logical shapes that share a padded shape\na = ttnn.from_torch(torch.randn((1, 1, 32, 50)), dtype=ttnn.bfloat16,\n                    layout=ttnn.TILE_LAYOUT, device=device)\nb = ttnn.from_torch(torch.randn((1, 1, 32, 60)), dtype=ttnn.bfloat16,\n                    layout=ttnn.TILE_LAYOUT, device=device)\ntry:\n    ttnn.complex_tensor(a, b)\n    print(\"complex_tensor accepted mismatched shapes (bad)\")\nexcept Exception as e:\n    print(\"complex_tensor raised (good):\", e)\n\nttnn.close_device(device)\n```\n\nA correct implementation raises on both. Today, in Release, the first is undefined behaviour and\nthe second is accepted silently. In a Debug build the first raises and the second still passes,\nbecause of the padded-shape comparison.\n\n### Why the current tests do not catch it\n\n- CI runs and the sweeps pass valid arguments; no test calls `polyval` with an empty vector or\n  `complex_tensor` with mismatched shapes, so the negative path is unexercised.\n- Any test that did would likely run against a Debug build, where the `polyval` assert fires and\n  the defect looks handled.\n\n### Is this a regression?\n\nNo, and I did not bisect. All three are present at the SHA below. Context: `TT_ASSERT` is used\ncorrectly elsewhere for genuine internal invariants — the issue is specifically its use on\ncaller-supplied arguments at a public boundary.\n\n### Software Versions\n\n| | |\n|---|---|\n| tt-metal | `main`, source as of 2026-08-16 |\n\n### Hardware Details\n\nNo Tenstorrent card and no ttsim run — this is source analysis, and none of it needs hardware:\nthe `TT_ASSERT` Release expansion is at `tt_stl/tt_stl/assert.hpp:163-168`, and the three call\nsites are at the lines quoted. The `coeffs[0]` read on an empty vector follows from the control\nflow above it. What I have not done is execute a Release build to observe the UB, which by its\nnature may present as anything.\n\n### Impact\n\n`polyval` is the one with real teeth: undefined behaviour reachable from user input in the build\nconfiguration everyone ships. The others are correctness-of-validation rather than crashes.\nGrouped into one report because the root cause is shared and a fix is a single small pass.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53285/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53285/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53284",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53284/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53284/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53284/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53284",
+      "id": 5162573835,
+      "node_id": "I_kwDOI9Wqc88AAAABM7agCw",
+      "number": 53284,
+      "title": "prod_bw passes padded_shape bounds to ttnn::slice (which resolves logically) and compares logical_shape against padded_shape in its guard",
+      "user": {
+        "login": "botify-service",
+        "id": 262649018,
+        "node_id": "U_kgDOD6e0ug",
+        "avatar_url": "https://avatars.githubusercontent.com/u/262649018?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/botify-service",
+        "html_url": "https://github.com/botify-service",
+        "followers_url": "https://api.github.com/users/botify-service/followers",
+        "following_url": "https://api.github.com/users/botify-service/following{/other_user}",
+        "gists_url": "https://api.github.com/users/botify-service/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/botify-service/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/botify-service/subscriptions",
+        "organizations_url": "https://api.github.com/users/botify-service/orgs",
+        "repos_url": "https://api.github.com/users/botify-service/repos",
+        "events_url": "https://api.github.com/users/botify-service/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/botify-service/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 7139963093,
+          "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+          "name": "community",
+          "color": "2DEB44",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-16T03:41:39Z",
+      "updated_at": "2026-08-16T03:41:59Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Component / Area\n\nttnn eltwise unary backward — `ttnn/cpp/ttnn/operations/eltwise/unary_backward/unary_backward.cpp`, `prod_bw` (the `dim`-specified path, `all_dimensions == false`)\n\n### Issue Type (optional)\n\nBad Outputs\n\n### Observed\n\n`prod_bw` mixes logical and padded shapes in two places on the same path. I want to be precise\nabout which half I can prove from source and which half I cannot, so they are separated below.\n\n**1. The guard compares a logical shape against a padded shape.**\n\n```cpp\n// unary_backward.cpp:1682\nif (prod_result.logical_shape() != grad.padded_shape()) {\n```\n\nThese are different quantities by definition, so the comparison does not test what it reads as\ntesting. For a tile-aligned `grad` they happen to coincide and the test behaves; for any `grad`\nwhose logical extent is not a tile multiple they differ purely because of padding. Given\n`prod_result` comes from `ttnn::prod(input, dim, keepdim=true)`, its logical shape carries a `1`\nin the reduced dimension, so in the reducing case the two are essentially never equal and the\nbranch is taken unconditionally — the guard is not selecting anything. Either way it is comparing\nthe wrong pair; the honest reading is that one side should be `grad.logical_shape()`.\n\n**2. Padded coordinates are handed to `ttnn::slice`, which resolves against the logical shape.**\n\n```cpp\n// dim == 3 / -1\nttsl::SmallVector<uint32_t> end_index = {\n    grad.padded_shape()[0], 1, grad.padded_shape()[1], grad.padded_shape()[2]};\nTensor new_slice_tensor = ttnn::slice(required, start_index, end_index, step, std::nullopt);\n\n// dim == 2 / -2 — same shape of bug\nttsl::SmallVector<uint32_t> end_index = {\n    grad.padded_shape()[0], 1, grad.padded_shape()[1], grad.padded_shape()[3]};\n```\n\n`ttnn::slice` takes its bounds against `input_tensor.logical_shape()` (`slice.cpp:95`) and maps\nthem through `wrap_index(index, input_shape[i])` with `input_shape` logical\n(`slice.cpp:222-223`). `wrap_index` is\n\n```cpp\n// data_movement/common/common.cpp:486\nuint32_t wrap_index(int index, int size) { return index < 0 ? size + index : index; }\n```\n\nwhich normalises negative indices only — a positive bound past the logical extent passes through\nunchanged. The sole downstream assertion is `modified_ends[i] >= modified_begins[i]`\n(`slice.cpp:344`); there is no upper-bound check. The output extent is computed as `end - begin`,\nso a padded bound silently yields an oversized slice that reads tile padding as data rather than\nraising.\n\nThis is the same mechanism as #53283 (`split_tensor_for_glu`), in a different file and a\ndifferent op — a fix to either does not reach the other.\n\n### What I could not determine\n\nI have not established the exact numeric output. `prod_bw` chains `permute` → `slice` →\n`permute` → `bcast`, and the trailing `bcast(reciprocal_input, temp, MUL, W/H)` may or may not\nre-broadcast over the oversized extent in a way that masks or compounds it. Predicting the final\ntensor would mean modelling those four ops together, which I am not willing to assert without\nrunning it.\n\nSo the claim here is narrower than my other reports: **the bounds handed to `slice` are padded\nwhere `slice` expects logical, and the guard compares mismatched shape kinds.** Both are visible\nin the source and neither depends on hardware. Whether that surfaces as wrong gradient values, a\nwrong shape, or is absorbed downstream is exactly what a run would settle, and I would rather say\nso than guess.\n\n### Expected\n\n`prod_bw` should use `grad.logical_shape()` for the slice bounds and compare like against like in\nthe guard, matching `torch.prod`'s backward semantics, which are defined on logical extents with\nno notion of tile padding.\n\n```cpp\n-    if (prod_result.logical_shape() != grad.padded_shape()) {\n+    if (prod_result.logical_shape() != grad.logical_shape()) {\n...\n-        end_index = {grad.padded_shape()[0], 1, grad.padded_shape()[1], grad.padded_shape()[2]};\n+        end_index = {grad.logical_shape()[0], 1, grad.logical_shape()[1], grad.logical_shape()[2]};\n```\n\nand the same substitution in the `dim == 2 / -2` branch.\n\n### Steps to reproduce\n\nI do not have a Tenstorrent card. These are the commands for someone who does. The shapes matter:\nthe last two dimensions must not be tile multiples, so that logical and padded differ.\n\n```python\nimport torch\nimport ttnn\n\ndevice = ttnn.open_device(device_id=0)\n\nfor shape in [(1, 1, 50, 100), (1, 1, 32, 100), (1, 1, 32, 128)]:   # last one is the control\n    x = torch.rand(shape, dtype=torch.bfloat16) + 0.5      # keep away from zero, prod_bw divides\n    g = torch.randn(shape, dtype=torch.bfloat16)\n    xt = x.clone().float().requires_grad_(True)\n    torch.prod(xt, dim=3, keepdim=True).backward(\n        torch.prod(xt, dim=3, keepdim=True).detach() * 0 + g.float().sum(dim=3, keepdim=True))\n    tx = ttnn.from_torch(x, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)\n    tg = ttnn.from_torch(g, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)\n    out = ttnn.to_torch(ttnn.from_device(ttnn.prod_bw(tg, tx, dim=3)[0]))\n    print(f\"{shape}: ttnn {tuple(out.shape)} vs input {tuple(x.shape)} \"\n          f\"{'ok' if out.shape == x.shape else 'SHAPE MISMATCH'}\")\n\nttnn.close_device(device)\n```\n\nThe gradient of `prod` w.r.t. its input has the input's shape, so a shape mismatch on the first two\nrows and a match on `(1, 1, 32, 128)` would confirm the padded-bounds path. If the shapes all\nmatch, the slice is being absorbed downstream and the report reduces to the guard being a\ntype confusion — still worth fixing, but not a bad-output bug.\n\n### Why the current tests do not catch it\n\n- The `prod_bw` sweeps and unit tests use tile-aligned shapes, so `logical_shape() ==\n  padded_shape()` throughout and both defects are inert.\n- #14886 (\"ttnn.prod_bw - Low PCC\", closed) exercised accuracy on aligned shapes; nothing samples\n  a width or height between tile boundaries.\n\n### Is this a regression?\n\nNo, and I did not bisect. Both reads are present at the SHA below. Context rather than blame: the\nsame logical/padded confusion appears in `_variance_impl` (#53277) and `split_tensor_for_glu`\n(#53283), which suggests a shared habit from before the logical/padded distinction was\nconsistently drawn, rather than three unrelated slips.\n\n### Software Versions\n\n| | |\n|---|---|\n| tt-metal | `main`, source as of 2026-08-16 |\n| reference | `torch.prod` backward semantics (logical extents) |\n\n### Hardware Details\n\nNo Tenstorrent card and no ttsim run.\n\nThe two source facts — padded bounds into a logical-resolving `slice`, and the mismatched-kind\ncomparison — are read directly from `unary_backward.cpp`, `slice.cpp` and `common.cpp` at the\nlines quoted. The non-clamping behaviour of `wrap_index` and the absence of an upper-bound assert\nin `slice` I verified while investigating #53283. The downstream consequence is explicitly left\nopen above rather than asserted.\n\n### Impact\n\n`prod_bw` is not on a hot training path for most models, so I would not rate this urgent. It is\nfiled because the mechanism is confirmed and shared with #53283, and because a gradient that is\nsilently wrong on some shapes and right on others is the kind of defect that costs a great deal of\ntime to attribute if it does bite.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53284/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53284/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53281",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53281/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53281/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53281/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53281",
+      "id": 5162442652,
+      "node_id": "I_kwDOI9Wqc88AAAABM7SfnA",
+      "number": 53281,
+      "title": "[Blackhole] vLLM exit leaves ethernet cores unreset-able; next PJRT/tt-xla device init times out (core 26-25) until tt-smi -r",
+      "user": {
+        "login": "ctxbot",
+        "id": 317392495,
+        "node_id": "U_kgDOEusGbw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317392495?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ctxbot",
+        "html_url": "https://github.com/ctxbot",
+        "followers_url": "https://api.github.com/users/ctxbot/followers",
+        "following_url": "https://api.github.com/users/ctxbot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ctxbot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ctxbot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ctxbot/subscriptions",
+        "organizations_url": "https://api.github.com/users/ctxbot/orgs",
+        "repos_url": "https://api.github.com/users/ctxbot/repos",
+        "events_url": "https://api.github.com/users/ctxbot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ctxbot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 7139963093,
+          "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+          "name": "community",
+          "color": "2DEB44",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 1,
+      "created_at": "2026-08-16T02:57:04Z",
+      "updated_at": "2026-08-16T16:14:43Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Environment\n- 2× Blackhole p150a, 1×2 mesh over one QSFP-DD, fw 19.11.0.0, kmd 2.9.0 (dkms)\n- tt-inference-server v0.10.0 vLLM workflow (Qwen3-8B, `--device p300`) — the *previous* workload\n- pjrt-plugin-tt 1.4.0 (tt-xla) — the *failing* workload, fresh process\n\n## Repro (minimal, no model needed)\n1. Run the official vLLM server on a 2-chip Blackhole mesh, then stop the container cleanly (`docker stop`; container exits ~8 s).\n2. In a fresh shell, open the mesh through the PJRT plugin:\n   ```\n   python -c \"import torch_xla.runtime as xr; print(xr.global_runtime_device_count())\"\n   ```\n3. It crashes ~20 s in at device init (before any model/compile work):\n\n```\nTraceback (most recent call last):\n      File \"/home/tt/nac-work/run/qwen3_tp_2chip.py\", line 252, in <module>\n        main()\n      File \"/home/tt/nac-work/run/qwen3_tp_2chip.py\", line 248, in main\n        run_device()\n      File \"/home/tt/nac-work/run/qwen3_tp_2chip.py\", line 167, in run_device\n        num_devices = xr.global_runtime_device_count()\n      File \"/home/tt/tt-repos/_tools/xla-env/lib/python3.12/site-packages/torch_xla/runtime.py\", line 192, in global_runtime_device_count\n        return len(torch_xla._XLAC._xla_get_all_runtime_devices())\n    RuntimeError: TT_THROW @ /project/third_party/tt-mlir/src/tt-mlir/third_party/tt-metal/src/tt-metal/tt_metal/llrt/llrt.cpp:590: tt::exception\n    info:\n    Device 0: Timed out while waiting for active ethernet core 26-25 to become active again. Try resetting the board. Minimum tt-firmware version is 18.10.0\n```\n\nCritical device-side lines (identical across two attempts):\n\n```\n2026-08-16 06:16:37.263 | critical | Metal | Device 0: Virtual core 26-25, Port status: 0x1, Retrain count: 0x0, Rx link up: 0x1, Train status: 0x2, PCS status: 0x1, SerDes reset status: 0x1, Postcode: 0xc0dea000, ERISC0 reset PC: 0x3548, ERISC1 reset PC: 0x9330, RISC soft reset: 0x0, Heartbeat start: 0xabcd42ae, Heartbeat end: 0xabcd42ae, Heartbeat changed: false (llrt.cpp:343)\n    2026-08-16 06:16:37.263 | critical | Always | TT_THROW: Device 0: Timed out while waiting for active ethernet core 26-25 to become active again. Try resetting the board. Minimum tt-firmware version is 18.10.0 (assert.hpp:104)\n```\n\nC++ path:\n\n```\ntt::llrt::internal_::return_to_base_firmware_and_wait_for_heartbeat(int, tt::xy_pair const&, int)\n    tt::tt_metal::RiscFirmwareInitializer::assert_active_ethernet_cores_to_reset(int)\n    tt::tt_metal::RiscFirmwareInitializer::reset_cores(int)\n    tt::tt_metal::RiscFirmwareInitializer::run_launch_phase(...)\n    tt::tt_metal::MetalContext::initialize(...)\n    tt::tt_metal::experimental::CreateDevices(...)\n    tt::tt_metal::distributed::MeshDeviceImpl::ScopedDevices::ScopedDevices(...)\n    tt::tt_metal::distributed::MeshDevice::create(...)\n    tt::runtime::system_desc::getCurrentSystemDesc(...)\n    tt::runtime::getCurrentSystemDesc(...)\n    tt::pjrt::ClientInstance::populateDevices()\n    tt::pjrt::ClientInstance::initialize()\n    tt::pjrt::GlobalClientInstanceSingleton::initClient()\n    tt::pjrt::internal::onClientCreate(PJRT_Client_Create_Args*)\n```\n\n## What recovers it\n- A stale interactive `tt-smi` was also mmap'ing `/dev/tenstorrent/0` and `1` — kill it first (`fuser /dev/tenstorrent/*` to find holders), then\n- `tt-smi -r` (board reset). After reset, the same PJRT program initializes the mesh cleanly (2 chips, program cache enabled, UMD mesh adjacency OK) and a sharded TP forward passes PCC 0.999 vs CPU.\n\nTwo observations that may help triage:\n1. vLLM/tt-transformers apparently leaves ethernet cores in application firmware at exit; the plugin's `RiscFirmwareInitializer::assert_active_ethernet_cores_to_reset` cannot recover core 26-25 without a full board reset.\n2. After the post-reset recovery run, UMD logs `Failed to discover available ethernet links; falling back to 1 link` on this 1-cable mesh — worth knowing whether that's expected after `tt-smi -r`.\n\nHappy to provide the full logs (device init through crash, both attempts) or test a fix branch on this rig.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53281/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53281/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53279",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53279/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53279/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53279/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53279",
+      "id": 5162363284,
+      "node_id": "I_kwDOI9Wqc88AAAABM7NplA",
+      "number": 53279,
+      "title": "ttnn.lerp uses the unbranched form, so lerp(a, b, 1.0) does not return b (33.8% of sampled pairs); torch.lerp branches to keep the endpoint",
+      "user": {
+        "login": "botify-service",
+        "id": 262649018,
+        "node_id": "U_kgDOD6e0ug",
+        "avatar_url": "https://avatars.githubusercontent.com/u/262649018?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/botify-service",
+        "html_url": "https://github.com/botify-service",
+        "followers_url": "https://api.github.com/users/botify-service/followers",
+        "following_url": "https://api.github.com/users/botify-service/following{/other_user}",
+        "gists_url": "https://api.github.com/users/botify-service/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/botify-service/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/botify-service/subscriptions",
+        "organizations_url": "https://api.github.com/users/botify-service/orgs",
+        "repos_url": "https://api.github.com/users/botify-service/repos",
+        "events_url": "https://api.github.com/users/botify-service/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/botify-service/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 7139963093,
+          "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+          "name": "community",
+          "color": "2DEB44",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-16T02:34:04Z",
+      "updated_at": "2026-08-16T02:34:16Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Component / Area\n\nttnn eltwise ternary — `ttnn/cpp/ttnn/operations/eltwise/ternary/ternary_composite_op.cpp` (`_lerp`, `_lerp_overload`)\n\n### Issue Type (optional)\n\nBad Outputs\n\n### Observed\n\n`ttnn.lerp` evaluates the interpolation in the single naive form, for both the scalar-weight and\ntensor-weight overloads:\n\n```cpp\n// _lerp_overload  (scalar weight)\nTensor t_diff = ttnn::subtract(end, input, ...);\nTensor t_mul  = ttnn::multiply(t_diff, weight, ...);\nTensor result = ttnn::add(input, t_mul, ...);\n\n// _lerp  (tensor weight) — same arithmetic, fused\nTensor t_diff = ttnn::multiply(ttnn::subtract(end, input, ...), weight, ...);\nTensor result = ttnn::add(input, t_diff, ...);\n```\n\nIts registered golden is `torch.lerp`, which does not use that form unconditionally. PyTorch\nbranches on the weight (`aten/src/ATen/native/Lerp.h`):\n\n```cpp\nreturn (std::abs(weight_val) < scalar_t(0.5))\n    ? self_val + weight_val * (end_val - self_val)\n    : end_val - (end_val - self_val) * (scalar_t(1) - weight_val);\n```\n\nThe second branch is anchored at `end` rather than at `self`, and it exists precisely so that the\n`w -> 1` side of the interval keeps its endpoint. `ttnn.lerp` only ever evaluates the first branch.\n\n**The consequence that is not a tolerance question: `lerp(a, b, 1.0)` does not return `b`.**\n\nAt `w = 1` the golden's branch reduces to `end - (end - self) * 0`, which is exactly `end` for any\nfinite inputs. The naive form computes `a + 1.0 * (b - a)`, and `a + (b - a)` is not `b` in\nfloating point once `b - a` has been rounded.\n\nSampling 200,000 random `(a, b)` pairs in `float32` with exponents spanning `1e-20` to `1e20`,\n`a + 1.0*(b-a) != b` on **67,661 of them — 33.8%**. Examples:\n\n| a | b | `ttnn.lerp(a, b, 1.0)` | `torch.lerp(a, b, 1.0)` |\n|---|---|---|---|\n| -3.421972e-05 | 5.681e-05 | 5.6810004e-05 | 5.681e-05 |\n| -6.487227e+14 | 3.576148e+14 | 3.57614815e+14 | 3.576148e+14 |\n| 1.47551e-20 | -1.522223e-20 | -1.52222316e-20 | -1.522223e-20 |\n| -0.000710318 | 0.0009918796 | 0.000991879497 | 0.0009918796 |\n\n`lerp(a, b, 0.0)` is unaffected — the naive form gives `a + 0*(b-a) = a` exactly — so only the\nupper endpoint is lost. An interpolation primitive that does not reproduce its own endpoints is\nthe thing the branch in the reference is there to prevent.\n\n**Away from the endpoint the divergence is about 1 ulp**, and I want to be straight that this half\nis a tolerance argument rather than a correctness one. Over 400,000 random `(a, b, w)` triples with\n`w` in `[0, 1]`, `ttnn.lerp` differs from `torch.lerp` on 21.25%, with relative differences around\n`1e-7` — one `float32` ulp. Sample rows:\n\n| a | b | w | ttnn | torch | rel |\n|---|---|---|---|---|---|\n| -8.1174e+13 | 1.65576e+13 | 0.909704 | 7.73283696e+12 | 7.73283801e+12 | 1.4e-07 |\n| 8.89362e-16 | -5.18033e-17 | 0.664152 | 2.64284973e-16 | 2.64285053e-16 | 3.0e-07 |\n| -4.30809e+07 | -2.28417e+07 | 0.668653 | -29547908 | -29547910 | 6.8e-08 |\n\nOne thing I checked and did **not** find, stated so nobody re-derives it: the naive form does not\nproduce results outside `[min(a,b), max(a,b)]`. Zero violations in 400,000 samples. The overshoot\none might expect from the unanchored form does not materialise; the endpoint identity is the real\ncasualty.\n\n### Expected\n\n`ttnn.lerp(a, b, 1.0)` should equal `b` exactly, in `float32` and `bfloat16`, for every finite\n`a, b` — matching the registered golden, which gets this by construction rather than by rounding\nluck. `lerp(a, b, 0.0) == a` already holds and should stay.\n\nThe direct fix is to mirror the reference's branch: use `a + w*(b-a)` for `|w| < 0.5` and\n`b - (b-a)*(1-w)` otherwise. On the scalar-weight overload the branch is free — `weight` is a host\nvalue, so the choice is made once on the host and only one composition is ever built. On the\ntensor-weight overload it costs a `where` over the two forms, which is the same shape as the\nexisting `where`-based special-case handling elsewhere in the eltwise composites.\n\n### Steps to reproduce\n\nI do not have a Tenstorrent card. These are the commands for someone who does.\n\n```python\nimport torch\nimport ttnn\n\ndevice = ttnn.open_device(device_id=0)\n\npairs = [(-3.421972e-05, 5.681e-05), (-6.487227e14, 3.576148e14),\n         (1.47551e-20, -1.522223e-20), (-0.000710318, 0.0009918796)]\n\nprint(f\"{'a':>16} {'b':>16} {'ttnn w=1':>18} {'exact b':>18}  ok\")\nfor a, b in pairs:\n    ta = ttnn.from_torch(torch.full((1, 1, 32, 32), a, dtype=torch.float32),\n                         dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\n    tb = ttnn.from_torch(torch.full((1, 1, 32, 32), b, dtype=torch.float32),\n                         dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\n    got = ttnn.to_torch(ttnn.from_device(ttnn.lerp(ta, tb, 1.0)))[0, 0, 0, 0].item()\n    print(f\"{a:>16.9g} {b:>16.9g} {got:>18.9g} {b:>18.9g}  {'ok' if got == b else 'FAIL'}\")\n\nttnn.close_device(device)\n```\n\nA correct implementation prints `ok` on every row.\n\n### Why the current tests do not catch it\n\n- `tests/sweep_framework/sweeps/eltwise/ternary/lerp/` draws its weight from a random uniform\n  distribution, so `w` is never exactly `1.0` — the endpoint is not a sampled point, and with\n  probability one it never will be.\n- The comparison is PCC-based. A 1-ulp difference on 21% of elements does not move PCC, so the\n  general divergence is invisible to it as well.\n- No test asserts the endpoint identities `lerp(a,b,0) == a` and `lerp(a,b,1) == b`, which is the\n  cheapest oracle available for this op and needs no reference implementation at all.\n\n### Is this a regression?\n\nNo. Both overloads have used the naive form at the SHA below and I did not bisect. Worth noting\nthat #47080 (closed) asked whether `ttnn.lerp` was *more* numerically accurate than a hand-rolled\ncombiner in `tt_dit`; this is the concrete answer to the shape of that question, and it is the\nother way round from what one would assume from the name.\n\n### Software Versions\n\n| | |\n|---|---|\n| tt-metal | `main`, source as of 2026-08-15 |\n| reference | `torch.lerp` per the registered golden in `ttnn/ttnn/operations/ternary.py` |\n\n### Hardware Details\n\nNo Tenstorrent card and no ttsim run — saying so up front.\n\nThe composition is read from the source. The failure rates and the tables come from evaluating\nboth formulas in `float32` with each intermediate rounded to `float32` — the same subtract,\nmultiply and add the composite performs, in the same order. That models host-side composition of\n`float32` element-wise ops, which is what these two functions build; it does not model any SFPU\nrounding behaviour that might differ on silicon. The endpoint claim is the robust one, since it\nfollows from `a + (b-a) != b` in any IEEE-754 binary format and does not depend on the accumulator.\nA run of the repro would confirm the rates.\n\n### Impact\n\nLow severity and I would not argue otherwise — one ulp, on an op that is not on a hot model path.\nIt is filed because the endpoint case is exact rather than approximate: code that interpolates to\n`w = 1` and expects to land on `end`, or a test asserting that identity, gets a value that is\nmerely close. That is cheap to fix on the scalar overload, where the branch costs nothing at\nruntime.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53279/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53279/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53278",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53278/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53278/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53278/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53278",
+      "id": 5162340498,
+      "node_id": "I_kwDOI9Wqc88AAAABM7MQkg",
+      "number": 53278,
+      "title": "ttnn.lcm accepts int32 but the kernel assumes 15-bit operands: gcd_body<15> where gcd uses <31>, and a u16 final multiply",
+      "user": {
+        "login": "botify-service",
+        "id": 262649018,
+        "node_id": "U_kgDOD6e0ug",
+        "avatar_url": "https://avatars.githubusercontent.com/u/262649018?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/botify-service",
+        "html_url": "https://github.com/botify-service",
+        "followers_url": "https://api.github.com/users/botify-service/followers",
+        "following_url": "https://api.github.com/users/botify-service/following{/other_user}",
+        "gists_url": "https://api.github.com/users/botify-service/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/botify-service/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/botify-service/subscriptions",
+        "organizations_url": "https://api.github.com/users/botify-service/orgs",
+        "repos_url": "https://api.github.com/users/botify-service/repos",
+        "events_url": "https://api.github.com/users/botify-service/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/botify-service/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+        {
+          "id": 7139963093,
+          "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+          "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+          "name": "community",
+          "color": "2DEB44",
+          "default": false,
+          "description": ""
+        }
+      ],
+      "state": "closed",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 5,
+      "created_at": "2026-08-16T02:25:58Z",
+      "updated_at": "2026-08-16T14:28:50Z",
+      "closed_at": "2026-08-16T14:28:50Z",
+      "assignee": null,
+      "author_association": "NONE",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "### Component / Area\n\nSFPU kernels — `tt_metal/hw/ckernels/{blackhole,wormhole_b0}/metal/llk_api/llk_sfpu/ckernel_sfpu_lcm.h` (`calculate_sfpu_lcm`), reached from `ttnn.lcm`\n\n### Issue Type (optional)\n\nBad Outputs\n\n### Observed\n\n`ttnn.lcm` accepts the full `int32` range and is implemented on two internal assumptions that\nonly hold for roughly 15-bit operands. Neither is enforced anywhere, and neither produces a\ndiagnostic when violated — the op returns a wrong integer.\n\n**1. The GCD sub-computation is given half the iterations it needs.**\n\n`calculate_sfpu_lcm` calls the shared binary-GCD body with a 15-bit budget:\n\n```cpp\n// ckernel_sfpu_lcm.h\n// Binary GCD algorithm; assumes abs(a) < 2^15 and abs(b) < 2^15, hence gcd(a, b) < 2^15\ncalculate_sfpu_gcd_body<15>();\n```\n\nwhile `ttnn.gcd`, on the same inputs, uses the full budget:\n\n```cpp\n// ckernel_sfpu_gcd.h, calculate_sfpu_gcd\ncalculate_sfpu_gcd_body<31>();\n```\n\nThe template parameter *is* the iteration count — `int iterations = max_input_bits - 1`, replayed\nseven instructions at a time. `gcd_body<31>` runs 30 iterations, which the body's own comment\njustifies as the worst case for 31-bit inputs. `gcd_body<15>` runs 14. For operands at or above\n`2^15` the loop exits before the algorithm has converged, and whatever is left in `LREG1` is used\nas the GCD.\n\n**2. The final product is a 16×16→32 multiply.**\n\n```cpp\n// Finally, compute lcm(a, b) = a/gcd(a, b) * b\ncalculate_sfpu_mul_u16_to_u32_body();\n```\n\nThat helper is `SFPMUL24` taken as an upper/lower pair — a `u16 * u16 -> u32` product. It requires\nboth `a/gcd(a,b)` and `b` to fit in 16 bits. `a/gcd` is only bounded by `a`, so it exceeds 16 bits\nwhenever `a` is large and the two operands are coprime, even when the LCM itself is a small\n`int32`.\n\n**Nothing constrains the inputs.** `ttnn::lcm` in `binary_composite_op.cpp` forwards straight to\n`invoke_binary_ng` with no range validation, and the dispatch rule admits the whole type:\n\n```cpp\n// binary_ng_device_operation.cpp, is_binary_sfpu_op\ncase LCM:\ncase GCD: return (a == INT32 && b == INT32);\n```\n\nSo the declared domain is `int32` and the implemented domain is about `[-2^15, 2^15]`.\n\n### Cases\n\nEvery row below has an LCM that is an ordinary `int32`, far from any representable limit:\n\n| a | b | lcm(a, b) | a/gcd | why it should fail |\n|---|---|---|---|---|\n| 65536 | 3 | 196,608 | 65,536 | `a/gcd` needs 17 bits — defect 2 |\n| 999983 | 2 | 1,999,966 | 999,983 | `a/gcd` needs 20 bits — defect 2 |\n| 786432 | 1310720 | 3,932,160 | 3 | both operands ≥ 2^15 — defect 1 |\n| 100000 | 150000 | 300,000 | 2 | both operands ≥ 2^15 — defect 1 |\n| 40000 | 60000 | 120,000 | 2 | both operands ≥ 2^15 — defect 1 |\n| 1048576 | 262144 | 1,048,576 | 4 | both operands ≥ 2^15 — defect 1 |\n| 30000 | 21000 | 210,000 | 10 | control — both under 2^15, should pass |\n\n`lcm(65536, 3)` is the cleanest single case: the answer is 196,608, and the only reason it cannot\nbe produced is that the implementation forms `65536 * 3` in a 16-bit lane.\n\n### Expected\n\n`ttnn.lcm` should agree with `torch.lcm` — its registered golden — for every input pair whose LCM\nis representable in `int32`, or it should reject the inputs it cannot handle. Returning a silently\nwrong integer is the one outcome that should not happen.\n\nNote the asymmetry that makes this worth fixing rather than documenting: `lcm(a, b) <= a * b`\nonly in the coprime case. For operands sharing a large factor the LCM is small — `lcm(2^20, 2^20)`\nis `2^20` — so the 15-bit restriction is far tighter than representability of the result requires.\nA great many `int32` pairs have a perfectly ordinary LCM and are outside the implemented domain.\n\nFor defect 1 the fix is a one-token change, `gcd_body<15>` to `gcd_body<31>`, at the cost of the\nextra replay iterations. For defect 2 the product needs enough width for `a/gcd`, or the operand\norder needs to be chosen so the smaller cofactor goes into the 16-bit lane — `a/gcd * b` and\n`b/gcd * a` are both valid factorisations of the LCM, and picking the one whose cofactor is\nsmaller widens the working range for free.\n\nIf the 15-bit domain is instead intended, then it should be enforced on the host with a clear\nerror, and stated in the `ttnn.lcm` docs, which today say nothing about a range restriction.\n\n### Steps to reproduce\n\nI do not have a Tenstorrent card. These are the commands for someone who does.\n\n```python\nimport torch\nimport ttnn\n\ndevice = ttnn.open_device(device_id=0)\n\npairs = [(65536, 3), (999983, 2), (786432, 1310720), (100000, 150000),\n         (40000, 60000), (1048576, 262144), (30000, 21000)]\n\nprint(f\"{'a':>10} {'b':>10} {'ttnn':>14} {'torch':>14}  ok\")\nfor a, b in pairs:\n    ta = ttnn.from_torch(torch.full((1, 1, 32, 32), a, dtype=torch.int32),\n                         dtype=ttnn.int32, layout=ttnn.TILE_LAYOUT, device=device)\n    tb = ttnn.from_torch(torch.full((1, 1, 32, 32), b, dtype=torch.int32),\n                         dtype=ttnn.int32, layout=ttnn.TILE_LAYOUT, device=device)\n    got = ttnn.to_torch(ttnn.from_device(ttnn.lcm(ta, tb)))[0, 0, 0, 0].item()\n    want = torch.lcm(torch.tensor(a), torch.tensor(b)).item()\n    print(f\"{a:>10} {b:>10} {got:>14} {want:>14}  {'ok' if got == want else 'FAIL'}\")\n\nttnn.close_device(device)\n```\n\nThe last row is the control: both operands are under `2^15`, so it should pass in the same run\nthat the others fail, which separates this from any general breakage of the op.\n\n### Why the current tests do not catch it\n\n- `tests/sweep_framework/sweeps/eltwise/binary/lcm/lcm.py` draws both operands from\n  `torch_random(low=-1024, high=1024)`. That is 11 bits — comfortably inside the implemented\n  domain and nowhere near the 15-bit edge.\n- The `gcd` sweep alongside it uses the same band, so the contrast between `gcd_body<31>` and\n  `gcd_body<15>` never shows up: both are correct over `±1024`.\n- #21182 (\"Retest - gcd, lcm ops with appropriate configs\", closed) re-ran these ops but did not\n  widen the input range past the same band.\n\nNo test places an operand at or above `2^15`, which is why a restriction documented in a code\ncomment has never surfaced as a failure.\n\n### Is this a regression?\n\nNo. The `<15>` budget is present at the SHA below and I did not bisect. Context rather than blame:\nthe kernel is contributed code (`SPDX-FileCopyrightText: © 2025 Jason Davies`), and the comment\nnaming the assumption is right above the call, so this reads as a deliberate narrowing for the\niteration cost that was never mirrored by a guard on the host side or a note in the docs.\n\n### Software Versions\n\n| | |\n|---|---|\n| tt-metal | `main`, source as of 2026-08-15 |\n| reference | `torch.lcm`, the registered golden for `ttnn.lcm` |\n\nSame code on Blackhole and Wormhole — the two `ckernel_sfpu_lcm.h` copies carry the identical\n`gcd_body<15>` call and the identical `u16` multiply, so this is not architecture-specific.\n\n### Hardware Details\n\nNo Tenstorrent card and no ttsim run — stating that up front rather than leaving it to be found.\n\nThe analysis is of the source: the `<15>` versus `<31>` template arguments and the iteration count\nthey expand to, the `u16 * u16 -> u32` helper used for the final product, the absence of any range\ncheck in `ttnn::lcm`, and the `INT32` admission in `is_binary_sfpu_op`. The case table is exact\ninteger arithmetic — `math.gcd` and `a // g * b` — establishing that each listed LCM is an ordinary\n`int32` and identifying which of the two defects each pair is positioned to trigger.\n\nWhat I have not done is observe the wrong values. The claim that these inputs are *outside the\nimplemented domain* follows from the source. The claim that each therefore returns a *specific*\nwrong integer does not, since an unconverged binary GCD leaves a value I have not modelled\ninstruction by instruction. Running the repro above would settle exactly which rows fail and what\nthey return, and I would rather have that than assert it.\n\n### Impact\n\nSilent and integer-valued, which is the awkward combination: no `inf`, no `NaN`, no assertion, just\na plausible-looking number. `lcm` is not on a hot model path, so the blast radius is small — but\nanything using it for stride, tiling or period computation over realistic magnitudes is outside the\nimplemented domain, and the failure carries no signal that it happened.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53278/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53278/timeline",
+      "performed_via_github_app": null,
+      "state_reason": "not_planned",
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53267",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53267/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53267/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53267/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53267",
+      "id": 5160678521,
+      "node_id": "I_kwDOI9Wqc88AAAABM5m0eQ",
+      "number": 53267,
+      "title": "global_avg_pool2d returns structurally wrong values on Blackhole for [1,7,7,2048] (PCC 0.55)",
+      "user": {
+        "login": "jbaumanTT",
+        "id": 185843928,
+        "node_id": "U_kgDOCxPA2A",
+        "avatar_url": "https://avatars.githubusercontent.com/u/185843928?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jbaumanTT",
+        "html_url": "https://github.com/jbaumanTT",
+        "followers_url": "https://api.github.com/users/jbaumanTT/followers",
+        "following_url": "https://api.github.com/users/jbaumanTT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jbaumanTT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jbaumanTT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jbaumanTT/subscriptions",
+        "organizations_url": "https://api.github.com/users/jbaumanTT/orgs",
+        "repos_url": "https://api.github.com/users/jbaumanTT/repos",
+        "events_url": "https://api.github.com/users/jbaumanTT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jbaumanTT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-15T18:12:05Z",
+      "updated_at": "2026-08-15T18:12:05Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\n`test_run_average_pool[BFLOAT16-resnet50_unpadded]` fails its correlation check on Blackhole:\n\n```\nPassing PCC = False\nOutput PCC = 0.5478098686296509\n```\n\n`tests/tt_eager/python_api_testing/unit_testing/misc/test_average_pool.py::test_run_average_pool`, `act_shape = [1, 7, 7, 2048]`, `bfloat16`.\n\nThe value is bit-identical across runs, so this is deterministic rather than flaky. The sibling parameterisation in the same file (`tile_divisible`, `[1, 1, 32, 64]`) passes at PCC 0.9999984714740633, so `global_avg_pool2d` is not broken in general — it is specific to this shape.\n\n## The output is structurally wrong, not mis-scaled\n\nWorth stating up front because it rules out the obvious explanation. `shape_padded()` pads dim 2 from 7 to 32, so the tensor handed to the op is `[1, 7, 32, 2048]` with 25 zero columns, while the golden is computed on the unpadded `[1, 7, 7, 2048]`. If the op simply averaged over the padded extent, every channel would be scaled by the same 49/224 = 0.21875 and PCC would stay at 1.0, because Pearson correlation is scale-invariant.\n\nMeasured per-channel ratio of output to golden:\n\n```\nratio   mean=2.263587   std=116.446693   min=-1134.297852   max=5111.541504\n```\n\nIndividual channels also flip sign:\n\n```\nfirst 8 out    : -0.00800  -0.03809  -0.08887  +0.07910  +0.08301  -0.08398  -0.01746  +0.03418\nfirst 8 golden : -0.06395  -0.02713  -0.12696  -0.00901  -0.13661  -0.18339  -0.08714  +0.10446\n```\n\nSo the result is not the correct answer times a constant. Something in the padded path produces different values per channel.\n\n## Reproduction\n\n```bash\npytest tests/tt_eager/python_api_testing/unit_testing/misc/test_average_pool.py \\\n  -k \"BFLOAT16-resnet50_unpadded\" -xvvv\n```\n\n(or `scripts/run_safe_pytest.sh --run-all tests/tt_eager/python_api_testing/unit_testing/misc/test_average_pool.py -v`, which runs both parameterisations and shows the passing sibling alongside.)\n\n## What has been ruled out\n\n- **Not flaky.** Same PCC to the last digit across every run.\n- **Not a scale/normalisation error.** Per-channel ratios vary by orders of magnitude and change sign (above).\n- **Not DRAM harvesting.** The system this was found on has one GDDR channel harvested per chip; the test returns `0.5478098686296509` with 7 banks and the identical value with all 8 banks enabled, with no other change.\n- **Not the op in general.** The tile-aligned parameterisation passes at 0.9999998.\n\n## Possible direction\n\nThe one structural difference between the failing and passing cases is that the failing one goes through `pad_to_tile(0.0)`. Note that dim 2 here is a spatial dimension (the tensor is NHWC, so `[N, H, W, C]` and W is padded 7 to 32), and zero-padding a spatial dimension is not a no-op for average pooling. Whether the defect is that the op mishandles the padded region, or that padding metadata is not carried into the reduction, I have not determined — flagging it as the obvious place to look rather than as a diagnosis.\n\n## Related\n\n[#44002](https://github.com/tenstorrent/tt-metal/issues/44002) is the same test in the same CI group, but a different symptom — a hard `TT_FATAL` about tile alignment after `global_avg_pool2d`, fixed and closed in May. This is a wrong-results failure, not a crash, so it is a separate problem on the same test.\n\n[#6237](https://github.com/tenstorrent/tt-metal/issues/6237) reported low PCC from `global_avg_pool2d` on Grayskull and is closed. No open issue matches low PCC on Blackhole.\n\n## Environment\n\nBlackhole, firmware 19.13.2, KMD 2.9.0. The test carries no architecture-specific handling, so it is expected to pass here.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53267/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53267/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53266",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53266/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53266/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53266/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53266",
+      "id": 5160655018,
+      "node_id": "I_kwDOI9Wqc88AAAABM5lYqg",
+      "number": 53266,
+      "title": "test_update_cache.py hardcodes an 8-bank expected layout; fails on DRAM-harvested parts (runtime is correct)",
+      "user": {
+        "login": "jbaumanTT",
+        "id": 185843928,
+        "node_id": "U_kgDOCxPA2A",
+        "avatar_url": "https://avatars.githubusercontent.com/u/185843928?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jbaumanTT",
+        "html_url": "https://github.com/jbaumanTT",
+        "followers_url": "https://api.github.com/users/jbaumanTT/followers",
+        "following_url": "https://api.github.com/users/jbaumanTT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jbaumanTT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jbaumanTT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jbaumanTT/subscriptions",
+        "organizations_url": "https://api.github.com/users/jbaumanTT/orgs",
+        "repos_url": "https://api.github.com/users/jbaumanTT/repos",
+        "events_url": "https://api.github.com/users/jbaumanTT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jbaumanTT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-15T18:06:15Z",
+      "updated_at": "2026-08-15T18:06:15Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\n`TestUpdateCacheWithKVPE::test_kvpe_cache_op` hardcodes the expected `TensorMemoryLayout` for each mesh shape, assuming 8 DRAM banks. On a device exposing fewer banks — for example a DRAM-harvested Blackhole such as P100a — the `HEIGHT_SHARDED` case fails:\n\n```\nAssertionError: Expected cache layout to be TensorMemoryLayout.HEIGHT_SHARDED,\n                but got TensorMemoryLayout.ND_SHARDED\n```\n\nThree parameterisations fail (`fill`, `fill_cache_for_user`, `update`), all `[DataType.BFLOAT8_B-mesh_shape1-1024-128-HEIGHT_SHARDED]`.\n\n**The runtime is behaving correctly here — only the test's expectation is wrong.** There is no data-correctness problem; `ND_SHARDED` is simply a different, valid layout.\n\n## Why ND_SHARDED is the correct answer on fewer banks\n\nA legacy `HEIGHT_SHARDED` spec requires at most one shard per core. `TensorSpec::compute_legacy_memory_config()` (`tt_metal/impl/tensor/spec/tensor_spec.cpp:364`) declines the conversion when that does not hold:\n\n```cpp\n// Check that the number of shards fits onto the cores\nsize_t total_num_shards = num_shards_along_height * num_shards_along_width;\nif (total_num_shards > shard_spec.grid.num_cores()) {\n    return std::nullopt;      // stays ND_SHARDED\n}\n```\n\nThis is deliberate — the neighbouring `CONTIGUOUS_1D` branch carries the comment *\"Don't fabricate a (garbled) legacy spec — leave the tensor ND-sharding-only.\"* Refusing to invent a legacy layout that cannot represent the actual placement is the right behaviour.\n\nConfirmed empirically. The rule is purely `num_shards <= num_banks`, independent of any specific bank count:\n\n| Tensor shape | Shards | Bank grid | Resulting layout |\n| --- | --- | --- | --- |\n| `[2,1,128,32]` | 8 | 8 | `HEIGHT_SHARDED` |\n| `[2,1,128,32]` | 8 | 7 | `ND_SHARDED` |\n| `[1,1,128,32]` | 4 | 7 | `HEIGHT_SHARDED` |\n| `[1,1,128,32]` | 4 | 3 | `ND_SHARDED` |\n\n(All with `shard_shape=[1,1,32,32]`, `ROUND_ROBIN_1D`, DRAM.) Note the third row: 4 shards on a 7-bank grid still normalises to `HEIGHT_SHARDED`, so this is not \"the grid must be 8\" — it is only whether the shards fit one per bank.\n\nThe model-side code is already harvest-aware and is not the problem: `init_kvpe_cache()` builds its grid from `get_num_dram_banks(mesh_device)`, whose docstring reads *\"Full Blackhole = 8; harvested parts expose fewer (e.g. 7).\"*\n\n## The shard count in the comments is also wrong\n\n`tests/tt_eager/python_api_testing/unit_testing/misc/test_update_cache.py:480`\n\n```python\n((8, 4), 1024, 128, \"HEIGHT_SHARDED\"),  # 128/32 = 4 shards across 8 banks → ≤1 shard/bank → HEIGHT_SHARDED\n```\n\nand the matching docstring at line 495. The real count is **8**, not 4: the cache is `[num_kvpe_cache_layers=2, 1, seq_len_local=128, 32]`, so the physical height is 2 × 128 = 256 and 256/32 = 8 shards. The layer dimension is omitted from the arithmetic.\n\nThis matters because it is exactly why the case is bank-count-critical. At the 4 shards the comment claims, the test would still pass on 7 banks (row 3 above). At the actual 8 shards it passes only when there are exactly 8 banks available.\n\n## Suggested fix\n\nDerive the expectation instead of hardcoding it, e.g.:\n\n```python\nnum_banks = get_num_dram_banks(mesh_device)\nnum_shards = (num_kvpe_cache_layers * expected_seq_len_local) // NUM_CONTIGUOUS_TOKENS_IN_DRAM_BANK\nexpected_layout_enum = (\n    ttnn.TensorMemoryLayout.HEIGHT_SHARDED if num_shards <= num_banks\n    else ttnn.TensorMemoryLayout.ND_SHARDED\n)\n```\n\nand correct the shard arithmetic in the parametrize comments and the docstring to include the layer dimension.\n\n## Why CI does not catch it\n\n`test_update_cache.py` sits in the `runtime_fd_python_*` groups, which run on `wh_n150_civ2` and `bh_p150b_civ2` only. `bh_p100a_civ2_viommu` appears in the `runtime_sd_*` groups and `service_core_manager`, but not in any group that runs this test, so it never executes on a DRAM-harvested part.\n\n## Related\n\nSame root cause class as #53264 (hardcoded 8-bank assumption in a test), but distinct in impact: that one exposes a genuine runtime validation gap and silently corrupts data, whereas this one is a wrong expectation over correct runtime behaviour.\n\n## Environment\n\nBlackhole, firmware 19.13.2, KMD 2.9.0, 7 of 8 DRAM banks available. All three cases pass when all 8 banks are enabled, with no other change.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53266/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53266/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    },
+    {
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53264",
+      "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+      "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53264/labels{/name}",
+      "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53264/comments",
+      "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53264/events",
+      "html_url": "https://github.com/tenstorrent/tt-metal/issues/53264",
+      "id": 5160596888,
+      "node_id": "I_kwDOI9Wqc88AAAABM5h1mA",
+      "number": 53264,
+      "title": "test_reshard.py hardcodes an 8-bank DRAM shard grid; 6 cases silently compare wrong data on DRAM-harvested parts",
+      "user": {
+        "login": "jbaumanTT",
+        "id": 185843928,
+        "node_id": "U_kgDOCxPA2A",
+        "avatar_url": "https://avatars.githubusercontent.com/u/185843928?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jbaumanTT",
+        "html_url": "https://github.com/jbaumanTT",
+        "followers_url": "https://api.github.com/users/jbaumanTT/followers",
+        "following_url": "https://api.github.com/users/jbaumanTT/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jbaumanTT/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jbaumanTT/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jbaumanTT/subscriptions",
+        "organizations_url": "https://api.github.com/users/jbaumanTT/orgs",
+        "repos_url": "https://api.github.com/users/jbaumanTT/repos",
+        "events_url": "https://api.github.com/users/jbaumanTT/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jbaumanTT/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "labels": [
+
+      ],
+      "state": "open",
+      "locked": false,
+      "assignees": [
+
+      ],
+      "milestone": null,
+      "comments": 0,
+      "created_at": "2026-08-15T17:50:19Z",
+      "updated_at": "2026-08-15T17:50:19Z",
+      "closed_at": null,
+      "assignee": null,
+      "author_association": "CONTRIBUTOR",
+      "issue_field_values": [
+
+      ],
+      "type": null,
+      "active_lock_reason": null,
+      "sub_issues_summary": {
+        "total": 0,
+        "completed": 0,
+        "percent_completed": 0
+      },
+      "issue_dependencies_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 0
+      },
+      "body": "## Summary\n\n`test_reshard.py` builds DRAM shard grids by hardcoding 8 banks, and guards that assumption against the wrong dimension. On any Blackhole exposing fewer than 8 DRAM banks — including DRAM-harvested parts such as P100a — this produces 16 failures, 6 of which silently compare wrong data rather than erroring.\n\nThe helper `_l1_dram_mem_config()` (`tests/tt_eager/python_api_testing/unit_testing/misc/test_reshard.py:1580`) handles the three sharding schemes inconsistently.\n\n**The BLOCK_SHARDED branch is correct** — it asks the device (line 1592):\n\n```python\nnum_dram_banks = device.dram_grid_size().x\ndram_banks = ttnn.CoreRangeSet(\n    [ttnn.CoreRange(ttnn.CoreCoord(b, 0), ttnn.CoreCoord(b, 0)) for b in range(num_dram_banks)]\n)\n```\n\n**The HEIGHT_SHARDED and WIDTH_SHARDED branches hardcode 8** (lines 1604–1613):\n\n```python\nif scheme == ttnn.TensorMemoryLayout.HEIGHT_SHARDED:\n    if grid_size.x < 8:\n        pytest.skip(\"Device grid too small for 8-core height sharding\")\n    grid = ttnn.CoreRangeSet({ttnn.CoreRange(ttnn.CoreCoord(0, 0), ttnn.CoreCoord(7, 0))})\n    shard_shape = (height // 8, width)\nelif scheme == ttnn.TensorMemoryLayout.WIDTH_SHARDED:\n    if grid_size.x < 8:\n        pytest.skip(\"Device grid too small for 8-core width sharding\")\n    grid = ttnn.CoreRangeSet({ttnn.CoreRange(ttnn.CoreCoord(0, 0), ttnn.CoreCoord(7, 0))})\n    shard_shape = (height, width // 8)\n```\n\nThe guard checks `grid_size`, which is `device.compute_with_storage_grid_size()` (line 44) — the **compute** grid. That is comfortably wider than 8 on Blackhole, so the skip never fires. The grid is then used for **DRAM** sharding, where the bank count is what matters. With 7 banks, `CoreCoord(7, 0)` names a bank that does not exist.\n\n## Impact\n\n16 failures in two test functions — 11 in `test_reshard_between_L1_and_DRAM`, 5 in `test_reshard_dram_to_dram`. They split cleanly by which side DRAM is on:\n\n| DRAM role | Result | Count |\n| --- | --- | --- |\n| Source | `TT_FATAL @ metal_soc_descriptor.cpp:164` — \"Logical DRAM core (7,0) is outside valid range (num_views=7)\" | 9 |\n| Source (row-major) | `TT_THROW @ allocator.cpp:352` — \"No DRAM bank exists for core 7-0\" | 1 |\n| **Destination** | **no error — wrong data returned and compared** | **6** |\n\nThe six destination cases are the concerning ones. Nothing resolves the DRAM channel on the write path, so the write reports success:\n\n| Case | Max ATOL Δ | Max RTOL Δ | PCC |\n| --- | --- | --- | --- |\n| `L1_HS-DRAM_WS-TILE-f32` | 0.9976 | 2685.99 | 0.8779 |\n| `L1_WS-DRAM_HS-TILE-u16` | 2,133,167,616 | 1670.78 | 0.8757 |\n| `L1_BS-DRAM_HS-TILE-f32` | 0.9904 | 2269.35 | 0.8766 |\n| `DRAM_HS-L1_BS-TILE-bf16` | 0.9959 | 3326.69 | 0.8746 |\n| `L1_WS-DRAM_HS-TILE-bf4_b` | 1.0 | inf | 0.8657 |\n| (sixth) | — | — | 0.8742 |\n\nPCC clusters tightly at 0.865–0.878 across dtypes, consistent with a systematic addressing error rather than sporadic corruption.\n\nNote `DRAM_BS_nd-DRAM_HS-f32` also lands in the silent set — its *source* uses the correct `dram_grid_size()` branch while its *destination* uses the hardcoded 8, which is exactly what the pattern predicts.\n\nOther DRAM reshard tests in the same file pass (`test_reshard_aligned_channels_height_sharded` with `BufferType.DRAM`, `test_reshard_diff_width`, `test_reshard_interleaved_to_block_sharded`), so DRAM resharding itself is fine — this is specific to the hardcoded grid.\n\n## Why CI does not catch it\n\n`test_reshard.py` lives in the `runtime_fd_python_*` groups, and those run on `wh_n150_civ2` and `bh_p150b_civ2` only:\n\n```\nruntime_fd_python_1 .. _7, _sweep    wh_n150_civ2, bh_p150b_civ2\n```\n\n`bh_p100a_civ2_viommu` appears in the `runtime_sd_*` groups and `service_core_manager`, but not in any group that runs this test. So the test never executes on a DRAM-harvested part in CI.\n\n## Suggested fix\n\nDerive the grid from the DRAM grid, matching what the BLOCK_SHARDED branch already does:\n\n```python\nnum_dram_banks = device.dram_grid_size().x\ngrid = ttnn.CoreRangeSet({ttnn.CoreRange(ttnn.CoreCoord(0, 0), ttnn.CoreCoord(num_dram_banks - 1, 0))})\nshard_shape = (height // num_dram_banks, width)   # and width // num_dram_banks for WIDTH_SHARDED\n```\n\nThe shard shapes divide by 8 as well, so those need the same treatment; the test dimensions may need adjusting to stay divisible by a non-power-of-two bank count.\n\nNote the guard should also move from `compute_with_storage_grid_size()` to the DRAM grid regardless of how the grid itself is derived — checking the compute grid to validate a DRAM assumption is the root mistake here.\n\n## Related\n\nThe runtime does not currently reject an out-of-range DRAM shard grid, which is why 6 of these corrupt silently instead of erroring. #53263 adds that validation in `validate_buffer_parameters()`. With that change all 16 become clean errors at buffer creation, so the two fixes are complementary — and after #53263 lands, this test will fail loudly on harvested parts rather than half-passing.\n\n## Environment\n\nBlackhole, firmware 19.13.2, KMD 2.9.0, 7 of 8 DRAM banks available.\n",
+      "reactions": {
+        "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53264/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53264/timeline",
+      "performed_via_github_app": null,
+      "state_reason": null,
+      "pinned_comment": null,
+      "score": 1.0
+    }
+  ],
+  "search_type": "lexical"
+}

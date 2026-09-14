@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53538",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53538/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53538/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53538/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/53538",
+  "id": 5183098470,
+  "node_id": "I_kwDOI9Wqc88AAAABNO_OZg",
+  "number": 53538,
+  "title": "get_max_l1_space() misses HYBRID per-core allocations, so ttnn CB budgets can overestimate free L1",
+  "user": {
+    "login": "ebanerjeeTT",
+    "id": 212577785,
+    "node_id": "U_kgDODKut-Q",
+    "avatar_url": "https://avatars.githubusercontent.com/u/212577785?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/ebanerjeeTT",
+    "html_url": "https://github.com/ebanerjeeTT",
+    "followers_url": "https://api.github.com/users/ebanerjeeTT/followers",
+    "following_url": "https://api.github.com/users/ebanerjeeTT/following{/other_user}",
+    "gists_url": "https://api.github.com/users/ebanerjeeTT/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/ebanerjeeTT/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/ebanerjeeTT/subscriptions",
+    "organizations_url": "https://api.github.com/users/ebanerjeeTT/orgs",
+    "repos_url": "https://api.github.com/users/ebanerjeeTT/repos",
+    "events_url": "https://api.github.com/users/ebanerjeeTT/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/ebanerjeeTT/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5150031476,
+      "node_id": "LA_kwDOI9Wqc88AAAABMvc-dA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 6124153767,
+      "node_id": "LA_kwDOI9Wqc88AAAABbQcrpw",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/ttnn",
+      "name": "ttnn",
+      "color": "fef2c0",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-18T14:46:24Z",
+  "updated_at": "2026-08-18T14:46:24Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Summary\n\n`ttnn::operations::data_movement::get_max_l1_space()` budgets CBs against `device->lowest_occupied_compute_l1_address()`, which in HYBRID allocator mode does not see per-core allocations on cores other than bank 0, nor any that live on a per-device rather than the mesh allocator. `ProgramImpl::validate_circular_buffer_region()` *does* see them. Ops budgeting with the helper can therefore build a CB plan the validator then rejects.\n\n## Detail\n\nThe per-bank query is HYBRID-aware (`tt_metal/impl/allocator/allocator.cpp:425-439`): it also checks `AllocatorID{bank_id + 1}`, the bank's per-core allocator. But the device-level query only ever asks about bank 0, on the default sub-device manager's allocator:\n\n```cpp\n// tt_metal/impl/sub_device/sub_device_manager_tracker.cpp:160\nconstexpr uint32_t global_bank_id = 0;\nconst auto& global_allocator = default_sub_device_manager_->allocator(SubDeviceId{0});\nauto found_addr = global_allocator->get_lowest_occupied_l1_address(global_bank_id);\n```\n\nThe validator, in HYBRID mode, discards that value and walks every core in each CB's core range across every physical device allocator (`tt_metal/impl/program/program.cpp:1895-1911`), precisely because per-core allocations can land at different addresses per core and can live on per-device allocators.\n\nSo the two disagree in exactly the configuration per-core allocation exists to support: `experimental_set_per_core_allocation` on a core other than bank 0's.\n\n## Affected callers\n\n`get_max_l1_space()` / `is_enough_space()` in `ttnn/cpp/ttnn/operations/data_movement/common/common.cpp:432`, reached from at least:\n\n- `untilize` (native, via `enough_space_height`; and the codegen program factory as of #53399)\n- `transpose`\n- `matmul_utilities`\n- `reshard_rm_program_factory`\n\nOps that place work over the full compute-with-storage grid are maximally exposed, since every core is in some CB's range.\n\n## Suggested fix\n\nExpose one frontier helper in the allocator layer that is allocator-mode-aware and takes a core range, and have both `validate_circular_buffer_region()` and the ttnn helpers call it. That removes the class of divergence rather than patching one caller.\n\nNote the cost asymmetry when scheduling this: the precise frontier is an O(cores) walk. That is fine once per program-cache miss, which is where every current ttnn caller sits. It would not be fine on a per-dispatch path.\n\n## Context\n\nRaised as a suppressed comment in the Copilot review on #53399. Pre-existing — that PR tightens the codegen budget from whole-of-L1 to this helper's frontier, which is a strict improvement but inherits the blind spot.\n\nRelated: #53399\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53538/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/53538/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/38561",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/38561",
+  "id": 5391555855,
+  "node_id": "I_kwDOLCAjRs8AAAABQVydDw",
+  "number": 38561,
+  "title": "[Bug] cache_salt in BlockStored KV events is undecodable with SGLang's exported msgspec types",
+  "user": {
+    "login": "hickeyma",
+    "id": 14892004,
+    "node_id": "MDQ6VXNlcjE0ODkyMDA0",
+    "avatar_url": "https://avatars.githubusercontent.com/u/14892004?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/hickeyma",
+    "html_url": "https://github.com/hickeyma",
+    "followers_url": "https://api.github.com/users/hickeyma/followers",
+    "following_url": "https://api.github.com/users/hickeyma/following{/other_user}",
+    "gists_url": "https://api.github.com/users/hickeyma/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/hickeyma/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/hickeyma/subscriptions",
+    "organizations_url": "https://api.github.com/users/hickeyma/orgs",
+    "repos_url": "https://api.github.com/users/hickeyma/repos",
+    "events_url": "https://api.github.com/users/hickeyma/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/hickeyma/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-08T20:26:04Z",
+  "updated_at": "2026-09-08T20:29:38Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\n`cache_salt` was added to the KV event stream in #30827. The producer side works. Salted nodes emit `BlockStoredWithMetadata` which serializes as the legacy 7 element `BlockStored` array plus a trailing `metadata` element carrying the salt.\n\nThe consumer side doesn't. SGLang exports no type that can decode the resulting stream. `BlockStoredWithMetadata` declares `metadata` as a  required field and it can't therefore decode the unsalted events sharing the same stream. It carries the same `tag=\"BlockStored\"` as the base struct, and as a result the two can't coexist in one union.\n\nThe net effect is that a consumer using `KVEventBatch` sees salted stores as plain `BlockStored` with the salt silently dropped. The feature is invisible to anyone going through the public types and there's no documentation for it.\n\n**Expected behavior.** A consumer should be able to `pip install sglang`, import a documented event type and decode a mixed stream, reading `cache_salt` where it's present and `None` where it isn't.\n\nIt should be noted that the wire format is fine and backward compatible. A legacy consumer decoding plain `BlockStored` gets the 7 elements it expects and ignores the trailing metadata and unsalted events keep their exact legacy shape. The two struct producer split is also correct.`omit_defaults=True` however does **not** trim a trailing `None` in `array_like` structs and as a result a single optional field on the producer breaks the wire for existing consumers. This is a missing *decoder side* type, not a format bug. The producer should stay as is.\n\n**Suggested fix.**\n\n1. Export a decoder side view type alongside the producer structs in `kv_events.py`:\n\n   ```python\n   class BlockStoredView(BlockStored, tag=\"BlockStored\", kw_only=True):\n       metadata: Optional[BlockStoredMetadata] = None\n   ```\n\n   plus a `KVEventBatchView` union built from it. Keep it separate from `BlockStoredWithMetadata`. Producer and consumer shapes genuinely differ here.\n\n2. Document the salted event shape in `docs/`: which events carry `metadata.cache_salt`, that block hashes are salt namespaced rather than salt disambiguated and that consumers must index emitted hashes rather than recompute them.\n\n### Reproduction\n\nNo model or server needed,. This is a pure serialization bug, reproducible from the exported types alone.\n\n```bash\npip install sglang\npython3 repro.py\n```\n\n```python\n# repro.py\nfrom typing import Union\n\nimport msgspec\n\nfrom sglang.srt.disaggregation.kv_events import (\n    BlockStored,\n    BlockStoredMetadata,\n    BlockStoredWithMetadata,\n    KVEventBatch,\n)\n\n\ndef store(cache_salt=None):\n    fields = dict(\n        block_hashes=[1],\n        parent_block_hash=None,\n        token_ids=[1, 2],\n        block_size=2,\n        lora_id=None,\n        medium=\"GPU\",\n    )\n    if cache_salt is None:\n        return BlockStored(**fields)\n    return BlockStoredWithMetadata(\n        **fields, metadata=BlockStoredMetadata(cache_salt=cache_salt)\n    )\n\n\n# One batch of mixed traffic: an unsalted request and a salted one.\npayload = msgspec.msgpack.encode(\n    KVEventBatch(ts=1.0, events=[store(), store(\"tenant-a\")])\n)\nprint(\"on the wire:\", msgspec.msgpack.decode(payload)[1])\n\n# 1. The exported union decodes, but the salt is gone.\nbatch = msgspec.msgpack.Decoder(KVEventBatch).decode(payload)\nprint(\"1.\", [type(e).__name__ for e in batch.events])\n\n# 2. Swap in the struct that has the metadata: it rejects the unsalted event.\nclass WithMetadata(KVEventBatch):\n    events: list[BlockStoredWithMetadata]\n\ntry:\n    msgspec.msgpack.decode(payload, type=WithMetadata)\nexcept msgspec.ValidationError as exc:\n    print(\"2. ValidationError:\", exc)\n\n# 3. Put both in one union: invalid at decoder construction.\nclass Both(KVEventBatch):\n    events: list[Union[BlockStored, BlockStoredWithMetadata]]\n\ntry:\n    msgspec.msgpack.Decoder(Both)\nexcept TypeError as exc:\n    print(\"3. TypeError:\", exc)\n```\n\nOutput:\n\n```\non the wire: [['BlockStored', [1], None, [1, 2], 2, None, 'GPU'], ['BlockStored', [1], None, [1, 2], 2, None, 'GPU', {'cache_salt': 'tenant-a'}]]\n1. ['BlockStored', 'BlockStored']\n2. ValidationError: Expected `array` of at least length 8, got 7 - at `$[1][0]`\n3. TypeError: If a type union contains multiple Struct types, all Struct types must have unique `tag` values - type `typing.Union[sglang.srt.disaggregation.kv_events.BlockStored, sglang.srt.disaggregation.kv_events.BlockStoredWithMetadata]` is not supported\n```\n\nThe first line shows the two array shapes the server really publishes: 7 elements unsalted, 8 salted. Case 1 is what a consumer gets today. That is both decode and `tenant-a` is gone. Cases 2 and 3 are the two workarounds and neither type checks.\n\nThe only shape that decodes both is a hand rolled struct SGLang doesn't export:\n\n```python\nclass BlockStoredView(BlockStored, tag=\"BlockStored\", kw_only=True):\n    metadata: Optional[BlockStoredMetadata] = None\n```\n\nTo see it against live traffic instead, launch with\n`--kv-events-config '{\"publisher\": \"zmq\", \"endpoint\": \"tcp://*:5557\", \"topic\": \"kv-events\"}'`,\nsend one request with `\"cache_salt\": \"tenant-a\"` and one without and decode the frames off the SUB socket with `KVEventBatch`.\n\n### Environment\n\nThis is a macOS dev box with no accelerator which is enough here. The bug is in the exported msgspec types and reproduces anywhere `sglang` and `msgspec` import. It isn't platform, GPU or model dependent.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/38561/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

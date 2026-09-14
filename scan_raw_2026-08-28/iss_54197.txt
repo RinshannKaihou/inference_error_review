@@ -1,0 +1,44 @@
+[Bug] GlmMoeDsa (V2 model runner) cannot use torch.compile — silent fallback, then fullgraph failures when force-enabled
+### Your current environment
+- vLLM: `v0.1.dev1+g4a6a3272e` (main, 2026-08-27)
+- torch 2.13.0+cu130
+- Model: GLM-5.2 INT4 (`GlmMoeDsaForCausalLM`, `glm_moe_dsa`), 78 layers, 256 routed experts, MTP spec decode (1 layer, `--speculative-config.method mtp --speculative-config.num_speculative_tokens 3`)
+- Hardware: 8 × A100 80GB (SM80), TP=8, single node
+- Flags: `--compilation-config '{"mode":3}'` (`VLLM_COMPILE`), `VLLM_USE_BREAKABLE_CUDAGRAPH=0`
+
+### Describe the bug
+
+**1. Silent fallback.** GlmMoeDsa is default-routed to the V2 model runner (`DEFAULT_V2_MODEL_RUNNER_ARCHITECTURES`), but `DeepseekV32Model` in `vllm/models/deepseek_v32/nvidia/model.py` has no `@support_torch_compile`. With `mode=3`, the engine prints `torch.compile is turned on, but the model /tmp/aed does not support it` and silently runs eager — no error, no hint that compilation is a no-op.
+
+**2. Fullgraph failures after force-enabling.** After adding `@support_torch_compile` locally (as the warning's "open an issue" hint suggests), two calls in upstream code fail Dynamo `fullgraph` compilation (`vllm/compilation/wrapper.py` uses `fullgraph=True`):
+
+```
+can't handle functions not implemented in python
+  File ".../vllm/models/deepseek_v32/nvidia/ops/fused_q_cutedsl.py", line 37, in is_fused_q_cutedsl_supported
+    current_platform.has_device_capability(100)
+```
+(→ `platforms/interface.py` `get_device_capability` is `@lru_cache`-wrapped; Dynamo cannot trace the cached C call.)
+
+```
+Unsupported method call — Dynamo does not know how to trace method `get` of class `ContextVar`
+  File ".../vllm/v1/worker/workspace.py", line 153, in _ensure_workspace_size
+    lane = _workspace_lane.get()
+```
+(`@torch._dynamo.disable` on the caller is also rejected: `Skip inlining ... since it was wrapped with torch.compiler.disable`, because of `fullgraph=True`.)
+
+**3. V1 path also fails on main.** Workaround `VLLM_USE_V2_MODEL_RUNNER=0` + `--model-class-overrides '{"GlmMoeDsaForCausalLM":"vllm.model_executor.models.deepseek_v2:GlmMoeDsaForCausalLM"}'` gets past the above, but then dies during the KV-cache init dummy run:
+
+```
+AssertionError: triton_kernel_wrapper_functional was not removed
+  torch/_inductor/fx_passes/post_grad.py:1438 decompose_triton_kernel_wrapper_functional
+```
+
+### Expected behavior
+`--compilation-config '{"mode":3}'` either compiles, or fails loudly with a clear "not supported" error instead of silently degrading to eager.
+
+### Workaround
+`VLLM_USE_V2_MODEL_RUNNER=0` (forces V1 runner) is documented; combining it with the model-class override above gets furthest. A working V1-routed combination on official v0.24/v0.26 images is reported in #49844 (single-node TP8, graphed, clean).
+
+### Ask
+- Either give V2 runner DSA models compile support (decorator + move the two above calls out of the traced region), or make the "unsupported" path an explicit hard error / documented limitation instead of a silent warning.
+

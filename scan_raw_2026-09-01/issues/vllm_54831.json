@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54831",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54831/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54831/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54831/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54831",
+  "id": 5316041822,
+  "node_id": "I_kwDOI7xefs8AAAABPNxcXg",
+  "number": 54831,
+  "title": "[Bug]: KV offloading impossible for GLM-5.3 (DSA indexer): tail_cache block_size=4 fails the hash-alignment assertion, --mamba-cache-mode align does not reach it",
+  "user": {
+    "login": "stefanskiasan",
+    "id": 69960390,
+    "node_id": "MDQ6VXNlcjY5OTYwMzkw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/69960390?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/stefanskiasan",
+    "html_url": "https://github.com/stefanskiasan",
+    "followers_url": "https://api.github.com/users/stefanskiasan/followers",
+    "following_url": "https://api.github.com/users/stefanskiasan/following{/other_user}",
+    "gists_url": "https://api.github.com/users/stefanskiasan/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/stefanskiasan/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/stefanskiasan/subscriptions",
+    "organizations_url": "https://api.github.com/users/stefanskiasan/orgs",
+    "repos_url": "https://api.github.com/users/stefanskiasan/repos",
+    "events_url": "https://api.github.com/users/stefanskiasan/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/stefanskiasan/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6114440385,
+      "node_id": "LA_kwDOI7xefs8AAAABbHL0wQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/rocm",
+      "name": "rocm",
+      "color": "B60205",
+      "default": false,
+      "description": "Related to AMD ROCm"
+    },
+    {
+      "id": 11777491380,
+      "node_id": "LA_kwDOI7xefs8AAAACvf5BtA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/glm",
+      "name": "glm",
+      "color": "1faf8d",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-09-01T19:39:41Z",
+  "updated_at": "2026-09-01T21:33:57Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Summary\n\nKV offloading (`OffloadingConnector`, and by extension LMCache) cannot be enabled for\nGLM-5.3-Flash because one of its KV-cache groups — the sparse-MLA indexer's **`tail_cache`** —\nhas `block_size=4` and cannot be aligned to the prefix-hash granularity. The assertion in\n`offloading/config.py:55` rejects the whole configuration, and `--mamba-cache-mode align` does\nnot help because it does not reach this group.\n\nThe error message points the operator at `--enable-prefix-caching`, which is a dead end: prefix\ncaching is on by default and enabling it explicitly changes nothing.\n\n### Reproduction\n\n1× MI350X (gfx950), ROCm 7.2.3, vLLM `glm-release`, GLM-5.3-Flash (MXFP4), TP1,\n`--kv-cache-dtype fp8_e4m3`, `--max-num-batched-tokens 32768`,\n`--kv-transfer-config '{\"kv_connector\":\"OffloadingConnector\",\"kv_role\":\"kv_both\",\n\"kv_connector_extra_config\":{\"spec_name\":\"CPUOffloadingSpec\",\"cpu_bytes_to_use\":214748364800}}'`\n\n```\nAssertionError: tokens_per_block=4 not divisible by tokens_per_hash=8704.\n  Hybrid models (e.g. Mamba+Attention) need --enable-prefix-caching to align block sizes.\n```\n\nInstrumenting `build_offloading_config` to print every group:\n\n```\n[GROUPS] tokens_per_hash=8704\n[GROUPS]   UniformTypeKVCacheSpecs block_size=8704 -> tokens_per_block=8704  layers=24  first=...layers.3.self_attn.indexer.k_cache\n[GROUPS]   UniformTypeKVCacheSpecs block_size=4    -> tokens_per_block=4     layers=12  first=...layers.3.self_attn.indexer.tail_cache\n[GROUPS]   MambaSpec               block_size=8704 -> tokens_per_block=8704  layers=12  first=...layers.0.self_attn\n[GROUPS]   MambaSpec               block_size=8704 -> tokens_per_block=8704  layers=11  first=...layers.1.self_attn\n[GROUPS]   MambaSpec               block_size=8704 -> tokens_per_block=8704  layers=11  first=...layers.2.self_attn\n```\n\nEvery group aligns to 8704 except `indexer.tail_cache`.\n\n### Why `--mamba-cache-mode align` does not fix it\n\nIt does exactly what it promises, verified by instrumenting\n`Platform._align_hybrid_block_size`:\n\n```\n[ALIGN] called. mamba_cache_mode='align' block_size=8704 mamba_block_size=16\n[ALIGN] set: mamba_block_size=8704\n```\n\n`mamba_block_size` goes 16 → 8704 and the MambaSpec groups follow. But `tail_cache` is not a\nMamba group — it is a small per-sequence ring buffer holding recent raw K+gate to seed the\nindexer's boundary pool (see the comment in `models/glm5next/nvidia/attention.py`: *\"prefill\n(seeds the boundary pool) and decode (per-step stash); read by the decode kernel to compress the\nboundary pool\"*). Nothing in the alignment path touches it, and semantically it has no\nper-token block size to align.\n\nWith and without `--mamba-cache-mode align`, KV pool, timings and prefix-hit counts are\nbyte-identical (10,360,556 tokens; 2.25 s / 2.26 s / 0.75 s on a repeated 38k prompt), so the\nflag is a no-op for this model apart from the mamba block size itself.\n\n### Why this matters\n\nPrefix caching on the GPU works well here — measured with a unique needle mid-context, hits read\nfrom `vllm:prefix_cache_hits_total` (the API does not report `cached_tokens`):\n\n| context | prefix hits from run 2 | share | needle |\n|---|---|---|---|\n| 60 000 | 147 968 → 513 536 | | 5/5 verbatim |\n| 200 000 | 156 672 | 78 % | 5/5 verbatim |\n| 600 000 | 478 720 | 80 % | 5/5 verbatim |\n\nBut it is bounded by GPU memory. The capacity argument for offloading is strong on this box:\n\n| tier | capacity | 1M-token contexts |\n|---|---|---|\n| GPU (8 × 11.2M tokens) | 89.8M | 87 |\n| host RAM (2 055 GB free) | 282M | 272 |\n| disk (1.4 TB free) | 192M | 185 |\n\nand a miss at 1M context costs **95.0 s** of prefill (measured, TP1) versus roughly 0.3 s to move\n6.92 GB back over PCIe. That is the difference offloading would buy on long-context workloads.\n\n### Suggested directions\n\n1. **Let groups whose block size is smaller than `tokens_per_hash` opt out of offloading**\n   rather than failing the whole configuration — but only if such a group can be *recomputed*\n   rather than restored. For `tail_cache` that needs a maintainer's judgement: if the tail is not\n   restored alongside the offloaded KV, the indexer's boundary pool is seeded from stale state\n   and attention is silently wrong. **A blanket skip would trade a startup error for silent\n   corruption, which is why I did not patch around it locally.**\n2. **Fix the error message.** \"need --enable-prefix-caching to align block sizes\" sends the\n   operator down a dead end when prefix caching is already enabled — which is the default. It\n   would help to name the offending group and its layers.\n3. If `tail_cache` genuinely cannot participate, it would be worth stating in the docs that\n   KV offloading (and LMCache) is unavailable for DSA-indexer models, so operators do not spend\n   time on it.\n\nHappy to test a patch on this hardware — the setup above reproduces in one start.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54831/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54831/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

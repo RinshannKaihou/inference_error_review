@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/huggingface/transformers/issues/48296",
+  "repository_url": "https://api.github.com/repos/huggingface/transformers",
+  "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/48296/labels{/name}",
+  "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/48296/comments",
+  "events_url": "https://api.github.com/repos/huggingface/transformers/issues/48296/events",
+  "html_url": "https://github.com/huggingface/transformers/issues/48296",
+  "id": 5247543425,
+  "node_id": "I_kwDOCUB6oc8AAAABOMcogQ",
+  "number": 48296,
+  "title": "`paged|sdpa` silently computes non-causal attention on a standard forward",
+  "user": {
+    "login": "qgallouedec",
+    "id": 45557362,
+    "node_id": "MDQ6VXNlcjQ1NTU3MzYy",
+    "avatar_url": "https://avatars.githubusercontent.com/u/45557362?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/qgallouedec",
+    "html_url": "https://github.com/qgallouedec",
+    "followers_url": "https://api.github.com/users/qgallouedec/followers",
+    "following_url": "https://api.github.com/users/qgallouedec/following{/other_user}",
+    "gists_url": "https://api.github.com/users/qgallouedec/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/qgallouedec/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/qgallouedec/subscriptions",
+    "organizations_url": "https://api.github.com/users/qgallouedec/orgs",
+    "repos_url": "https://api.github.com/users/qgallouedec/repos",
+    "events_url": "https://api.github.com/users/qgallouedec/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/qgallouedec/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-25T15:19:25Z",
+  "updated_at": "2026-08-25T15:19:25Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "MEMBER",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "Found while testing training and continuous batching on one weight copy (training forward on the same model a CB manager generates with). Filing separately because the failure is silent and can bite anyone who runs a regular forward on a model with an attached CB manager.\n\n### What happens\n\n`ContinuousBatchingManager.switch_to_cb_friendly_attn` switches the whole model to a paged attention implementation. A standard forward in that state goes through `sdpa_attention_paged_forward`, which treats `cache` as optional (`kwargs.pop(\"cache\", None)`) and runs plain SDPA when it is absent. But in paged mode the model builds no causal mask, so `attn_mask` is `None` and `is_causal` is never set: the forward is fully bidirectional. No error, no warning. (`paged|flash_attention_*` at least raises a `TypeError`, since `cache` is a\nrequired positional there; `paged|eager` has the same silent problem as sdpa.)\n\n```python\nimport torch\nfrom transformers import AutoModelForCausalLM, AutoTokenizer\n\nmodel_id = \"Qwen/Qwen3-0.6B\"\ntokenizer = AutoTokenizer.from_pretrained(model_id)\nmodel = AutoModelForCausalLM.from_pretrained(\n    model_id, dtype=torch.bfloat16, device_map=\"cuda:0\", attn_implementation=\"sdpa\"\n)\n\nbatch = tokenizer([\"The capital of France is Paris.\"], return_tensors=\"pt\").to(\"cuda:0\")\nlabels = batch[\"input_ids\"].clone()\n\nwith torch.no_grad():\n    ref_loss = model(**batch, labels=labels).loss.item()\n\nmodel.set_attn_implementation(\"paged|sdpa\")  # what the CB manager does to the model\nwith torch.no_grad():\n    paged_loss = model(**batch, labels=labels).loss.item()  # expected: raise. actual: silent wrong result\n\nprint(f\"sdpa loss:       {ref_loss:.4f}\")\nprint(f\"paged|sdpa loss: {paged_loss:.4f}\")\nassert abs(ref_loss - paged_loss) < 0.1, (\n    \"paged|sdpa silently computed different (non-causal) attention on a standard forward\"\n)\n```\n\n```\nsdpa loss:       3.0899\npaged|sdpa loss: 1.9871\nTraceback (most recent call last):\n  File \"/fsx/qgallouedec/cb_train/issues/01-paged-sdpa-silent-noncausal/repro.py\", line 33, in <module>\n    assert abs(ref_loss - paged_loss) < 0.1, (\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: paged|sdpa silently computed different (non-causal) attention on a standard forward\n```\n\nMeasured (Qwen3-0.6B, bf16, H100, padded 2-sequence batch): loss 2.8371 vs 4.0290 for sdpa, max logit diff 22.5, and backward \"works\" (grad_norm 936 vs 199 for the correct forward).\n\n### Expected behavior\n\nEither\n- raise when a paged implementation is invoked without CB kwargs, or \n- fall back to the true non-paged implementation.\n\nThe fallback is the more useful behavior: it makes a model with an attached CB manager directly usable for training forwards on the same weights, verified: with the fallback, rollouts of a live CB manager pick up concurrent training within seconds.\n\nFix proposed in #XXXX (coming): paged forwards delegate to their base implementation when `cache` is\nabsent, and mask creation resolves 2D-or-absent masks through the base implementation's mask\nfunction. After it, `paged|sdpa` == `sdpa` and `paged|eager` == `eager` exactly (logit diff\n0.0)\n\nRepro script and numbers: `repro.py` in this folder. transformers main (a353632), torch 2.13.0+cu130, H100.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/huggingface/transformers/issues/48296/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/48296/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

@@ -1,0 +1,25 @@
+TOTAL: 23
+
+#34043 | 2026-08-07 | [srt] Fix sconv state memory corruption on specdec
+#34023 | 2026-08-07 | DSpark compact/confidence path silently ignores --speculative-dspark-block-size, locked to checkpoint-native gamma
+#33974 | 2026-08-07 | [unified memory] Support DSPARK speculative decoding + fix two NaN root causes (page hand-out zeroing, CuTe int32 slot-stride wrap)
+#33967 | 2026-08-07 | [Bug] It is defined as int32 in SGLang, but the kernel within `ascend_backend` reads it as int64, leading to incorrect memory‑address access.
+#33872 | 2026-08-06 | [DSV4] Fix silent KV corruption when speculative draft tokens > 4
+#33868 | 2026-08-06 | [BUGFIX] [NPU] [DIFFUSION] Fix wrong attentions import warning
+#33751 | 2026-08-05 | [Multimodal] Batch LFM2-VL encodes across requests on HIP, guard wrong-length mm cache hits
+#33697 | 2026-08-05 | [Bug] Seeded sampling silently selects token 0 for an empty distribution
+#33656 | 2026-08-05 | [Bug] DeepSeek-V4 + hierarchical cache: deterministic SWA KV position corruption (kv-canary TAIL_K_SWA write_position), downstream NaN sampling crash
+#33588 | 2026-08-04 | [diffusion] fix: stop silently dropping weights in update_weights_fro…
+#33579 | 2026-08-04 | [Bug] DSPARK/DFLASH spec v2 at page_size=1: req_to_token row too narrow for the decode reserve — silent KV slot leak at the context boundary
+#33565 | 2026-08-04 | [Fix] Restore data_parallel_rank alias on native /generate (dp-aware gateway routing is silently dropped)
+#33541 | 2026-08-04 | Fix MXFP4 expert scales silently zeroing on per-expert checkpoints
+#33517 | 2026-08-04 | Fix NaN logits from deterministic Triton extend on the unified memory pool
+#33493 | 2026-08-04 | [Bug] DSPARK retrieves wrong key "acc_linear_penalities" from sampling_info
+#33450 | 2026-08-04 | [Mamba] Fix wrong SSM state cached by the mamba radix cache under extra_buffer
+#33414 | 2026-08-03 | [Bugfix] auto-round GPTQ MoE: un-invert the Marlin branch (experts silently ran on the Triton fallback)
+#33397 | 2026-08-03 | [Bug] DeepSeek-V4-Flash-0731 on 2× H200: progressive output corruption under concurrency (dsv4 + DP attention)
+#33353 | 2026-08-03 | [diffusion] reject ring parallelism where it would silently miscompute
+#33268 | 2026-08-02 | [Bug] HiCache storage keys omit kv_cache_dtype — silent cross-run cache collisions
+#33263 | 2026-08-02 | Abort requests whose logits row is fully NaN instead of sampling noise
+#33255 | 2026-08-02 | [misc] Improve benchmark determinism and dataset API coverage
+#33245 | 2026-08-02 | [Bug] Quantized DeepSeek-V4: fused wq_a+wkv path silently drops every layer's packed weights (server runs, output is garbage)

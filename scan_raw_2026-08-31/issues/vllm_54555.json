@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54555",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54555/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54555/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54555/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54555",
+  "id": 5299553013,
+  "node_id": "I_kwDOI7xefs8AAAABO-DC9Q",
+  "number": 54555,
+  "title": "[Bug]: V1 spec-decode proposer never constructs the positions buffer a both-XD-RoPE drafter seeds from",
+  "user": {
+    "login": "he-yufeng",
+    "id": 40085740,
+    "node_id": "MDQ6VXNlcjQwMDg1NzQw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/40085740?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/he-yufeng",
+    "html_url": "https://github.com/he-yufeng",
+    "followers_url": "https://api.github.com/users/he-yufeng/followers",
+    "following_url": "https://api.github.com/users/he-yufeng/following{/other_user}",
+    "gists_url": "https://api.github.com/users/he-yufeng/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/he-yufeng/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/he-yufeng/subscriptions",
+    "organizations_url": "https://api.github.com/users/he-yufeng/orgs",
+    "repos_url": "https://api.github.com/users/he-yufeng/repos",
+    "events_url": "https://api.github.com/users/he-yufeng/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/he-yufeng/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-31T11:21:52Z",
+  "updated_at": "2026-08-31T19:56:13Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### 🐛 Describe the bug\n\nThe V1 spec-decode proposer crashes on the first sequential draft step for any both-XD-RoPE configuration (target model `uses_xdrope_dim > 0` and draft model `uses_xdrope_dim > 0`), because the position-buffer init and the draft-loop seed disagree about which buffer this config uses.\n\n**Buffer init** (`vllm/v1/spec_decode/llm_base_proposer.py`, `SpecDecodeBaseProposer.__init__`):\n\n```python\nif self.uses_mrope:\n    self.mrope_positions = torch.zeros(...)\nelif self.uses_xdrope_dim > 0 and self.draft_uses_xdrope_dim > 0:\n    self.xdrope_positions = torch.zeros(...)\nelse:\n    self.positions = torch.zeros(...)\n```\n\nFor both-XD-RoPE, `self.positions` is never constructed.\n\n**Draft-loop seed** (`propose()`, before the `num_speculative_tokens - 1` loop):\n\n```python\nif self.uses_mrope:\n    positions = self.mrope_positions[:, token_indices_to_sample]\nelse:\n    positions = self.positions[token_indices_to_sample]\n```\n\nOnly `uses_mrope` gets a dedicated branch, so a both-XD-RoPE run lands in the `else` and reads `self.positions`, which does not exist for this config: immediate `AttributeError` on the first speculative step. The same mismatch exists in `_get_positions` / `_set_positions`, which do handle the both-XD-RoPE branch, so the buffers that ARE written are never the ones the seed reads.\n\n**Reachability.** No model in main implements `get_xdrope_input_positions` yet, so nothing in-tree can trigger this today; it is a latent crash on the landing path. The XD-RoPE machinery is clearly mid-landing (scheduler, runner, `RopeState`, #54232), the runner comment names HunYuan-VL as the intended family, and the first both-XD-RoPE drafter with `num_speculative_tokens >= 2` (sequential, non-parallel) will hit this on its very first proposal. Worth fixing before that model PR lands rather than inside it.\n\n**Fix shape.** Treat both-XD-RoPE the way M-RoPE is treated in the seed and in `_update_positions_dependent_metadata`: seed from `self.xdrope_positions[:, token_indices_to_sample]` and take dim 0 as the slot coordinate. That is sound because XD-RoPE decode positions are the absolute token index on every dim by construction: `get_rope_state` builds the XD-RoPE state with `has_delta=False`, so `_prepare_rope_positions_kernel` uses `orig_pos` for all dims during decode. A CPU-only proposer-level test with synthetic XD-RoPE positions can pin this without a checkpoint; I am happy to open that PR if the direction sounds right.\n\n**Relation to #54498.** Found while analyzing that issue. Different root: #54498 is a wrong-but-present coordinate for M-RoPE, this one is a missing buffer for XD-RoPE. The two fixes touch adjacent branches of the same function and should not conflict.\n\n**Disclosure.** This analysis was done with AI assistance; every claim above was verified against current main (`810bc32`) by reading the cited code paths.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54555/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54555/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

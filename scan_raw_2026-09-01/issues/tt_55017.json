@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55017",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55017/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55017/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55017/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/55017",
+  "id": 5306906261,
+  "node_id": "I_kwDOI9Wqc88AAAABPFD2lQ",
+  "number": 55017,
+  "title": "ttnn.grid_sample accepts FLOAT32 input and returns unrelated values; BFLOAT16 input is correct",
+  "user": {
+    "login": "AJ0070",
+    "id": 87864439,
+    "node_id": "MDQ6VXNlcjg3ODY0NDM5",
+    "avatar_url": "https://avatars.githubusercontent.com/u/87864439?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/AJ0070",
+    "html_url": "https://github.com/AJ0070",
+    "followers_url": "https://api.github.com/users/AJ0070/followers",
+    "following_url": "https://api.github.com/users/AJ0070/following{/other_user}",
+    "gists_url": "https://api.github.com/users/AJ0070/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/AJ0070/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/AJ0070/subscriptions",
+    "organizations_url": "https://api.github.com/users/AJ0070/orgs",
+    "repos_url": "https://api.github.com/users/AJ0070/repos",
+    "events_url": "https://api.github.com/users/AJ0070/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/AJ0070/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5150031476,
+      "node_id": "LA_kwDOI9Wqc88AAAABMvc-dA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 7139963093,
+      "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+      "name": "community",
+      "color": "2DEB44",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-01T02:02:07Z",
+  "updated_at": "2026-09-01T06:53:15Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "`ttnn.grid_sample` validates FLOAT32 input as supported and runs without error, but the\nvalues it returns bear no relation to the reference. The same call with BFLOAT16 input\nis correct. Output is finite and bit-stable across runs, so nothing signals the problem.\n\n## Observed\n\nWormhole n150 and Blackhole p150b, `main` at `d4ee647ae3c`. Input `(1, 32, 16, 16)`\nNCHW fed as NHWC, grid `(1, 8, 8, 2)`, bilinear, `padding_mode=\"zeros\"`,\n`align_corners=False`. Every case returns the same shape `(1, 8, 8, 32)`.\n\nFirst six output values, same input in every row:\n\n| | values |\n|---|---|\n| `torch.nn.functional.grid_sample` | `0.3661, -0.0175, -0.4147, -0.5385, 2.1881, -0.0384` |\n| BFLOAT16 input, n150 | `0.3691, -0.0144, -0.4082, -0.5391, 2.2031, -0.0386` |\n| BFLOAT16 input, p150b | `0.3691, -0.0144, -0.4082, -0.5391, 2.2031, -0.0386` |\n| **FLOAT32 input, n150** | `0.1631, -0.0386, -0.0571, -0.1826, 0.6250, -0.0400` |\n| **FLOAT32 input, p150b** | `-0.4551, -1.1484, -0.2598, -0.0898, 0.3223, -0.4609` |\n\nBFLOAT16 tracks the reference to bf16 precision and is bit-identical on both\narchitectures. FLOAT32 does not track it on either, **and the two architectures\ndisagree with each other**. A deterministic arithmetic error would give the same wrong\nanswer on both; a misaligned read gives whatever the stride lands on, which differs per\narchitecture. That is the strongest evidence here for where to look.\n\nIt is the input element size specifically, not the grid: a FLOAT32 **grid** with\nBFLOAT16 input is correct. So the three cases are\n\n- input bf16, grid bf16: correct\n- input bf16, grid fp32: correct\n- input fp32, grid fp32: wrong\n\nWithin one architecture the output is deterministic: five runs in each of two separate\nprocesses produced a bit-identical result (same SHA1). It is stable and repeatable, just\nwrong, and wrong in an architecture-dependent way.\n\n## Where\n\nValidation accepts FLOAT32 at\n[`grid_sample_device_operation.cpp:93-94`](https://github.com/tenstorrent/tt-metal/blob/main/ttnn/cpp/ttnn/operations/pool/grid_sample/device/grid_sample_device_operation.cpp#L93-L94):\n\n```cpp\nTT_FATAL(\n    input_tensor.dtype() == DataType::BFLOAT16 || input_tensor.dtype() == DataType::FLOAT32,\n    \"Input tensor must be BFLOAT16 or FLOAT32\");\n```\n\nThe pattern points at 2-byte element assumptions in the reader and stick arithmetic:\nthe op reads the right number of *elements* but the wrong number of *bytes* per\nelement, so a 4-byte input is sampled at half stride.\n\n## Why it matters\n\n`models/experimental/uniad/tt/ttnn_utils.py:192-202` guards the sibling op against\nexactly this, and its comment records the belief this issue disproves:\n\n> The fused op requires all three inputs in bf16 (decomposed grid_sample tolerates\n> fp32; this op does not). Most callers already emit bf16, but some e2e paths feed\n> fp32 sampling locations / weights - guard each input.\n\ngrid_sample only appears to tolerate fp32. Any caller that trusts that and passes a\nFLOAT32 input gets silently wrong samples.\n\n## Repro\n\n```python\nimport torch, ttnn\n\ndev = ttnn.open_device(device_id=0)\ntorch.manual_seed(0)\ninp = torch.randn(1, 32, 16, 16, dtype=torch.float32)\ngrid = torch.rand(1, 8, 8, 2, dtype=torch.float32) * 2 - 1\n\nref = torch.nn.functional.grid_sample(\n    inp, grid, mode=\"bilinear\", padding_mode=\"zeros\", align_corners=False)\nprint(\"torch  \", ref.permute(0, 2, 3, 1).reshape(-1)[:6].tolist())\n\nfor dt in (ttnn.bfloat16, ttnn.float32):\n    i = inp.permute(0, 2, 3, 1).contiguous()\n    g = grid\n    if dt == ttnn.bfloat16:\n        i, g = i.to(torch.bfloat16), g.to(torch.bfloat16)\n    a = ttnn.from_torch(i, dtype=dt, layout=ttnn.ROW_MAJOR_LAYOUT, device=dev)\n    b = ttnn.from_torch(g, dtype=dt, layout=ttnn.ROW_MAJOR_LAYOUT, device=dev)\n    out = ttnn.to_torch(ttnn.grid_sample(a, b)).float()\n    print(str(dt), out.reshape(-1)[:6].tolist())\n```\n\n## Expected\n\nEither produce correct values for FLOAT32 input, or reject it in validation so the\nfailure is loud. The current combination, accepted and silently wrong, is the worst of\nthe three.\n\n## Related, and distinct\n\n- #51226 audits three defects in `pool/`, two of them in `pool/rotate` with the same\n  element-size flavour. None is in `pool/grid_sample`.\n- The op has not been modified since 2026-07-31, so this is not a recent regression.\n\n---\n\nI'd like to take this through the bounty program and implement the fix myself. Holding off on a PR pending assignment.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55017/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55017/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

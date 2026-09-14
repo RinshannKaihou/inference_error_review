@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/35270",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/35270/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/35270/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/35270/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/35270",
+  "id": 5179004729,
+  "node_id": "I_kwDOLCAjRs8AAAABNLFXOQ",
+  "number": 35270,
+  "title": "[Bug] Radix cache `evictable_size()` double-counts shared pages, killing the scheduler at idle",
+  "user": {
+    "login": "wenxuewuhd",
+    "id": 11328943,
+    "node_id": "MDQ6VXNlcjExMzI4OTQz",
+    "avatar_url": "https://avatars.githubusercontent.com/u/11328943?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/wenxuewuhd",
+    "html_url": "https://github.com/wenxuewuhd",
+    "followers_url": "https://api.github.com/users/wenxuewuhd/followers",
+    "following_url": "https://api.github.com/users/wenxuewuhd/following{/other_user}",
+    "gists_url": "https://api.github.com/users/wenxuewuhd/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/wenxuewuhd/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/wenxuewuhd/subscriptions",
+    "organizations_url": "https://api.github.com/users/wenxuewuhd/orgs",
+    "repos_url": "https://api.github.com/users/wenxuewuhd/repos",
+    "events_url": "https://api.github.com/users/wenxuewuhd/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/wenxuewuhd/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-18T06:53:24Z",
+  "updated_at": "2026-08-18T09:56:45Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Checklist\n\n- [x] I searched related issues but found no solution.\n- [x] The bug persists in the latest version.\n- [x] Issues without environment info and a minimal reproducible demo are hard to resolve and may receive no feedback.\n- [x] If this is not a bug report but a general question, please start a discussion at https://github.com/sgl-project/sglang/discussions. Otherwise, it will be closed.\n- [x] Please use English. Otherwise, it will be closed.\n\n### Describe the bug\n\nSurfaced while investigating a KV accounting report from @ApsarasX on #32992; the check there fails for the same reason but is unrelated to that PR's fix.\n\nWith radix cache enabled, the idle pool-invariant check in `on_idle()` fails and raises, killing the scheduler. All requests complete successfully first — the server dies the next time it goes idle.\n\n```\nValueError: pool memory leak detected! [full]\ntotal=469952, available=96, evictable=470016, protected=0, session_held=0, uncached=0\n```\n\n`96 + 470016 = 470112`, i.e. **+160 tokens (5 pages) more than the pool holds**.\n\nThis is not a debug-only path: `SGLANG_ENABLE_STRICT_MEM_CHECK_DURING_IDLE` defaults to `True`, and `_check_all_pools()` in `on_idle()` is not env-gated, so the default configuration raises. No `SGLANG_*` variables were set in the runs below.\n\n## It is a counting bug, not a leak\n\nI instrumented `on_idle()` to walk the radix tree, collect every page referenced by a tree node, and intersect that set with the allocator's free list:\n\n```\n[PROBE] tree_nodes=14687 tree_pages=14683 free_pages=3 OVERLAP(tree AND free)=0\n```\n\n- Physical pages balance exactly: `14683 + 3 = 14686 = 469952 / 32`.\n- `OVERLAP=0` — no page is simultaneously free and referenced by the tree, so there is no use-after-free and no risk of serving stale KV.\n- But `evictable` reports `470016` tokens = 14688 pages' worth, while the tree references only **14683 distinct pages**. Five pages are counted more than once, which is exactly the `+160`.\n\nSo `evictable_size()` appears to count per node reference rather than per distinct page, while `total` is a per-page quantity. Nothing leaks and nothing is corrupted; the invariant compares two different units.\n\n`--disable-radix-cache` makes the check pass and the run complete cleanly.\n\n## Scope of what I verified\n\n- Reproduced on **Ascend NPU with a dLLM model** (LLaDA2.1-mini, `JointThreshold`), TP=1 and, per @ApsarasX, TP=8 with LLaDA2.1-flash.\n- **It appears specific to the dLLM path, not to paged radix in general.** Qwen3-8B (autoregressive) on the same hardware with the same workload and an explicit `--page-size 32` and radix on completes cleanly — `Successful requests: 256`, no idle assertion. One model and one workload, so not conclusive, but it is a real negative control.\n- **`page_size > 1` is not NPU-specific here.** `_dllm_page_size` in `arg_groups/overrides.py` forces `page_size = dllm block_size` (32) whenever a dLLM algorithm is selected and radix cache is on, with no device predicate — so a CUDA dLLM run should land on the same code path. I have no GPU available to confirm this, so it is a code-reading claim, not a measurement.\n- I have **not** tested SWA / mamba caches.\n- I have not found *why* those pages end up with multiple tree references — only that the duplication is on the counting side, not on page ownership.\n\n### Reproduction\n\nReproduced on `4f51dad1da` (2026-07-30) and `d6c837489a` (2026-08-18) with the **identical** `+160` — 926 commits apart, so it is deterministic and long-standing. In that window `invariant_checker.py` changed only by a refactor (`server_args` → `get_parallel()`) and `radix_cache.py` has no `evictable_size` changes.\n\n```bash\npython3 -m sglang.launch_server --model-path <LLaDA2.1-mini> --trust-remote-code \\\n  --device npu --attention-backend ascend --dllm-algorithm JointThreshold \\\n  --tp-size 1 --max-running-requests 64 --enable-tokenizer-batch-encode \\\n  --disable-overlap-schedule --mem-fraction-static 0.8 \\\n  --cuda-graph-backend-prefill disabled --cuda-graph-backend-decode full \\\n  --cuda-graph-bs-decode 1 2 4 8 12 16 24 32 48 64 --port 31099\n\npython3 -m sglang.bench_serving --port 31099 \\\n  --dataset-name generated-shared-prefix --gsp-num-groups 1 --gsp-prompts-per-group 256 \\\n  --gsp-system-prompt-len 0 --gsp-question-len 4096 --gsp-output-len 1536 \\\n  --request-rate inf --max-concurrency 64 --flush-cache\n```\n\nAll 256 requests succeed (`0` request errors), then the scheduler raises at idle.\n\n`--gsp-question-len 4096` is page-aligned; the correlation with page-aligned prompt lengths was first noticed by @ApsarasX in #32992, where a TP=8 LLaDA2.1-flash run showed `+224` = 7 pages against exactly 7 page-aligned prompts in the dataset.\n\n### Environment\n\n- Ascend 910B3, `aarch64`, Ubuntu 22.04\n- page_size resolves to 32: not passed on the command line — the NPU default is 128 (hardware_backend/npu/utils.py), and _dllm_page_size knocks it down to the dLLM block size. On CUDA the default is 1 and the same override raises it to 32, which is why this should not be NPU-specific.\n- Model: LLaDA2.1-mini",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/35270/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/35270/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

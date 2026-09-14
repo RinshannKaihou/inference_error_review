@@ -1,0 +1,32 @@
+TOTAL: 283
+
+#51524 | 2026-08-08 | [Bugfix][Frontend] Reject unsupported named tool_choice for Gemma 4
+#51517 | 2026-08-08 | [Bugfix][Parser] Stream Inkling plain-text answers incrementally
+#51511 | 2026-08-08 | [Bugfix][ROCm] Disable skinny GEMM on gfx1151
+#51508 | 2026-08-08 | [BugFix] Skip GDN/KDA recurrent state updates for stale zero-accept s…
+#51501 | 2026-08-08 | [Bugfix][Frontend] Give each batched conversation its own parser
+#51499 | 2026-08-08 | [Bug]: DeepSeek V4 FULL_AND_PIECEWISE capture fails with CUDA error 700
+#51496 | 2026-08-08 | [Bugfix] Save logical sharded state before postprocessing
+#51495 | 2026-08-08 | [Bugfix] Fix LFM2 ShortConv prefix breaking quant ignore list
+#51493 | 2026-08-08 | [Bugfix] Use the V2 model runner for Gemma 4 MoE so MTP drafting works
+#51492 | 2026-08-08 | [Bugfix] Demote FlashInfer CUTLASS unquantized MoE when intermediate size is not 128-aligned
+#51489 | 2026-08-08 | [Bugfix][DSv4] Skip zero-query-len prefill chunks in FlashMLA sparse prefill (complements #49059)
+#51483 | 2026-08-08 | [Bugfix][Kimi-K3] Do not classify a stateless first chunk as a decode
+#51482 | 2026-08-08 | [BugFix][Core] free_blocks: restore prepend (LIFO) reuse order when prefix caching is off
+#51481 | 2026-08-08 | [Bugfix][DP] Don't assume the engines started when forwarding a wake
+#51477 | 2026-08-08 | [Bugfix] Stop fusing scale_ue8m0=True group quant into ue8m0-unaware fused kernels
+#51475 | 2026-08-08 | [Bugfix][Rust Frontend] Avoid abort on empty prompt logprobs
+#51474 | 2026-08-08 | [Bugfix][Rust Frontend] Return an error instead of panicking on empty-prompt logprobs
+#51470 | 2026-08-08 | [Bugfix][Frontend] Build parsers from the tools rendered into the prompt
+#51469 | 2026-08-08 | [BugFix] Reject invalid data-parallel RPC ports
+#51468 | 2026-08-08 | [BugFix] Preserve divergent FA hits with external Mamba state
+#51467 | 2026-08-08 | [Bug]: DeepSeek-V4-Flash-0731 `response_format` (structured output) crashes the vLLM EngineCore — `apply_grammar_bitmask` tensor size mismatch (4040 vs 4041)
+#51466 | 2026-08-08 | [Bugfix][Spec Decode] Fix DSD K-lookup to count sampling-only requests, preventing K thrashing at batch boundaries
+#51465 | 2026-08-08 | [Bug]: Kimi K3 usage.prompt_tokens over-counts trailing channel-open stub (+3)
+#51462 | 2026-08-07 | [Bugfix] Install the weight offloader in the V2 model runner
+#51461 | 2026-08-07 | [MM][CG][BugFix] Fix Ernie-4.5-VL encoder CG postprocess for multi-path outputs
+#51442 | 2026-08-07 | [Bugfix] Drop stale layer kwarg from online MXFP4 kernel creation (fix precommit)
+#51441 | 2026-08-07 | [Bug]: Hybrid sparse attention + Eagle results in full cache miss for certain prompt lengths
+#51438 | 2026-08-07 | [Bugfix][MRV2] Reserve spec-decode lookahead blocks in V2 warmup
+#51435 | 2026-08-07 | [Bugfix][MM] Avoid device sync in FusedInputNorm initialization
+#51432 | 2026-08-07 | [Bugfix][multi_modal] Fix pos_ids being unitialized for minicpmv2.6 in hf runner

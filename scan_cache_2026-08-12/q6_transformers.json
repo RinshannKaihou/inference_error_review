@@ -1,0 +1,115 @@
+{
+  "total": 13,
+  "items": [
+    {
+      "num": 47927,
+      "title": "docs: fix incorrect PEFT anchor link in fine-tuning section",
+      "state": "closed",
+      "created": "2026-08-12T11:21:20Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47927"
+    },
+    {
+      "num": 47915,
+      "title": "this is an incorrect pr, plz ignore",
+      "state": "closed",
+      "created": "2026-08-12T07:22:10Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47915"
+    },
+    {
+      "num": 47894,
+      "title": "fix(whisper): prevent NaN propagation in fbank feature extraction",
+      "state": "closed",
+      "created": "2026-08-11T08:14:14Z",
+      "labels": [
+        "Code agent slop"
+      ],
+      "url": "https://github.com/huggingface/transformers/pull/47894"
+    },
+    {
+      "num": 47886,
+      "title": "ASR pipeline silently destroys stereo audio in channels-last layout (what soundfile/librosa return): mean(axis=0) averages across time",
+      "state": "open",
+      "created": "2026-08-10T18:38:46Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/issues/47886"
+    },
+    {
+      "num": 47885,
+      "title": "WhisperFeatureExtractor: one non-finite input sample makes the entire feature matrix NaN, and the pipeline transcribes it silently",
+      "state": "open",
+      "created": "2026-08-10T18:26:47Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/issues/47885"
+    },
+    {
+      "num": 47855,
+      "title": "[Tokenizer] Fix silent data loss when migrating additional_special_tokens (Fixes #47838)",
+      "state": "open",
+      "created": "2026-08-09T18:47:23Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47855"
+    },
+    {
+      "num": 47854,
+      "title": "[Tokenizer] Fix silent data loss when migrating additional_special_tokens (Fixes #47838)",
+      "state": "closed",
+      "created": "2026-08-09T18:43:24Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47854"
+    },
+    {
+      "num": 47852,
+      "title": "Fix cached_files silently returning stale file on read-only filesystem (EROFS)",
+      "state": "closed",
+      "created": "2026-08-09T14:14:31Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47852"
+    },
+    {
+      "num": 47838,
+      "title": "`additional_special_tokens` is silently discarded when `tokenizer_config.json` also contains `extra_special_tokens`",
+      "state": "open",
+      "created": "2026-08-07T19:34:28Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/huggingface/transformers/issues/47838"
+    },
+    {
+      "num": 47788,
+      "title": "[Fix] Wrong type hint in get_number_of_image_patches",
+      "state": "closed",
+      "created": "2026-08-05T06:10:15Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47788"
+    },
+    {
+      "num": 47754,
+      "title": "## Fix for Issue #47752: Incorrect Precedence of `generation_config` Values  ###",
+      "state": "closed",
+      "created": "2026-08-04T03:06:21Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47754"
+    },
+    {
+      "num": 47752,
+      "title": "incorrect precedence of generation_config values",
+      "state": "open",
+      "created": "2026-08-03T23:11:04Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/huggingface/transformers/issues/47752"
+    },
+    {
+      "num": 47712,
+      "title": "config: raise on missing local config file instead of silently falling back to defaults",
+      "state": "open",
+      "created": "2026-08-02T14:05:30Z",
+      "labels": [],
+      "url": "https://github.com/huggingface/transformers/pull/47712"
+    }
+  ]
+}

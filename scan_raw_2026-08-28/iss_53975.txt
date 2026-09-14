@@ -1,0 +1,88 @@
+[Bug]: legacy guided_json is silently ignored - request returns 200 with unconstrained free-form text
+## Summary
+
+On `0.26.1rc1.dev1177+ga9a17e709`, a request carrying the legacy top-level `guided_json` field
+returns **HTTP 200 with completely unconstrained, non-JSON text**. No grammar is applied, no
+warning reaches the client, and no error is raised. The field appears to be dropped silently.
+
+This is a silent-failure bug rather than a formatting one: a caller still using `guided_json`
+believes it has a hard structural guarantee and in fact has none.
+
+## Environment
+
+- vLLM build: `vllm-0.26.1rc1.dev1177+ga9a17e709`
+- Image: `vllm/vllm-openai:nightly`
+- Model: `RedHatAI/gemma-4-31B-it-FP8-block` (Gemma 4 31B, FP8), `--served-model-name gemma-4`
+- Tensor parallel size 2, on 2x NVIDIA A100-80GB-PCIe
+- Server started with `--structured-outputs-config '{"backend":"xgrammar","disable_any_whitespace":true}'`
+- Measured 2026-08-26
+
+**All requests below were issued from inside the serving pod, directly against the vLLM process.**
+No proxy, gateway, load balancer, or response cache is in the path.
+
+I can supply `collect_env.py` output if useful — the deployment is a container image, so please say
+whether you would like it captured from inside the running container.
+
+## Reproducer
+
+```bash
+curl -s http://127.0.0.1:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{
+  "model": "gemma-4",
+  "messages": [{"role": "user", "content": "Return alpha=1, beta=2, gamma=3."}],
+  "guided_json": {"type":"object","properties":{"alpha":{"type":"integer"},"beta":{"type":"integer"},"gamma":{"type":"integer"}},"required":["alpha","beta","gamma"],"additionalProperties":false}
+}'
+```
+
+**Expected:** either the schema is enforced, or the request is rejected as using a removed field.
+
+**Actual:** HTTP 200, `usage.completion_tokens: 12`, and
+`choices[0].message.content` is:
+
+```
+alpha=1, beta=2, gamma=3
+```
+
+That is not JSON at all.
+
+## The grammar path itself is healthy
+
+This is not structured output being off server-wide. The identical schema, sent as
+`response_format: {"type": "json_schema", ...}` against the same process in the same session,
+returns schema-conformant JSON:
+
+```
+{"alpha": 1, "beta": 2, "gamma": 3}      # 19 completion tokens
+```
+
+and a schema containing a regex lookahead is rejected by xgrammar's own validator with
+`Lookahead is not supported yet` before generation. So the grammar backend is engaged and
+enforcing — `guided_json` simply never reaches it.
+
+## Ruled out
+
+- **A proxy or intermediary stripping the field.** Requests were made inside the pod, directly
+  against vLLM. Nothing sits between client and server.
+- **The schema being invalid.** The same schema object enforces correctly via `response_format`.
+- **The model merely choosing that output.** With the grammar applied it cannot emit
+  `alpha=1, beta=2, gamma=3`; without one it does.
+
+## Why this is worth an error rather than a silent drop
+
+If `guided_json` is deprecated or removed, **rejecting the request — or logging a warning — would
+surface this at the first call.** Dropping it silently means the failure only shows up much later
+and somewhere else, when downstream parsing breaks on free-form text. Anything that had been
+relying on it has been running unconstrained since the change, with no signal.
+
+## Possibly a regression
+
+#48228 (closed) reports, on `0.23.1rc1.dev961+gbc6fbf472`, that "the native `guided_json` param
+with the identical schema is valid even with thinking enabled" — i.e. it was still applying its
+constraint on that build. If that reading is right, the behaviour changed somewhere between there
+and `0.26.1rc1.dev1177`. I have not bisected it and am not claiming a specific commit.
+
+## Related but distinct
+
+#48765 covers `disable_any_whitespace` being ignored at request level. Mentioned only to note that
+this report is **not** that one: here no constraint is applied at all, rather than a constraint
+being applied with one option dropped.
+

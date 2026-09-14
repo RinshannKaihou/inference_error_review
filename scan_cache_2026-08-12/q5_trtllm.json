@@ -1,0 +1,124 @@
+{
+  "total": 13,
+  "items": [
+    {
+      "num": 17561,
+      "title": "[None][test] Waive test_kda_verify_matches_sequential_decode[2-1] (NaN on B200)",
+      "state": "closed",
+      "created": "2026-08-12T15:40:35Z",
+      "labels": [],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/pull/17561"
+    },
+    {
+      "num": 17464,
+      "title": "[https://nvbugs/6456085][fix] Harmony: stop discarding malformed tool-call messages silently",
+      "state": "open",
+      "created": "2026-08-10T06:03:33Z",
+      "labels": [],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/pull/17464"
+    },
+    {
+      "num": 17437,
+      "title": "[Bug]: Interior control-token rejection can split a tool-call prelude and silently drop tool_calls",
+      "state": "open",
+      "created": "2026-08-08T11:56:30Z",
+      "labels": [
+        "Speculative Decoding"
+      ],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/17437"
+    },
+    {
+      "num": 17432,
+      "title": "[None][infra] Log infra-retry classify declines instead of silent rethrow",
+      "state": "closed",
+      "created": "2026-08-07T22:30:13Z",
+      "labels": [
+        "ci: full pre-merge approved"
+      ],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/pull/17432"
+    },
+    {
+      "num": 17159,
+      "title": "[#17158][fix] Reject NaN top_p, min_p and temperature in SamplingParams",
+      "state": "closed",
+      "created": "2026-08-01T10:10:13Z",
+      "labels": [],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/pull/17159"
+    },
+    {
+      "num": 17158,
+      "title": "[Bug]: SamplingParams accepts NaN for top_p, min_p and temperature",
+      "state": "closed",
+      "created": "2026-08-01T10:09:25Z",
+      "labels": [
+        "Decoding/Sampling"
+      ],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/17158"
+    },
+    {
+      "num": 17022,
+      "title": "`trtllm-eval --max_output_length` is silently discarded on text tasks whose yaml sets `max_gen_toks`",
+      "state": "open",
+      "created": "2026-07-29T20:27:22Z",
+      "labels": [],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/17022"
+    },
+    {
+      "num": 17020,
+      "title": "`trtllm-eval aime25`/`aime26` silently disable thinking on DeepSeek-V4, halving reported accuracy",
+      "state": "open",
+      "created": "2026-07-29T20:26:50Z",
+      "labels": [],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/17020"
+    },
+    {
+      "num": 16801,
+      "title": "[Bug] Vanilla attention uses incorrect KV indices for layer-specific cache layouts",
+      "state": "open",
+      "created": "2026-07-23T17:24:02Z",
+      "labels": [
+        "KV-Cache Management"
+      ],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/16801"
+    },
+    {
+      "num": 16550,
+      "title": "[https://nvbugs/6432953][fix] Fix MPI world heap corruption during teardown",
+      "state": "closed",
+      "created": "2026-07-17T19:17:53Z",
+      "labels": [],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/pull/16550"
+    },
+    {
+      "num": 16377,
+      "title": "[Bug]: Eagle3 speculative decoding silently drops tool_calls for gpt-oss on trtllm-serve",
+      "state": "open",
+      "created": "2026-07-14T14:10:17Z",
+      "labels": [
+        "bug",
+        "Inference runtime",
+        "Speculative Decoding",
+        "Pytorch"
+      ],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/16377"
+    },
+    {
+      "num": 16362,
+      "title": "[Closed: wrong account] Shape-gated backend selection for FP8 block-scaling GEMM",
+      "state": "closed",
+      "created": "2026-07-14T07:41:38Z",
+      "labels": [
+        "Model optimization"
+      ],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/16362"
+    },
+    {
+      "num": 16335,
+      "title": "[None][fix] Emit KV cache removed events for silently detached reuse-tree blocks",
+      "state": "open",
+      "created": "2026-07-13T17:53:34Z",
+      "labels": [],
+      "url": "https://github.com/NVIDIA/TensorRT-LLM/pull/16335"
+    }
+  ]
+}

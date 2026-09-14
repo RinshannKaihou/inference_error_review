@@ -1,0 +1,42 @@
+### 55305 [open] global_avg_pool2d silently ignores dtype=, including the supported bfloat8_b, while the ordinary avg_pool2d path TT_FATALs on the same argument
+### Summary
+
+`ttnn.global_avg_pool2d` accepts a `dtype=` argument and silently ignores it. The global-pool fast path neither applies the requested output dtype nor validates it, while the ordinary pooling path rejects an unsupported dtype with a `TT_FATAL`. A supported dtype is dropped just as silently as an unsupported one.
+
+Measured on **ttsim** (tenstorrent/ttsim v1.10.3, `libttsim_bh.so`, Blackhole) with the prebuilt tt-metal `v0.79.0-dev20260902` ubuntu22.04 debs and SFPI 7.72.0, bfloat16 input:
+
+```
+global_avg_pool2d(x, dtype=ttnn.bfloat8_b)  -> DataType.BFLOAT16   ignored  (bfloat8_b IS supported)
+global_avg_pool2d(x, dtype=ttnn.bfloat16)   -> DataType.BFLOAT16   ok
+global_avg_pool2d(x, dtype=ttnn.float32)    -> DataType.BFLOAT16   ignored
+
+avg_pool2d(y, ..., dtype=ttnn.float32)      -> RuntimeError:
+    TT_FATAL @ ttnn/cpp/ttnn/operations/pool/generic/generic_pools.cpp:153:
+    dtype == DataType::BFLOAT16 || dtype == DataType::BFLOAT8_B || dtype == DataType::BFLOAT4_B
+```
+
+The `bfloat8_b` case is the damaging one: it is an explicitly supported output format, the caller asked for it, and the returned tensor is bfloat16 with nothing to indicate the request was dropped.
+
+### Cause
+
+`ttnn/cpp/ttnn/operations/pool/generic/generic_pools.cpp`.
+
+The ordinary path validates the requested dtype at `:151-157`:
+
+```cpp
+TT_FATAL(
+    dtype == DataType::BFLOAT16 || dtype == DataType::BFLOAT8_B || dtype == DataType::BFLOAT4_B,
+    "Currently only BFLOAT16, BFLOAT8_B, and BFLOAT4_B output data formats are supported");
+```
+
+The global-average-pool fast path is a separate branch (`:1031` comment, gated at `:1072`):
+
+```cpp
+// Global average pool fast path: kernel exactly covers spatial input with no padding/dilation.
+...
+if (is_global_pool && pool_type == Pool2DType::AVG_POOL2D) {
+```
+
+and its body (`:1072-1160`) never references the `dtype` parameter. The only dtype it consults is the input's, via `canonical.dtype()` at `:1140`. It routes to `ttnn::operations::reduction::pool_sum`, whose output format follows the input, and returns that directly.
+
+So the requested dtype is not applied, and because this branch is reached before the ordinary path's validation, it is not re

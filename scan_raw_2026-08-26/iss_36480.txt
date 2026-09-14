@@ -1,0 +1,58 @@
+[Bug] Qwen3.5 greedy outputs differ A LOT between v0.5.12 and v0.5.17.dev for the same multimodal request; v0.5.17.dev36 not self-consistent behind router
+STATE: open
+BODY:
+## Checklist
+
+- [x] I searched related issues but found no solution.
+- [x] The bug persists in the latest version.
+- [x] Environment info and a minimal reproducible demo are included below.
+
+## Describe the bug
+
+We serve the same VLM (Qwen3.5-35B-A3B) with two SGLang builds on identical
+hardware (NVIDIA H20, TP=1, 4 independent workers behind the SGLang router):
+
+- Build A: **v0.5.12** (commit `5a15cde858ea09b77`)
+- Build B: **v0.5.17.dev36+gcb05a44** (commit `cb05a44`)
+
+Sending a **byte-identical** multimodal request (`prompt_tokens` = 3932 on both
+builds) with `temperature=0`:
+
+### 1. A and B produce substantially different outputs
+
+The fork always happens in the same region — right after the shared prefix
+`"... This is exactly what I need(ed)"` (output char ~149–162) — and the
+continuations then diverge completely:
+
+| | completion tokens | stable across repeats? |
+|---|---|---|
+| A (0.5.12) | 246 | yes, bit-stable |
+| B (0.5.17.dev36) | 342/342/342 in one session; 282/134/134 in a later session | **no** |
+
+Cross-build text similarity: 0.28–0.58.
+
+### 2. B is not self-consistent at temperature=0
+
+Across repeated identical requests behind the router, B returned 342/342/342
+completion tokens in one session but 282/134/134 in a later one (see
+`results/repro_verify.log` in the attachment). A is bit-stable across all
+repeats. The router round-robins over 4 identical workers, so this points at
+worker-level non-determinism at temperature=0 on v0.5.17.dev.
+
+### 3. The divergence is an argmax flip on a near-tie
+
+With `logprobs=True`, at the first divergence position (right after
+`"... This is exactly what I "`):
+
+| Build | top-1 | top-2 | top-2 logprob gap |
+|---|---|---|---|
+| 0.5.12 | `need` (-0.7474) | `needed` (-0.7474) | **0.0** |
+| 0.5.17.dev36 | `needed` (-0.6269) | `need` (-0.8769) | 0.25 |
+
+Each build picks a different winner and the free-form `<think>` continuation
+diverges completely. In a later session the flip lands one token later
+(`' accomplish'` with gap 0.625 on A vs `' see'` with gap 0.125 on B).
+`prompt_tokens` is identical (3932) on both builds, so tokenization / image
+preprocessing are not the cause.
+
+### Real-world impact: the flip changes grounde

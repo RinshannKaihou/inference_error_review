@@ -1,0 +1,95 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53406",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53406/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53406/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53406/events",
+  "html_url": "https://github.com/vllm-project/vllm/pull/53406",
+  "id": 5224253237,
+  "node_id": "PR_kwDOI7xefs8AAAABAq_hew",
+  "number": 53406,
+  "title": "[Bugfix] Do not FULL-capture spec-decode batches in TurboQuant attention backend",
+  "user": {
+    "login": "giannisanni",
+    "id": 115853836,
+    "node_id": "U_kgDOBufKDA",
+    "avatar_url": "https://avatars.githubusercontent.com/u/115853836?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/giannisanni",
+    "html_url": "https://github.com/giannisanni",
+    "followers_url": "https://api.github.com/users/giannisanni/followers",
+    "following_url": "https://api.github.com/users/giannisanni/following{/other_user}",
+    "gists_url": "https://api.github.com/users/giannisanni/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/giannisanni/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/giannisanni/subscriptions",
+    "organizations_url": "https://api.github.com/users/giannisanni/orgs",
+    "repos_url": "https://api.github.com/users/giannisanni/repos",
+    "events_url": "https://api.github.com/users/giannisanni/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/giannisanni/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 9988761457,
+      "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+      "name": "quantization",
+      "color": "62bfab",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-22T22:36:21Z",
+  "updated_at": "2026-08-22T22:36:58Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": false,
+  "pull_request": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/pulls/53406",
+    "html_url": "https://github.com/vllm-project/vllm/pull/53406",
+    "diff_url": "https://github.com/vllm-project/vllm/pull/53406.diff",
+    "patch_url": "https://github.com/vllm-project/vllm/pull/53406.patch",
+    "merged_at": null
+  },
+  "body": "## Purpose\n\nFixes #52475: MTP speculative decoding with any `turboquant_*` KV cache dtype silently collapses into repetition, and `num_speculative_tokens: 1` kills the engine with an illegal memory access.\n\nRoot cause: `TurboQuantMetadataBuilder` declares `_cudagraph_support = UNIFORM_BATCH` while also declaring `supports_spec_as_decode=False`. Those two declarations are contradictory under speculative decoding:\n\n1. `UNIFORM_BATCH` tells the runner it may FULL-capture uniform batches, explicitly including spec-decode verify batches whose query_len is `1 + num_speculative_tokens` (see the `AttentionCGSupport.UNIFORM_BATCH` docstring). `GPUModelRunner._is_uniform_decode` classifies these batches by query length alone and does not consult `supports_spec_as_decode`.\n2. But because `supports_spec_as_decode=False` sets `reorder_batch_threshold=1`, the TurboQuant forward routes every batch with `max_query_len > 1` through its per-request Python prefill loop (`_prefill_attention`). That loop iterates over CPU-resident metadata (`query_start_loc_cpu.tolist()`, `seq_lens_cpu.tolist()`), so it is not graph-capturable: capture bakes in the dummy metadata from `build_for_cudagraph_capture`, which fills `seq_lens` with 1. With query_len 4 and seq_len 1, `cached_len = seq_len - q_len` is negative and the synthetic seq_lens slice `_arange_cache[cached_len + 1 : seq_len + 1]` is empty, so the captured graph performs no attention at all. Every replayed verify step then returns zeros from all full-attention layers (the hybrid model's GDN layers keep the output superficially fluent, which is why the failure is silent and gradual). With `num_speculative_tokens=1` the same baked-in arithmetic indexes out of bounds instead, matching the illegal-memory-access crash in the issue.\n\nThis also explains the exact on/off pattern reported in #52475: fp8 KV is clean (FlashAttention masks from GPU-side tensors and supports spec-as-decode), turboquant without MTP is clean (pure decode batches are capture-safe), and turboquant with MTP under `--enforce-eager` is clean (same Python loop, real metadata).\n\nThe fix declares `UNIFORM_SINGLE_TOKEN_DECODE` so spec-shaped batches fall back to piecewise cudagraphs and the attention path runs eagerly with real metadata. Pure decode batches (query_len 1, no spec) keep FULL capture, so the non-speculative configuration is unchanged.\n\nNot a duplicate: no open PR references #52475, and the open TurboQuant PRs (#53060, #52745, #53231, #51082, #50248, #49798, #49465, #40858) touch the decode kernels, cache-shape resolution, or platform enablement, not the cudagraph support declaration. #53059 is adjacent but different: it fixes prefills that alias the uniform-decode shape, while this bug is genuine spec-decode batches being FULL-captured by a backend whose spec path cannot be captured.\n\n## Test Plan\n\nHardware: 2x RTX 5060 Ti (sm120), TP=2. Model: Qwen3.8-27B NVFP4 (`model_type: qwen3_5`, hybrid GDN, head_dim 256, GQA 6), the same model family as the issue.\n\nBisection matrix that isolated the bug, all with `--kv-cache-dtype turboquant_k8v4`, greedy sampling, identical prompts:\n\n```bash\nvllm serve <model> -tp 2 --max-model-len 32768 --max-num-seqs 1 \\\n  --kv-cache-dtype turboquant_k8v4 [--enforce-eager] \\\n  [--speculative-config '{\"method\":\"mtp\",\"num_speculative_tokens\":3}']\n```\n\n| cudagraphs | MTP | output |\n|---|---|---|\n| on | on | repetition collapse (\"The The The...\") |\n| off | on | coherent |\n| on | off | coherent |\n| off | off | coherent |\n| on (with this fix) | on | coherent |\n\n`--no-async-scheduling` with cudagraphs+MTP still collapses, ruling out async scheduling as the trigger.\n\nThe second failure mode from the issue is also resolved: `num_speculative_tokens: 1` with cudagraphs, which previously died with an illegal memory access on the first request, now serves and generates coherently with this fix (same command as above with `\"num_speculative_tokens\":1`).\n\nAfter the fix, the full target configuration from the issue also works: `--max-model-len 262144 --kv-cache-dtype turboquant_4bit_nc` with MTP K3 and the vision tower loaded. 301,465-token KV pool (1.15x concurrency), needle retrieval passes at 12k and 60k token prompts, MTP draft acceptance 77.3% (per-position 0.864/0.727/0.727), prefill 10.6k tokens/s on this hardware.\n\n## Test Result\n\nBefore (cudagraphs + MTP K3, turboquant_k8v4, greedy):\n\n```\n'\\n\\nRome\\n\\nR\\n\\nR\\n\\nR\\n\\nR\\n\\nR\\n\\nHere\\n\\nHere\\n\\nHere\\n\\nHere...'\n```\n\nAfter (same command, this fix applied):\n\n```\n\"\\n\\n<think>\\nThe user wants a detailed paragraph about the history of Rome...\n</think>\\n\\nThe history of Rome stretches across roughly three millennia...\"\n```\n\nOutput quality matches the `--enforce-eager` control. Non-speculative serving before/after is unchanged (still FULL-captures single-token decode batches).\n\nAI assistance was used to bisect this bug and draft this PR; I reviewed the change and ran the tests above.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53406/reactions",
+    "total_count": 2,
+    "+1": 1,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 1
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53406/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

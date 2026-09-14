@@ -1,0 +1,42 @@
+TOTAL: 223
+
+#51524 | 2026-08-08 | [Bugfix][Frontend] Reject unsupported named tool_choice for Gemma 4
+#51517 | 2026-08-08 | [Bugfix][Parser] Stream Inkling plain-text answers incrementally
+#51511 | 2026-08-08 | [Bugfix][ROCm] Disable skinny GEMM on gfx1151
+#51508 | 2026-08-08 | [BugFix] Skip GDN/KDA recurrent state updates for stale zero-accept s…
+#51501 | 2026-08-08 | [Bugfix][Frontend] Give each batched conversation its own parser
+#51496 | 2026-08-08 | [Bugfix] Save logical sharded state before postprocessing
+#51495 | 2026-08-08 | [Bugfix] Fix LFM2 ShortConv prefix breaking quant ignore list
+#51493 | 2026-08-08 | [Bugfix] Use the V2 model runner for Gemma 4 MoE so MTP drafting works
+#51492 | 2026-08-08 | [Bugfix] Demote FlashInfer CUTLASS unquantized MoE when intermediate size is not 128-aligned
+#51489 | 2026-08-08 | [Bugfix][DSv4] Skip zero-query-len prefill chunks in FlashMLA sparse prefill (complements #49059)
+#51483 | 2026-08-08 | [Bugfix][Kimi-K3] Do not classify a stateless first chunk as a decode
+#51482 | 2026-08-08 | [BugFix][Core] free_blocks: restore prepend (LIFO) reuse order when prefix caching is off
+#51481 | 2026-08-08 | [Bugfix][DP] Don't assume the engines started when forwarding a wake
+#51477 | 2026-08-08 | [Bugfix] Stop fusing scale_ue8m0=True group quant into ue8m0-unaware fused kernels
+#51475 | 2026-08-08 | [Bugfix][Rust Frontend] Avoid abort on empty prompt logprobs
+#51474 | 2026-08-08 | [Bugfix][Rust Frontend] Return an error instead of panicking on empty-prompt logprobs
+#51470 | 2026-08-08 | [Bugfix][Frontend] Build parsers from the tools rendered into the prompt
+#51469 | 2026-08-08 | [BugFix] Reject invalid data-parallel RPC ports
+#51468 | 2026-08-08 | [BugFix] Preserve divergent FA hits with external Mamba state
+#51466 | 2026-08-08 | [Bugfix][Spec Decode] Fix DSD K-lookup to count sampling-only requests, preventing K thrashing at batch boundaries
+#51462 | 2026-08-07 | [Bugfix] Install the weight offloader in the V2 model runner
+#51461 | 2026-08-07 | [MM][CG][BugFix] Fix Ernie-4.5-VL encoder CG postprocess for multi-path outputs
+#51442 | 2026-08-07 | [Bugfix] Drop stale layer kwarg from online MXFP4 kernel creation (fix precommit)
+#51438 | 2026-08-07 | [Bugfix][MRV2] Reserve spec-decode lookahead blocks in V2 warmup
+#51435 | 2026-08-07 | [Bugfix][MM] Avoid device sync in FusedInputNorm initialization
+#51432 | 2026-08-07 | [Bugfix][multi_modal] Fix pos_ids being unitialized for minicpmv2.6 in hf runner
+#51427 | 2026-08-07 | [Bugfix][models_multimodal] Remote HF python code misses importing class
+#51423 | 2026-08-07 | [Bugfix] LoRA: normalize single-tensor lora_a in merged set_lora
+#51421 | 2026-08-07 | [Bugfix] Pad assertion error in truncate_computed_blocks due to lagging mamba lookup
+#51419 | 2026-08-07 | [Bugfix][Quantization] Fix fp32 weight scale for mxfp4 quantization and per-expert checkpoint mapping
+#51418 | 2026-08-07 | [Bugfix] Pin quack-kernels before FA4 AST regression
+#51411 | 2026-08-07 | [Bugfix][Quantization] Fix INT8 W8A8 MoE crash in TritonExperts
+#51404 | 2026-08-07 | [BugFix] Bind fault-tolerance DP ports before publishing them
+#51403 | 2026-08-07 | [Bugfix][ROCm] Route non-divisor small-head MLA decode to Gluon on gfx950
+#51402 | 2026-08-07 | [ROCm][CI][Bugfix] Do not microbatch a step that splits a prefix from its writer
+#51400 | 2026-08-07 | [Bugfix] Stop Kimi K3 end-of-turn marker leaking into streamed content
+#51397 | 2026-08-07 | [Bugfix] Do not select Model Runner V2 when weight offloading is enabled
+#51395 | 2026-08-07 | [Bugfix][SM120][MLA] Disable dense prefill for FlashInfer sparse MLA
+#51394 | 2026-08-07 | [Bugfix][Model] Validate Kimi-K3 plain FP8 prefill support
+#51391 | 2026-08-07 | [Bugfix][Parser] Prevent Inkling block-end leakage with tools

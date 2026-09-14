@@ -1,0 +1,108 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/52531",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/52531/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/52531/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/52531/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/52531",
+  "id": 5164729026,
+  "node_id": "I_kwDOI7xefs8AAAABM9eCwg",
+  "number": 52531,
+  "title": "[Bug]:  Kimi-K3 CUDA graph capture silently corrupts output at batch=1; three distinct failure modes across cudagraph modes.",
+  "user": {
+    "login": "a64543668",
+    "id": 13732211,
+    "node_id": "MDQ6VXNlcjEzNzMyMjEx",
+    "avatar_url": "https://avatars.githubusercontent.com/u/13732211?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/a64543668",
+    "html_url": "https://github.com/a64543668",
+    "followers_url": "https://api.github.com/users/a64543668/followers",
+    "following_url": "https://api.github.com/users/a64543668/following{/other_user}",
+    "gists_url": "https://api.github.com/users/a64543668/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/a64543668/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/a64543668/subscriptions",
+    "organizations_url": "https://api.github.com/users/a64543668/orgs",
+    "repos_url": "https://api.github.com/users/a64543668/repos",
+    "events_url": "https://api.github.com/users/a64543668/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/a64543668/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 11639749480,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7aA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/kimi",
+      "name": "kimi",
+      "color": "78d0bd",
+      "default": false,
+      "description": null
+    },
+    {
+      "id": 11639749575,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7xw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/k3",
+      "name": "k3",
+      "color": "e429eb",
+      "default": false,
+      "description": null
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-16T14:33:48Z",
+  "updated_at": "2026-08-16T14:50:32Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\n<details>\n<summary>The output of <code>python collect_env.py</code></summary>\n\n```text\n==============================\n        System Info\n==============================\nOS                           : Ubuntu 24.04.3 LTS (x86_64)\nGCC version                  : (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nClang version                : Could not collect\nCMake version                : Could not collect\nLibc version                 : glibc-2.39\n==============================\n       PyTorch Info\n==============================\nPyTorch version              : 2.13.0+cu130\nIs debug build               : False\nCUDA used to build PyTorch   : 13.0\nROCM used to build PyTorch   : N/A\nXPU used to build PyTorch    : N/A\n==============================\n      Python Environment\n==============================\nPython version               : 3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0] (64-bit runtime)\nPython platform              : Linux-6.12.95-124.187.amzn2023.x86_64-x86_64-with-glibc2.39\n==============================\n       CUDA / GPU Info\n==============================\nIs CUDA available            : True\nCUDA runtime version         : 13.0.88\nCUDA_MODULE_LOADING set to   :\nGPU models and configuration :\nGPU 0: NVIDIA B200\nGPU 1: NVIDIA B200\nGPU 2: NVIDIA B200\nGPU 3: NVIDIA B200\nGPU 4: NVIDIA B200\nGPU 5: NVIDIA B200\nGPU 6: NVIDIA B200\nGPU 7: NVIDIA B200\nNvidia driver version        : 580.159.03\ncuDNN version                : Could not collect\nHIP runtime version          : N/A\nMIOpen runtime version       : N/A\nIs XNNPACK available         : False\n==============================\n          CPU Info\n==============================\nArchitecture:                            x86_64\nCPU(s):                                  192\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Xeon(R) Platinum 8559C\nCPU family:                              6\nModel:                                   207\nThread(s) per core:                      2\nCore(s) per socket:                      48\nSocket(s):                               2\nStepping:                                2\nBogoMIPS:                                4800.00\nHypervisor vendor:                       KVM\nVirtualization type:                     full\nL1d cache:                               4.5 MiB (96 instances)\nL1i cache:                               3 MiB (96 instances)\nL2 cache:                                192 MiB (96 instances)\nL3 cache:                                640 MiB (2 instances)\nNUMA node(s):                            2\nNUMA node0 CPU(s):                       0-47,96-143\nNUMA node1 CPU(s):                       48-95,144-191\n==============================\nVersions of relevant libraries\n==============================\n[pip3] flashinfer-python==0.6.15\n[pip3] nccl4py==0.3.1\n[pip3] numpy==2.2.6\n[pip3] nvidia-cublas==13.1.1.3\n[pip3] nvidia-cuda-cccl==13.3.3.4.1\n[pip3] nvidia-cuda-crt==13.3.73\n[pip3] nvidia-cuda-cupti==13.0.85\n[pip3] nvidia-cuda-nvcc==13.3.73\n[pip3] nvidia-cuda-nvdisasm==13.3.73\n[pip3] nvidia-cuda-nvrtc==13.0.88\n[pip3] nvidia-cuda-runtime==13.0.96\n[pip3] nvidia-cudnn-cu13==9.20.0.48\n[pip3] nvidia-cudnn-frontend==1.26.0\n[pip3] nvidia-cufft==12.0.0.61\n[pip3] nvidia-cufile==1.15.1.6\n[pip3] nvidia-curand==10.4.0.35\n[pip3] nvidia-cusolver==12.0.4.66\n[pip3] nvidia-cusparse==12.6.3.3\n[pip3] nvidia-cusparselt-cu13==0.8.1\n[pip3] nvidia-cutlass-dsl==4.6.0\n[pip3] nvidia-cutlass-dsl-libs-base==4.6.0\n[pip3] nvidia-cutlass-dsl-libs-core==4.6.0\n[pip3] nvidia-cutlass-dsl-libs-cu12==4.6.0\n[pip3] nvidia-cutlass-dsl-libs-cu13==4.6.0\n[pip3] nvidia-ml-py==13.610.43\n[pip3] nvidia-nccl-cu13==2.30.7\n[pip3] nvidia-nvjitlink==13.3.33\n[pip3] nvidia-nvshmem-cu13==3.4.5\n[pip3] nvidia-nvtx==13.0.85\n[pip3] pyzmq==27.1.0\n[pip3] tokenspeed-triton==3.8.10.post20260721\n[pip3] torch==2.13.0+cu130\n[pip3] torch_c_dlpack_ext==0.1.5\n[pip3] torchaudio==2.11.0+cu130\n[pip3] torchcodec==0.15.0+cu130\n[pip3] torchvision==0.28.0+cu130\n[pip3] transformers==5.14.1\n[pip3] triton==3.7.1\n[conda] Could not collect\n==============================\n         vLLM Info\n==============================\nROCM Version                 : Could not collect\nvLLM Version                 : 0.1.dev19262+gb6bbf29dd.d20260727 (git sha: b6bbf29dd, date: 20260727)\nvLLM Build Flags:\n  CUDA Archs: 8.7 8.9 9.0 10.0+PTX 12.0 12.1; ROCm: Disabled; XPU: Disabled\nGPU Topology:\n        GPU0    GPU1    GPU2    GPU3    GPU4    GPU5    GPU6    GPU7    CPU Affinity    NUMA Affinity   GPU NUMA ID\nGPU0     X      NV18    NV18    NV18    NV18    NV18    NV18    NV18    0-47,96-143     0               N/A\nGPU1    NV18     X      NV18    NV18    NV18    NV18    NV18    NV18    0-47,96-143     0               N/A\nGPU2    NV18    NV18     X      NV18    NV18    NV18    NV18    NV18    0-47,96-143     0               N/A\nGPU3    NV18    NV18    NV18     X      NV18    NV18    NV18    NV18    0-47,96-143     0               N/A\nGPU4    NV18    NV18    NV18    NV18     X      NV18    NV18    NV18    48-95,144-191   1               N/A\nGPU5    NV18    NV18    NV18    NV18    NV18     X      NV18    NV18    48-95,144-191   1               N/A\nGPU6    NV18    NV18    NV18    NV18    NV18    NV18     X      NV18    48-95,144-191   1               N/A\nGPU7    NV18    NV18    NV18    NV18    NV18    NV18    NV18     X      48-95,144-191   1               N/A\nLegend:\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n==============================\n     Environment Variables\n==============================\nNVIDIA_VISIBLE_DEVICES=<8 GPU UUIDs redacted>\nNVIDIA_REQUIRE_CUDA=<trimmed>\nNVIDIA_DRIVER_CAPABILITIES=compute,utility\nCUDA_VERSION=13.0.1\nTORCH_CUDA_ARCH_LIST=8.7 8.9 9.0 10.0+PTX 12.0 12.1\nPYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512\nPYTORCH_NVML_BASED_CUDA_CHECK=1\nPYTORCH_INDEX_URL=<internal-mirror>\nPYTORCH_EXTRA_INDEX_URL=<internal-mirror>\nTORCHINDUCTOR_COMPILE_THREADS=1\nTORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor_root\nVLLM_IMAGE_TAG=local/vllm-openai:dev\nVLLM_BUILD_URL=\nVLLM_BUILD_COMMIT=unknown\nVLLM_BUILD_PIPELINE=local\nVLLM_USAGE_SOURCE=production-docker-image\nVLLM_ENABLE_CUDA_COMPATIBILITY=0\nVLLM_CACHE_ROOT=/data/vllm_cache/exp12\nVLLM_WORKER_MULTIPROC_METHOD=spawn\nVLLM_USE_RAY_V2_EXECUTOR_BACKEND=1\nVLLM_ALLREDUCE_USE_SYMM_MEM=0\nVLLM_USE_NCCL_SYMM_MEM=0\nNCCL_SOCKET_IFNAME=eth0\nNCCL_DEBUG=INFO\nNCCL_NVLS_ENABLE=0\nNCCL_CUMEM_ENABLE=0\nNCCL_BUFFSIZE=8388608\nNCCL_P2P_NET_CHUNKSIZE=524288\nNCCL_IGNORE_DISABLED_P2P=1\nLD_LIBRARY_PATH=/opt/amazon/efa-extra-lib:/opt/amazon/openmpi/lib:/opt/amazon/efa/lib:/opt/amazon/ofi-nccl/lib:/opt/amazon/ofi-nccl/lib/x86_64-linux-gnu:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64\n```\n\n</details>\n\n\n### 🐛 Describe the bug\n\n<h2>Summary</h2>\n<p>Serving Kimi-K3 with TP16 across two 8× B200 nodes (EFA, no NVSwitch/MNNVL),any form of CUDA graph capture produces wrong output or crashes. <code>enforce_eager</code> is correct 100% of the time. Unlike #50147, this reproduces at <strong>batch=1 on the first request</strong>, with prefix caching disabled and no concurrency. I also tried TP=8 and PP=2, the issue persists</p>\n<p>Critically, the FlashInfer fused all-reduce path is disabled on this topology, so the latent-MoE stale-residual fix in #50386 cannot apply here (details below).</p>\n<h2>Configuration</h2>\n<p><code>vllm serve</code> flags:</p>\n<ul>\n<li>-tensor-parallel-size 16 --trust-remote-code --load-format fastsafetensors<br>\n--moe-backend flashinfer_trtllm --attention-backend FLASHINFER_MLA<br>\n--disable-custom-all-reduce --no-enable-flashinfer-autotune<br>\n--max-model-len 32768 --max-num-seqs 64 --max-num-batched-tokens 8192<br>\n--gpu-memory-utilization 0.90</li>\n</ul>\n<p>env: VLLM_ALLREDUCE_USE_FLASHINFER=0 VLLM_ALLREDUCE_USE_SYMM_MEM=0<br>\nVLLM_USE_NCCL_SYMM_MEM=0 NCCL_CUMEM_ENABLE=0 NCCL_NVLS_ENABLE=0<br>\nVLLM_ENABLE_K3_LATENT_MOE_TAIL_FUSION=0</p>\n<p>Prefix caching is OFF. All tests below are single-stream, temperature=0, max_tokens=64, identical prompt.</p>\n<h2>Failure matrix</h2>\n\ncudagraph config | result\n-- | --\nenforce_eager: true | Correct output, every time, across many deploys (TP16 and TP8+PP2)\ndefault (FULL_AND_PIECEWISE) | Fluent but semantically random multilingual text; host SIGSEGV in cuGraphLaunch / at::cuda::CUDAGraph::replay() on the 3rd request\ncudagraph_mode: PIECEWISE | No crash. Deterministic collapse to a single repeated token (@ @ @ ...) from the first request\nVLLM_USE_BREAKABLE_CUDAGRAPH=0 | AcceleratorError: CUDA error: an illegal memory access was encountered, surfaced at torch.cuda.set_rng_state during Dynamo tracing\n\n\n<h2>Performance impact</h2>\n<p>Eager decode is ~2.6 tok/s at batch=1 (64 tokens in ~25 s), closely matching the ~2.7 tok/s eager figure in #50147 against ~85 tok/s with graphs. DSpark speculative decoding recovers this to ~10 tok/s, still far below the graph-enabled figure. Eager is therefore not a viable workaround for latency-sensitive serving, which makes graph capture on this topology effectively blocking.</p>\n<h2>Questions</h2>\n<ol>\n<li>Is CUDA graph capture expected to be supported for Kimi-K3 on multi-node TP without NVSwitch, where the FlashInfer fused all-reduce path is inactive and collectives fall back to NCCL over EFA? But I tried TP=8 and PP=2 the issue still persist.</li>\n<li>Are there other buffers allocated outside capture in the K3 MoE/KDA paths, analogous to the one fixed in #50386, that would be reached on the non-FlashInfer path?</li>\n</ol>\n<h2>Reproduction</h2>\n<p>Serve:</p>\n<pre><code class=\"language-bash\">vllm serve moonshotai/Kimi-K3 \\\n  --tensor-parallel-size 16 --nnodes 2 --node-rank $RANK \\\n  --trust-remote-code --load-format fastsafetensors \\\n  --moe-backend flashinfer_trtllm --attention-backend FLASHINFER_MLA \\\n  --disable-custom-all-reduce --no-enable-flashinfer-autotune \\\n  --max-model-len 32768 --max-num-seqs 64 --max-num-batched-tokens 8192 \\\n  --gpu-memory-utilization 0.90\n# env:\n#   VLLM_ALLREDUCE_USE_FLASHINFER=0 VLLM_ALLREDUCE_USE_SYMM_MEM=0\n#   VLLM_USE_NCCL_SYMM_MEM=0 NCCL_CUMEM_ENABLE=0 NCCL_NVLS_ENABLE=0\n#   VLLM_ENABLE_K3_LATENT_MOE_TAIL_FUSION=0\n# Add --enforce-eager for the known-good control run.\n</code></pre>\n<p>Single request, greedy, no concurrency:</p>\n<pre><code class=\"language-python\">from openai import OpenAI\n\nclient = OpenAI(base_url=&quot;&lt;http://localhost:8000/v1&gt;&quot;, api_key=&quot;dummy&quot;, timeout=600.0)\nresp = client.chat.completions.create(\n    model=&quot;moonshotai/Kimi-K3&quot;,\n    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;can you write me a story about a cat&quot;}],\n    max_tokens=64,\n    temperature=0,\n    extra_body={&quot;chat_template_kwargs&quot;: {&quot;thinking&quot;: False}},\n)\nprint(resp.choices[0].message.content)\n</code></pre>\n<p>With <code>--enforce-eager</code> this returns a coherent story on every run. Without it, the first response is already corrupted. Send the same request 3+ times to reach the segfault under the default cudagraph mode.</p>\n<!-- notionvc: d1709100-256b-472e-afd6-db6db4ce00a8 -->\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/52531/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/52531/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

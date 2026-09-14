@@ -1,0 +1,24 @@
+#### PR #53478 [Bugfix] Honor a false boolean in a yaml config when the key uses underscores
+STATE:closed merged:no
+## Purpose
+
+A boolean set to `false` in a config file is silently discarded when the key is written with underscores, so the option keeps its previous value and the config applies the opposite of what it says.
+
+`FlexibleArgumentParser.load_config_file` builds `--no-{key}` and looks it up in the registry. Registered option strings use dashes, so an underscore key misses and the branch emits nothing. The true branch does not have this problem, because argparse resolves `--enable_prefix_caching` to the registered action anyway. The same key therefore behaves differently depending on its value:
+
+```
+'enable_prefix_caching: false'   ->  []                              <- dropped
+'enable-prefix-caching: false'   ->  ['--no-enable-prefix-caching']
+'enable_prefix_caching: true'    ->  ['--enable_prefix_caching']
+```
+
+There is no error and no warning. Underscore keys are normal in these files; the docstring for this function uses them in its own nested examples.
+
+This has bitten us twice on a serving deployment: a config that ran with prefix caching on for some time before anyone noticed, and later an A/B run where the arm meant to disable it silently measured the control condition instead.
+
+## Fix
+
+Normalize underscores to dashes before the registry lookup.
+
+I considered raising when a false boolean resolves to no flag at all, since a silent drop is what made this hard to spot. That would be wrong here. `make_arg_parser` registers 157 `BooleanOptionalAction` options but also 6 `store_true` options (`--headless`, `--grpc`, `--disable-log-stats`, `--data-parallel-multi-port-external-
+

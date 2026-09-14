@@ -1,0 +1,32 @@
+TOTAL: 13
+
+- #52256 [open] 2026-08-05T22:34:49Z [Bug fix] Fix Blackhole destination-reuse synchronization
+  https://github.com/tenstorrent/tt-metal/pull/52256
+  labels: 
+- #52252 [open] 2026-08-05T21:41:57Z [Bounty $3000] Fix Blackhole destination-reuse synchronization
+  https://github.com/tenstorrent/tt-metal/issues/52252
+  labels: community, bounty, bounty_difficulty/medium
+- #52247 [open] 2026-08-05T20:50:32Z models/tt_dit: add tt-dit-loop, a long-running bringup/optimization loop
+  https://github.com/tenstorrent/tt-metal/pull/52247
+  labels: feat
+- #52246 [open] 2026-08-05T20:48:29Z [CI] WH nightly test_moe_compute_single_card_nontile_tokens_sweep FATALs: core placement on 7x8 grid
+  https://github.com/tenstorrent/tt-metal/issues/52246
+  labels: Mixture of Experts (MoE)
+- #52234 [open] 2026-08-05T19:03:17Z models/tt_dit: add agent skills for bringup, profiling and optimization
+  https://github.com/tenstorrent/tt-metal/pull/52234
+  labels: docs
+- #52196 [open] 2026-08-05T12:39:13Z [test_windowed_sdpa.py] | Sanity tests nightly debug run with LLK asserts | blackhole nightly debug run (Ubuntu 22.04 with LLK asserts) / ttnn-unit-tests / ttnn sdpa group [bh_p150b_civ2]
+  https://github.com/tenstorrent/tt-metal/issues/52196
+  labels: CI auto triage
+- #52191 [closed] 2026-08-05T12:11:39Z rotary_embedding_indexed: port to Metal 2.0 named-arg program factory
+  https://github.com/tenstorrent/tt-metal/pull/52191
+  labels: refactor
+- #52177 [closed] 2026-08-05T09:33:56Z Reland "[Bug fix] Make sampling and top-k deterministic on sub-core grids." with int32 tie-break index reduce
+  https://github.com/tenstorrent/tt-metal/pull/52177
+  labels: fix
+- #52172 [open] 2026-08-05T08:43:32Z [LLK] SFPU edge cases initial pass ( expand ranges on ops)
+  https://github.com/tenstorrent/tt-metal/pull/52172
+  labels: LLK, llk:quasar, llk:test-infra, test
+- #52165 [closed] 2026-08-05T08:34:11Z [test_dispatcher.cpp] | (Runtime) Unit Tests | runtime-unit-tests / runtime_fd2 [bh_p150b_civ2]
+  https://github.com/tenstorrent/tt-metal/issues/52165
+  labels: CI auto triage

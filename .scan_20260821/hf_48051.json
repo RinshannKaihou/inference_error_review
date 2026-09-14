@@ -1,0 +1,102 @@
+{
+  "url": "https://api.github.com/repos/huggingface/transformers/issues/48051",
+  "repository_url": "https://api.github.com/repos/huggingface/transformers",
+  "labels_url": "https://api.github.com/repos/huggingface/transformers/issues/48051/labels{/name}",
+  "comments_url": "https://api.github.com/repos/huggingface/transformers/issues/48051/comments",
+  "events_url": "https://api.github.com/repos/huggingface/transformers/issues/48051/events",
+  "html_url": "https://github.com/huggingface/transformers/issues/48051",
+  "id": 5179152684,
+  "node_id": "I_kwDOCUB6oc8AAAABNLOZLA",
+  "number": 48051,
+  "title": "convert_to_rgb gives wrong output shape for RGBA numpy videos",
+  "user": {
+    "login": "carlszk",
+    "id": 118542544,
+    "node_id": "U_kgDOBxDQ0A",
+    "avatar_url": "https://avatars.githubusercontent.com/u/118542544?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/carlszk",
+    "html_url": "https://github.com/carlszk",
+    "followers_url": "https://api.github.com/users/carlszk/followers",
+    "following_url": "https://api.github.com/users/carlszk/following{/other_user}",
+    "gists_url": "https://api.github.com/users/carlszk/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/carlszk/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/carlszk/subscriptions",
+    "organizations_url": "https://api.github.com/users/carlszk/orgs",
+    "repos_url": "https://api.github.com/users/carlszk/repos",
+    "events_url": "https://api.github.com/users/carlszk/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/carlszk/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "closed",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 2,
+  "created_at": "2026-08-18T07:13:58Z",
+  "updated_at": "2026-08-19T08:59:29Z",
+  "closed_at": "2026-08-19T08:59:29Z",
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## System Info\n\n- transformers main (commit 8c62d6f)\n- Windows 11, Python 3.13\n- numpy\n\n## Who can help?\n\n@molbap @guarin\n\n## Reproduction\n\nWas processing some RGBA video frames as numpy arrays and noticed the output shape is wrong after `convert_to_rgb`. Here's a minimal example:\n\n```python\nimport numpy as np\nfrom transformers.video_utils import convert_to_rgb\n\nvideo = np.array(\n    [\n        [[[255, 0, 0, 128]]],\n        [[[0, 255, 0, 64]]],\n    ],\n    dtype=np.uint8,\n)\n\nrgb_video = convert_to_rgb(video, input_data_format=\"channels_last\")\nprint(rgb_video.shape)  # prints (2, 2, 1, 1) — should be (2, 3, 1, 1)\n```\n\nLooks like the blending line in `convert_to_rgb` (video_utils.py:789) uses `video[..., 3, :, :]` as the foreground instead of `video[..., :3, :, :]`, so the alpha channel ends up being used as the RGB data. This causes both the wrong channel count and incorrect pixel values.\n\n## Expected behavior\n\nOutput shape should be `(2, 3, 1, 1)` — 3 RGB channels after blending the alpha with white background. The alpha channel should be used for blending only, not as the foreground color.",
+  "closed_by": {
+    "login": "zucchini-nlp",
+    "id": 100715397,
+    "node_id": "U_kgDOBgDLhQ",
+    "avatar_url": "https://avatars.githubusercontent.com/u/100715397?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/zucchini-nlp",
+    "html_url": "https://github.com/zucchini-nlp",
+    "followers_url": "https://api.github.com/users/zucchini-nlp/followers",
+    "following_url": "https://api.github.com/users/zucchini-nlp/following{/other_user}",
+    "gists_url": "https://api.github.com/users/zucchini-nlp/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/zucchini-nlp/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/zucchini-nlp/subscriptions",
+    "organizations_url": "https://api.github.com/users/zucchini-nlp/orgs",
+    "repos_url": "https://api.github.com/users/zucchini-nlp/repos",
+    "events_url": "https://api.github.com/users/zucchini-nlp/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/zucchini-nlp/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "reactions": {
+    "url": "https://api.github.com/repos/huggingface/transformers/issues/48051/reactions",
+    "total_count": 1,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 1
+  },
+  "timeline_url": "https://api.github.com/repos/huggingface/transformers/issues/48051/timeline",
+  "performed_via_github_app": null,
+  "state_reason": "completed",
+  "pinned_comment": null
+}

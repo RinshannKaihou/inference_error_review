@@ -1,0 +1,117 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/54723",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/54723/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/54723/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/54723/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/54723",
+  "id": 5309009593,
+  "node_id": "I_kwDOI7xefs8AAAABPHEOuQ",
+  "number": 54723,
+  "title": "[Bug]: FlashInfer TRTLLM MoE Backend stuck under DP/EP (Kimi K2 base, DeepSeek v3 base)",
+  "user": {
+    "login": "sebastiandero",
+    "id": 9080122,
+    "node_id": "MDQ6VXNlcjkwODAxMjI=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/9080122?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/sebastiandero",
+    "html_url": "https://github.com/sebastiandero",
+    "followers_url": "https://api.github.com/users/sebastiandero/followers",
+    "following_url": "https://api.github.com/users/sebastiandero/following{/other_user}",
+    "gists_url": "https://api.github.com/users/sebastiandero/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/sebastiandero/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/sebastiandero/subscriptions",
+    "organizations_url": "https://api.github.com/users/sebastiandero/orgs",
+    "repos_url": "https://api.github.com/users/sebastiandero/repos",
+    "events_url": "https://api.github.com/users/sebastiandero/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/sebastiandero/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 8746007475,
+      "node_id": "LA_kwDOI7xefs8AAAACCU17sw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/deepseek",
+      "name": "deepseek",
+      "color": "1995FE",
+      "default": false,
+      "description": "Related to DeepSeek models"
+    },
+    {
+      "id": 9988761457,
+      "node_id": "LA_kwDOI7xefs8AAAACU2BncQ",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/quantization",
+      "name": "quantization",
+      "color": "62bfab",
+      "default": false,
+      "description": ""
+    },
+    {
+      "id": 11639749480,
+      "node_id": "LA_kwDOI7xefs8AAAACtch7aA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/kimi",
+      "name": "kimi",
+      "color": "78d0bd",
+      "default": false,
+      "description": null
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-01T07:24:26Z",
+  "updated_at": "2026-09-01T07:43:16Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Your current environment\n\n<details>\n<summary>The output of <code>python collect_env.py</code></summary>\n\n```text\nCollecting environment information...\n==============================\n        System Info\n==============================\nOS                           : Ubuntu 22.04.5 LTS (aarch64)\nGCC version                  : (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0\nClang version                : Could not collect\nCMake version                : Could not collect\nLibc version                 : glibc-2.35\n\n==============================\n       PyTorch Info\n==============================\nPyTorch version              : 2.13.0+cu129\nIs debug build               : False\nCUDA used to build PyTorch   : 12.9\nROCM used to build PyTorch   : N/A\nXPU used to build PyTorch    : N/A\n\n==============================\n      Python Environment\n==============================\nPython version               : 3.12.13 (main, Mar  4 2026, 09:23:07) [GCC 11.4.0] (64-bit runtime)\nPython platform              : Linux-6.12.68+-aarch64-with-glibc2.35\n\n==============================\n       CUDA / GPU Info\n==============================\nIs CUDA available            : True\nCUDA runtime version         : 12.9.86\nCUDA_MODULE_LOADING set to   :\nGPU models and configuration :\nGPU 0: NVIDIA GB200\nGPU 1: NVIDIA GB200\nGPU 2: NVIDIA GB200\nGPU 3: NVIDIA GB200\n\nNvidia driver version        : 580.126.20\ncuDNN version                : Could not collect\nHIP runtime version          : N/A\nMIOpen runtime version       : N/A\nIs XNNPACK available         : False\n\n==============================\n          CPU Info\n==============================\nArchitecture:                            aarch64\nCPU op-mode(s):                          64-bit\nByte Order:                              Little Endian\nCPU(s):                                  140\nOn-line CPU(s) list:                     0-139\nVendor ID:                               ARM\nModel name:                              Neoverse-V2\nModel:                                   0\nThread(s) per core:                      1\nCore(s) per cluster:                     70\nSocket(s):                               -\nCluster(s):                              2\nStepping:                                r0p0\nBogoMIPS:                                2000.00\nFlags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\nNUMA node(s):                            34\nNUMA node0 CPU(s):                       0-69\nNUMA node1 CPU(s):                       70-139\nNUMA node2 CPU(s):\nNUMA node3 CPU(s):\nNUMA node4 CPU(s):\nNUMA node5 CPU(s):\nNUMA node6 CPU(s):\nNUMA node7 CPU(s):\nNUMA node8 CPU(s):\nNUMA node9 CPU(s):\nNUMA node10 CPU(s):\nNUMA node11 CPU(s):\nNUMA node12 CPU(s):\nNUMA node13 CPU(s):\nNUMA node14 CPU(s):\nNUMA node15 CPU(s):\nNUMA node16 CPU(s):\nNUMA node17 CPU(s):\nNUMA node18 CPU(s):\nNUMA node19 CPU(s):\nNUMA node20 CPU(s):\nNUMA node21 CPU(s):\nNUMA node22 CPU(s):\nNUMA node23 CPU(s):\nNUMA node24 CPU(s):\nNUMA node25 CPU(s):\nNUMA node26 CPU(s):\nNUMA node27 CPU(s):\nNUMA node28 CPU(s):\nNUMA node29 CPU(s):\nNUMA node30 CPU(s):\nNUMA node31 CPU(s):\nNUMA node32 CPU(s):\nNUMA node33 CPU(s):\nVulnerability Gather data sampling:      Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Not affected\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; CSV2, BHB\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Not affected\n\n==============================\nVersions of relevant libraries\n==============================\n[pip3] flashinfer-python==0.6.16.post3\n[pip3] nccl4py==0.3.1\n[pip3] numpy==2.2.6\n[pip3] nvidia-cublas-cu12==12.9.1.4\n[pip3] nvidia-cuda-cccl-cu12==12.9.27\n[pip3] nvidia-cuda-cupti-cu12==12.9.79\n[pip3] nvidia-cuda-nvcc-cu12==12.9.86\n[pip3] nvidia-cuda-nvdisasm==13.3.73\n[pip3] nvidia-cuda-nvrtc-cu12==12.9.86\n[pip3] nvidia-cuda-runtime-cu12==12.9.79\n[pip3] nvidia-cudnn-cu12==9.20.0.48\n[pip3] nvidia-cudnn-frontend==1.27.0\n[pip3] nvidia-cufft-cu12==11.4.1.4\n[pip3] nvidia-cufile-cu12==1.14.1.1\n[pip3] nvidia-curand-cu12==10.3.10.19\n[pip3] nvidia-cusolver-cu12==11.7.5.82\n[pip3] nvidia-cusparse-cu12==12.5.10.65\n[pip3] nvidia-cusparselt-cu12==0.8.1\n[pip3] nvidia-cutlass-dsl==4.6.0\n[pip3] nvidia-cutlass-dsl-libs-base==4.6.0\n[pip3] nvidia-cutlass-dsl-libs-core==4.6.0\n[pip3] nvidia-cutlass-dsl-libs-cu12==4.6.0\n[pip3] nvidia-ml-py==13.610.43\n[pip3] nvidia-nccl-cu12==2.30.7\n[pip3] nvidia-nvjitlink-cu12==12.9.86\n[pip3] nvidia-nvshmem-cu12==3.4.5\n[pip3] nvidia-nvtx-cu12==12.9.79\n[pip3] pyzmq==27.1.0\n[pip3] tokenspeed-triton==3.8.10.post20260721\n[pip3] torch==2.13.0+cu129\n[pip3] torch_c_dlpack_ext==0.1.5\n[pip3] torchaudio==2.11.0+cu129\n[pip3] torchcodec==0.15.0+cu129\n[pip3] torchvision==0.28.0+cu129\n[pip3] transformers==5.15.0\n[pip3] triton==3.7.1\n[conda] Could not collect\n\n==============================\n         vLLM Info\n==============================\nROCM Version                 : Could not collect\nvLLM Version                 : 0.27.1\nvLLM Build Flags:\n  CUDA Archs: 8.0 8.7 8.9 9.0 10.0 12.0; ROCm: Disabled; XPU: Disabled\nGPU Topology:\n  \t\u001B[4mGPU0\tGPU1\tGPU2\tGPU3\tNIC0\tNIC1\tNIC2\tNIC3\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID\u001B[0m\nGPU0\t X \tNV18\tNV18\tNV18\tNODE\tNODE\tSYS\tSYS\t0-69\t0\t\tN/A\nGPU1\tNV18\t X \tNV18\tNV18\tNODE\tNODE\tSYS\tSYS\t0-69\t0\t\tN/A\nGPU2\tNV18\tNV18\t X \tNV18\tSYS\tSYS\tNODE\tNODE\t70-139\t1\t\tN/A\nGPU3\tNV18\tNV18\tNV18\t X \tSYS\tSYS\tNODE\tNODE\t70-139\t1\t\tN/A\nNIC0\tNODE\tNODE\tSYS\tSYS\t X \tNODE\tSYS\tSYS\nNIC1\tNODE\tNODE\tSYS\tSYS\tNODE\t X \tSYS\tSYS\nNIC2\tSYS\tSYS\tNODE\tNODE\tSYS\tSYS\t X \tNODE\nNIC3\tSYS\tSYS\tNODE\tNODE\tSYS\tSYS\tNODE\t X\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n\nNIC Legend:\n\n  NIC0: mlx5_0\n  NIC1: mlx5_1\n  NIC2: mlx5_2\n  NIC3: mlx5_3\n\n==============================\n     Environment Variables\n==============================\nNVIDIA_REQUIRE_CUDA=cuda>=12.9 brand=unknown,driver>=535,driver<536 brand=grid,driver>=535,driver<536 brand=tesla,driver>=535,driver<536 brand=nvidia,driver>=535,driver<536 brand=quadro,driver>=535,driver<536 brand=quadrortx,driver>=535,driver<536 brand=nvidiartx,driver>=535,driver<536 brand=vapps,driver>=535,driver<536 brand=vpc,driver>=535,driver<536 brand=vcs,driver>=535,driver<536 brand=vws,driver>=535,driver<536 brand=cloudgaming,driver>=535,driver<536 brand=unknown,driver>=550,driver<551 brand=grid,driver>=550,driver<551 brand=tesla,driver>=550,driver<551 brand=nvidia,driver>=550,driver<551 brand=quadro,driver>=550,driver<551 brand=quadrortx,driver>=550,driver<551 brand=nvidiartx,driver>=550,driver<551 brand=vapps,driver>=550,driver<551 brand=vpc,driver>=550,driver<551 brand=vcs,driver>=550,driver<551 brand=vws,driver>=550,driver<551 brand=cloudgaming,driver>=550,driver<551 brand=unknown,driver>=560,driver<561 brand=grid,driver>=560,driver<561 brand=tesla,driver>=560,driver<561 brand=nvidia,driver>=560,driver<561 brand=quadro,driver>=560,driver<561 brand=quadrortx,driver>=560,driver<561 brand=nvidiartx,driver>=560,driver<561 brand=vapps,driver>=560,driver<561 brand=vpc,driver>=560,driver<561 brand=vcs,driver>=560,driver<561 brand=vws,driver>=560,driver<561 brand=cloudgaming,driver>=560,driver<561 brand=unknown,driver>=565,driver<566 brand=grid,driver>=565,driver<566 brand=tesla,driver>=565,driver<566 brand=nvidia,driver>=565,driver<566 brand=quadro,driver>=565,driver<566 brand=quadrortx,driver>=565,driver<566 brand=nvidiartx,driver>=565,driver<566 brand=vapps,driver>=565,driver<566 brand=vpc,driver>=565,driver<566 brand=vcs,driver>=565,driver<566 brand=vws,driver>=565,driver<566 brand=cloudgaming,driver>=565,driver<566 brand=unknown,driver>=570,driver<571 brand=grid,driver>=570,driver<571 brand=tesla,driver>=570,driver<571 brand=nvidia,driver>=570,driver<571 brand=quadro,driver>=570,driver<571 brand=quadrortx,driver>=570,driver<571 brand=nvidiartx,driver>=570,driver<571 brand=vapps,driver>=570,driver<571 brand=vpc,driver>=570,driver<571 brand=vcs,driver>=570,driver<571 brand=vws,driver>=570,driver<571 brand=cloudgaming,driver>=570,driver<571\nCUDA_VERSION=12.9.1\nLD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/cuda/lib64\nNVIDIA_DRIVER_CAPABILITIES=compute,utility\nVLLM_ENABLE_CUDA_COMPATIBILITY=0\nTORCH_CUDA_ARCH_LIST=8.0 8.7 8.9 9.0 10.0 12.0\nVLLM_USAGE_SOURCE=production-docker-image\nVLLM_BUILD_COMMIT=6e448d0ea9bf3d88d898b65449ca6dc2aec170ac\nVLLM_BUILD_PIPELINE=019d130e-464e-4ff7-b84b-492992c0c06b\nVLLM_BUILD_URL=https://buildkite.com/vllm/release-v2/builds/5006\nVLLM_IMAGE_TAG=vllm/vllm-openai:v0.27.1-cu129\nNVIDIA_VISIBLE_DEVICES=GPU-ee6d5542-bf10-0327-dbc8-215684ea10e1,GPU-8a154cfc-93dd-85e9-a0c2-220070f6d7ca,GPU-6515e1d4-0679-8d8d-def3-49a8248cce86,GPU-788624cb-e366-87a6-49a0-b68bce132106\nNCCL_IB_TC=52\nNCCL_IB_FIFO_TC=84\nPYTORCH_CUDA_ALLOC_CONF=expandable_segments:True\nNCCL_IB_QPS_PER_CONNECTION=4\nVLLM_WORKER_MULTIPROC_METHOD=spawn\nVLLM_LOGGING_LEVEL=INFO\nNCCL_NET=gIB\nNCCL_IB_MERGE_VFS=0\nNCCL_PXN_C2C=1\nNCCL_IB_ADAPTIVE_ROUTING=1\nVLLM_EXECUTE_MODEL_TIMEOUT_SECONDS=1800\nPYTORCH_NVML_BASED_CUDA_CHECK=1\nTORCHINDUCTOR_COMPILE_THREADS=1\nTORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor_root\n```\n\n</details>\n\n### 🐛 Describe the bug\n\nWhen serving Kimi K2 base or DeepSeek v3 base, with the default moe_backend selection of FlashInfer TRTLLM will cause hangs under DP/EP.\nOn the other hand, TP with TRTLLM and DP/EP with triton moe_backend work.\n\nThis issue was not present in 0.20.1. I bisected vLLM releases and found that 0.21.0 introduced this regression; all releases after seem to have this problem. Flashinfer was not bumped between those two versions, still at 0.6.8.post1, so it seems unlikely to be related. I dug into the code changes around the code listed in the py-spy output below, and https://github.com/vllm-project/vllm/pull/39917 touches related files, with https://github.com/flashinfer-ai/flashinfer/issues/4172 reading like a possibly related issue. (FP4 hangs under PDL; the suggestion in the issue is to disable PDL)\n\nWhen py-spying the stuck deployment, roughly 10 minutes into a prefill-heavy load (perplexity eval), it looks like flashinfer::trtllm_fp8_block_scale_moe is hung, either around or at execute_dummy_batch.\nI was unable to verify whether the behavior was crawling or hanging.\n\nHere is a snippet from the py-spy output:\n\n```\nThread 1709 (active): \"MainThread\"\n    trtllm_fp8_block_scale_moe_op (flashinfer/fused_moe/core.py:2410)\n    trtllm_fp8_block_scale_moe (flashinfer/fused_moe/core.py:3775)\n    _auto_dump_wrapper (flashinfer/api_logging.py:2333)\n    _apply_block_scale (vllm/model_executor/layers/fused_moe/experts/trtllm_fp8_moe.py:443)\n    apply (vllm/model_executor/layers/fused_moe/experts/trtllm_fp8_moe.py:531)\n    apply (vllm/model_executor/layers/fused_moe/modular_kernel.py:1565)\n    apply_monolithic (vllm/model_executor/layers/fused_moe/modular_kernel.py:1684)\n    apply_monolithic (vllm/model_executor/layers/quantization/fp8.py:808)\n    forward_monolithic (vllm/model_executor/layers/fused_moe/routed_experts.py:1261)\n    _apply_quant_method (vllm/model_executor/layers/fused_moe/runner/moe_runner.py:596)\n    _forward_impl (vllm/model_executor/layers/fused_moe/runner/moe_runner.py:881)\n    _moe_forward_shared (vllm/model_executor/layers/fused_moe/runner/moe_runner.py:161)\n    __call__ (torch/_ops.py:875)\n    call (c56m5cp27zcdrf7l5yddopf2kwzrm6isk7ytrf7endxdpgadyn5g.py:1226)\n    __call__ (torch/_inductor/output_code.py:763)\n    __call__ (torch/_functorch/_aot_autograd/runtime_wrappers.py:2548)\n    _runtime_wrapper (torch/_functorch/_aot_autograd/subclass_codegen.py:codegen(runtime_wrapper_orchestration):8)\n    runtime_wrapper (torch/_functorch/_aot_autograd/runtime_wrappers.py:1141)\n    forward (torch/_functorch/aot_autograd.py:1277)\n    _fn (torch/_dynamo/eval_frame.py:1446)\n    __call__ (torch/_dynamo/aot_compile_types.py:221)\n    __call__ (torch/_inductor/standalone_compile.py:321)\n    __call__ (vllm/compilation/piecewise_backend.py:380)\n    __call__ (vllm/compilation/cuda_graph.py:254)\n    execution_fn (<string>:1096)\n    __call__ (vllm/compilation/caching.py:217)\n    forward (vllm/model_executor/models/deepseek_v2.py:1433)\n    __call__ (torch/_dynamo/aot_compile.py:244)\n    __call__ (vllm/compilation/decorators.py:520)\n    forward (vllm/model_executor/models/deepseek_v2.py:1900)\n    _call_impl (torch/nn/modules/module.py:1789)\n    _wrapped_call_impl (torch/nn/modules/module.py:1778)\n    __call__ (vllm/compilation/cuda_graph.py:254)\n    _dummy_run (vllm/v1/worker/gpu_model_runner.py:6156)\n    decorate_context (torch/utils/_contextlib.py:124)\n    execute_dummy_batch (vllm/v1/worker/gpu_worker.py:1167)\n    worker_busy_loop (vllm/v1/executor/multiproc_executor.py:1010)\n    worker_main (vllm/v1/executor/multiproc_executor.py:903)\n    run (multiprocessing/process.py:108)\n    _bootstrap (multiprocessing/process.py:314)\n    _main (multiprocessing/spawn.py:135)\n    spawn_main (multiprocessing/spawn.py:122)\n    <module> (<string>:1)\n```\n\nWe reproduced this on vllm/vllm-openai:v0.27.1-cu129 with driver 580.126.20 on GB200.\n\nIt might make sense to change the default moe_backend for these two models to triton or cutlass for the time being to avoid this issue.\n\n### Before submitting a new issue...\n\n- [x] Make sure you already searched for relevant issues, and asked the chatbot living at the bottom right corner of the [documentation page](https://docs.vllm.ai/en/latest/), which can answer lots of frequently asked questions.",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/54723/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/54723/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

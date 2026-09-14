@@ -1,0 +1,17 @@
+TOTAL: 257
+
+[50778] [Bugfix][Elastic EP] Clear scaling flag on failure to prevent permane… | state=open | created=2026-08-02
+[50777] [Bugfix] Default Gemma3TextModel intermediate_tensors to None | state=open | created=2026-08-02
+[50768] [Bug]: Responses API Returns Raw Malformed Kimi Tool Marker as Assistant Text Instead of function_call | state=open | created=2026-08-02
+[50767] [Bug]: override-generation-config silently ignores presence_penalty / frequency_penalty (missing from available_params whitelist) | state=open | created=2026-08-02
+[50766] [Bugfix] serving_llama70B_tp4 benchmark was silently running at tensor_parallel_size=1 | state=open | created=2026-08-02
+[50764] [Bugfix][Frontend] Constrain Anthropic cache_salt to non-empty | state=open | created=2026-08-02
+[50761] [ROCm][Bugfix][Kimi-K3] Preserve MoE correction bias in FP32 | state=closed | created=2026-08-02
+[50760] [Bugfix][Kimi-K3] Cover missing AttnRes warmup profiles | state=open | created=2026-08-02
+[50759] [Bugfix] Skip MoE padding across router paths | state=open | created=2026-08-02
+[50757] [Bugfix] Skip MoE padding across all router paths | state=closed | created=2026-08-02
+[50754] [PD][NixlPush][Bugfix] Notify D of NIXL writes that failed to post so it stops waiting | state=open | created=2026-08-02
+[50753] [Bugfix][Parser] Surface unterminated reasoning as content for deepseek_v4 (fixes #48645) | state=open | created=2026-08-02
+[50752] [Bugfix] Encode special tokens in HF processors for transformers-native mistral-common tokenizers | state=open | created=2026-08-02
+[50747] [Bugfix] Preflight FlashInfer sampler JIT compilability instead of crashing engine warmup | state=closed | created=2026-08-02
+[50746] [Bugfix][Frontend] Reject empty gRPC stop strings | state=open | created=2026-08-02

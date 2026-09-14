@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/50889",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/50889/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/50889/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/50889/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/50889",
+  "id": 5051862758,
+  "node_id": "I_kwDOI7xefs8AAAABLR1O5g",
+  "number": 50889,
+  "title": "[Bug]: Gemma4 tool parser (non-streaming): finish_reason=tool_calls with empty tool_calls array — model's move silently lost under concurrent load",
+  "user": {
+    "login": "MaxParisotto",
+    "id": 147703374,
+    "node_id": "U_kgDOCM3GTg",
+    "avatar_url": "https://avatars.githubusercontent.com/u/147703374?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/MaxParisotto",
+    "html_url": "https://github.com/MaxParisotto",
+    "followers_url": "https://api.github.com/users/MaxParisotto/followers",
+    "following_url": "https://api.github.com/users/MaxParisotto/following{/other_user}",
+    "gists_url": "https://api.github.com/users/MaxParisotto/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/MaxParisotto/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/MaxParisotto/subscriptions",
+    "organizations_url": "https://api.github.com/users/MaxParisotto/orgs",
+    "repos_url": "https://api.github.com/users/MaxParisotto/repos",
+    "events_url": "https://api.github.com/users/MaxParisotto/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/MaxParisotto/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-03T16:12:58Z",
+  "updated_at": "2026-08-03T16:12:58Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Symptom\n\nOn intermittent occasions under concurrent agentic load, a **non-streaming** `/v1/chat/completions` request served with the Gemma4 tool-call parser returns:\n\n- `choices[0].finish_reason == \"tool_calls\"`\n- `choices[0].message.tool_calls == []` (empty array — not null, not missing)\n- `choices[0].message.content` empty or a short prose echo\n\ni.e. the engine *signals* that the model made a tool move, but the parsed calls are lost and the raw text is not surfaced either — the model's move is silently swallowed. An agentic client has nothing to execute and nothing to re-parse.\n\n## Environment\n\n- vLLM **0.26.0**, torch 2.11.0+cu130\n- Model: `google/gemma-4-31B-it-qat-w4a16-ct` (compressed-tensors W4A16; also reproduced on the 26B QAT sibling)\n- 8× GPU, TP8\n- Serve command:\n\n```\nvllm serve google/gemma-4-31B-it-qat-w4a16-ct \\\n  --served-model-name nexa-small \\\n  --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4 \\\n  --tensor-parallel-size 8 --gpu-memory-utilization 0.9 --max-model-len 131072 \\\n  --enable-prefix-caching --enable-chunked-prefill --max-num-seqs 8 \\\n  --enable-prompt-tokens-details --max-num-batched-tokens 8192\n```\n\n## Frequency / conditions\n\nMulti-agent orchestration platform, several concurrent conversations with tool specs (10-40 tools offered per request), long prompts (10k-100k tokens). Roughly **5 occurrences over ~2 days of continuous agentic traffic** (thousands of requests) — rare, but each occurrence breaks the consuming agent's turn (we had to build a client-side typed retry barrier around it).\n\nClient-side capture at the moment of failure (our audit layer): `finish_reason=\"tool_calls\"`, `raw tool_calls=[]`, content head empty/echo. The same request retried immediately usually succeeds, which points at a parser/race condition rather than a prompt problem.\n\n## Possibly related\n\n- #39392 (Gemma4 tool-call-parser produces `<pad>` tokens under concurrent requests) — same parser, also concurrency-correlated, different visible symptom.\n- #44522 (closed — parser leaked raw tokens in streaming). Ours is the non-streaming lane: nothing is leaked; the move disappears entirely.\n\n## Expected behavior\n\nWhen the Gemma4 parser cannot extract any tool call from a completion that triggered the tool-call stop condition, either (a) the raw model text should be preserved in `message.content` so the client can recover, or (b) `finish_reason` should not claim `tool_calls`. `finish_reason=tool_calls` with an empty array and empty content loses the model's output with no recovery path.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/50889/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/50889/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

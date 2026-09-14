@@ -1,0 +1,33 @@
+[DFLASH] Mamba state cache silently caps effective concurrency on hybrid-KDA models — 5 state slots/request, info-level log only (+75% throughput hidden behind one flag)
+## Summary
+On hybrid linear-attention models (GLM-5.3-Flash: 34 KDA layers) with `--speculative-algorithm DFLASH`, each running request needs `1 + speculative_num_draft_tokens` mamba state slots. When the static-memory fraction is tight (large weights relative to VRAM — e.g. a 320B NVFP4 model on 2x DGX Spark), the derived `max_mamba_cache_size` can resolve far below `max_running_requests x (1+D)`, and the scheduler silently caps effective concurrency with only an info-level log line:
+
+```
+max_running_requests is capped to 2 by the mamba state cache (max_mamba_cache_size=10, 5 state slots per request).
+```
+
+Everything else still *looks* like an 8-stream server: `--max-running-requests 8` is accepted, `/get_server_info` reports 8, requests are admitted and queue. The throughput curve flattens at ~2 streams and is easy to misread as a hardware bandwidth ceiling. We shipped exactly that misreading in a published recipe before finding the log line.
+
+## Measured impact (2x DGX Spark GB10, TP=2, GLM-5.3-Flash NVFP4 + DFlash2 drafter, D=5)
+c-sweep, 12 distinct code prompts, 400 max_tokens, temp 0, stream:false, warmed, stock clocks:
+
+| concurrency | capped (10 slots -> 2 streams) | fixed (40 slots) |
+|---|---|---|
+| c1 | 37.3 | 36.9 |
+| c8 | 47.3 | **80.3** (8/8 concurrent) |
+| c12 | 48.8 | **85.4** |
+
++75% aggregate at c12 from configuration alone. The fix on our rig:
+`--max-mamba-cache-size 40 --mamba-ssm-dtype bfloat16 --mem-fraction-static 0.90`
+(bf16 ssm halves the per-slot cost, which is what makes 40 slots fit inside the fraction; measured cost ~6% single-stream decode from shorter accept lengths.)
+
+## Suggestions (any one of these would have saved us a day)
+1. When speculative decoding is enabled, derive the mamba cache floor from `max_running_requests x (1 + num_draft_tokens)` and fail loudly (or warn at WARNING level) if it cannot be met — same spirit as the existing draft-weights accounting in `_profile_available_bytes`.
+2. Or: surface the effective cap in `/get_server_info` (e.g. `effective_max_running_requests`) so operators and load balancers can see the real ceiling.
+3. Docs: a note in the speculative-decoding docs that hybrid-mamba models multiply state-slot cost by (1+D).
+
+Happy to PR any of the three if maintainers have a preference. Full ladder and configs: https://github.com/beastllama/GLM-5.3-Flash-DFlash2-SGLang-2x-DGX-Spark
+
+Env: SGLang @ PR #36507 branch (aa8c950a3 base), 2x DGX Spark (GB10 sm_121, aarch64), CUDA 13, TP=2/nnodes=2.
+Related: #36830 (fp8-KV on GB10), #36507 (GLM-5.3 support).
+

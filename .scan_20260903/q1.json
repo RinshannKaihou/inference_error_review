@@ -1,0 +1,38 @@
+{
+  "total": 3,
+  "items": [
+    {
+      "n": 55193,
+      "t": "[Bug]:  LoRA adapter targeting no configured modules silently serves the base model",
+      "u": "https://github.com/vllm-project/vllm/issues/55193",
+      "s": "open",
+      "c": "2026-09-03T17:47:03Z",
+      "pr": false,
+      "labels": [
+        "bug"
+      ]
+    },
+    {
+      "n": 55125,
+      "t": "[Bug]: --cc.<path>=<value> silently rejected; only -cc short alias works",
+      "u": "https://github.com/vllm-project/vllm/issues/55125",
+      "s": "open",
+      "c": "2026-09-03T10:43:01Z",
+      "pr": false,
+      "labels": []
+    },
+    {
+      "n": 55080,
+      "t": "[Bug]: tool_choice='none' silently deletes tool-call-shaped content",
+      "u": "https://github.com/vllm-project/vllm/issues/55080",
+      "s": "open",
+      "c": "2026-09-03T03:59:58Z",
+      "pr": false,
+      "labels": [
+        "bug",
+        "tool-calling"
+      ]
+    }
+  ],
+  "msg": null
+}

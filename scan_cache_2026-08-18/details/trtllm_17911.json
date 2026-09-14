@@ -1,0 +1,90 @@
+{
+  "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17911",
+  "repository_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM",
+  "labels_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17911/labels{/name}",
+  "comments_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17911/comments",
+  "events_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17911/events",
+  "html_url": "https://github.com/NVIDIA/TensorRT-LLM/issues/17911",
+  "id": 5183933269,
+  "node_id": "I_kwDOKH5No88AAAABNPyLVQ",
+  "number": 17911,
+  "title": "head_size 256 missing from the sm_120 e4m3 kernel enumeration disables fused FP8-KV context FMHA",
+  "user": {
+    "login": "StephenLReed",
+    "id": 3487363,
+    "node_id": "MDQ6VXNlcjM0ODczNjM=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/3487363?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/StephenLReed",
+    "html_url": "https://github.com/StephenLReed",
+    "followers_url": "https://api.github.com/users/StephenLReed/followers",
+    "following_url": "https://api.github.com/users/StephenLReed/following{/other_user}",
+    "gists_url": "https://api.github.com/users/StephenLReed/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/StephenLReed/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/StephenLReed/subscriptions",
+    "organizations_url": "https://api.github.com/users/StephenLReed/orgs",
+    "repos_url": "https://api.github.com/users/StephenLReed/repos",
+    "events_url": "https://api.github.com/users/StephenLReed/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/StephenLReed/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 7799669591,
+      "node_id": "LA_kwDOKH5No88AAAAB0OWDVw",
+      "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/labels/Customized%20kernels",
+      "name": "Customized kernels",
+      "color": "00611d",
+      "default": false,
+      "description": "<NV>Specialized/modified CUDA kernels in TRTLLM for LLM ops, beyond standard TRT. Dev & perf."
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-18T16:15:02Z",
+  "updated_at": "2026-08-18T17:40:15Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "\n### System Info\n\n- TensorRT-LLM: 1.3.0rc23 (built from `f20ea652`); behaviour re-checked against `main` @ `fbda11f5`\n- GPU: NVIDIA GeForce RTX 5090 (sm_120), driver 595.71.05\n- PyTorch 2.11.0+cu130, CUDA 13.0, Python 3.12.13\n- Ubuntu 25.10, kernel 6.17.0-41-generic\n- Backend: PyTorch; single GPU, no TP/PP\n- Model where observed: Qwen3.6-35B-A3B-NVFP4 with FP8 KV cache (where model-specific)\n\n### Who can help?\n\n_No response_\n\n### Reproduction\n\n`cpp/kernels/fmha_v2/setup.py` enumerates sm_120 e4m3→bf16 kernels with\n`head_sizes=[64, 128, 192, 576]`. 256 is absent.\n\nModels with GQA `head_dim == 256` therefore have no fused FP8-KV paged-context FMHA kernel on\nsm_120, and the runtime falls back to an unfused dense context path. Because it is a build-time\nkernel-generation gap rather than a runtime error, it presents as \"prefix caching does not work on\nthis GPU\" with no diagnostic.\n\nServing Qwen3.6-35B-A3B with FP8 KV on RTX 5090 (sm_120):\n\n- the unfused chunked-context path requested a ~626 GB workspace, i.e. KV block reuse was not merely\n  slower but unusable on the card;\n- adding 256 to the enumeration made prefix reuse work — our reuse probe reached 4096/4181 blocks\n  cached across two hosts.\n\n### Expected behavior\n\nA GQA head_dim 256 model uses the fused FP8-KV paged-context FMHA kernel on sm_120, so KV block reuse works.\n\n### actual behavior\n\nNo such kernel is generated for sm_120, so the runtime silently falls back to an unfused dense context path. That path requested a ~626 GB workspace, making KV block reuse unusable on the card. No error is raised.\n\n### additional notes\n\nServing Qwen3.6-35B-A3B with FP8 KV on RTX 5090 (sm_120):\n\n- the unfused chunked-context path requested a ~626 GB workspace, i.e. KV block reuse was not merely\n  slower but unusable on the card;\n- adding 256 to the enumeration made prefix reuse work — our reuse probe reached 4096/4181 blocks\n  cached across two hosts.\n\nAdd `256` to that `head_sizes` list. This enlarges the generated sm_120 kernel set (build time and\nbinary size) and changes no runtime behaviour for other head sizes.\n\nPer CONTRIBUTING.md we are opening this Issue Request before submitting the one-line PR.\n\n**Questions for maintainers**\n\n1. Was 256 omitted deliberately for sm_120 — binary-size budget, or an untested configuration?\n2. If the default sm_120 kernel set should not grow, would you prefer this behind a build flag?\n3. Is there an existing test that would have caught the silent fallback, or should one be added?",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17911/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/NVIDIA/TensorRT-LLM/issues/17911/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

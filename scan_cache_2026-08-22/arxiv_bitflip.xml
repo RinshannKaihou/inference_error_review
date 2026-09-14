@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/yame8Y354W6TR5foVe0adbsnidw</id>
+  <title>arXiv Query: search_query=all:"bit flip" AND all:LLM AND all:inference&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-08-22T23:06:45Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22bit+flip%22+AND+(all:LLM+AND+all:inference)&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>8</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2607.19623v1</id>
+    <title>From Bit-Position Sensitivity to Unequal Error Protection for DNN Inference Memory</title>
+    <updated>2026-07-21T23:07:56Z</updated>
+    <link href="https://arxiv.org/abs/2607.19623v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.19623v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We characterize per-bit-position fault sensitivity in ML inference across 16 workloads -- spanning transformer-based models and attention-free CNNs -- and across three floating-point formats. Our central empirical finding is a sharp bit-sensitivity transition: flipping any of the least-significant fraction bits up to a data-type-specific threshold, Xsafe, degrades task metrics by less than 1% under deterministic single-bit stress tests. Sensitivity rises through the upper fraction bits and spikes at the exponent-mantissa boundary, where a single-bit flip causes catastrophic collapse. Because low-order bits are largely inconsequential while high-order and exponent bits are critical, uniform SECDED protection -- which guards every bit equally at 12.5% storage overhead -- is unnecessarily conservative. We derive per-data-type Xsafe floors (FP16: 6, BF16: 4, FP32: 15) and workload-aware tiers that widen the unprotected region for resilient model classes, raising ECC savings to 37.5-62.5% without retraining. Text-conditioned diffusion models dictate the conservative floor; vision encoders, NLU models, and resilient LLMs tolerate wider bypass regions. These floors and tiers drive an Unequal Error Protection (UEP) codec with per-cacheline data-type tags and a dual-partition SRAM architecture for ML accelerators. Validation across 870+ fault-injection runs confirms selective protection holds under contiguous 2- and 3-bit upsets. The codec reduces ECC area by 27.8% relative to uniform SECDED; dual-voltage operation of the non-critical partition lowers gross BF16 read energy by about 17%, with a roughly 4% dual-partition macro-area overhead.</summary>
+    <category term="cs.AR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-21T23:07:56Z</published>
+    <arxiv:comment>Accepted to appear at the 59th IEEE/ACM International Symposium on Microarchitecture (MICRO 2026). 14 pages</arxiv:comment>
+    <arxiv:primary_category term="cs.AR"/>
+    <author>
+      <name>Muhammad Husnain Mubarik</name>
+    </author>
+    <author>
+      <name>Karthik Mohan Kumar</name>
+    </author>
+    <author>
+      <name>Pedro Antonio Pena</name>
+    </author>
+    <author>
+      <name>Keshavan Varadarajan</name>
+    </author>
+    <author>
+      <name>Kunal Tyagi</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2605.04563v1</id>
+    <title>RangeGuard: Efficient, Bounded Approximate Error Correction for Reliable DNNs</title>
+    <updated>2026-05-06T07:05:30Z</updated>
+    <link href="https://arxiv.org/abs/2605.04563v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2605.04563v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As DRAM scales in density and adopts 3D integration, raw fault rates increase and multi-bit errors are no longer rare. Such errors can severely impact Deep Neural Networks (DNNs): although DNNs tolerate small numerical perturbations, random bit flips can create extreme outliers that propagate and sharply degrade accuracy. Large Language Models (LLMs) are particularly vulnerable because attention, residual, and normalization layers can amplify and preserve a single corrupted activation across many layers, destabilizing inference.
+  This paper introduces RangeGuard, a metadata-centric error-correcting framework that provides strong reliability and high efficiency based on bounded approximate correction. Instead of protecting raw bits, RangeGuard encodes compact Range Identifiers (RIDs) that capture the numerical range of each value. These compact metadata enable efficient use of limited redundancy and concentrate protection on range changes, which indicate harmful semantic deviations, while ignoring benign intra-range variations. Upon detecting a range change, RangeGuard restores the correct range and substitutes a representative value, ensuring that error magnitudes are bounded within the range. Based on RIDs, RangeGuard can tolerate 64+ flipped bits using only 16 bits of parity available in GPU memories without a noticeable accuracy loss. By introducing semantic range protection, RangeGuard enables reliable DNN execution even under frequent memory errors and tight redundancy budgets.</summary>
+    <category term="cs.AR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-05-06T07:05:30Z</published>
+    <arxiv:comment>16 pages, 9 figures. Accepted to the 53rd Annual IEEE/ACM International Symposium on Computer Architecture (ISCA 2026)</arxiv:comment>
+    <arxiv:primary_category term="cs.AR"/>
+    <author>
+      <name>Hanum Ko</name>
+    </author>
+    <author>
+      <name>Sangheum Yeon</name>
+    </author>
+    <author>
+      <name>Jong Hwan Ko</name>
+    </author>
+    <author>
+      <name>Jungrae Kim</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.16382v1</id>
+    <title>Rotated Robustness: A Training-Free Defense against Bit-Flip Attacks on Large Language Models</title>
+    <updated>2026-03-17T11:11:17Z</updated>
+    <link href="https://arxiv.org/abs/2603.16382v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.16382v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Hardware faults, specifically bit-flips in quantized weights, pose a severe reliability threat to Large Language Models (LLMs), often triggering catastrophic model collapses. We demonstrate that this vulnerability fundamentally stems from the spatial alignment between sensitive weight bits and extreme activation outliers, which causes a single hardware fault to be massively amplified. To address this, we propose Rotated Robustness (RoR), a training-free defense utilizing orthogonal Householder transformations. By applying an orthogonal rotation to the activation space, RoR geometrically smooths extreme outliers across all feature dimensions. This mechanism effectively breaks the alignment between outliers and vulnerable weights, mathematically guaranteeing original model accuracy. Extensive empirical evaluations across Llama-2/3, OPT, and Qwen families demonstrate the superior reliability of our approach. Under random bit-flip attacks, RoR reduces the stochastic collapse rate from 3.15\% to 0.00\% on Qwen2.5-7B. Furthermore, under severe targeted attacks with 50 Progressive Bit Search flips, RoR sustains robust reasoning on Llama-2-7B, maintaining a 43.9\% MMLU accuracy that nearly matches its 45.2\% unattacked accuracy, while competing defenses collapse to random guessing. Most notably, against the Single-Point Fault Attack (SPFA) -- the most aggressive targeted threat -- RoR exponentially inflates the attack complexity from a few bits to over 17,000 precise bit-flips. With a negligible storage overhead of 0.31\% and a minimal inference latency increase of 9.1\% on Llama-2-7B, RoR achieves true lossless robustness, providing a practical and highly reliable defense for LLM deployment.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-17T11:11:17Z</published>
+    <arxiv:comment>13 pages, 8 figures. Preprint. Under review at IEEE Transactions on Information Forensics and Security</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Deng Liu</name>
+    </author>
+    <author>
+      <name>Song Chen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2603.10042v1</id>
+    <title>Targeted Bit-Flip Attacks on LLM-Based Agents</title>
+    <updated>2026-03-07T04:57:49Z</updated>
+    <link href="https://arxiv.org/abs/2603.10042v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2603.10042v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Targeted bit-flip attacks (BFAs) exploit hardware faults to manipulate model parameters, posing a significant security threat. While prior work targets single-step inference models (e.g., image classifiers), LLM-based agents with multi-stage pipelines and external tools present new attack surfaces, which remain unexplored. This work introduces Flip-Agent, the first targeted BFA framework for LLM-based agents, manipulating both final outputs and tool invocations. Our experiments show that Flip-Agent significantly outperforms existing targeted BFAs on real-world agent tasks, revealing a critical vulnerability in LLM-based agent systems.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-03-07T04:57:49Z</published>
+    <arxiv:comment>To appear in DAC 2026 (Design Automation Conference)</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Jialai Wang</name>
+    </author>
+    <author>
+      <name>Ya Wen</name>
+    </author>
+    <author>
+      <name>Zhongmou Liu</name>
+    </author>
+    <author>
+      <name>Yuxiao Wu</name>
+    </author>
+    <author>
+      <name>Bingyi He</name>
+    </author>
+    <author>
+      <name>Zongpeng Li</name>
+    </author>
+    <author>
+      <name>Ee-Chien Chang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2512.22174v2</id>
+    <title>BitFlipScope: Scalable Fault Localization and Recovery for Bit-Flip Corruptions in LLMs</title>
+    <updated>2026-04-14T19:51:27Z</updated>
+    <link href="https://arxiv.org/abs/2512.22174v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2512.22174v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) deployed in practical and safety-critical settings are increasingly susceptible to bit-flip faults caused by hardware degradation, cosmic radiation, or deliberate fault-injection attacks such as Rowhammer. These faults silently corrupt internal parameters and can lead to unpredictable or dangerous model behavior. Localizing these corruptions is essential: without identifying the affected region, it is impossible to diagnose the source of degradation, apply targeted corrective measures, or restore model functionality without resorting to costly fine-tuning or full retraining. This work introduces BitFlipScope, a scalable, software-based framework for identifying fault-affected regions within transformer architectures under two deployment scenarios. When a clean reference model is available, BitFlipScope performs differential analysis of outputs, hidden states, and internal activations for detecting anomalous behavior indicative of corruption to pinpoint or localize faults. When no reference model exists, it uses residual-path perturbation and loss-sensitivity profiling to infer the fault-impacted region directly from the corrupted model. In both settings, the framework not only enables effective fault diagnosis but also supports lightweight performance recovery without fine-tuning, offering a practical path to restoring corrupted models. Together, these capabilities make BitFlipScope an important step toward trustworthy, fault-resilient LLM deployment in hardware-prone and adversarial environments.</summary>
+    <category term="cs.DC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-12-18T20:35:29Z</published>
+    <arxiv:comment>Accepted at the IEEE International Symposium on Hardware Oriented Security and Trust (HOST) 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.DC"/>
+    <author>
+      <name>Muhammad Zeeshan Karamat</name>
+    </author>
+    <author>
+      <name>Sadman Saif</name>
+    </author>
+    <author>
+      <name>Christiana Chamon Garcia</name>
+    </author>
+  </entry>
+</feed>

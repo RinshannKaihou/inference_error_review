@@ -1,0 +1,178 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/LcOgqtfikrAs8TsXYwRUWkz/BNE</id>
+  <title>arXiv Query: search_query=all:"bit flip" AND all:LLM OR all:inference&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-09-08T23:03:30Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22bit+flip%22+AND+(all:LLM+OR+all:inference)&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>76</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2608.29745v1</id>
+    <title>JITterFlip: Uncovering Fault Attack Surfaces in JIT-Compiled LLM Serving</title>
+    <updated>2026-08-30T12:16:00Z</updated>
+    <link href="https://arxiv.org/abs/2608.29745v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.29745v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLMs are widely deployed through cloud-hosted inference services, where Just-in-Time (JIT) compilation is used to reduce recurring framework and GPU-launch overhead. JIT serving introduces a host-side control plane that selects compiled artifacts and orchestrates their execution on the GPU. Meanwhile, the shared cloud setting has motivated a growing body of bit-flip attacks (BFAs) against LLM/DNN inference. Most existing BFAs target model parameters or weights and require model-specific knowledge. A smaller body of work reduces this dependency by faulting executable code, yet still corrupts code that directly implements model computation, limiting their attack effect to inference depletion.
+  We present JITterFlip, the first BFA targeting the host-side JIT serving control plane of GPU-based LLM inference. By faulting CPU-resident serving decisions rather than model computation, JITterFlip enables both gibberish output generation and a correct-output sponge attack. To identify exploitable targets in a large JIT compiler stack, JITterFlip develops a decision-guided fault-vulnerable code analysis.
+  Across four text and multimodal LLM workloads, the identified vulnerable code faults exhibit cross-model transferability, produce gibberish outputs with PPL ratios of $15.45\times$ to $2.48{\times}10^{6}\times$, and demonstrate correct-output sponge attacks with latency amplification of $2.03\times$ to $181.90\times$. JITterFlip also bypasses recent BFA defenses for LLMs while retaining both attack effects. Last, we demonstrate end-to-end Rowhammer attacks across four LLMs: a single bit flip in CPU-resident branch code propagates across the CPU-GPU boundary to disrupt GPU-executed inference without direct access to GPU memory, reaching up to $7.23{\times}10^{6}\times$ PPL amplification or $124.97\times$ latency amplification while preserving the exact generated output.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-30T12:16:00Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Tairui Wang</name>
+    </author>
+    <author>
+      <name>Zhi Zhang</name>
+    </author>
+    <author>
+      <name>Yansong Gao</name>
+    </author>
+    <author>
+      <name>Xin Zhang</name>
+    </author>
+    <author>
+      <name>Qingni Shen</name>
+    </author>
+    <author>
+      <name>Zhonghai Wu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.25276v1</id>
+    <title>Groundhog Bit-Flip Attack: Seeding Infinite Generation Loops in Mixture-of-Experts LLMs through Bit Flips</title>
+    <updated>2026-08-26T01:23:01Z</updated>
+    <link href="https://arxiv.org/abs/2608.25276v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.25276v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Mixture-of-Experts (MoE) architectures enable scalable and efficient large language models (LLMs) by selectively activating expert sub-networks through a routing mechanism. However, this adaptive design introduces a new attack surface: specific experts become disproportionately correlated with certain tokens (e.g., end-of-sequence), allowing adversaries to manipulate model behavior via lightweight perturbations. In this work, we present \textbf{Groundhog Bit-Flip Attack (GBFA)}, the first bit-flip-based \textit{ Denial-of-Wallet availability attack} against MoE-based LLMs. By identifying and flipping routing-layer bits associated with related expert activations, we demonstrate that GBFA substantially extends the decoding token usage across three different LLM modes: conversational, reasoning, and agentic tasks, while largely preserving semantic fidelity. Across four main real-world MoE-based LLMs, manually deactivating on average fewer than \textbf{4 experts} drives average output inflation to $\mathbf{5912\%}$, with the majority of test samples reaching max tokens. These results reveal a robustness vulnerability of MoE architectures to bit flip, and highlight the potential of GBFA as an availability attack against LLMs.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-26T01:23:01Z</published>
+    <arxiv:comment>9 pages, 3 figures; Accepted at EMNLP 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Huakang Lin</name>
+    </author>
+    <author>
+      <name>Tiancheng Zheng</name>
+    </author>
+    <author>
+      <name>Mingxuan Sun</name>
+    </author>
+    <author>
+      <name>Tianhong Xu</name>
+    </author>
+    <author>
+      <name>Fan Zhang</name>
+    </author>
+    <author>
+      <name>Yunsi Fei</name>
+    </author>
+    <author>
+      <name>Ruyi Ding</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.23774v1</id>
+    <title>ROBBIN: Rowhammer-Based Backdoor Injection during Inference</title>
+    <updated>2026-08-24T19:09:03Z</updated>
+    <link href="https://arxiv.org/abs/2608.23774v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.23774v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Existing Rowhammer-based inference-time backdoor attacks design their bit-flip strategies purely at the algorithmic level, without accounting for the bit-flips that the underlying DRAM hardware will actually produce. This disconnection between the algorithmic backdoor construction and its hardware realization leads to unreliable attack performance, as collateral bit-flips at unintended locations degrade both the attack success rate (ASR) on triggered inputs and the test accuracy (TA) for normal inputs. Consequently, the performance of such attacks varies significantly across different DRAM devices, as each device presents a unique set of exploitable bit-flip locations. This work presents ROBBIN, a hardware-aware Rowhammer-based backdoor injection attack that integrates the device-specific vulnerability into the backdoor construction process. ROBBIN first characterizes the bit-flip patterns of a target DRAM and uses this information to iteratively select DRAM \textit{page} mappings for the model weights that would maximize ASR while preserving TA under Rowhammering. By treating every hammering-induced bit-flip as an integral part of the attack design rather than first constructing a hardware-agnostic backdoor and dismissing collateral flips as side effects, ROBBIN produces backdoors that remain robust across devices. Evaluated on ResNet-20 and VGG-16 with CIFAR-10 across three commodity DDR4 chips, ROBBIN consistently achieves close to 90\% ASR while maintaining TA above 83\%, demonstrating reliable backdoor efficacy across diverse DRAM devices.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-24T19:09:03Z</published>
+    <arxiv:comment>8 pages and 1 page reference</arxiv:comment>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Saion K. Roy</name>
+    </author>
+    <author>
+      <name>Yufei Wang</name>
+    </author>
+    <author>
+      <name>A. Adam Ding</name>
+    </author>
+    <author>
+      <name>Yunsi Fei</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2608.18404v1</id>
+    <title>Vector Symbolic Policy Gradient</title>
+    <updated>2026-08-19T00:19:26Z</updated>
+    <link href="https://arxiv.org/abs/2608.18404v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2608.18404v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We answer this question with Vector-Symbolic Policy Gradient (VSPG), a discrete-action actor that represents each action by a unit-norm hypervector and scores it by similarity to the encoded state. Under the standard softmax policy-gradient surrogate, we prove that its update is exactly advantage-weighted hypervector bundling followed by normalization, and therefore supports standard advantage estimators. We further show that each trained action hypervector is a fixed-size compressed kernel memory, storing an advantage-weighted kernel expansion over visited states and transferring evidence according to the encoder-induced similarity. This provides a concrete mechanism that can support sample-efficient learning without increasing inference-time memory. Finally, for bipolar action memories, we prove that greedy action selection is stable under random bit flips, with failure probability decaying exponentially in the hypervector dimension. VSPG thus connects VSA action memories, log-linear policy gradients, and kernel policy search while providing a quantitative robustness guarantee.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.SC" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-08-19T00:19:26Z</published>
+    <arxiv:comment>Code available in https://github.com/BiasLabProjects/VSPG</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Ryozo Masukawa</name>
+    </author>
+    <author>
+      <name>Sanggeon Yun</name>
+    </author>
+    <author>
+      <name>SungHeon Jeong</name>
+    </author>
+    <author>
+      <name>Hyunwoo Oh</name>
+    </author>
+    <author>
+      <name>Raheeb Hassan</name>
+    </author>
+    <author>
+      <name>Pietro Mercati</name>
+    </author>
+    <author>
+      <name>Nathaniel D. Bastian</name>
+    </author>
+    <author>
+      <name>Mahdi Imani</name>
+    </author>
+    <author>
+      <name>Mohsen Imani</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2607.25227v1</id>
+    <title>Decision-Level Hijacking: Injecting Cognitive Bias into Large Language Models via Bit-Flip Attacks</title>
+    <updated>2026-07-28T02:59:32Z</updated>
+    <link href="https://arxiv.org/abs/2607.25227v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2607.25227v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Large Language Models (LLMs) have been widely applied in high-stakes decision-making scenarios such as corporate strategy, and users are increasingly relying on their outputs. However, the deep integration of open-source model sharing ecosystems with LLM-powered critical decision-making applications also introduces critical risks: if an attacker can manipulate the model's cognitive stance, they can indirectly influence the judgments and actions of downstream decision-makers. This paper defines such threats as decision-level hijacking. Existing attacks fail to achieve targeted cognitive manipulation without triggering prohibited content or degrading model functionality. To fill this gap, this paper reveals that Bit-Flip Attacks (BFAs) can serve as an attack vector for inducing decision-level hijacking, requiring no real-time interaction or control over the training process, and only a minimal number of weight bits need to be flipped after deployment to achieve stealthy, low-cost, and persistent cognitive manipulation. Therefore, we propose CogBias, a cognitive bias injection framework for LLMs. CogBias converts subjective preferences into optimization signals via a differentiable sentiment evaluator, uses a multi-objective loss to jointly constrain multiple dimensions, and constructs BitScout to locate critical bits, achieving targeted cognitive intervention under an ultra-sparse flip budget. Experiments on Llama-3.2-3B, Mistral-7B, and Qwen2.5-14B, as well as on the commercial recommendation and controversial factual topic scenarios, demonstrate that flipping only a small number of bits stably induces significant stance shifts on target topics, while the impact on non-target tasks and overall output distribution is limited. This work demonstrates that minute perturbations to low-level weight data suffice to undermine the high-level value alignment of LLMs.</summary>
+    <category term="cs.CR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-07-28T02:59:32Z</published>
+    <arxiv:primary_category term="cs.CR"/>
+    <author>
+      <name>Yu Yan</name>
+    </author>
+    <author>
+      <name>Jiahao Chen</name>
+    </author>
+    <author>
+      <name>Siqi Lu</name>
+    </author>
+    <author>
+      <name>Yongjuan Wang</name>
+    </author>
+    <author>
+      <name>Ziming Zhao</name>
+    </author>
+    <author>
+      <name>Zhaoxuan Li</name>
+    </author>
+    <author>
+      <name>Tianyu Du</name>
+    </author>
+    <author>
+      <name>Qingjun Yuan</name>
+    </author>
+    <author>
+      <name>Shouling Ji</name>
+    </author>
+  </entry>
+</feed>

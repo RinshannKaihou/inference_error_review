@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/sgl-project/sglang/issues/37475",
+  "repository_url": "https://api.github.com/repos/sgl-project/sglang",
+  "labels_url": "https://api.github.com/repos/sgl-project/sglang/issues/37475/labels{/name}",
+  "comments_url": "https://api.github.com/repos/sgl-project/sglang/issues/37475/comments",
+  "events_url": "https://api.github.com/repos/sgl-project/sglang/issues/37475/events",
+  "html_url": "https://github.com/sgl-project/sglang/issues/37475",
+  "id": 5316852209,
+  "node_id": "I_kwDOLCAjRs8AAAABPOi58Q",
+  "number": 37475,
+  "title": "[Bug] DFlash target_layer_ids fallback guesses wrong tap layers; count collision fails silently",
+  "user": {
+    "login": "harshal-96",
+    "id": 128535839,
+    "node_id": "U_kgDOB6lNHw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/128535839?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/harshal-96",
+    "html_url": "https://github.com/harshal-96",
+    "followers_url": "https://api.github.com/users/harshal-96/followers",
+    "following_url": "https://api.github.com/users/harshal-96/following{/other_user}",
+    "gists_url": "https://api.github.com/users/harshal-96/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/harshal-96/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/harshal-96/subscriptions",
+    "organizations_url": "https://api.github.com/users/harshal-96/orgs",
+    "repos_url": "https://api.github.com/users/harshal-96/repos",
+    "events_url": "https://api.github.com/users/harshal-96/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/harshal-96/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-01T21:08:26Z",
+  "updated_at": "2026-09-01T21:08:26Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Describe the bug\n\n`DFlashDraftConfig.resolve_target_layer_ids` (`python/sglang/srt/speculative/dflash_utils.py`) falls back to `build_target_layer_ids` when the draft config omits `dflash_config.target_layer_ids`. That fallback can never be correct, and in one case it fails silently:\n\n1. The tap list is a training-time choice baked into the checkpoint: it determines `fc`'s input width and which target layers the drafter was trained to read. It cannot be recomputed at load time.\n2. The reference repo surveyed all 20 published z-lab DFlash/DFlash2 checkpoints (z-lab/dflash#156): every one sets `dflash_config.target_layer_ids`, so the fallback is dead code today, and the formula's guess would be wrong for 14 of 20 if it ever ran.\n3. The dangerous failure mode is a count collision. For `z-lab/Qwen3.8-27B-DFlash2` the formula produces the right number of taps but different layer ids (`[1, 16, 31, 46, 61]` vs the trained `[5, 19, 33, 47, 61]`). Weights load cleanly, nothing errors, and the draft silently reads the wrong target layers, which collapses acceptance. A config missing the key (hand-written config, future checkpoint format change) would hit this with no diagnostic.\n\nThe reference implementation is removing the same helper and making the key required (z-lab/dflash#156, z-lab/dflash#157).\n\n## Reproduction\n\nLoad any DFlash draft config without `dflash_config.target_layer_ids`: `resolve_target_layer_ids` returns formula-guessed ids instead of failing. If the guessed count matches the checkpoint's `fc` width, the model runs with silently wrong context features.\n\n## Environment\n\nCode inspection against current main; the fallback is reachable from both `resolve_target_layer_ids` call sites (`spec_aux_hidden_state.py`, `models/dflash.py`).\n\nI have a fix ready (require the key with a clear error, delete the helper, add CPU regression tests) and will open the PR referencing this issue.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/sgl-project/sglang/issues/37475/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/sgl-project/sglang/issues/37475/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

@@ -1,0 +1,95 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/53330",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/53330/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/53330/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/53330/events",
+  "html_url": "https://github.com/vllm-project/vllm/pull/53330",
+  "id": 5218862663,
+  "node_id": "PR_kwDOI7xefs8AAAABAm8yPQ",
+  "number": 53330,
+  "title": "[Bugfix][KV Offload] Guard P2P supply against consumer demand",
+  "user": {
+    "login": "almogtavor",
+    "id": 70065337,
+    "node_id": "MDQ6VXNlcjcwMDY1MzM3",
+    "avatar_url": "https://avatars.githubusercontent.com/u/70065337?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/almogtavor",
+    "html_url": "https://github.com/almogtavor",
+    "followers_url": "https://api.github.com/users/almogtavor/followers",
+    "following_url": "https://api.github.com/users/almogtavor/following{/other_user}",
+    "gists_url": "https://api.github.com/users/almogtavor/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/almogtavor/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/almogtavor/subscriptions",
+    "organizations_url": "https://api.github.com/users/almogtavor/orgs",
+    "repos_url": "https://api.github.com/users/almogtavor/repos",
+    "events_url": "https://api.github.com/users/almogtavor/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/almogtavor/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5135047172,
+      "node_id": "LA_kwDOI7xefs8AAAABMhKaBA",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 9306392211,
+      "node_id": "LA_kwDOI7xefs8AAAACKrRGkw",
+      "url": "https://api.github.com/repos/vllm-project/vllm/labels/kv-connector",
+      "name": "kv-connector",
+      "color": "4417cb",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 1,
+  "created_at": "2026-08-21T23:05:53Z",
+  "updated_at": "2026-08-22T22:49:01Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "CONTRIBUTOR",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "draft": false,
+  "pull_request": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/pulls/53330",
+    "html_url": "https://github.com/vllm-project/vllm/pull/53330",
+    "diff_url": "https://github.com/vllm-project/vllm/pull/53330.diff",
+    "patch_url": "https://github.com/vllm-project/vllm/pull/53330.patch",
+    "merged_at": null
+  },
+  "body": "## Purpose\n\nAddresses #53083.\n\nIn the PD flow over the P2P secondary tier the producer's supply and the consumer's demand are computed by two independent code paths on two engines, and nothing verifies they agree. When they diverge the consumer's unmatched demand parks until `_LOAD_TIMEOUT_S` and it recomputes the prompt. #52808 and #53062 are two instances of the same weakness, found separately and fixed separately.\n\n#53083 makes the case that this needs a mechanism rather than another point fix: #51840 changed `lookup` to return `HIT_PENDING` instead of `RETRY` when it starts a promotion, and because `HIT_PENDING` keeps the consecutive-hit streak alive in `_sliding_window_lookup`, a change to lookup semantics in one file silently changed which keys the consumer demands. Nothing in the suite noticed.\n\nThis adds three declare-or-fail guards in the style of the `_SCAN_BEHAVIOR` table already on this branch, plus one diagnosability change.\n\n**`_POLICY_KEEPS_PREFIX_HITS`** pins, per `OffloadPolicy`, whether prefix-hit chunks stay in the store path. That is the gate behind #52808: under `BLOCK_LEVEL` the scheduler sets `next_stored_chunk_idx = num_chunks` and a warm producer has nothing left to offer. A new policy has to declare. Combined with `test_on_new_request_policy` on this branch, which pins that a producer leg gets `REQUEST_LEVEL`, the chain holds: a producer leg cannot end up on a policy that skips prefix hits without one of the two failing.\n\n**`_GROUP_STORE_PRUNING`** pins which branch of `get_sliding_window_size_in_chunks` every `KVCacheSpec` resolves to. The function closes with `assert isinstance(kv_cache_spec, FullAttentionSpec)`, so it fails closed, but only at runtime on a model that uses the new type, never in CI. The test enumerates concrete `KVCacheSpec` subclasses, requires each to be declared, and drives the real function on a minimal instance.\n\n**`test_demand_oracle_matches_a_real_lookup_scan`** pins `_demanded_keys` against a real scheduler's lookups. #53083 flags that the oracle reimplements the scan and so can drift along with production rather than pinning it, which is the #51840 failure mode. The test drives a real cold admission with every key resolving `HIT_PENDING` and asserts the keys the scheduler actually looked up are exactly the oracle's set.\n\nThe one production change is in `p2p/session/server.py`. A fetch round that ends with demand unmatched only logged counts at `debug`. It now warns and names the unmatched keys per KV cache group via `get_offload_group_idx`, so a divergence is diagnosable from one log line. In #52808 the timeout path instead printed a `PYTHONHASHSEED` hint that had nothing to do with the failure, and the reporter had to instrument a container and count chunks by hand.\n\n### Stacking\n\nThis is stacked on #52912, whose four commits are included here. **Only `[Bugfix][KV Offload] Guard P2P supply against consumer demand` is mine.** `_demanded_keys` and `_SCAN_BEHAVIOR` are introduced by that PR, so this cannot go against `main` until it lands. Kept as a draft until then.\n\n## Test Plan\n\n```bash\n.venv/bin/python -m pytest tests/v1/kv_connector/unit/offloading_connector -q\n```\n\nEach guard was mutation-checked, since a guard that cannot fail is decoration:\n\n| mutation | expected | result |\n|---|---|---|\n| production stops skipping prefix hits under `BLOCK_LEVEL` | policy table fails | `FAILED ...[OffloadPolicy.BLOCK_LEVEL]` |\n| a new `AttentionSpec` subclass appears | spec table fails | `FAILED ...[_NewFangledAttentionSpec]` |\n| the oracle scans with the wrong window | oracle guard fails | `FAILED ...[True]` |\n| the oracle drops its `[:num_chunks]` slice | oracle guard fails | `FAILED ...[True]` |\n\n## Test Result\n\nRun on one H100, `vllm/vllm-openai` container, source overlaid on this branch.\n\n`tests/v1/kv_connector/unit/offloading_connector` and `tests/v1/kv_offload/tiering` together: 684 passed on the branch without this commit, 701 passed with it, plus the same 2 pre-existing `test_fs_tier.py` failures on both sides (they need writable paths in this container). No test changes state because of this PR.\n\n`ruff check` and `ruff format --check` (v0.14.0) pass on both changed files.\n\n## What this does not cover\n\n- Rows 4 and 6 of the divergence table in #53083 are examined below but not fixed here.\n- The tier-level supply invariant, driven through a real `TieringOffloadingManager` rather than a `MagicMock`, is not here. That one is in #53329, where it doubles as the regression test for #53062.\n- Demand-driven serving for the PD leg, raised as the long-term direction in the #52912 discussion, is a design change and deliberately out of scope.\n\n## Following up on the divergence table\n\n### Row 4, `prepare_store` returning None, is self-healing\n\nOn a primary allocation failure the scheduler logs and `continue`s **without** calling `advance_stored_idx`, so `next_stored_chunk_idx` stays put and the same chunks are re-offered on a later step. `advance_stored_idx` has exactly two call sites (`scheduler.py:1323` and `:1337`), neither on this path. This is the opposite shape from #53062, where the index does advance and the key is stranded. The residual exposure is only that a request can finish while primary is still full, after which nothing retries.\n\n### Row 6 is real but narrow, and only bites through `max_offload_tokens`\n\nThe store side truncates in `_calc_num_offloadable_tokens`; the demand side starts from `max_hit_size_tokens = req_status.req.num_tokens` in `_lookup_complete_chunks` and never consults either cap. Taking the two settings separately:\n\n- `offload_prompt_only` does not diverge. It clamps the store to `num_prompt_tokens`, and a consumer's demand at admission is over its prompt with nothing generated yet, so supply covers demand either way.\n- `max_offload_tokens` does diverge. It is per-request, read from that request's own `kv_transfer_params`, and nothing propagates it from the producer leg to the consumer leg on the other engine. A producer that caps below its prompt length supplies fewer chunks than the consumer demands, and since a PD fetch round only completes when nothing is left demanded, the result is not a smaller hit but a full `_LOAD_TIMEOUT_S` stall and a recompute.\n\nThat asymmetry seems worth naming: for local offloading the cap degrades gracefully, and for PD it turns into a hard failure. It is marked experimental in the code, so this may be known.\n\n### Correction on `UniformTypeKVCacheSpecs`\n\nAn earlier revision of this description flagged it as reachable. **That was wrong**, and the table comment now records why. `generate_scheduler_kv_cache_config` (`kv_cache_utils.py:1848`) replaces the wrapper with a representative per-layer spec before the scheduler config is built, and `EngineCore` passes that config to the connector. Only the worker side keeps the wrapper, which is exactly why `worker.py` and `canonical_mapping.py` branch on it and the scheduler path does not. It stays in the table as `None` because it is a concrete `KVCacheSpec` subclass and the exhaustiveness check demands every one be declared, not because it is a latent bug.\n\n### `RSWASpec`: checked and cleared\n\nAn earlier revision of this description claimed R-SWA was a third instance of the\nsame class. **That was wrong too, and it is worth recording why so nobody\nre-derives it.** Every individual link is real:\n\n1. `RSWASpec` subclasses `FullAttentionSpec`, so the group declares no store pruning.\n2. `RSWAManager.remove_skipped_blocks` frees gap blocks and replaces them with `null_block`, whose id is 0.\n3. `_build_store_jobs` drops chunks whose block id is 0.\n4. `RSWAManager` overrides only `remove_skipped_blocks`, so the load path scans the group as a contiguous prefix.\n5. A PD consumer's `lookup` returns an unconditional `HIT`, so that scan never breaks at a hole.\n\nWhat I had not checked is whether steps 2 and 3 can co-occur in time. They cannot.\nA chunk becomes storable exactly when it fills, at `(i + 1) * tokens_per_chunk`\ncomputed tokens, while R-SWA can only null block `i` once the decode window has\nmoved strictly past its end. Storability necessarily precedes nulling, so the\nnull-block filter never sees a gap chunk.\n\nMeasured on one H100 by driving a real `Scheduler` with an `RSWASpec` group and\nrecording, per chunk, the step it was offered to `prepare_store` against the step\nits block became null. `RSWAManager` does null blocks (final block table\n`[1, 2, 0, 0, 0, 0, 7, 8]`), and every chunk is still stored first:\n\n| config | result |\n|---|---|\n| `rswa_window=16`, prompt 32, decode 96 | 8/8 stored before null |\n| `rswa_window=1` (fastest possible slide) | 8/8 stored before null |\n| `rswa_window=1`, prompt 16, decode 160 | 11/11 stored before null |\n| `rswa_window=64`, decode 240 | 16/16 stored before null |\n\nIn the `rswa_window=1` case the margin is a consistent 3 steps: chunk `i` is\noffered at step `16i` and nulled at step `16i + 3`.\n\nI also tried to invert the ordering by deferring the store, simulating a full\nprimary tier so `prepare_store` returns `None` for the first 40 and then 70 steps,\nwell past when those blocks are nulled. All 8 chunks are still stored, because\nthe connector's `group_state.block_ids` is captured at allocation and is not\nrewritten when the scheduler nulls a block.\n\nSo R-SWA is fine, and `_GROUP_STORE_PRUNING` declaring it under the\n`FullAttentionSpec` branch is correct rather than merely current behavior.\n\nAI assistance was used for this change.\n\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/53330/reactions",
+    "total_count": 2,
+    "+1": 1,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 1
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/53330/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null
+}

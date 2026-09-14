@@ -1,0 +1,100 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55723",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55723/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55723/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55723/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/55723",
+  "id": 5385915709,
+  "node_id": "I_kwDOI9Wqc88AAAABQQaNPQ",
+  "number": 55723,
+  "title": "[Bug] ttnn.expm1_bw returns a zero gradient for x <= -6.25 (bf16) / -17 (fp32): the derivative is built as expm1(x) + 1",
+  "user": {
+    "login": "badnikhil",
+    "id": 72620320,
+    "node_id": "MDQ6VXNlcjcyNjIwMzIw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/72620320?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/badnikhil",
+    "html_url": "https://github.com/badnikhil",
+    "followers_url": "https://api.github.com/users/badnikhil/followers",
+    "following_url": "https://api.github.com/users/badnikhil/following{/other_user}",
+    "gists_url": "https://api.github.com/users/badnikhil/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/badnikhil/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/badnikhil/subscriptions",
+    "organizations_url": "https://api.github.com/users/badnikhil/orgs",
+    "repos_url": "https://api.github.com/users/badnikhil/repos",
+    "events_url": "https://api.github.com/users/badnikhil/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/badnikhil/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 6471843668,
+      "node_id": "LA_kwDOI9Wqc88AAAABgcB_VA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/op_cat:%20eltwise",
+      "name": "op_cat: eltwise",
+      "color": "8555FE",
+      "default": false,
+      "description": "Eltwise operations"
+    },
+    {
+      "id": 7139963093,
+      "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+      "name": "community",
+      "color": "2DEB44",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-08T11:08:25Z",
+  "updated_at": "2026-09-08T11:57:11Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "parent_issue_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55250",
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Describe the bug\n\n`ttnn.expm1_bw` returns a gradient of exactly `0` for every input below `-6.25` in bfloat16 and `-17` in float32, although `d/dx expm1(x) = exp(x)` is an ordinary normal float all the way down to `x = -87.34`, where it is still `1.2e-37`.\n\nThe composite builds the derivative out of the forward result instead of calling `exp`\n([`unary_backward.cpp#L1334-L1343`](https://github.com/tenstorrent/tt-metal/blob/main/ttnn/cpp/ttnn/operations/eltwise/unary_backward/unary_backward.cpp#L1334-L1343)):\n\n```cpp\n// bw(expm1) = grad * expm1(input) + 1\nstd::vector<Tensor> expm1_bw(\n    const Tensor& grad, const Tensor& input, const std::optional<MemoryConfig>& output_mem_config) {\n    std::vector<Tensor> grad_tensor;\n    Tensor eresult = ttnn::expm1(input, output_mem_config);\n    Tensor rp1 = ttnn::add(eresult, 1.0f, std::nullopt, output_mem_config);\n    Tensor result = ttnn::multiply(grad, rp1, std::nullopt, output_mem_config);\n    grad_tensor.emplace_back(result);\n    return grad_tensor;\n}\n```\n\n`expm1(x) + 1` equals `exp(x)` in exact arithmetic only. `expm1(x)` tends to `-1` from above and rounds to **exactly** `-1` as soon as `exp(x)` falls below half an ULP of `1` — below `2^-9` for bfloat16 and `2^-25` for float32. The `+ 1` then cancels completely and the entire gradient is lost. This is the cancellation `expm1` exists to avoid, reintroduced in the one place where plain `exp` was what was wanted.\n\n### Repro\n\n```python\nimport torch, ttnn\n\ndevice = ttnn.open_device(device_id=0)\nx = torch.tensor([[-5.0, -10.0, -17.0, -20.0, -30.0, -60.0, -85.0]], dtype=torch.float32)\nt = ttnn.from_torch(x, dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\ng = ttnn.from_torch(torch.ones_like(x), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\n\nprint(ttnn.to_torch(ttnn.expm1_bw(g, t)[0]))\n# tensor([[6.7379e-03, 4.5419e-05, 0., 0., 0., 0., 0.]])\nprint(torch.exp(x.double()))\n# tensor([[6.7379e-03, 4.5400e-05, 4.1399e-08, 2.0612e-09, 9.3576e-14, 8.7565e-27, 1.2161e-37]])\n```\n\n### Observed vs expected\n\nfloat32, gradient `1`, golden `exp(x)` in float64. ULP is the integer distance between float32 bit patterns:\n\n| input | got | want | ULP |\n|---|---|---|---|\n| -5 | 0.006737947 | 0.006737947 | 1 |\n| -10 | 4.541874e-05 | 4.539993e-05 | 5,170 |\n| -17 | **0** | 4.139938e-08 | 858,902,297 |\n| -20 | **0** | 2.061154e-09 | 822,977,587 |\n| -30 | **0** | 9.357623e-14 | 701,675,270 |\n| -60 | **0** | 8.756511e-27 | 338,522,313 |\n| -85 | **0** | 1.216099e-37 | 36,013,792 |\n\nbfloat16, gradient `1`, ULP between bfloat16 bit patterns:\n\n| input | got | want | ULP |\n|---|---|---|---|\n| -3 | 0.05078125 | 0.04980469 | 4 |\n| -4 | 0.01953125 | 0.01831055 | 10 |\n| -6.25 | **0** | 0.001930237 | 15,101 |\n| -6.28125 | **0** | 0.001869202 | 15,093 |\n| -10 | **0** | 4.529953e-05 | 14,398 |\n| -40 | **0** | 4.255494e-18 | 8,861 |\n| -85 | **0** | 1.219575e-37 | 550 |\n\nThe relative error over the zeroed band is 100%. The rows above the threshold show the same cancellation in a milder form: at `x = -10` in float32 the gradient is already 5,170 ULP off.\n\n### Affected input range\n\nAll 65,536 bfloat16 bit patterns as the input, gradient `1`, counting inputs whose exact gradient is a normal float but whose result is exactly zero (subnormal inputs and gradients outside the float32 normal range excluded):\n\n| dtype | zeros where the golden is normal | affected range | max ULP | mean ULP |\n|---|---|---|---|---|\n| bfloat16 | 487 | `[-87, -6.25]` | 15,101 | 105.29 |\n| float32 | 295 | `[-87, -17]` | 858,902,297 | 3,266,830 |\n\n### Which architectures\n\nAll of them. `expm1_bw` is a host-side composite in `ttnn/cpp/ttnn/operations/eltwise/unary_backward/unary_backward.cpp`, so Wormhole and Blackhole build the same op graph and produce the same values.\n\n### How it was verified\n\nttsim Blackhole v1.10.6 (`TT_METAL_SIMULATOR=libttsim_bh.so`, slow dispatch). Exhaustive sweep of all 65,536 bfloat16 bit patterns as the input with an all-ones gradient, in both bfloat16 and float32, against `exp(x)` evaluated in float64. Subnormal inputs (flushed by the hardware) and gradients outside the float32 normal range are excluded.\n\n`test_backward_expm1.py::test_bw_expm1` does not catch it: it draws inputs from `[-10, 10]` and asserts PCC only, which the large positive values dominate.\n\n![expm1_bw before/after](https://raw.githubusercontent.com/badnikhil/tt-metal/pr-assets/tt-metal-expm1-bw.png)\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55723/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55723/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

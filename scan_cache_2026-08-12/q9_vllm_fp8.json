@@ -1,0 +1,232 @@
+{
+  "total": 114,
+  "items": [
+    {
+      "num": 52050,
+      "title": "[Bugfix] Fall back to FA2 for Blackwell head-dim-256 paged attention",
+      "state": "open",
+      "created": "2026-08-12T21:30:39Z",
+      "labels": [
+        "bug",
+        "ready",
+        "multi-modality"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52050"
+    },
+    {
+      "num": 52030,
+      "title": "[Bugfix] Fix packed GDN decode launch for large batch-head grids",
+      "state": "open",
+      "created": "2026-08-12T17:44:32Z",
+      "labels": [
+        "bug",
+        "ready"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52030"
+    },
+    {
+      "num": 52013,
+      "title": "[Bugfix][Qwen3.5-MTP] Load a dedicated mtp.lm_head draft head",
+      "state": "open",
+      "created": "2026-08-12T15:39:47Z",
+      "labels": [
+        "bug",
+        "qwen"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52013"
+    },
+    {
+      "num": 52012,
+      "title": "[Bugfix] Remap ModelOpt q_scale to attn.q_scale",
+      "state": "open",
+      "created": "2026-08-12T15:39:38Z",
+      "labels": [
+        "bug",
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52012"
+    },
+    {
+      "num": 52002,
+      "title": "[Bugfix] compressed-tensors: restore int8 grouped WNA16 MoE support",
+      "state": "open",
+      "created": "2026-08-12T14:34:09Z",
+      "labels": [
+        "bug",
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52002"
+    },
+    {
+      "num": 51972,
+      "title": "[BugFix] Clamp indexer scheduler-metadata seq_lens to avoid OOB read in DeepGEMM paged-MQA metadata kernel",
+      "state": "open",
+      "created": "2026-08-12T09:16:29Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51972"
+    },
+    {
+      "num": 51971,
+      "title": "[Bug]: Qwen3 MoE GPTQ `qzeros` shape mismatch on ROCm gfx1201",
+      "state": "open",
+      "created": "2026-08-12T09:16:10Z",
+      "labels": [
+        "bug",
+        "rocm",
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51971"
+    },
+    {
+      "num": 51964,
+      "title": "[Bug]:amd mi308x gpu, vllm 0.27.0~0.27.1, rocm 7.2.3, Kimi-K2.7-Coder start fails:AssertionError: mla_gluon requires gfx950 (CDNA4), got gfx942",
+      "state": "open",
+      "created": "2026-08-12T08:49:47Z",
+      "labels": [
+        "bug",
+        "rocm",
+        "kimi"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51964"
+    },
+    {
+      "num": 51962,
+      "title": "[Bugfix][Model] Reuse CUDA segments when loading Inkling expert weights",
+      "state": "open",
+      "created": "2026-08-12T08:44:27Z",
+      "labels": [
+        "bug",
+        "nvidia"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51962"
+    },
+    {
+      "num": 51957,
+      "title": "[Bug][ROCm]: AITER FP8 BMM segfaults with data parallel attention",
+      "state": "open",
+      "created": "2026-08-12T08:25:57Z",
+      "labels": [
+        "bug",
+        "rocm"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/51957"
+    },
+    {
+      "num": 51953,
+      "title": "[Bugfix][MRV2] Fix DiffusionGemma runtime OOM via tiled logits projection",
+      "state": "open",
+      "created": "2026-08-12T08:18:41Z",
+      "labels": [
+        "bug",
+        "mrv2"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51953"
+    },
+    {
+      "num": 51951,
+      "title": "[Bugfix][Model] Fix Inkling NVIDIA sconv cache block-size mismatch",
+      "state": "open",
+      "created": "2026-08-12T08:14:23Z",
+      "labels": [
+        "bug",
+        "nvidia"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51951"
+    },
+    {
+      "num": 51946,
+      "title": "[Bugfix] DeepSeek-V4: pick e8m0 expert-scale representation per desti…",
+      "state": "open",
+      "created": "2026-08-12T07:42:44Z",
+      "labels": [
+        "bug",
+        "deepseek"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51946"
+    },
+    {
+      "num": 51915,
+      "title": "[ROCm][Model][Bugfix] Enable GLM-5.2-MXFP4 on the deepseek_v32 path and fix sparse attention correctness",
+      "state": "open",
+      "created": "2026-08-12T02:59:15Z",
+      "labels": [
+        "bug",
+        "rocm",
+        "deepseek"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51915"
+    },
+    {
+      "num": 51872,
+      "title": "[Bugfix][Triton] Make fp8_min/fp8_max constexpr in _quantize_pad_fp8_kernel",
+      "state": "closed",
+      "created": "2026-08-11T20:16:49Z",
+      "labels": [
+        "bug",
+        "ready",
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51872"
+    },
+    {
+      "num": 51852,
+      "title": "[Bugfix] Give CPU attention layers their own metadata when head counts differ",
+      "state": "open",
+      "created": "2026-08-11T17:18:34Z",
+      "labels": [
+        "bug",
+        "cpu"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51852"
+    },
+    {
+      "num": 51849,
+      "title": "[Bugfix] Reject FLASH_ATTN for fp8 KV cache when local attention forces FA2 fallback",
+      "state": "open",
+      "created": "2026-08-11T16:46:53Z",
+      "labels": [
+        "bug",
+        "nvidia"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51849"
+    },
+    {
+      "num": 51837,
+      "title": "[Bugfix][ROCm] Give KV-first attention blocks their own page in hybrid models",
+      "state": "closed",
+      "created": "2026-08-11T15:20:16Z",
+      "labels": [
+        "bug",
+        "rocm",
+        "ready-run-all-tests",
+        "mrv2"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51837"
+    },
+    {
+      "num": 51835,
+      "title": "[Bugfix][Spec Decode] Restore DeepSeek-V4 DSpark draft quantization",
+      "state": "open",
+      "created": "2026-08-11T15:04:20Z",
+      "labels": [
+        "bug",
+        "deepseek",
+        "quantization"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51835"
+    },
+    {
+      "num": 51824,
+      "title": "[Bugfix] vLLM crashes at startup when DeepEP v2 is used with `--enforce-eager` wiht TRTLLM Bf16",
+      "state": "open",
+      "created": "2026-08-11T13:42:07Z",
+      "labels": [
+        "bug",
+        "nvidia"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/51824"
+    }
+  ]
+}

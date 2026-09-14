@@ -1,0 +1,226 @@
+{
+  "total": 256,
+  "items": [
+    {
+      "num": 52058,
+      "title": "[Bugfix] Bound KV block zeroing launch geometry",
+      "state": "open",
+      "created": "2026-08-12T22:01:44Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52058"
+    },
+    {
+      "num": 52055,
+      "title": "[Bugfix] Handle HarmonyError in process_chunk to fix gpt-oss streaming 500s",
+      "state": "open",
+      "created": "2026-08-12T21:45:49Z",
+      "labels": [
+        "bug",
+        "tool-calling",
+        "gpt-oss"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52055"
+    },
+    {
+      "num": 52054,
+      "title": "[Bugfix][V1] Chunk prompt-logprobs logits to bound the activation peak",
+      "state": "open",
+      "created": "2026-08-12T21:45:27Z",
+      "labels": [
+        "bug",
+        "mrv1-only"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52054"
+    },
+    {
+      "num": 52050,
+      "title": "[Bugfix] Fall back to FA2 for Blackwell head-dim-256 paged attention",
+      "state": "open",
+      "created": "2026-08-12T21:30:39Z",
+      "labels": [
+        "bug",
+        "ready",
+        "multi-modality"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52050"
+    },
+    {
+      "num": 52049,
+      "title": "[Bug]: Gemma 4 31B MTP - Slower T/S at high context",
+      "state": "open",
+      "created": "2026-08-12T21:24:05Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/52049"
+    },
+    {
+      "num": 52048,
+      "title": "[Bugfix] Add DeepseekV4ForCausalLM to benchmark_moe.py model param dispatch",
+      "state": "closed",
+      "created": "2026-08-12T21:09:52Z",
+      "labels": [
+        "bug",
+        "performance",
+        "deepseek"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52048"
+    },
+    {
+      "num": 52047,
+      "title": "[Bugfix][AMD] Annotate draft KV cache groups on the hybrid grouping path",
+      "state": "open",
+      "created": "2026-08-12T21:08:09Z",
+      "labels": [
+        "bug",
+        "rocm"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52047"
+    },
+    {
+      "num": 52045,
+      "title": "[Bugfix][CPU] Workaround contradictory mamba validation after CPU MLA disables prefix caching",
+      "state": "open",
+      "created": "2026-08-12T20:54:58Z",
+      "labels": [
+        "bug",
+        "cpu",
+        "kimi"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52045"
+    },
+    {
+      "num": 52044,
+      "title": "[Bugfix] Handle DeepseekV4ForCausalLM in benchmark_moe get_model_params",
+      "state": "open",
+      "created": "2026-08-12T20:54:27Z",
+      "labels": [
+        "bug",
+        "performance",
+        "deepseek"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52044"
+    },
+    {
+      "num": 52042,
+      "title": "[Bug]: AttributeError: 'DeepseekV4Config' object has no attribute 'num_local_experts' / vllm 0.27.1 / DeepSeek-V4-Flash-0731",
+      "state": "open",
+      "created": "2026-08-12T20:25:18Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/52042"
+    },
+    {
+      "num": 52039,
+      "title": "[Bugfix] Fix collect_env.py crash when pip list command fails",
+      "state": "open",
+      "created": "2026-08-12T19:14:16Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52039"
+    },
+    {
+      "num": 52036,
+      "title": "[Bugfix] VLLM 0.27.0 has not been fixed MiniCPM-V-4.6 startup fails",
+      "state": "open",
+      "created": "2026-08-12T18:50:54Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52036"
+    },
+    {
+      "num": 52030,
+      "title": "[Bugfix] Fix packed GDN decode launch for large batch-head grids",
+      "state": "open",
+      "created": "2026-08-12T17:44:32Z",
+      "labels": [
+        "bug",
+        "ready"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52030"
+    },
+    {
+      "num": 52028,
+      "title": "[Bugfix] Pin DeepEP by its full commit hash",
+      "state": "closed",
+      "created": "2026-08-12T17:31:10Z",
+      "labels": [
+        "bug",
+        "ready"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52028"
+    },
+    {
+      "num": 52027,
+      "title": "[Bug]:  logs from a parser loaded with --tool-parser-plugin bypass vLLM's logging config",
+      "state": "open",
+      "created": "2026-08-12T17:27:22Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/52027"
+    },
+    {
+      "num": 52026,
+      "title": "  [Bugfix][Frontend] Import parser plugins under the vllm.* namespace so their logs survive",
+      "state": "open",
+      "created": "2026-08-12T17:19:19Z",
+      "labels": [
+        "bug",
+        "tool-calling"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52026"
+    },
+    {
+      "num": 52025,
+      "title": "[Bug]:  Rust frontend renders caller-supplied chat templates with no evaluation budget: a 116-byte request body costs 55 CPU-seconds",
+      "state": "open",
+      "created": "2026-08-12T17:11:53Z",
+      "labels": [
+        "bug"
+      ],
+      "url": "https://github.com/vllm-project/vllm/issues/52025"
+    },
+    {
+      "num": 52021,
+      "title": "[Bugfix] Preserve Anthropic disable_parallel_tool_use",
+      "state": "open",
+      "created": "2026-08-12T16:49:55Z",
+      "labels": [
+        "bug",
+        "frontend",
+        "ready"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52021"
+    },
+    {
+      "num": 52020,
+      "title": "[Bugfix][Structured Outputs] Reject empty JSON schemas",
+      "state": "open",
+      "created": "2026-08-12T16:41:18Z",
+      "labels": [
+        "bug",
+        "documentation",
+        "structured-output",
+        "rust"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52020"
+    },
+    {
+      "num": 52014,
+      "title": "[Bugfix][KVConnector][MoRIIO] Fix MoRIIO port collisions for deployments using both DP and TP",
+      "state": "open",
+      "created": "2026-08-12T15:51:54Z",
+      "labels": [
+        "bug",
+        "kv-connector"
+      ],
+      "url": "https://github.com/vllm-project/vllm/pull/52014"
+    }
+  ]
+}

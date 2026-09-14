@@ -1,0 +1,11 @@
+#### PR #54098 fix(ttnn): fix ttnn.remainder incorrect results for large ratios
+STATE:open merged:no
+Fixes #54048.
+
+The sfpu remainder kernel truncates the float quotient estimation and performs a single `-1` overshoot correction. However, for large dividend/divisor ratios (> 2^23), floating point rounding in the initial estimate can overshoot by more than 1. This leaves the result negative, which caused the iterative correction loop to be bypassed completely (since it only checked `v >= s`).
+
+This PR:
+1. Moves the iterative cleanup loop to evaluate **before** the sign logic is applied, so we correct the absolute magnitude.
+2. Adds a `v_elseif(v < 0.0f) { v = v + s; }` path to the loop, which allows the kernel to walk a negative error back into the valid `[0, s)` range (fixing cases where the quotient estimation error was deeply negative).
+3. Adds a regression test covering the `2^23` ratio overflow described in the issue.
+

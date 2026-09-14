@@ -1,0 +1,42 @@
+### Summary
+The vLLM model tests `GPT-OSS-120B (high-throughput)` and `GPT-OSS-120B (low-latency)` on `wh_galaxy_perf` fail their structured-output step on every scheduled run that reaches it. This is not a 09-08 → 09-10 regression: the `correct_rate == 100.0` gate has never passed in the three weeks of available logs (HT 90.6 to 96.9 % on 08-21, 08-23, 08-27, 08-28, 08-29, 08-31, 09-02, 09-04, 09-08, 09-10; LL 15.6 to 37.5 % or stalled on 08-27, 08-28, 08-30, 08-31, 09-02, 09-03, 09-04, 09-05, 09-09, 09-10). `models/demos/gpt_oss` has no commit since 08-26 and the plugin moved f699547 → bef89e42 → c9cfebcf with no change in the rate. The "✅ Structured output passed" strings in some logs are the script's own echo text, not results.
+
+The `openai_harmony.HarmonyError: channel marker present but no channel value found in header` lines are a messenger. Every failing sample is a request whose generated tokens **after the correct prefill-sampled `<|channel|>`** are garbage (word-repetition loops such as `cosmos cosmos cosmos`, `... ... ...`, `We\nWe\nWe`). Same cause on both legs; LL is about 6x worse than HT.
+
+### What the failing samples contain (verified from job logs 102697371699 HT and 102697371594 LL, 2026-09-10, plus 22 earlier GPT-OSS logs)
+- Two bins, both from the same upstream event. `output_len 0`: vLLM's `chat_completion_stream_generator` (`serving.py` around line 829) caught the `HarmonyError` mid-stream, emitted an error chunk and `[DONE]`, and the benchmark client counted the request as successful with empty text. Visible garbage (186 to 1022 tokens, some `<|return|>`-terminated): the model never emitted `<|message|>`, so `HarmonyParser.flush()` returned the raw decoded tokens ("parser ended in a non-terminal state", 8 times in the LL log).
+- Mechanism in `openai/harmony` `src/encoding.rs` (parse_header_from_string / parse_header_from_tokens): the parser sits in the Header state until `<|message|>`; the channel value is the text after `<|channel|>` up to the first whitespace or `<`. A first decode token that begins with a space gives an empty value ("channel marker present but no channel value found"); any other garbage gives "unexpected tokens remaining in message header". No token merge or split, stop-token or chunk-boundary problem is involved.
+- The JSON grammar never engages for these requests: with `reasoning_parser='openai_gptoss'` the bitmask is applied only once the `final` channel appears, so the garbage is unconstrained text rather than malformed JSON. That is why these look like harmony errors and not digest mismatches.
+- Several LL garbage streams recover into coherent, on-task text hundreds of tokens later (one ends with a well-formed JSON block), so the prompt is still in context; the corruption is around the start of decode, not a permanently wrong prompt KV.
+- HT failures are almost always among the first six requests admitted (22 of 23 failing indices are <= 5), which with the plugin's round-robin lane pick are the lane-local slot 0/1 users of a mesh row, decoding inside a healthy 32-user batch. In LL every request is batch 1 and about 70 % fail across all indices.
+- Sampling: the benchmark sets no temperature and `generation_config.json` has none, so T = 1.0, top_p = 1.0. Random sampling explains variety among correct outputs, not 1000-token single-word loops.
+- Host sampling is forced for every structured request: `check_perform_device_sampling` returns False when `has_structured_outputs` (tenstorrent/vllm#277), so despite `sample_on_device_mode: all` the whole structured step runs the host-logits decode variant (`trace_ids_decode[False]`) with a full padded-vocab logits readback per step. It is the only step in either GPT-OSS job that checks output content at all.
+
+### Controlled contrast
+The same model build (max_batch_size 1, `users_row_sharded=False`, non-throughput experts), paged and traced, with greedy on-device sampling, is fully coherent in the Tier 1 e2e job `GPT-OSS 120B e2e tests [wh_galaxy_perf]` (`text_demo.py` `prefill_128` and `batch128`) on 09-08 (job 101918474038) and 09-09 (102315832610) on the same runner pool. So the forward pass and decode trace are fine when driven by the demo; the corruption needs something the vLLM structured path adds: the host-logits decode trace variant, host sampling of the full logits at T = 1.0, request turnover with KV block reuse, and for HT 32 sequential single-user traced prefills before the first decode.
+
+### What static inspection ruled out
+Line-by-line audits of the plugin's async-scheduling / host-sampling ordering and bitmask timing, the prefill → decode handoff and KV placement, the LL decode output assembly, and the MoE combine (sparse_matmul outputs are zero-filled, which refutes a stale-L1 hazard) found no defect.
+
+### Root-cause candidates (inferred; none provable without hardware), ranked H1 >= H2 > H3 > H4 for LL, H1 ~ H4 for HT
+- H1: the host-logits decode path (`trace_ids_decode[False]` plus full-logit readback), the one device path only the structured step exercises.
+- H2: request-turnover device state (decode of request k → single-user traced prefill of k+1 → first decode of k+1). Host-visible state was cleared by audit, so this would be device-side (trace variants sharing scratch, prefill trace replay right after a decode trace on the same cq).
+- H3: EP row divergence in the LL MoE (each row runs `moe_routing_remap` on its own router output; the KV replicas are written independently per row; nothing checks that the 4 rows stay bit-identical). The only candidate that naturally predicts the recovery hundreds of tokens later (sliding-window layers forget a fork after 128 tokens).
+- H4 (HT only): throughput-experts / row-sharded attention with a sparsely populated row (8 real users, 24 padding rows per row); a combine landing a padding token's contribution on slot 0/1 would hit exactly the failing users.
+
+### Cheapest discriminating runs
+1. LL server with `sample_on_device_mode` removed from `tt-config`, plain 32-prompt benchmark, dump the text (or `text_demo.py prefill_128` with the host-sampling fallback and `repeat_batches >= 4`).
+2. The structured benchmark with `--no-structured-output` on the same server.
+(1) bad and (2) good means H1; (1) good and (2) bad points at the grammar/host-sampler side (unlikely per the audits); both good means H2/H3, then `text_demo.py` with `repeat_batches=8` on Galaxy with a content check.
+
+### Gate recommendations (for the job owners; not changed by this issue)
+- Enable `coherence-test: true` for both GPT-OSS entries in `tests/pipeline_reorg/vllm_model_tests.yaml` so the device-sampled path users actually hit is content-checked every night.
+- Count a structured request as failed if its stream carried an `error` chunk or produced zero tokens, and validate against the schema instead of `\{.*\}`; a garbage stream that happens to contain a `{...}` currently scores `correctness: true`.
+- Do not gate on `correct_rate == 100.0` at T = 1.0 over 32 samples: make the structured requests greedy (`--override-generation-config '{"temperature": 0}'`, the benchmark has no temperature flag) or gate on "no empty/aborted streams and >= 31/32 schema-valid".
+- Run the structured step after the sampling tests (or `continue-on-error` with its own annotation); today every GPT-OSS job dies at this step and the HT sampling tests have never executed.
+
+### Related, not the cause
+- Latent: `TTModelRunner.warmup_model` captures the prefill traces before `warmup_model_decode(enable_trace=True)`, so the decode trace's persistent buffers are allocated with prefill traces live, which `_prepare_decode_trace_text`'s docstring and the #52176 fix warn against. Inert under host sampling; worth a look for the device-sampled plain benchmark.
+- The LL decode stalls on 09-06/07/08 (`Avg generation throughput: 0.0, Running: 1`, no `TT_METAL_OPERATION_TIMEOUT` fired, killed by the step timeout; jobs 102043832922, 102037661088, 101899077477) are a separate hang in B=1 decode on Galaxy.
+- #44746 (per-user KV-cache corruption with `row_sharded_batched_prefill` / `sample_on_device_mode=all`) is the device-sampled sibling symptom; this issue is about the host-sampled structured path.
+

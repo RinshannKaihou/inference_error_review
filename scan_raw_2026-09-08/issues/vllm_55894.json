@@ -1,0 +1,82 @@
+{
+  "url": "https://api.github.com/repos/vllm-project/vllm/issues/55894",
+  "repository_url": "https://api.github.com/repos/vllm-project/vllm",
+  "labels_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/labels{/name}",
+  "comments_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/comments",
+  "events_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/events",
+  "html_url": "https://github.com/vllm-project/vllm/issues/55894",
+  "id": 5386550665,
+  "node_id": "I_kwDOI7xefs8AAAABQRA9iQ",
+  "number": 55894,
+  "title": "[Bug]: Hybrid Mamba + MTP silently corrupts requests when the drafter's attention backend lowers the batch-reorder threshold (decode rows run through Mamba prefill kernels)",
+  "user": {
+    "login": "filipmihal",
+    "id": 11509995,
+    "node_id": "MDQ6VXNlcjExNTA5OTk1",
+    "avatar_url": "https://avatars.githubusercontent.com/u/11509995?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/filipmihal",
+    "html_url": "https://github.com/filipmihal",
+    "followers_url": "https://api.github.com/users/filipmihal/followers",
+    "following_url": "https://api.github.com/users/filipmihal/following{/other_user}",
+    "gists_url": "https://api.github.com/users/filipmihal/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/filipmihal/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/filipmihal/subscriptions",
+    "organizations_url": "https://api.github.com/users/filipmihal/orgs",
+    "repos_url": "https://api.github.com/users/filipmihal/repos",
+    "events_url": "https://api.github.com/users/filipmihal/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/filipmihal/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-08T12:14:05Z",
+  "updated_at": "2026-09-08T12:14:05Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Summary\n\nWith MTP speculative decoding on a hybrid Mamba2 model (`nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16`), a request whose first decode step is scheduled while a long prompt is being chunk-prefilled comes back as word salad or an empty loop of special tokens for the rest of its life, from roughly its fifth token on. About 0.2–1% of requests on a mixed workload; up to 7% with a targeted trigger.\n\nRoot cause (verified with an in-process probe, see \"Probe evidence\"): `GPUModelRunner.calculate_reorder_batch_threshold` takes the **minimum** `reorder_batch_threshold` over all attention groups. The MTP drafter's attention backend is auto-selected independently of the target's (`llm_base_proposer.py`: \"Never inherit the attention backend from base\") and lands on FlashInfer, whose builder reports `1` (`supports_spec_as_decode` is false without the trtllm-gen decode kernel). The target's Mamba2 builders report `1 + k = 4`. With the runner at `1`, `reorder_batch_to_split_decodes_and_prefills` puts a 4-token draft-decode row and a chunked long prefill's *continuing chunk* in the same region and never sorts the decode rows ahead of that chunk. `Mamba2AttentionMetadataBuilder` then calls `split_decodes_and_prefills` at its own threshold `4`, which is positional: every row from the first prefill row on is a prefill. Decode rows behind the continuing chunk are run through `causal_conv1d_fn` / `mamba_chunk_scan_combined_varlen`, which read and write only state slot 0 and never the `k` speculative slots. On a request's first decode step those slots have never been written; the next step's `selective_state_update` reads slot `num_accepted - 1` and the recurrent state is garbage from then on.\n\nThe docstring of `calculate_reorder_batch_threshold` says a lower threshold \"just may have a performance penalty due to that backend treating decodes as prefills\". That holds for token-KV attention; for backends with per-draft recurrent state it is a correctness bug.\n\n## Environment\n\n- vLLM 0.27.1 (both code paths unchanged on `main` at 34b9899), torch 2.13.0+cu130, CUDA 13.0\n- 1× NVIDIA RTX PRO 6000 Blackwell (sm_120)\n- Model: `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16` (NemotronH hybrid Mamba2 + attention + MoE, in-weights MTP head)\n\nServe command (production):\n\n```\nvllm serve nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16 --trust-remote-code \\\n  --max-model-len 262144 --max-num-seqs 96 --gpu-memory-utilization 0.9 \\\n  --attention-backend TRITON_ATTN --mamba-backend triton --mamba-cache-mode align \\\n  --kv-cache-dtype fp8 --async-scheduling \\\n  --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder \\\n  --speculative-config '{\"method\":\"mtp\",\"num_speculative_tokens\":3}'\n```\n\nLog excerpt showing the drafter picking a different backend than the target:\n\n```\n[cuda.py:422] Using AttentionBackendEnum.TRITON_ATTN backend.\n[gpu_model_runner.py:5332] Loading drafter model...\n[cuda.py:482] Using FLASHINFER attention backend out of potential backends: ['FLASHINFER', 'TRITON_ATTN'].\n```\n\nPrefix caching on (`align`) or off (`none`), `--async-scheduling` on or off, and the KV dtype make no difference. `max_num_batched_tokens` is the default 8192.\n\n## Reproduction\n\nDeterministic-ish trigger: keep ~30 pairs in flight, each pair = one ~60k-token prompt followed 1.5 ± 1 s later by a short (~150-token) prompt; `temperature=1.0`, `max_tokens=3000`, chat completions with `enable_thinking`. The short \"follower\" is admitted while the long prompt is on its 2nd–8th prefill chunk.\n\n| variant | corrupted responses |\n|---|---|\n| production flags above | 15 + 2 / 400 (14 of the 200 followers); repeated on two other nodes: 12 / 400 and 9 / 400 |\n| same, `--no-async-scheduling` | 14 / 400 |\n| same, prefix caching off (`none` mode) | 4 / 400 (all first-step cases, as empty special-token loops) |\n| same, `--max-num-batched-tokens 65536` | 6 / 400 (fewer chunked prefills, not none) |\n| **no MTP** | **0 / 400** |\n| **runner `reorder_batch_threshold` forced to `1 + k`** (monkeypatch) | **0 / 400**, zero misordered prefill steps in 418 |\n| **drafter pinned: `\"attention_backend\":\"TRITON_ATTN\"` in `--speculative-config`** (its builder reports no threshold) | **0 / 400** |\n\nA mixed workload (1 in 7 prompts 24k tokens, the rest 2.3k or short, 110 in flight, 1000 requests) reproduces at 0.2–1.6% with production flags and 0/1000 without MTP.\n\n\"Corrupted\" = out-of-vocabulary word rate > 0.3 against the batch's own vocabulary, or > 200 completion tokens rendering to almost no text. Corrupted texts start with a coherent 5–15-word opener (\"We are given a multiple choice question: \\\"\") and then degenerate.\n\n## Probe evidence\n\nA `sitecustomize` probe (https://gist.github.com/filipmihal/ca652065fdd066063998c1bf6d3e9b8e, with the load generator and the analysis script) wrapped `GPUModelRunner._update_states`, `InputBatch.swap_states` and `Mamba2AttentionMetadataBuilder.build` without changing behaviour:\n\n```\n{\"event\": \"start\", \"async\": true, \"mamba_cache_mode\": \"align\",\n \"runner_reorder_batch_threshold\": 1,\n \"builder_thresholds\": {\"Mamba2AttentionMetadataBuilder\": 4, \"TritonAttentionMetadataBuilder\": null, \"FlashInferMetadataBuilder\": 1}}\n```\n\nMamba2 prefill region of one step (`[req, num_computed_before, tokens_this_step]`): the 24k prompt's continuing chunk followed by 14 decode rows of other requests, all counted as prefills (`num_prefills = 15`):\n\n```\n[[\"…700f8d\", 16960, 6627], [\"…f9466a\", 1470, 4], [\"…99e300\", 283, 4], [\"…c17e3f\", 651, 4], … ]\n```\n\nIn 85 of 89 such steps the reorder recorded no swap at all (the rows were all \"long_extend\" at threshold 1). Across six production-flag runs with the probe, 75 of the 154 requests whose *first* decode step sat in that region were corrupted, versus 1 of 3,246 others. With the threshold forced to `1 + k`: 0 misordered steps, 0 corrupted.\n\nWith the drafter pinned to TRITON_ATTN the start line reads `\"runner_reorder_batch_threshold\": 4` and the FlashInfer builder is gone.\n\n## Proposed fix\n\nDon't let a backend that only *tolerates* a low threshold lower the threshold of a backend that *requires* ordering. PR incoming: add `requires_decode_ordering` to `AttentionMetadataBuilder` (True for the Mamba, GDN, linear-attention and short-conv builders) and have `calculate_reorder_batch_threshold` raise the minimum to the largest such builder's threshold. Attention backends already treat rows above their own threshold as prefills, so a higher global threshold costs them nothing in correctness. A more thorough fix would make the Mamba2 split independent of batch position.\n\nWorkaround for users: set `\"attention_backend\": \"TRITON_ATTN\"` (or any backend whose builder reports no threshold or `1 + k`) in `--speculative-config`, or disable MTP.\n\n## Possibly related\n\n- #46088 (Gemma-4 hybrid, MTP, \"garbage from token 0\" for short requests batched with a 64k prompt, closed \"not planned\") and #53180 (Qwen3.8 hybrid, MTP, intermittent degenerate output) describe the same symptom without a root cause; the mechanism above may apply if their drafter's builder reports `1`.\n- #45100 (accepted-count race), #47861 / #51113 (align-mode prefix-cache snapshots) are different bugs.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/vllm-project/vllm/issues/55894/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}

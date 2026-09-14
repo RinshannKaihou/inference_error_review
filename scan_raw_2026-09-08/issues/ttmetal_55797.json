@@ -1,0 +1,99 @@
+{
+  "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55797",
+  "repository_url": "https://api.github.com/repos/tenstorrent/tt-metal",
+  "labels_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55797/labels{/name}",
+  "comments_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55797/comments",
+  "events_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55797/events",
+  "html_url": "https://github.com/tenstorrent/tt-metal/issues/55797",
+  "id": 5390433871,
+  "node_id": "I_kwDOI9Wqc88AAAABQUt-Tw",
+  "number": 55797,
+  "title": "[Bug] ttnn.reciprocal (float32, Blackhole) discards its Newton refinement for |x| >= 2^119 and returns the raw 7-bit SFPARECIP seed: 0.56% relative error on seven full binades",
+  "user": {
+    "login": "badnikhil",
+    "id": 72620320,
+    "node_id": "MDQ6VXNlcjcyNjIwMzIw",
+    "avatar_url": "https://avatars.githubusercontent.com/u/72620320?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/badnikhil",
+    "html_url": "https://github.com/badnikhil",
+    "followers_url": "https://api.github.com/users/badnikhil/followers",
+    "following_url": "https://api.github.com/users/badnikhil/following{/other_user}",
+    "gists_url": "https://api.github.com/users/badnikhil/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/badnikhil/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/badnikhil/subscriptions",
+    "organizations_url": "https://api.github.com/users/badnikhil/orgs",
+    "repos_url": "https://api.github.com/users/badnikhil/repos",
+    "events_url": "https://api.github.com/users/badnikhil/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/badnikhil/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 5150031476,
+      "node_id": "LA_kwDOI9Wqc88AAAABMvc-dA",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true,
+      "description": "Something isn't working"
+    },
+    {
+      "id": 7139963093,
+      "node_id": "LA_kwDOI9Wqc88AAAABqZMw1Q",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/labels/community",
+      "name": "community",
+      "color": "2DEB44",
+      "default": false,
+      "description": ""
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-09-08T18:26:35Z",
+  "updated_at": "2026-09-08T18:42:23Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "NONE",
+  "issue_field_values": [
+
+  ],
+  "type": null,
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "### Describe the bug\n\nOn Blackhole, `ttnn.reciprocal` in `float32` throws away its entire Newton refinement for `|x| >= 2^119` and returns the raw ~7-bit `SFPARECIP` seed: **0.56 % relative error (90,174 ULP) on 100 % of the seven binades `2^119 .. 2^126`** — 117,440,512 float32 bit patterns, about 2.75 % of the finite normal float32 domain — with partial loss starting at `2^111` (about 23 % of the values in `2^111 .. 2^118`).\n\nThe float32 (fp32 dest-accumulate) path is [`_calculate_reciprocal_fast_24b_5c_`](https://github.com/tenstorrent/tt-metal/blob/main/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu/ckernel_sfpu_recip.h#L150-L216), selected by `recip_tile<false>` (`unary_op_utils.cpp:753`) whenever fp32 dest accumulation is on. It refines the seed **additively**, per its own pseudocode:\n\n```\ny  = arecip(x)      # ~7-bit seed\ne  = 1 - x*y\nt  = e*e + e\nt2 = t*e + e        # e + e^2 + e^3\nt2 = min(t2, 1.0)   # NaN guard\ny  = t2*y + y       # <-- here\n```\n\n`t2` is the seed's relative error (`~2^-8`) and `y` is `~1/x`, so the refinement **term** `t2*y` is `~2^-8/x`. For `|x| >= 2^119` that term is below `FLT_MIN`; the SFPU flushes it to zero, the MAD adds nothing, and the unrefined seed is stored. The same additive MAD is in the `SFPLOADMACRO` schedule (`[z] L16 = mad(t2, z, z)`) and in the `DISABLE_SFPLOADMACRO` branch (`TTI_SFPMAD(LREG3, LREG1, LREG1, LREG0, 0)`).\n\nThis is **not** a limitation of the seed or of the SFPU: at the same input, `ttnn.div`, `ttnn.rdiv` and `ttnn.pow(x, -1)` — which start from the same `SFPARECIP` seed but refine multiplicatively, `y*(2 - x*y)`, in `sfpu_reciprocal_iter` — are correct to 3e-08.\n\nIt is also distinct from #54513 / #52094 / #55128 (`reciprocal(±2^126) -> 0`, where `SFPARECIP` itself returns zero); that cliff starts one binade higher and is independent of this one.\n\n### Repro\n\n```python\nimport torch, ttnn\n\ntorch.set_printoptions(precision=10)\ndevice = ttnn.open_device(device_id=0)\nx = torch.tensor([[2.0**119, 2.0**125, 1.5 * 2.0**122, 2.0**115]], dtype=torch.float32)\nt = ttnn.from_torch(x, dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=device)\n\nprint(\"reciprocal\", ttnn.to_torch(ttnn.reciprocal(t)))\nprint(\"rdiv      \", ttnn.to_torch(ttnn.rdiv(t, 1.0)))\nprint(\"torch     \", 1.0 / x.double())\n```\n\n```\nreciprocal tensor([[1.4987552973e-36, 2.3418051520e-38, 1.2489627477e-37, 2.4074124305e-35]])\nrdiv       tensor([[1.5046327691e-36, 2.3509887016e-38, 1.2538606782e-37, 2.4074124305e-35]])\ntorch      tensor([[1.5046327691e-36, 2.3509887016e-38, 1.2538606409e-37, 2.4074124305e-35]])\n```\n\n`ttnn.reciprocal` and `ttnn.rdiv(x, 1)` are bit-identical on only 42,934 of the 65,536 bfloat16 bit patterns promoted to float32; they should agree everywhere.\n\n### Observed vs expected (float32)\n\n| input | got | want | ULP | rel. err |\n|---|---|---|---|---|\n| 2^115 | 2.407412430e-35 | 2.407412430e-35 | 0 | 0 |\n| 2^111 · 1.293 | 2.979172883e-34 | 2.979081966e-34 | 396 | 3.05e-05 |\n| 2^114 · 1.1133 | 4.325819211e-35 | 4.324895403e-35 | 3,219 | 2.14e-04 |\n| 2^118 · 1.2031 | 2.492048024e-36 | 2.501207718e-36 | 51,067 | 3.66e-03 |\n| 2^119 | 1.498755297e-36 | 1.504632769e-36 | 65,536 | 3.906e-03 |\n| 1.5 · 2^122 | 1.248962748e-37 | 1.253860678e-37 | 43,691 | 3.906e-03 |\n| 2^125 | 2.341805152e-38 | 2.350988702e-38 | 65,536 | 3.906e-03 |\n\n`3.906e-03` is exactly `2^-8`, i.e. the accuracy of the unrefined `SFPARECIP` seed.\n\n### Affected range\n\n256 bfloat16-spaced mantissas per binade, golden `1/x` in float64, ttsim Blackhole:\n\n| binade of \\|x\\| | mantissas wrong by >4 ULP | max ULP | max rel. err |\n|---|---|---|---|\n| 2^100 .. 2^110 | 0 / 256 | 1 | 1.19e-07 |\n| 2^111 | 2 / 256 | 396 | 3.05e-05 |\n| 2^112 | 4 / 256 | 580 | 6.10e-05 |\n| 2^113 | 6 / 256 | 688 | 6.10e-05 |\n| 2^114 | 16 / 256 | 3,219 | 2.44e-04 |\n| 2^115 | 41 / 256 | 6,812 | 4.73e-04 |\n| 2^116 | 65 / 256 | 14,693 | 9.61e-04 |\n| 2^117 | 136 / 256 | 29,700 | 1.92e-03 |\n| 2^118 | 210 / 256 | 51,067 | 3.66e-03 |\n| **2^119 .. 2^125** | **256 / 256** | **90,174** | **5.58e-03** |\n\nBoth signs are affected. Over all 65,536 bfloat16 bit patterns promoted to float32, mean ULP is 0.008 below `2^111` and 16,319 over `2^111 .. 2^126`.\n\n### Downstream\n\nEverything built on `UnaryOpType::RECIP` inherits it. Measured at `x = 1.5 · 2^122` (exact `1/x = 1.253860641e-37`):\n\n| op | got | rel. err |\n|---|---|---|\n| `ttnn.reciprocal(x)` | 1.248962748e-37 | 3.906e-03 |\n| `ttnn.div_bw(1, a, x)` grad-wrt-a arm | 1.248962748e-37 | 3.906e-03 |\n| `ttnn.log_bw(1, x)` | 1.248962748e-37 | 3.906e-03 |\n| `ttnn.div(1, x)` / `ttnn.rdiv(x, 1)` / `ttnn.pow(x, -1)` | 1.253860678e-37 | 2.98e-08 |\n\nBy code path, also `normalize_global` / `normalize_hw` (`unary_composite_op.cpp:154`), `quantization` (`reciprocal(scale)`), `hypot_bw` / `pow_bw` / `softplus_bw` / `rdiv_bw` / `asinh_bw`, and `div`'s FPU fallback (`binary_ng_utils.cpp:162`, `process_rhs = RECIP`). `atan2` (`unary.cpp:110`) uses it too but the error cancels there, because both operands are scaled by the same `inv_dr`.\n\n### Expected behavior\n\n`ttnn.reciprocal(x)` should stay within a ULP or two of `1/x` over the whole float32 normal range, and should agree with `ttnn.div(1, x)` / `ttnn.rdiv(x, 1)` / `ttnn.pow(x, -1)`, which are already correct at these inputs. The true result is a normal float everywhere below `2^126`.\n\n### Which architectures\n\n**Blackhole only.** Wormhole has no `_fast_*` reciprocal paths; its `sfpu_reciprocal_iter` normalises the mantissa to `[1, 2)` and applies the exponent afterwards, so its refinement term can never be subnormal. `bfloat16` on Blackhole is also unaffected: it uses `_calculate_reciprocal_fast_8b_3c_`, whose correction is an integer add (max 0 ULP over all 64,512 normal-in / normal-out bfloat16 patterns).\n\n### How it was verified\n\nttsim Blackhole v1.10.6 (`TT_METAL_SIMULATOR=libttsim_bh.so`, slow dispatch, `TT_METAL_DISABLE_SFPLOADMACRO=1`), float32 tensors (fp32 dest accumulate), 256 bfloat16-spaced mantissas per binade plus all 65,536 bfloat16 bit patterns promoted to float32, golden `1/x` evaluated in float64.\n\nThe mechanism was confirmed by re-running the kernel's own arithmetic on device with `ttnn` primitives and a seed set `2^-8` low: the shipped associativity `t2*y + y` reproduces `1.49875530e-36` at `2^119` and `2.34180515e-38` at `2^125` bit for bit, while `y*(1 + t2)` gives `1.50463268e-36` / `2.35098856e-38`. The refinement term `t2*y` measures `1.175e-38 = 2^-126` at `x = 2^118` (kept) and exactly `0` from `x = 2^119` on. The flush threshold itself is exactly the smallest normal: in float32, `ttnn.multiply(2^-100, 2^-26) = 2^-126` is kept and `ttnn.multiply(2^-100, 2^-27)` returns `0`.\n\nOnly the `DISABLE_SFPLOADMACRO` branch is executable under ttsim (the simulator does not implement `SFPLOADMACRO`); the macro schedule carries the identical final MAD in its own committed pseudocode.\n",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55797/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/tenstorrent/tt-metal/issues/55797/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}
