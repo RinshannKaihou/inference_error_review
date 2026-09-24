@@ -73,11 +73,9 @@ def parse_metadata_line(line: str) -> dict:
 
 def extract_field(entry_text: str, field_name: str) -> str:
     """Extract a **bold** field's content from entry text."""
-    # NOTE: the bare `\n## ` terminator is required. Without it, an entry that is the
-    # last one in a `## §x` section and has no `---` separator lets its final bold field
-    # swallow the following section heading (previously leaked into discovery_date for
-    # 3.8 / 6.25 / 8.10 / K3.10 / K4.9 / K8.14).
-    pattern = rf"- \*\*{re.escape(field_name)}\*\*[：:]?\s*(.*?)(?=\n- \*\*|\n### |\n---\s*\n## |\n## |\Z)"
+    # A horizontal rule also ends a field even when the next heading is another ###
+    # entry rather than a ## section. Otherwise discovery_date absorbs the separator.
+    pattern = rf"- \*\*{re.escape(field_name)}\*\*[：:]?\s*(.*?)(?=\n- \*\*|\n### |\n---(?:\n|\Z)|\n## |\Z)"
     match = re.search(pattern, entry_text, re.DOTALL)
     if match:
         return match.group(1).strip()

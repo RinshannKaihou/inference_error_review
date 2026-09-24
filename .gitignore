@@ -1,0 +1,10 @@
+# Daily scan raw responses and scratch files are not catalog deliverables.
+.scan_*/
+scan_cache_*/
+scan_raw/
+scan_raw_*/
+scan_queries_*.sh
+__pycache__/
+*.py[cod]
+*.bak*
+.claude/settings.local.json
