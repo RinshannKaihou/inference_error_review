@@ -13,7 +13,7 @@
 
 || 你的问题 | 去哪里 |
 ||---|---|---|
-|| 「这个故障我们编目过吗？」 | 用 `Ctrl-F` 搜 snake_case 故障名；全部 1184 个名字都在本文档中 |
+|| 「这个故障我们编目过吗？」 | 用 `Ctrl-F` 搜 snake_case 故障名；现行条目总数以滚动汇总为准 |
 || 「这个故障在 vLLM/CUDA 上怎么触发？」 | 看条目的**触发**字段（标签）与**触发面**字段（一行触发方式）；标 `⚠` 者为待复核 |
 || 「监控信号能看见它吗？」 | 看条目的**隐藏态签名**字段；结构性盲点均已显式标注「检测器漏检」 |
 || 「KV 扩展覆盖了哪些 locus？」 | 查[附录 B](#附录-b--kv-扩展覆盖关系) |
@@ -24,7 +24,7 @@
 
 ## 两层来源
 
-> 两个集合彼此**不重叠**（原 211 个故障名无一重复；2026-07-29 新增 20 条、2026-07-30 新增 15 条、2026-07-31 新增 11 条、2026-08-01 新增 19 条、2026-08-02 新增 16 条、2026-08-03 新增 11 条、2026-08-04 新增 12 条、2026-08-05 新增 6 条、2026-08-06 新增 24 条、2026-08-07 新增 24 条、2026-08-08 新增 33 条、2026-08-09 新增 17 条、2026-08-10 新增 18 条、2026-08-11 新增 30 条、2026-08-12 新增 22 条、2026-08-13 新增 23 条、2026-08-14 新增 11 条、2026-08-15 新增 21 条、2026-08-16 新增 24 条、2026-08-17 新增 37 条、2026-08-18 新增 30 条、2026-08-19 新增 17 条、2026-08-20 新增 16 条、2026-08-21 新增 8 条、2026-08-22 新增 16 条、2026-08-23 新增 8 条、2026-08-25 新增 13 条、2026-08-26 新增 14 条、2026-08-27 新增 22 条、2026-08-28 新增 11 条、2026-08-29 新增 25 条、2026-08-30 新增 16 条、2026-08-31 新增 10 条、2026-09-01 新增 29 条、2026-09-02 新增 12 条、2026-09-03 新增 26 条、2026-09-04 新增 30 条、2026-09-05 新增 25 条、2026-09-06 新增 39 条、2026-09-07 新增 13 条、2026-09-08 新增 18 条、2026-09-09 新增 18 条、2026-09-10 新增 14 条、2026-09-11 新增 19 条、2026-09-13 新增 18 条、2026-09-14 新增 9 条、2026-09-15 新增 18 条、2026-09-16 新增 13 条、2026-09-17 新增 12 条、2026-09-18 新增 12 条、2026-09-19 新增 12 条、2026-09-20 新增 9 条、2026-09-21 新增 13 条、2026-09-22 新增 13 条亦无重复、合计 1184 个名字）：
+> 以下两层来源与 1184 个原始编号为截至 2026-09-22 的历史累计口径，**不是当前去重后的总数**（原 211 个故障名无一重复；2026-07-29 新增 20 条、2026-07-30 新增 15 条、2026-07-31 新增 11 条、2026-08-01 新增 19 条、2026-08-02 新增 16 条、2026-08-03 新增 11 条、2026-08-04 新增 12 条、2026-08-05 新增 6 条、2026-08-06 新增 24 条、2026-08-07 新增 24 条、2026-08-08 新增 33 条、2026-08-09 新增 17 条、2026-08-10 新增 18 条、2026-08-11 新增 30 条、2026-08-12 新增 22 条、2026-08-13 新增 23 条、2026-08-14 新增 11 条、2026-08-15 新增 21 条、2026-08-16 新增 24 条、2026-08-17 新增 37 条、2026-08-18 新增 30 条、2026-08-19 新增 17 条、2026-08-20 新增 16 条、2026-08-21 新增 8 条、2026-08-22 新增 16 条、2026-08-23 新增 8 条、2026-08-25 新增 13 条、2026-08-26 新增 14 条、2026-08-27 新增 22 条、2026-08-28 新增 11 条、2026-08-29 新增 25 条、2026-08-30 新增 16 条、2026-08-31 新增 10 条、2026-09-01 新增 29 条、2026-09-02 新增 12 条、2026-09-03 新增 26 条、2026-09-04 新增 30 条、2026-09-05 新增 25 条、2026-09-06 新增 39 条、2026-09-07 新增 13 条、2026-09-08 新增 18 条、2026-09-09 新增 18 条、2026-09-10 新增 14 条、2026-09-11 新增 19 条、2026-09-13 新增 18 条、2026-09-14 新增 9 条、2026-09-15 新增 18 条、2026-09-16 新增 13 条、2026-09-17 新增 12 条、2026-09-18 新增 12 条、2026-09-19 新增 12 条、2026-09-20 新增 9 条、2026-09-21 新增 13 条、2026-09-22 记录新增 13 条、当时累计 1184 个原始编号；后续发现跨日重复，见 2026-09-24 勘误）：
 
 || 层 | 来源文件（历史，已不在本仓库） | 条目数 | 性质 |
 ||---|---|---|---|
@@ -33,7 +33,9 @@
 
 ---
 
-## 滚动汇总（共 1196 条，逐条解析自本文档正文，非人工计数）
+## 滚动汇总（共 1194 条，逐条解析自本文档正文，非人工计数）
+
+> 2026-09-24 编目勘误（非新发现，不改写历史日报）：按来源和具体机制合并两组旧重复，1.70 → 1.44（tt-metal #51921 单核 topk 忽略 indices_tensor）、11.30 → 11.24（SGLang #33493 DSPARK 错读采样惩罚字段）；保留先录编号，撤销重复编号，1196 → 1194。旧编号仅作历史引用，今后检索和交叉引用应使用保留编号。#33493 原条目中的 `acc_linear_penalities`、字典直索引 `KeyError` 及所有惩罚必然不生效的断言均无原 issue 代码支持，已按 v0.5.16 源码勘误。#51921 issue 已关闭，但尚未从此事实推断修复版本或完全修复状态。
 
 > 2026-09-23 更新：合并每日扫描 2026-09-23 的发现（5 个新子签名 + 7 个已知类别变体 = **12 条新增**，1184 → 1196；扫描窗口 created:>=2026-09-21，与 09-22 扫描重叠两日已逐条去重）。分布：第 1 类 +2（1.245 SDPA 隐式 tile padding 越界泄漏非 32 倍数长 PCC≈0 NEW、1.246 log 族 bf16 accurate −0.0 返 +inf 指数先于规范化读取 var:1.193 前向姊妹）、第 5 类 +1（5.45 SGLang trtllm_mha 双侧 SM90 门限回归静默错补全 NEW）、第 6 类 +2（6.253 部分 prefix 提升事件 parent 同批移除 var:6.252、6.254 Mooncake 把 min() 塌缩 block_size 读作物理尺寸混合块 PD 断裂 NEW）、第 7 类 +1（7.97 DeepSeek chunked-prefix LSE base-2 按自然对数合并前缀指数过权 NEW）、第 8 类 +1（8.92 DSV4.1-Flash nightly KV 记录 MXFP8 化结构化文本 logprob 位移 var:8.53）、第 10 类 +2（10.85 Qwen2Tokenizer 常量覆盖发布 pre_tokenizer v5 回归 var:10.56、10.86 Gemma1 exact GELU 守卫移除 v4.48 起静默 var:12.39）、第 11 类 +1（11.86 thinking_token_budget 边界重复循环 NEW）、第 12 类 +2（12.42 SGLang rsLoRA use_rslora 无视 var:12.32 跨栈姊妹、12.43 Gemma4 k_eq_v LoRA 投影集异构三重失败 NEW）。观察：7.97 是分块注意力 LSE 底数契约分裂首例（每次前缀命中静默过权、Blackwell 默认路径）；6.253 使 KV 事件契约族成三形态（parent 从未上报/载荷不可解码/parent 同批撤回）；12.42 与 12.32 构成 rsLoRA √r 丢失跨栈姊妹对（vLLM MoE 打包重算 vs SGLang 加载器恒错公式）；10.85 与 10.56 构成 tokenizer 双源漂移对（别名表 vs pre_tokenizer 正则）；5.45 是首条"拒绝门被移除致静默错服务"方向的能力门条目（与 7.70 门缺失互为镜像）。来源更正：1.242（tt-metal #57408）维护者已合并 #57421 但只修 calculate_square——rad2deg/deg2rad/softsign/hardsigmoid/prelu 五内核仍截断存储（rad2deg(-4.5) 仍 -256.0），条目补充部分修复状态、issue 已关闭（closed/completed）剩余站点跟踪待问（#57172）；1.244（#57413）修复候选 #57414 验证 e2e BERTScore 0.7555 越门（高于 #57179 前 0.702 与窗口前 0.722）。不收录：vLLM #58422（TP=1 SM120 GDN-hybrid wedge——观察真实（generation counter 冻结/running>0/waiting=0/health 200）但根因未定、与 #40926/#53130 谱系待分、留观）、#58421（Responses truncation auto 语义偏差——API 兼容域）、#58406（mm_processor_kwargs 合并语义——数据丢失半已修 #58408、precedence 契约留观）、#58384（Harmony parser ValueError 关流——fail-loud SSE 错误）、#58353（Qwen2-VL 单帧视频除零——fail-loud ZeroDivisionError）、#58303（Mamba+EAGLE dense 默认 0% 复用——性能/调度域留观）、#58273（Whisper LLM.generate 无 fallback 循环——解码策略缺失、模型能力域）、#58267（CPU W4A16 Whisper 3-D IMA fail-loud + 假 bias 垃圾转录——第一重 fail-loud 参照先例留观）、#58241（SM89 block-fp8 排除——CUTLASS 无 c2x blockwise 实现的正确回退）、#58228（finish_reason tool_calls 遮蔽 length——API 语义）、#58222（NIXL lease reaper 心跳头阻塞收割——源码检查、资源治理留观）、#58280（DSV4 模板 tools 合成 system——main 已修 closed）、#58441（Qwen4Exp PLE prefetch graph-pool 内存 side-stream 竞态——greedy 不可复现实测真实但 PinnedHost 本体未复现、留观）、#58290（多节点 NCCL 启动挂——环境 bring-up）、#58324（实时会话 O(n) 调度——性能）、#58233（并发性能求助）、#58236（FlashInfer 0.6.18 编译失败——构建环境）、#58246（SDK 兼容测试）、#57956（CI 分拣）、#58211/#58134（CI）、SGLang #40926（HiCache cudaHostRegister 失败杀实例——fail-loud 启动崩溃、错误路径 TypeError 掩盖 rc 属诊断质量）、#40966 已编目 12.43、#40817（未知 tool call 转发——feature 议题）、tt-metal #57603/#57586/#57540/#57452/#57450/#57403/#57343/#57335/#57308/#57236/#57230（重构/性能/hang bring-up/feature/profiler）、#57510/#57509/#57506/#57504/#57503/#57502/#57499/#57498/#57496/#57478/#57477/#57476/#57475/#57474（静态审计 meta-issue 第二批 ~90 项——同 #57360–#57367 判例整批留观待单项运行时证据）、#57512（reduction_size 主机校验缺失——防御性加固、未静默面）、#57480（MemoryConfig 复验证——设计议题）、#57515（repeat all-ones 快路径返回未扩维张量——已 closed、三形态中静默错形状面窄留观）、#57458（all_gather_minimal_matmul_async 无持久 buffer 对端覆写 L1——真实静默损坏但触发需实验性 API 无防护调用、留观待生产路径证据）、#57164（#57163 重复贴）、transformers #49036（Cache.crop 不回滚 GDN recurrent state——spec/块验证非无损、核心已知待 Cyrilvallez 方案、报告格式待清晰复现留观）、#49026（serge 集成分拣）。arxiv 当日 5 组查询全部成功（1 组 0 命中、无 429）：全部命中已编目或已判（SProbe/TrainSDC/SCOUT/LLM-PRISM/2604.00726/BitSifter/2609.17983/2608.07408/2608.05863 已编目；Nexus/ReaLM 方法论文不收录；2609.25881 虚拟试穿非 LLM 域 OR 噪声）。GitHub Search API 当日 10 组查询全部有效、无限流 403、无 Validation Failed；tt-metal 65 命中以 per_page=100 单请求补全；vLLM label:bug（34）与量化/KV（43/44）两查询以 page=2 补全；core REST 详情 33 次调用 28 成功、5 次因未认证 core 限额（60/h）耗尽失败——失败的 5 个目标（#58105/#58138/#58119/#58080/#58031 后续评论）改以当日 search 快照（含 state/comments 计数）覆盖状态面、评论正文缺口下次限额窗口补查。
 
@@ -127,13 +129,13 @@
 
 || 轴 | 分布 |
 ||---|---|
-|| **族（Family）** | `infra_off` **1029** · `model_on` **71** · `ambiguous` **92** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
-|| **触发（vLLM/CUDA）** | `config` **247+6⚠** · `other_stack` **207+25⚠** · `partial` **242** · `hw_specific` **300** · `yes` **121** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
-|| **置信度** | `documented` **685** · `verified` **504** · `speculative` **6** · 源文档未给出（10.4）**1** |
-|| **覆盖（Cov）** | `NEW` **879** · `var:x` **314** · `rationale` / `baseline` / `existing` **3** |
+|| **族（Family）** | `infra_off` **1027** · `model_on` **71** · `ambiguous` **92** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
+|| **触发（vLLM/CUDA）** | `config` **247+6⚠** · `other_stack` **206+25⚠** · `partial` **242** · `hw_specific` **299** · `yes` **121** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
+|| **置信度** | `documented` **683** · `verified` **504** · `speculative` **6** · 源文档未给出（10.4）**1** |
+|| **覆盖（Cov）** | `NEW` **877** · `var:x` **314** · `rationale` / `baseline` / `existing` **3** |
 
-> **可直接动手的是未标 ⚠ 的 `config` + `yes` = 364 条（30.7%），再加 `partial` 共 606 条（51.2%）**；
-> `no` + `hw_specific` = 320 条（27.0%），其中 `hw_specific` 仅表示需特定硬件，不等同于不可复现。`other_stack`（202+25⚠ 条）指原报告主路径或依赖栈非本项目默认路径，需按条目触发面复核。
+> **可直接动手的是未标 ⚠ 的 `config` + `yes` = 364 条（30.5%），再加 `partial` 共 606 条（50.8%）**；
+> `no` + `hw_specific` = 319 条（26.7%），其中 `hw_specific` 仅表示需特定硬件，不等同于不可复现。`other_stack`（206+25⚠ 条）指原报告主路径或依赖栈非本项目默认路径，需按条目触发面复核。
 >
 > **32 条带 `⚠` 标记的条目为待复核**（25 条 `other_stack`、6 条 `config`、1 条 `n/a`）——触发标签继承自旧环境评估，机制通常可迁移但需逐条核对**触发面**与**复现方式**字段。
 >
@@ -230,7 +232,7 @@
 
 || 类 | 主题 | 条数 |
 ||---|---|---|
-|| 1 | 硬件 / 静默数据损坏（SDC） | 246 |
+|| 1 | 硬件 / 静默数据损坏（SDC） | 245 |
 || 2 | GPU 显存故障（HBM/GDDR ECC、rowhammer、磨损） | 3 |
 || 3 | 比特翻转攻击与定向权重篡改（BFA 家族） | 20 |
 || 4 | 数值 / 精度 / 不确定性（**本项目的噪声底**） | 25 |
@@ -240,7 +242,7 @@
 || 8 | KV 缓存 / 注意力机制故障 | 92 |
 || 9 | 位置编码 / RoPE 配置故障 | 28 |
 || 10 | 分词器 / 对话模板故障 | 86 |
-|| 11 | 解码 / 采样故障（多为 post-forward **结构性盲点**） | 86 |
+|| 11 | 解码 / 采样故障（多为 post-forward **结构性盲点**） | 85 |
 || 12 | 权重 / 适配器 / 检查点加载故障 | 43 |
 || 13 | 模型图 / 架构配置故障 | 39 |
 || 14 | 长上下文能力失效（model_on — 健康模型盲点） | 8 |
@@ -770,11 +772,11 @@
 
 `infra_off`（topk 单核路径硬编码 GENERATE_INDICES，丢弃 payload） · Cov: `NEW` · 触发 `hw_specific` · 置信度 `documented`
 
-- **机制**：`topk_single_core_program_factory` 硬编码 `GENERATE_INDICES = "1"`，忽略传入的 `indices_tensor` payload（如全 777），返回 generated iota `[0,1,2,...]`。仅多核 factory 读取该 tensor。单核形状（W<8192、非 2 的幂、W≥65535、k>64 等）的调用者静默获得错误索引。同时 index dtype 未验证。
-- **来源**：tt-metal #51921（2026-08-03 open，关联 #36329）。https://github.com/tenstorrent/tt-metal/issues/51921
+- **机制**：`ttnn.topk(..., indices_tensor=...)` 的单核 `topk_single_core_program_factory` 硬编码 `GENERATE_INDICES = "1"`，忽略传入的索引 payload（如全 777），返回 generated iota `[0,1,2,...]`；多核 factory 才读取该 tensor。单核形状（W<8192、非 2 的幂、W≥65535、k>64 等）的调用者静默获得错误索引。#51921 另列 dtype / shape / layout 等独立验证缺陷，不能一概归为此单核忽略机制。
+- **来源**：tt-metal #51921（2026-08-03 创建、2026-08-25 关闭；关联 #36329；关闭原因及已修复版本未核实）。https://github.com/tenstorrent/tt-metal/issues/51921
 - **行为效应**：无 crash、无 NaN。单核路径静默丢弃 indices payload，返回 generated iota 而非调用者提供的索引。属「路径特异静默忽略参数」签名。
 - **触发面**：tt-metal 专用；topk 单核 factory
-- **发现来源**：2026-08-07 每日扫描。
+- **发现来源**：2026-08-07 每日扫描首录；2026-08-12 的同源同机制重录（旧 ID 1.70）已并入。
 
 ### 1.45 `ttmetal_moe_routing_remap_precedence_dead_check`
 
@@ -1026,15 +1028,6 @@
 - **触发面**：tt-metal；ttnn sharded softmax + subblock_w > Dest
 - **发现来源**：2026-08-12 每日扫描。
 
-### 1.70 `ttmetal_topk_single_core_ignores_indices_tensor`
-
-`infra_off`（topk single-core 路径硬编码 GENERATE_INDICES，静默忽略传入的 indices_tensor） · Cov: `NEW` · 触发 `hw_specific` · 置信度 `documented`
-
-- **机制**：`ttnn.topk(..., indices_tensor=...)` 的 `indices_tensor` 参数在 single-core 路径被**完全忽略**——`topk_single_core_program_factory.cpp` 硬编码 `GENERATE_INDICES = "1"`，只有 `TopKMultiCoreProgramFactory` 读取该张量。W<8192、非 2 的幂 W、W>=65535、k>64 等所有 single-core shape 的 caller 静默获得生成的 iota 索引，传入的 payload 被丢弃。无 shape/dtype 契约检查。已被 #36329 跟踪。与 #52928（11.29 TTSampling topk iota 宽度）同族（topk 索引正确性）。
-- **来源**：tt-metal #51921（2026-08-12 open）。组件 `ttnn.topk`。https://github.com/tenstorrent/tt-metal/issues/51921 · 补充来源：#36329
-- **行为效应**：无 crash。caller 传入的 indices_tensor payload 静默丢弃，返回的 indices 是 iota 而非 payload。属「topk 的 program factory 分叉使参数语义不一致」**新子签名**。
-- **触发面**：tt-metal；ttnn.topk single-core 路径（W<8192 等）
-- **发现来源**：2026-08-12 每日扫描。
 
 ### 1.71 `ttmetal_sort_row_major_dram_multicore_wrong_values`
 
@@ -9903,15 +9896,15 @@
 - **触发面**：SGLang；DSpark compact/confidence 模式 + 非 checkpoint 原生 gamma
 - **发现来源**：2026-08-08 每日扫描。
 
-### 11.24 `sglang_dspark_acc_linear_penalities_typo_none`
+### 11.24 `sglang_dspark_acc_additive_penalties_field_mismatch`
 
-`infra_off`（DSPARK 取错误键 acc_linear_penalities（拼写错误）→penalty 静默 None） · Cov: `NEW` · 触发 `other_stack` · 置信度 `documented`
+`infra_off`（DSPARK 读取不存在的 acc_linear_penalties，未直接读取 acc_additive_penalties） · Cov: `NEW` · 触发 `other_stack` · 置信度 `documented`
 
-- **机制**：`dflash_utils.py` 用 `getattr(sampling_info, "acc_linear_penalities", None)`（多了 'i'），但 `sampling_info` 的属性是 `acc_additive_penalties`。getattr 默认返回 None→惩罚静默不应用。应为 `getattr(sampling_info, "acc_additive_penalties", None)`。拼写错误导致惩罚逻辑静默 no-op。
-- **来源**：SGLang #33493（2026-08-04 open）。组件 `sglang/srt/speculative/dflash_utils.py`。https://github.com/sgl-project/sglang/issues/33493
-- **行为效应**：无 crash。采样惩罚静默不应用（presence/frequency penalty 在推测解码路径失效）→输出分布偏差。属「getattr 键拼写错误→静默默认值」签名——基础编程错误但后果静默。post-forward 结构性盲点。
-- **触发面**：SGLang；DSPARK 推测解码 + 带 penalty 的采样
-- **发现来源**：2026-08-08 每日扫描。
+- **机制**：SGLang v0.5.16 的 `dflash_utils.py` 与 `dspark_verify.py` 均读取 `getattr(sampling_info, "acc_linear_penalties", None)`，而 `SamplingBatchInfo` 保存的是 `acc_additive_penalties`；这个属性读取返回 `None`，不是 `KeyError`。前者无法通过该字段走预计算加性惩罚的分支，后者的 no-op 判断也无法通过该字段检测非空惩罚。不过 `dflash_utils.py` 在 `penalizer.is_required` 或有 `vocab_mask` 时存在 fallback，不能断言所有惩罚请求必然被忽略。
+- **来源**：SGLang #33493（2026-08-04 创建；2026-09-24 查询仍 open）；v0.5.16 `dflash_utils.py`、`dspark_verify.py`、`sampling_batch_info.py` 源码核对。https://github.com/sgl-project/sglang/issues/33493
+- **行为效应**：报告者在 DSPARK 请求设置 `min_new_tokens=50`，返回 HTTP 200、`finish_reason=stop`、`completion_tokens=18`（低于 50）；静态代码确证属性名错位，但该次症状如何经不同惩罚分支传播尚未由运行期追踪单独证明。不能据此声称所有 presence/frequency penalty 均失效。
+- **触发面**：SGLang v0.5.16；DSPARK 推测解码的 verify logits 调整及 no-op 判定
+- **发现来源**：2026-08-08 每日扫描首录；2026-08-12 的同源重录（旧 ID 11.30）已并入，错误的 typo/KeyError 推断已撤回。
 
 ### 11.25 `vllm_streaming_stop_buffer_desync_reasoning_content_misroute`
 
@@ -9958,20 +9951,11 @@
 `infra_off`（TTSampling top-k 路径 iota indices_tensor 宽度仅 logits 一半→多核 top-k 从截断 logits 选 token，部分超词表） · Cov: `NEW` · 触发 `hw_specific` · 置信度 `verified`
 
 - **机制**：单芯片 `TTSampling` 在 top-k 路径（非 argmax fast path）上返回**错误 token**。`decode_forward` 交给 `ttnn.topk` 的 `iota` `indices_tensor` 宽度仅为 logits 的一半（padded vocab/2），导致多核 top-k 选择从**截断的 logits 行**选出 token。Mistral-7B-Instruct 在 500 个 teacher-forced token 上 Top-1 从 96.4%（argmax 路径）跌到 83.2%（k=1, p=0.5 top-k 路径），Top-5 从 99.4% 跌到 85.4%。padded vocab 32768 时 256 token 中 **126 个错误**，65536 时 **191 个错误**，部分返回的 token**超出词表范围**。CI 使用 `temperature=0` 走 argmax fast path（`_is_force_argmax_sampling` 要求 `p ∈ {0.0, 1.0}`），所以 `p=0.5` 的 top-k 路径长期被掩盖。这是 tt-metal #34763（自 2025-12 开启，workaround 是禁用整个 Mistral-7B family 的 on-device sampling）的根因。
-- **来源**：tt-metal #52928（2026-08-12 open）。组件 `TTSampling` / `ttnn.topk`。P150 Blackhole。https://github.com/tenstorrent/tt-metal/issues/52928 · 关联 #34763、#51921（1.70）
+- **来源**：tt-metal #52928（2026-08-12 open）。组件 `TTSampling` / `ttnn.topk`。P150 Blackhole。https://github.com/tenstorrent/tt-metal/issues/52928 · 关联 #34763、#51921（1.44；原 1.70 已并入）
 - **行为效应**：无 crash。top-k 采样返回错误 token（部分超词表），CI 全绿掩盖。属「采样 kernel 的索引张量宽度与 logits 不匹配→多核路径选择错误」**新子签名**——post-forward 结构性盲点，隐藏态监控不可见。
 - **触发面**：tt-metal；TTSampling top-k 路径（temperature≠0 或 p∉{0,1}）+ multi-core topk（vocab≥32768）
 - **发现来源**：2026-08-12 每日扫描。
 
-### 11.30 `sglang_dspark_wrong_key_acc_linear_penalities_typo`
-
-`infra_off`（DSPARK 从 sampling_info 取 typo key acc_linear_penalities→KeyError 或惩罚静默跳过） · Cov: `NEW` · 触发 `other_stack` · 置信度 `documented`
-
-- **机制**：SGLang DSPARK 推测解码路径从 `sampling_info` 取 key `acc_linear_penalities`（typo，应为 `acc_linear_penalties`）。若 `sampling_info` 字典无该 typo key 则 KeyError；若使用了 `.get()` 默认值则惩罚**静默跳过**——linear penalty 不被应用，采样分布偏离预期。
-- **来源**：SGLang #33493（2026-08-12 open）。组件 DSPARK sampling。https://github.com/sgl-project/sglang/issues/33493
-- **行为效应**：无 crash（.get 路径）或 KeyError（直索引）。linear penalty 静默丢失→采样分布偏移。属「推测解码路径的 key typo 使惩罚静默失效」**新子签名**——post-forward 结构性盲点。
-- **触发面**：SGLang；DSPARK 推测解码 + linear penalty 配置
-- **发现来源**：2026-08-12 每日扫描。
 
 ### 11.31 `hf_spec_decode_candidate_generator_q_distribution_mismatch`
 

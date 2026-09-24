@@ -40,6 +40,23 @@ class CatalogVerificationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "discovery_date"):
             verify_catalog.check_dates(rows)
 
+    def test_topk_source_has_one_canonical_mechanism(self):
+        rows = [row for row in parse_entries(self.text)
+                if row["source"] == "https://github.com/tenstorrent/tt-metal/issues/51921"]
+        self.assertEqual([row["id"] for row in rows], ["1.44"])
+        self.assertIn("GENERATE_INDICES", rows[0]["mechanism"])
+        self.assertIn("1.70 → 1.44", self.text)
+
+    def test_dspark_source_has_one_evidence_based_mechanism(self):
+        rows = [row for row in parse_entries(self.text)
+                if row["source"] == "https://github.com/sgl-project/sglang/issues/33493"]
+        self.assertEqual([row["id"] for row in rows], ["11.24"])
+        self.assertIn('getattr(sampling_info, "acc_linear_penalties", None)', rows[0]["mechanism"])
+        self.assertIn("acc_additive_penalties", rows[0]["mechanism"])
+        self.assertIn("不是 `KeyError`", rows[0]["mechanism"])
+        self.assertIn("min_new_tokens", rows[0]["behavior"])
+        self.assertIn("11.30 → 11.24", self.text)
+
 
 if __name__ == "__main__":
     unittest.main()
