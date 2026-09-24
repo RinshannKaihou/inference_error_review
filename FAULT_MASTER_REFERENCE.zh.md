@@ -33,9 +33,11 @@
 
 ---
 
-## 滚动汇总（共 1194 条，逐条解析自本文档正文，非人工计数）
+## 滚动汇总（共 1206 条，逐条解析自本文档正文，非人工计数）
 
 > 2026-09-24 编目勘误（非新发现，不改写历史日报）：按来源和具体机制合并两组旧重复，1.70 → 1.44（tt-metal #51921 单核 topk 忽略 indices_tensor）、11.30 → 11.24（SGLang #33493 DSPARK 错读采样惩罚字段）；保留先录编号，撤销重复编号，1196 → 1194。旧编号仅作历史引用，今后检索和交叉引用应使用保留编号。#33493 原条目中的 `acc_linear_penalities`、字典直索引 `KeyError` 及所有惩罚必然不生效的断言均无原 issue 代码支持，已按 v0.5.16 源码勘误。#51921 issue 已关闭，但尚未从此事实推断修复版本或完全修复状态。
+
+> 2026-09-24 更新：合并每日扫描 2026-09-24 的发现（6 个新子签名 + 6 个已知类别变体 = **12 条新增**，1194 → 1206；扫描窗口 created:>=2026-09-17，与 09-23 扫描重叠三日已逐条去重；另补录 09-23 因 core 限额留观的 tt-metal #57461）。分布：第 1 类 +6（1.247 moe_expert_token_remap writer 组边界 off-by-one 每组丢页+越界写下一 core NEW、1.248 softmax float32 默认近似 exp 逐元素至 7.5% var:1.137、1.249 prod fp32 SrcA-TF32 10-bit 尾数+DEST→SrcA 回读 var:4.2、1.250 typecast u32→f32 双重舍入 bit31 1 ULP var:1.190、1.251 fmod/remainder 精确零丢被除数符号 var:1.246、1.252 2D mcast DRAM width-shard 首读未钳制宽网格静默垃圾 NEW）、第 4 类 +1（4.26 GLM-5.x indexer 复制 key norm 逐 rank autotune 分歧 TP greedy 分叉 var:4.12）、第 6 类 +2（6.255 DeepSelect NaN 后陈旧 col_indices 静默 top-k 选择 NEW、6.256 MLA target × GQA draft 非对称 TP KV 误传输 vLLM/SGLang 双栈同机制合并 NEW）、第 7 类 +1（7.98 Triton fused MoE per-channel 权重 scale 按 per-tensor 索引 NEW）、第 8 类 +1（8.93 Gemma4 精确窗口 ring spec verify 丢窗内 KV 仅启动告警 NEW）、第 11 类 +1（11.87 V1 thinking budget 多 token end spec desync 损坏结束序列 var:11.86）。观察：6.256 首次把 vLLM Nixl（#58470）与 SGLang Mooncake（#41038）按"同目标双栈同机制"合并编目——模型级 MLA 复制假设被无差别套到 head-sharded draft KV 区域；4.26 给出"复制计算 × 离散选择（top-k/argmax）需要 bit-identical 内核或单一写者"的通用水律并附钉配置干预级因果证明（逐 rank Inductor autotune 是新根因面）；1.249 是 TF32 10-bit 截断族（4.2）在 tt-metal SrcA unpack 维度的首例、且与 DEST→SrcA 回读双机制复合；1.252 使"错误掩住性能上限"具象化（修复后 13 列网格快 14-22%）；11.87 与 11.86 构成 thinking-budget 强制结束状态机的两半（预算边界死循环 / spec 窗口内序列损坏）。来源更正：5.44（vLLM #58031）评论全文补读——autotuner 实有 tqdm 进度输出（`\r` 分隔写 stderr、捕获方式可吞），且第二台 GB300 + 不同模型（MiMo-V2.6-Pro-RL）复现同类病理性 autotune；「无进度日志」表述按捕获口径修正，根因未定判定不变。不收录：vLLM #58616（L4 权重加载后确定性 segfault——fail-loud crash，VLLM_TRACE_FUNCTION=1 回避提示竞态但无静默错值证据）、#58565（CPU bge-m3 首请求 EngineCore "RuntimeError: cancelled"——fail-loud 崩溃）、#58492（verbose_json EOS-only chunk IndexError——fail-loud）、#58575（ROCm v0.30.0 漏 cherry-pick #57252 致 GLM-5.3 无法启动——发布工程 fail-loud）、#58599（MiniMax Lamport workspace 在 cuda-bindings 13.4 静默禁用——纯性能回退，eager 回退数值正确）、#58624/#58324/#58233（性能）、#58597（MFU/MBU 把线性注意力层计为全注意力——观测指标域）、#58523（capture size 静默截断——已 closed、性能面）、#58388（XPU 大首请求引擎死——fail-loud）、#58520/#58537/#58562/#58329/#58487/#58580/#58544/#58263/#58240（RFC/feature）、SGLang #40817（09-23 已判 feature）、tt-metal #57800（KDA PCC 调查桩——无根因留观）、#57742（#57180 正确修复的校准余波——内核侧 follow-up 含 streaming kernel 硬编码近似 #56710、bf16 截断 rescale 尺度不一致记录留观）、#57695（Galaxy GCB 重建地址未验证——设计契约加固、当前大概率正确留观）、#57724（varargs 越读 watcher assert——fail-loud hang）、#57752（tt-train 优化器状态——训练域）、#57733/#57734/#57626/#57627/#57629/#57722（性能/易用性/诊断质量）、#57652/#57698/#57760/#57771/#57750（CI/基建/运维）、静态审计第三批 meta-issue #57674–#57694（延续整批留观判例，待单项运行时证据）、transformers #49026（CI triage）。arxiv 当日 5 组有效查询（首轮 5 组无引号查询串被 API OR 拆解判失效，同日以引号短语+AND 重发全部成功；无 429）：命中全部已编目或已判方法论文（SProbe/TrainSDC/SCOUT/LLM-PRISM/2502.12340/2604.00726/JITterFlip/GBFA/ROBBIN/Decision-Level/UEP/RangeGuard/2604.17249/2606.28958/2609.17983/Nexus/Moment-KV/2606.07571 等；2609.16742 CNN 边缘推理 checksum 检测为非 LLM 方法论文不收录）。GitHub Search API 当日 10 组查询全部有效、分页完整（fetched==total：50/67/22/7/2/2/147/6/106/63）、无限流 403、无 Validation Failed；core REST 24 次调用全部成功（`--http1.1`）。
 
 > 2026-09-23 更新：合并每日扫描 2026-09-23 的发现（5 个新子签名 + 7 个已知类别变体 = **12 条新增**，1184 → 1196；扫描窗口 created:>=2026-09-21，与 09-22 扫描重叠两日已逐条去重）。分布：第 1 类 +2（1.245 SDPA 隐式 tile padding 越界泄漏非 32 倍数长 PCC≈0 NEW、1.246 log 族 bf16 accurate −0.0 返 +inf 指数先于规范化读取 var:1.193 前向姊妹）、第 5 类 +1（5.45 SGLang trtllm_mha 双侧 SM90 门限回归静默错补全 NEW）、第 6 类 +2（6.253 部分 prefix 提升事件 parent 同批移除 var:6.252、6.254 Mooncake 把 min() 塌缩 block_size 读作物理尺寸混合块 PD 断裂 NEW）、第 7 类 +1（7.97 DeepSeek chunked-prefix LSE base-2 按自然对数合并前缀指数过权 NEW）、第 8 类 +1（8.92 DSV4.1-Flash nightly KV 记录 MXFP8 化结构化文本 logprob 位移 var:8.53）、第 10 类 +2（10.85 Qwen2Tokenizer 常量覆盖发布 pre_tokenizer v5 回归 var:10.56、10.86 Gemma1 exact GELU 守卫移除 v4.48 起静默 var:12.39）、第 11 类 +1（11.86 thinking_token_budget 边界重复循环 NEW）、第 12 类 +2（12.42 SGLang rsLoRA use_rslora 无视 var:12.32 跨栈姊妹、12.43 Gemma4 k_eq_v LoRA 投影集异构三重失败 NEW）。观察：7.97 是分块注意力 LSE 底数契约分裂首例（每次前缀命中静默过权、Blackwell 默认路径）；6.253 使 KV 事件契约族成三形态（parent 从未上报/载荷不可解码/parent 同批撤回）；12.42 与 12.32 构成 rsLoRA √r 丢失跨栈姊妹对（vLLM MoE 打包重算 vs SGLang 加载器恒错公式）；10.85 与 10.56 构成 tokenizer 双源漂移对（别名表 vs pre_tokenizer 正则）；5.45 是首条"拒绝门被移除致静默错服务"方向的能力门条目（与 7.70 门缺失互为镜像）。来源更正：1.242（tt-metal #57408）维护者已合并 #57421 但只修 calculate_square——rad2deg/deg2rad/softsign/hardsigmoid/prelu 五内核仍截断存储（rad2deg(-4.5) 仍 -256.0），条目补充部分修复状态、issue 已关闭（closed/completed）剩余站点跟踪待问（#57172）；1.244（#57413）修复候选 #57414 验证 e2e BERTScore 0.7555 越门（高于 #57179 前 0.702 与窗口前 0.722）。不收录：vLLM #58422（TP=1 SM120 GDN-hybrid wedge——观察真实（generation counter 冻结/running>0/waiting=0/health 200）但根因未定、与 #40926/#53130 谱系待分、留观）、#58421（Responses truncation auto 语义偏差——API 兼容域）、#58406（mm_processor_kwargs 合并语义——数据丢失半已修 #58408、precedence 契约留观）、#58384（Harmony parser ValueError 关流——fail-loud SSE 错误）、#58353（Qwen2-VL 单帧视频除零——fail-loud ZeroDivisionError）、#58303（Mamba+EAGLE dense 默认 0% 复用——性能/调度域留观）、#58273（Whisper LLM.generate 无 fallback 循环——解码策略缺失、模型能力域）、#58267（CPU W4A16 Whisper 3-D IMA fail-loud + 假 bias 垃圾转录——第一重 fail-loud 参照先例留观）、#58241（SM89 block-fp8 排除——CUTLASS 无 c2x blockwise 实现的正确回退）、#58228（finish_reason tool_calls 遮蔽 length——API 语义）、#58222（NIXL lease reaper 心跳头阻塞收割——源码检查、资源治理留观）、#58280（DSV4 模板 tools 合成 system——main 已修 closed）、#58441（Qwen4Exp PLE prefetch graph-pool 内存 side-stream 竞态——greedy 不可复现实测真实但 PinnedHost 本体未复现、留观）、#58290（多节点 NCCL 启动挂——环境 bring-up）、#58324（实时会话 O(n) 调度——性能）、#58233（并发性能求助）、#58236（FlashInfer 0.6.18 编译失败——构建环境）、#58246（SDK 兼容测试）、#57956（CI 分拣）、#58211/#58134（CI）、SGLang #40926（HiCache cudaHostRegister 失败杀实例——fail-loud 启动崩溃、错误路径 TypeError 掩盖 rc 属诊断质量）、#40966 已编目 12.43、#40817（未知 tool call 转发——feature 议题）、tt-metal #57603/#57586/#57540/#57452/#57450/#57403/#57343/#57335/#57308/#57236/#57230（重构/性能/hang bring-up/feature/profiler）、#57510/#57509/#57506/#57504/#57503/#57502/#57499/#57498/#57496/#57478/#57477/#57476/#57475/#57474（静态审计 meta-issue 第二批 ~90 项——同 #57360–#57367 判例整批留观待单项运行时证据）、#57512（reduction_size 主机校验缺失——防御性加固、未静默面）、#57480（MemoryConfig 复验证——设计议题）、#57515（repeat all-ones 快路径返回未扩维张量——已 closed、三形态中静默错形状面窄留观）、#57458（all_gather_minimal_matmul_async 无持久 buffer 对端覆写 L1——真实静默损坏但触发需实验性 API 无防护调用、留观待生产路径证据）、#57164（#57163 重复贴）、transformers #49036（Cache.crop 不回滚 GDN recurrent state——spec/块验证非无损、核心已知待 Cyrilvallez 方案、报告格式待清晰复现留观）、#49026（serge 集成分拣）。arxiv 当日 5 组查询全部成功（1 组 0 命中、无 429）：全部命中已编目或已判（SProbe/TrainSDC/SCOUT/LLM-PRISM/2604.00726/BitSifter/2609.17983/2608.07408/2608.05863 已编目；Nexus/ReaLM 方法论文不收录；2609.25881 虚拟试穿非 LLM 域 OR 噪声）。GitHub Search API 当日 10 组查询全部有效、无限流 403、无 Validation Failed；tt-metal 65 命中以 per_page=100 单请求补全；vLLM label:bug（34）与量化/KV（43/44）两查询以 page=2 补全；core REST 详情 33 次调用 28 成功、5 次因未认证 core 限额（60/h）耗尽失败——失败的 5 个目标（#58105/#58138/#58119/#58080/#58031 后续评论）改以当日 search 快照（含 state/comments 计数）覆盖状态面、评论正文缺口下次限额窗口补查。
 
@@ -129,13 +131,13 @@
 
 || 轴 | 分布 |
 ||---|---|
-|| **族（Family）** | `infra_off` **1027** · `model_on` **71** · `ambiguous` **92** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
-|| **触发（vLLM/CUDA）** | `config` **247+6⚠** · `other_stack` **206+25⚠** · `partial` **242** · `hw_specific` **299** · `yes` **121** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
-|| **置信度** | `documented` **683** · `verified` **504** · `speculative` **6** · 源文档未给出（10.4）**1** |
-|| **覆盖（Cov）** | `NEW` **877** · `var:x` **314** · `rationale` / `baseline` / `existing` **3** |
+|| **族（Family）** | `infra_off` **1039** · `model_on` **71** · `ambiguous` **92** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
+|| **触发（vLLM/CUDA）** | `config` **252+6⚠** · `other_stack` **207+25⚠** · `partial` **242** · `hw_specific` **304** · `yes` **122** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
+|| **置信度** | `documented` **690** · `verified` **509** · `speculative` **6** · 源文档未给出（10.4）**1** |
+|| **覆盖（Cov）** | `NEW` **883** · `var:x` **320** · `rationale` / `baseline` / `existing` **3** |
 
-> **可直接动手的是未标 ⚠ 的 `config` + `yes` = 364 条（30.5%），再加 `partial` 共 606 条（50.8%）**；
-> `no` + `hw_specific` = 319 条（26.7%），其中 `hw_specific` 仅表示需特定硬件，不等同于不可复现。`other_stack`（206+25⚠ 条）指原报告主路径或依赖栈非本项目默认路径，需按条目触发面复核。
+> **可直接动手的是未标 ⚠ 的 `config` + `yes` = 365 条（30.3%），再加 `partial` 共 607 条（50.3%）**；
+> `no` + `hw_specific` = 324 条（26.9%），其中 `hw_specific` 仅表示需特定硬件，不等同于不可复现。`other_stack`（207+25⚠ 条）指原报告主路径或依赖栈非本项目默认路径，需按条目触发面复核。
 >
 > **32 条带 `⚠` 标记的条目为待复核**（25 条 `other_stack`、6 条 `config`、1 条 `n/a`）——触发标签继承自旧环境评估，机制通常可迁移但需逐条核对**触发面**与**复现方式**字段。
 >
@@ -145,7 +147,9 @@
 
 ## 目录
 
-**编号编目（1082 条，1.1–15.10）** — 15 类真实世界故障调研（含 14 条本项目早期实测条目）
+**编号编目（1092 条，1.1–15.10）** — 15 类真实世界故障调研（含 14 条本项目早期实测条目）
+
+> 2026-09-24 更新：新增 12 条（第 1 类 +6、第 4 类 +1、第 6 类 +2、第 7 类 +1、第 8 类 +1、第 11 类 +1），1080 → 1092。
 
 > 2026-09-23 更新：新增 12 条（第 1 类 +2、第 5 类 +1、第 6 类 +2、第 7 类 +1、第 8 类 +1、第 10 类 +2、第 11 类 +1、第 12 类 +2），1070 → 1082。
 
@@ -232,17 +236,17 @@
 
 || 类 | 主题 | 条数 |
 ||---|---|---|
-|| 1 | 硬件 / 静默数据损坏（SDC） | 245 |
+|| 1 | 硬件 / 静默数据损坏（SDC） | 251 |
 || 2 | GPU 显存故障（HBM/GDDR ECC、rowhammer、磨损） | 3 |
 || 3 | 比特翻转攻击与定向权重篡改（BFA 家族） | 20 |
-|| 4 | 数值 / 精度 / 不确定性（**本项目的噪声底**） | 25 |
+|| 4 | 数值 / 精度 / 不确定性（**本项目的噪声底**） | 26 |
 || 5 | 分布式 / 多 GPU / 并行推理 | 45 |
-|| 6 | 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM） | 254 |
-|| 7 | 量化（PTQ / 低位 / FP8 / 微缩度） | 97 |
-|| 8 | KV 缓存 / 注意力机制故障 | 92 |
+|| 6 | 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM） | 256 |
+|| 7 | 量化（PTQ / 低位 / FP8 / 微缩度） | 98 |
+|| 8 | KV 缓存 / 注意力机制故障 | 93 |
 || 9 | 位置编码 / RoPE 配置故障 | 28 |
 || 10 | 分词器 / 对话模板故障 | 86 |
-|| 11 | 解码 / 采样故障（多为 post-forward **结构性盲点**） | 85 |
+|| 11 | 解码 / 采样故障（多为 post-forward **结构性盲点**） | 86 |
 || 12 | 权重 / 适配器 / 检查点加载故障 | 43 |
 || 13 | 模型图 / 架构配置故障 | 39 |
 || 14 | 长上下文能力失效（model_on — 健康模型盲点） | 8 |
@@ -2863,6 +2867,66 @@
 - **触发面**：tt-metal + `ttnn.log/log2/log10` + bfloat16 + accurate mode + −0.0 输入（hw_specific：默认路径即触发）
 - **发现来源**：2026-09-23 每日扫描。
 
+### 1.247 `ttmetal_moe_expert_token_remap_writer_group_boundary_off_by_one_drops_page_overwrites_next_core`
+
+`infra_off`（`moe_expert_token_remap` writer 内核（`writer_moe_expert_token_remap.cpp:107`）组计数器被 **for 增量表达式与体内 reset 双重推进**：`reduction_count = 0` 后循环自带 `++reduction_count` 立即把它变 1——第一个之后每个归约组跨 `reduction_size − 1` 页而非 `reduction_size` 页，组边界每次 flush 提前一页漂移。三重后果：(a) 每组尾页的激活被 OR 进 scratch 后又被 post-write `fill_with_val` 清零——**从未到达 reduced 输出**（下游消费者漏掉一个真实激活 local expert 的 token 批）；(b) 组变短使多页 core **发出多于其 reduced 页数的写**，`reduce_idx` 越过本 core 切片**覆写下一 core 的页**（最后一个 core 则写越缓冲末端）；(c) `reduction_size == 1` 时每 core 恰写一页、其余保留输出缓冲原值。**全部访问留在已分配张量内——无 assert、静默错数据**；`output_mapping`（`page_id = bs` 独立路径）不受影响） · Cov: `NEW`（循环计数器双重推进组边界漂移子签名） · 触发 `yes` · 置信度 `documented`
+
+- **机制**：host 侧 `split_work_to_cores_even_multiples` 按 `reduction_size` 整数倍分页、golden `reshape(...).any(dim=2)` 按连续不重叠 chunk 归约——两侧契约都证实内核的组边界漂移是缺陷；该 op 测试套件只参数化 `batch*seq` 64/128 对 64 core（每 core 单组、漂移无处发生），故恒绿。wormhole_b0 实测：128 页/rs=1 错 **906/4096**、256 页/rs=2 错 **1346/4096**、4096 页/rs=16 错 45/8192；rs=16 低错数是"丢 1/16 token 只在该 token 恰为组内唯一激活者时翻转 OR 位"的稀释而非良性。修复 #57463（open，未合并）：把计数移进体内前置自增。**09-24 回访补充**：#57463 评论区记录三个相邻缺陷——writer 仍丢部分尾组（当前被偶数倍分配掩盖、与 #51290 修复联动即暴露）、`reduction_size` 完全无主机校验（0/非整除）、`output_reduced` 经真实消费者（sparse_matmul）的覆盖被 #28376 跳过。
+- **来源**：tt-metal #57461（2026-09-23 open，含逐迭代漂移表、host/golden 双侧契约证据、7 组 wormhole 实测错元素计数与建议修复；master ticket #51214 item 10）。https://github.com/tenstorrent/tt-metal/issues/57461
+- **行为效应**：无 crash——MoE 专家路由元数据静默错值：被丢页 token 批的 local expert 激活位归零（消费者误判"该专家未被使用"）、越界写污染下一 core 的 reduced 页；`reduction_size==1` 时除首组外全组保留陈旧缓冲内容。
+- **触发面**：tt-metal + `ttnn.moe_expert_token_remap` + 单 core 拥有 >1 个归约组（`batch*seq/reduction_size` 超过分片 core 数；默认测试形状之外即触发）
+- **发现来源**：2026-09-23 每日扫描发现、当日 core 限额未及核实；2026-09-24 补录（评论核实修复 #57463 open 未合并）。
+
+### 1.248 `ttmetal_softmax_float32_default_approximate_exp_7_5pct_element_error`
+
+`infra_off`（`ttnn.softmax` 对 **float32** 张量默认使用**近似 exp**：`softmax_init_compute_kernel_config` 把 `default_approx_mode = true` 硬编码给**每个输入 dtype**——同一行代码刚按 `is_fp32` 给了 fp32 Dest，紧接着却让 fp32 数值走 bf16 级近似内核。实测（Blackhole P150、fp32 TILE、dim=−1、float64 参考）：全 ones 行每元素恒错 **2.91e-2**（返回 0.9709/n、行和 0.9709——`exp_fast(0)=0.9785`/`exp_fast(1)/e=0.971` 的同款 −2.9%）；N(0,1) 4096 宽逐元素最大 **7.45e-2**、行和 0.9639–0.9999；4·N(0,1) logit 尺度最大 7.01e-2。`numeric_stable=True` 与 `HiFi4+fp32_dest_acc_en` **不改变任何一位**——不是累加问题；只有 `math_approx_mode=False` 改变它（残差 4.88e-2→4.88e-4，系 #53106 recip Newton 种子）。与 `ttnn.exp` 自身文档（`fast_and_approximate_mode ... Defaults to False`）**方向相反**，softmax docstring 无近似默认声明） · Cov: `var:ttmetal_bias_gelu_approximate_default_no_exact_escape`（1.137 融合算子默认近似无逃生族——本条在 softmax 默认维度，report 亦自证与 #55265/#52045 同形） · 触发 `hw_specific` · 置信度 `verified`
+
+- **机制**：每个 softmax program factory 按 `math_approx_mode` 发 `EXP_APPROX` compute define，`softmax_device_operation.cpp:386` 的 `init_device_compute_kernel_config(arch, cfg, fidelity, true, is_fp32, false)` 第 4 参把近似钉死为 true；近似 exp 在数值稳定路径的 `x−max ≤ 0` 域上自身相对误差最大 3.1e-2（中位 2.0e-2），分子分母部分相消后仍留逐元素百分位误差。修复（报告者已验证）：float32 输入时默认关近似（镜像同行的 fp32-Dest 策略），bf16 默认不动。
+- **来源**：tt-metal #57633（2026-09-24 open，Bad Outputs，含 7 组形状×分布误差表、ones/随机/均匀/logit 四输入族、`ttnn.exp` 双模式对照、代码行定位与已验证修复）。https://github.com/tenstorrent/tt-metal/issues/57633
+- **行为效应**：无 crash、无 NaN——softmax 概率逐元素至 7.5% 偏差且**行和不归一**（0.96–0.97），分布形状貌似合法；任何 fp32 softmax 消费者（归一化注意力权重、采样分布）静默携带百分位误差。1.137/1.138 之后"近似 API 契约违反"族第三例：本条在 softmax 默认路径、对显式请求 fp32 精度的用户生效。
+- **触发面**：tt-metal + `ttnn.softmax` + float32 输入 + 默认参数（hw_specific：默认路径即触发；`math_approx_mode=False` 显式规避）
+- **发现来源**：2026-09-24 每日扫描。
+
+### 1.249 `ttmetal_prod_fp32_srca_tf32_mantissa_dest_to_srca_roundtrip_10bit`
+
+`infra_off`（`ttnn.prod` 文档声明 FLOAT32 输入输出、program factory 亦开 32-bit DEST，但乘积实际按 **~10 bit 尾数**形成且带向下偏置：`exp(0.01·N(0,1))` 输入（每值 4% 内、乘积远在 fp32 域内）下 32 元素错 4.2%、4096 元素错 **99%**、**72,192 值乘积返回 3.89e-31（真值 98.9）**、全张量 `prod()` 返 denormal 1.4e-45。机理双点：(1) 输入 tile 以 `UnpackMode::UnpackToSrc` 进 **SrcA**（工厂注释自述"Legacy set no unpack_to_dest_mode"）——SrcA 持 TF32（10-bit 尾数），每因子到乘法时只剩 10 位；(2) 运行积留在 DEST 但每步经 `mul_reuse_dest_tiles<DEST_TO_SRCA>` 折叠——fp32 部分积**再次穿过 SrcA**（16-bit-high 路径）。判决性对照：`(1+2⁻¹⁰)` 因子整行被乘成 1.0（因子完全消失）、精确 bf16 输入精确（非算法错、纯舍入路径错）） · Cov: `var:tf32_matmul_truncation`（4.2 TF32 10-bit 尾数截断族——本条在 tt-metal SrcA unpack 维度，且与 DEST→SrcA 回读双机制复合；issue 亦自证即 #45222 对 std/var 描述的机制、#45319 在彼处已修） · 触发 `hw_specific` · 置信度 `verified`
+
+- **机制**：fp32 精度承诺只落在 DEST 累加器标志上，输入侧 unpack 与折返侧 DEST→SrcA 两条路径都不受该标志覆盖——"精度开关粒度小于数据通路粒度"的结构缺陷；误差按每因子 −1.0e-3 相对率对数累积（log(device/exact)/n 实测），4096 元素即到 99%。修复（报告者已在 BH 验证）：两处改 unpack_to_dest + 去 SrcA 折返，修后 72,192 元素相对误差 2.0e-5（torch fp32 为 1.6e-5）、耗时不变。
+- **来源**：tt-metal #57634（2026-09-24 open，Bad Outputs，含 n=32..72192 误差表、(1+2⁻ᵏ) 消失因子判决表、双 factory 代码定位与已验证修复数据）。https://github.com/tenstorrent/tt-metal/issues/57634
+- **行为效应**：无 crash——**长乘积静默坍塌为垃圾**（量级 1 的乘积返回 1e-31 甚至 denormal）；任何把 prod 当 fp32 语义用的管线（概率连乘、似然、归一化常数）结果系统性偏小且无警告。9.20（RoPE TF32 整数截断）之后 TF32 族在 **tt-metal 归约算子**维度的首例。
+- **触发面**：tt-metal + `ttnn.prod` + float32 + 多于数十元素（hw_specific：默认路径即触发；bf16 更差但无精度声明）
+- **发现来源**：2026-09-24 每日扫描。
+
+### 1.250 `ttmetal_typecast_uint32_float32_double_rounding_bit31_one_ulp`
+
+`infra_off`（`ttnn.typecast(x_uint32, float32)` 对 **bit 31 置位**的输入把低 31 位先 cast 成 fp32（第一次 RNE）、再加 2^31（第二次 RNE）——**两次舍入 ≠ 一次**：[2^31, 2^32) 全域 2,147,483,648 个输入中 **353,697,792 个（16.47%）** 返回距 torch 正确舍入值 1 ULP 的邻值（上/下各半、和在求和中不消）。判决例 v=3221225663：ttnn 3221225472（|Δ|=191，超半 ULP——**不是另一个合法舍入**）、torch 3221225728（|Δ|=65）。golden 是 `x.to(torch.float32)` 且单测以 `assert_equal` **位精确**比较——该 dtype 对的现有测试必已绕开上半域。机理：lo ≥ 2^24 时第一次 cast 舍到 128 的倍数、加 2^31 后间距 256 的第二次 RNE 在第一舍入制造的伪 tie 上向偶破平可落到远侧；`SFPLOADMACRO` 默认路径同构（SFPCAST + SFPMAD 双舍入）） · Cov: `var:ttmetal_typecast_positive_int32_overflow_saturates_int32_min_domain_sign_reversal`（1.190 typecast 整数域舍入/溢出族——本条在高半 uint32 舍入维度） · 触发 `hw_specific` · 置信度 `documented`
+
+- **机制**：`ckernel_sfpu_typecast.h`（BH L443-L449 / WH L459-L465 双副本）的 `SFPCAST(lo)` + `SFPADDI(0x4f00)` 序列；输入 <2^31 跳过加法只舍入一次故精确。来源为无设备的逐指令 replay + 全域 2^31 穷举（脚本在 issue 内），Repo Assist 机器人已在 main 上确认根因；修复方向 sticky-halve 单轮舍入（报告者拟走 bounty 流程）。
+- **来源**：tt-metal #57643（2026-09-24 open，Bad Outputs，含逐位区间错值计数表、worked example、双 arch 代码行与穷举脚本；Repo Assist 根因确认评论）。https://github.com/tenstorrent/tt-metal/issues/57643
+- **行为效应**：无 crash——uint32 大值转 fp32 恒 1 ULP 静默偏差；影响任何以 typecast 进浮点域的计数/id/哈希管线，误差上/下对称分布使其在聚合中不消。
+- **触发面**：tt-metal + `ttnn.typecast` uint32→float32 + 输入 ≥2^31（hw_specific：Wormhole/Blackhole 同病；<2^31 干净）
+- **发现来源**：2026-09-24 每日扫描。
+
+### 1.251 `ttmetal_fmod_remainder_exact_zero_loses_dividend_sign`
+
+`infra_off`（tensor-tensor `ttnn.fmod`/`ttnn.remainder` 在**精确零结果**处恒返 **+0.0**，torch 按 C `fmod` 语义把零结果继承**被除数符号**（−0.0）：`fmod(-4.0, 2.0)` ttnn +0.0 vs torch −0.0、`remainder(-4.0, 2.0)` 同、`fmod(-0.0, 2.0)` 同。负零不罕见——任何整除的负被除数都产生。机理双路径：fmod 的 `result = a - trunc_div * b` 在 IEEE RNE 下对负被除数精确零得 +0.0，两个 fix-up 循环都只对非零幅值/符号动作（`result_abs >= b_abs`、`result < 0`、`result > 0` 在零处全 false），`a == b` 臂更直接字面赋 `0.0f`；remainder 的符号校正显式 `v_if(result != 0.0f)` 跳过零。**现有测试结构性看不见**：数值比较 `+0.0 == −0.0`，此前五轮 fmod/remainder 修复（#51661/#56384/#51441/#55502）全针对非零结果。bf16 输出同病（vFloat16b 转换保留零符号）） · Cov: `var:ttmetal_log_bf16_accurate_mode_signed_zero_exponent_before_normalisation_plus_inf`（1.246 ±0.0 位域语义族——本条在 fmod/remainder 精确零符号维度） · 触发 `hw_specific` · 置信度 `documented`
+
+- **机制**：来源为无设备的内核 IEEE replay（C++ 逐位复现内核输出、与 torch 恰好且仅在零符号处分歧）；修复每内核一句（零结果处 copysign(0, a)，含 `a == b` 臂），Wormhole/Blackhole 双副本。
+- **来源**：tt-metal #57714（2026-09-24 open，Bad Outputs，含 fp32 全对照表、双 arch 代码行、历史修复谱系与测试盲区分析）。https://github.com/tenstorrent/tt-metal/issues/57714
+- **行为效应**：无 crash——零符号丢失对以 signbit 分支的下游（`1/x` → ±inf、atan2、区间边界比较）产生符号级分歧；PCC/容差门恒绿。
+- **触发面**：tt-metal + `ttnn.fmod`/`ttnn.remainder` tensor-tensor + 负被除数整除（hw_specific：默认 SFPU 路径即触发）
+- **发现来源**：2026-09-24 每日扫描。
+
+### 1.252 `ttmetal_matmul_2d_mcast_dram_width_shard_first_read_unclamped_narrow_per_core_n_garbage`
+
+`infra_off`（`MatmulMultiCoreReuseMultiCastProgramConfig` + in1 **DRAM width-sharded**（`tt_transformers` 每个 prefill linear 的默认权重布局）在 per-worker 块窄于一个 DRAM shard（`per_core_N < ceil(N / num_dram_channels)`）时**静默返回 inf/garbage**、config 过验证正常执行：工厂的 DRAM bank 游标首读未钳制 `worker_core_stride = per_core_N_storage − storage_core_stride`（后续读取都有 `std::min(stride, per_core_N)`），首读过冲使 bank 游标越过下一列需要的 tile、其后每列读错权重。P150（8 bank）：grid 9（per_core_N 22<24）与 grid 13（15<24）全形状 non-finite；**预测规则 `per_core_N ≥ ceil(N/8)` 在 22/22 配置 + 288 配置检查搜索（宽 10-13：229/229 错；宽 8：59/59 对）全部成立**。decode 姊妹工厂（`..._dram_sharded_...`）同款未钳制行但先分支后封顶故不中招。修复即同一行加 `std::min(..., per_core_N)`：五垃圾配置全对（PCC ≥ 0.99988）、212 既有测试逐测试结论不变（188 过/24 跳/0 挂——无一到达失败案例）） · Cov: `NEW`（sharded 权重读取首过冲子签名；与 1.119（MatmulMultiCoreReuse 过订阅静默丢块）同属 mcast matmul 工厂数据通路缺陷但机制独立——本条是游标钳制缺失非资源过订阅） · 触发 `hw_specific` · 置信度 `verified`
+
+- **机制**：DRAM shard 内列段连续性与 worker 块宽不匹配时，首读按"取余整个 bank 条带"推进游标——修复把首读钳到 worker 块宽；同一 commit（`213530ded2a`，`arg/pplx-embed-upstream` 分支）还带 in1 合并读优化（逐 tile NoC 读改行段突发，Qwen3-4B 端到端 22.3→21.5/21.4→17.7 ms）。
+- **来源**：tt-metal #57732（2026-09-24 open，社区报告，含自包含回归测试、22+288 配置验证矩阵、隔离构建因果证明（五配置垃圾→修复后 PCC≥0.99988、`/proc/self/maps` 验证加载 .so）、212 测试无回归与 Llama-3.1-8B 端到端 bit-identical logits）；同 commit 另以 #57630 独立报告（同根因、同修复，含 4 形状×8/12 列 PCC 表与 perf 数据）。https://github.com/tenstorrent/tt-metal/issues/57732
+- **行为效应**：无 crash、无 raise——**宽网格 prefill 静默垃圾输出**；缺陷把 `tt_transformers` P150 prefill 配置锁死在 ≤8 列网格（错误同时掩盖性能上限：修复后 13 列网格快 14.3–21.5% 且 logits bit-identical）。
+- **触发面**：tt-metal + 2D mcast matmul + in1 DRAM width-sharded + grid 列数 > DRAM bank 数（P150 8 bank；P100 7 bank 未测；Wormhole 未测）
+- **发现来源**：2026-09-24 每日扫描。
+
 
 ## §3.2 权重位翻转（持久静默权重损坏）
 
@@ -3382,6 +3446,16 @@
 - **触发面**：vLLM + Mamba-hybrid（granite-4.0-h/Falcon-H1）+ 默认 full CUDA graph + 无 BOS 分词器的单 token prompt（config：`--enforce-eager`/`PIECEWISE` 即绕开）
 - **发现来源**：2026-09-19 每日扫描。
 
+### 4.26 `vllm_glm5x_replicated_indexer_key_norm_per_rank_autotune_nondeterministic_tp_greedy_forks`
+
+`infra_off`（GLM-5.x kpool sparse indexer 的 key 路径在 TP 下**每个 rank 复制计算**（`wq_b` ReplicatedLinear、`wk_weights_proj` disable_tp）——正确性依赖各 rank **bit-identical**，但 `_fused_indexer_k_norm` 经 `torch.compile(dynamic=True)` 编译后 Inductor 为该 persistent reduction 保留 3 个候选 config（XBLOCK 1/8/32）且**首次运行时逐 rank benchmark 自选**：XBLOCK=1 的行归约顺序不同，固定 2048×160 输入上与 8/32 在 2048 行中 2 行分歧。indexer 随后做 **540 池取 top-512** 的离散选择——near-tie 处不同 rank 选出不同候选集 → 两 rank attention 输出分歧 → all-reduce 混合 → **temperature 0 greedy completion 随启动时各 rank 调优结果分叉**。2×GB10 TP2 实测 16 次启动：11 次 state1（双 rank 8/32）、3 次 state2（一 rank 落 XBLOCK=1，858 次 indexer 调用中 10 次键分歧、layer 19 候选集分歧 2 行）、2 次 state3；**因果以干预闭合**——仅钉该内核 config（8/1 复现 state2 逐行一致、8/8 还原 state1），两次实验间唯一变化即 rank 1 该内核输出。`TORCHINDUCTOR_DETERMINISTIC=1` 因 torch 2.13 bug（pytorch#198563：Dynamo 全局态恢复把 deterministic 拉回 False）失效，强制 config 入口可用） · Cov: `var:sglang_vlm_greedy_cross_build_near_tie_flip_worker_nondeterminism`（4.12 near-tie 放大族——本条根因定位到**逐 rank autotune 选择**这一新机制面，并给出干预级因果证明；通用水律：跨 rank 复制且喂离散选择（top-k/argmax）的计算需要 bit-identical 内核或单一写者） · 触发 `config` · 置信度 `documented`
+
+- **机制**：复制计算 × 自适应调优的组合破坏复制前提——autotune 本为性能设计，但其选择空间包含数值不等价的归约分块；row-sharding PR（#54394/#58536，单 rank 计算 + all-gather int32 索引）从结构上消除分歧但 #58536 仅覆盖 ≥8 请求均匀 decode batch，小 batch 服务仍走复制路径。
+- **来源**：vLLM #58636（2026-09-24 open，含三态启动×16 记录、per-layer 键/候选集分歧计数、钉配置干预 A/B（8/1 vs 8/8）、pytorch#198563 关联与两个修复方向）。https://github.com/vllm-project/vllm/issues/58636
+- **行为效应**：无 crash——temp=0 输出跨启动非确定（"这台服务器答什么"取决于调优 benchmark 的偶然结果）；每次启动内自一致（请求内可复现）使"重放即验证"探针失效，只有跨启动对拍才暴露。4.12/4.24 之后非确定族新成员：根因首次定到 **Inductor per-rank autotune**。
+- **触发面**：vLLM + GLM-5.x（kpool indexer 复制路径）+ TP>1 + `torch.compile`（config：小 batch decode 尤其；钉 config / row-sharding 可避）
+- **发现来源**：2026-09-24 每日扫描。
+
 
 ## 第 5 类 · 分布式 / 多 GPU / 并行推理
 
@@ -3843,8 +3917,8 @@
 
 `infra_off`（vLLM + FlashInfer 0.6.18.post1 在 GB300（SM103）上 `trtllm_fp4_block_scale_moe` autotune：报告者观察到启动停在 autotune **40+ 分钟**，GPU 利用率 100%、期间无进度日志、cache 目录已创建但 `autotune_configs.json` 未写入；未见 error/traceback；跳过该 op 的 autotune 后同配置约 8 分钟进入服务。**未证明永久挂死**） · Cov: `var:vllm_flashinfer_autotune_config_cache_rank0_only_dump_multi_rank_launch_deadlock`（仅按 autotune 启动活性症状关联 5.40；5.40 有独立已知根因，本条根因未定） · 触发 `hw_specific` · 置信度 `documented`
 
-- **机制**：**根因未定**。2026-09-23 报告者撤回「`trtllm_gemm.so` 仅有 sm_100a cubin 且无 PTX → SM103 候选永不终止」归因：该库是 dense GEMM 模块，`fp4_block_scale_moe` 符号实际位于含 sm_103a cubin 的 `fused_moe_trtllm_sm100.so`；前者的架构观察虽真实，但与本 op 无关。autotuner 开始/结束之间缺逐 bucket 进度日志，cache 只在完成时写出；40+ 分钟和空目录不能区分极慢调优与真正卡死。报告者认为极慢爬行更可能，但仍待进程栈/完成时间验证；不得把无 per-candidate 超时或不兼容 cubin 断言为已证根因。
-- **来源**：vLLM #58031（2026-09-21 报告，2026-09-23 EDIT 撤回原归因；报告者在评论中确认模块符号和 sm_103a cubin）。https://github.com/vllm-project/vllm/issues/58031 ；更正评论 https://github.com/vllm-project/vllm/issues/58031#issuecomment-5788562400
+- **机制**：**根因未定**。2026-09-23 报告者撤回「`trtllm_gemm.so` 仅有 sm_100a cubin 且无 PTX → SM103 候选永不终止」归因：该库是 dense GEMM 模块，`fp4_block_scale_moe` 符号实际位于含 sm_103a cubin 的 `fused_moe_trtllm_sm100.so`；前者的架构观察虽真实，但与本 op 无关。autotuner 开始/结束之间缺逐 bucket 进度日志，cache 只在完成时写出；40+ 分钟和空目录不能区分极慢调优与真正卡死。报告者认为极慢爬行更可能，但仍待进程栈/完成时间验证；不得把无 per-candidate 超时或不兼容 cubin 断言为已证根因。**2026-09-24 评论补读更正**：autotuner 实际有 tqdm 进度输出（`[AutoTuner]: Tuning ...: N/21`，以 `\r` 分隔写 stderr——按行采集的日志捕获方式会吞掉），「无进度日志」应按捕获口径理解为"未被观测到"；另一台 GB300（SM103）+ 不同模型（MiMo-V2.6-Pro-RL，MXFP4 384 专家）复现同类病理性 autotune，排除单点/单模型因素。根因未定判定不变。
+- **来源**：vLLM #58031（2026-09-21 报告，2026-09-23 EDIT 撤回原归因；报告者在评论中确认模块符号和 sm_103a cubin；2026-09-24 补读 jmeadlock/ebfio 评论——tqdm 进度与第二台 GB300 复现）。https://github.com/vllm-project/vllm/issues/58031 ；更正评论 https://github.com/vllm-project/vllm/issues/58031#issuecomment-5788562400
 - **行为效应**：观察窗口内启动未就绪、无中途进度日志和完成态 cache 文件；**不等于永久挂死**，亦无证据证明候选内核无法在 SM103 执行。跳过调优可绕过该次启动延迟，但不构成故障根因验证。
 - **触发面**：vLLM + GB300/SM103 + FlashInfer `trtllm_fp4_block_scale_moe` autotune 未跳过（hw_specific；SM103 上的报告，其他架构不可泛化）
 - **发现来源**：2026-09-22 每日扫描；2026-09-23 依据原 issue EDIT/评论更正（保留历史发现）。
@@ -6476,6 +6550,26 @@
 - **触发面**：vLLM + hybrid 模型（混合 KV group block size）+ Mooncake connector + PD 分离（other_stack；Ascend 报告、机制后端无关）
 - **发现来源**：2026-09-23 每日扫描。
 
+### 6.255 `vllm_dsv41_sparse_mqa_nan_row_stale_col_indices_silent_topk_selection`
+
+`infra_off`（DeepSeek-V4.1 sparse MQA indexer：DeepSelect 以 `abort_when_nan_found=False` 被调用、检测到 NaN 行时**只写 `output_idx[row,0]=0x3f3f3f3f` 哨兵即返回**，其余 `index_topk − 1` 个槽**不写**；V4.1 路径跨步复用调用方持有的 `col_indices_buffer`（`SparseMQAIndexer.forward` 清 `topk_indices_buffer` 却不清这块 DeepSelect scratch）——#58215 修好的越界界检查把首槽哨兵映射为 −1，**其余陈旧槽保留上一行索引、落在 [0,width) 内通过新界检查、被当作真实 attention 位置重映射**。非第二次 OOB：是 **NaN 行之后的静默陈旧 top-k 选择**。修复方向（未实施）：调用前把 `end > topk` 行的 NaN logits 原位置换为 −inf，使 DeepSelect 从有限候选中产出完整 top-k；事后回填不充分（selector 从未排序其余槽）） · Cov: `NEW`（NaN 哨兵半写出 × 复用 scratch 陈旧数据子签名；与 8.91（NaN 经 P·V 绕 mask 引爆）同域但本条在索引选择层） · 触发 `config` · 置信度 `documented`
+
+- **机制**：pinned DeepSelect（`d96d33afe1`，其 main 同行为）的 `take_action_when_have_nan` 只写槽 0 即返回；vLLM 侧 `indexer_topk.py` 传 `abort_when_nan_found=False`、`sparse_indexer.py` 一次性分配 `col_indices_buffer` 且 forward 不重置——两份代码的契约缝隙只在 NaN 出现时显形。
+- **来源**：vLLM #58627（2026-09-24 open，含源码证据、修复提案与回归测试设计（毒化预填 + NaN 注入断言等价 `nan_to_num(-inf).topk`）；**报告者同日评论撤回"已演示的服务影响"**——29 个空回复采样 0 个重复尾巴、文本连贯，不得把本条读作观测到的长推理收敛回归之因；GB200 生产 A/B 中 #58215 使接受率 −3.39% 的观察仍真实但归因待验证）。https://github.com/vllm-project/vllm/issues/58627
+- **行为效应**：无 crash、无 IMA——NaN 行之后该步的 sparse 注意力**静默读错位置集**（陈旧列而非任何良定义选择）；触发依赖上游 NaN 出现（本身是故障信号），本条把"暴露 NaN"退化为"静默错读"。
+- **触发面**：vLLM + DSV4.1 sparse MQA indexer + DeepSelect NaN 路径（config：`abort_when_nan_found=False` 为 vLLM 调用方式）
+- **发现来源**：2026-09-24 每日扫描。
+
+### 6.256 `pd_disagg_mla_target_gqa_draft_kv_asymmetric_tp_mistransfer_vllm_nixl_sglang_mooncake`
+
+`infra_off`（PD 分离下 **MLA target + GQA draft**（DFlash 类）且 prefill TP < decode TP 时 draft KV 传输错位——vLLM Nixl 与 SGLang Mooncake 双栈同机制：**模型级 MLA 复制假设被无差别套到 head-sharded draft 区域**。vLLM：`compute_tp_mapping` 按 `use_mla` 给全部区域 `total_num_kv_heads=1, rank_offset_factor=0`（对 MLA 层正确、对按头切分的 draft 错误）——(1) handshake 尺寸校验把 draft 区域当 replicated，**正确几何反被 assert 拒绝**（`local=2048, remote=16384`）、**未按头比缩放的错几何反被接受**；(2) 读路径每 decode rank 都读 prefill 块的 draft head 0（7/8 rank 读错头，target verify 使输出最终正确但 **draft 注意错头、接受率下降**）；(3) hetero-TP 头切分守卫在 `use_mla` 时被跳过。SGLang：非 DCP hybrid-MLA 分支 `send_kvcache` 把 **P 侧 item length 当 D 侧 stride**——P TP2 draft 页每 rank 字节数是 D TP4 的两倍，draft 写入按错误步长落址（target MLA KV 每_rank 布局兼容不受影响）；B300 双 P（TP2/EP2）× 单 D（TP4/EP4）实测 28/256 请求 KV 传输失败，本地原型（target 走通用路径、只传 owning D rank 的 draft 头切片）256/256） · Cov: `NEW`（draft 区域沿用模型级复制/单一长度假设子签名；按"同目标双栈同机制"合并编目——判例同 11.73（vLLM #56088 + SGLang #38589）） · 触发 `other_stack` · 置信度 `verified`
+
+- **机制**：MLA 的"每 rank 持全量 KV"与 GQA draft 的"按头分片"在同一 engine 里共存，传输层的区域分类（vLLM `_is_region_replicated` 已判 SPLIT 但三处仍用模型级答案）/长度参数（SGLang 源 stride 复用为目的 stride）都没有按区域粒度区分。
+- **来源**：vLLM #58470（2026-09-23 open，含 CPU handshake 单测复现（main 上 assert 触发）、三处代码定位与修复 PR 测试设计；GLM-5.3 + DFlash2、2×8×H200）；SGLang #41038（2026-09-24 open，含 28/256 失败计数、RDMA HCA 排除与本地修复原型对照；GLM-5.3-Flash + DFlash2、B300）。https://github.com/vllm-project/vllm/issues/58470 ; https://github.com/sgl-project/sglang/issues/41038
+- **行为效应**：vLLM 侧显形为 fail-loud assert（正确几何被拒）或**静默接受错误几何**（错值传输潜伏面）；读错头形态无 crash、输出经 verify 保持正确但**接受率静默受损**（吞吐损失无诊断）。SGLang 侧 KV 传输失败（请求级失败/重试）。6.226（GDN hybrid PD 双维 stride 错切）之后 PD 非对称 TP 族在 **draft-GQA × target-MLA 混合几何**维度的首例。
+- **触发面**：vLLM Nixl / SGLang Mooncake PD 分离 + MLA target + GQA draft（DFlash）+ prefill TP < decode TP（other_stack：双栈各自默认路径内的非对称拓扑）
+- **发现来源**：2026-09-24 每日扫描。
+
 
 ## 第 7 类 · 量化（PTQ / 低位 / FP8 / 微缩度）
 
@@ -7505,6 +7599,16 @@
 - **触发面**：SGLang + DeepSeek MLA + `trtllm_mha`/chunked-prefix 路径 + prefix-cache 命中（other_stack：Blackwell 默认即触发）
 - **发现来源**：2026-09-23 每日扫描。
 
+### 7.98 `vllm_triton_fused_moe_per_channel_weight_scales_indexed_as_per_tensor_quark_static_int8`
+
+`infra_off`（vLLM Triton fused MoE legacy 路径（INT8/FP8 共享内核）：`per_act_token_quant` 标志**同时选择**激活 scale 与权重 scale 的索引布局——Quark `W8A8Int8MoEMethod` 的"静态 per-tensor 激活 scale + per-output-channel 权重 scale"组合走 tensor-scale 分支，**per-channel 权重 scale 被按 per-tensor 布局读取**（`int8_w8a8_moe_quant_config()` 又把 `per_out_ch_quant=False` 钉死）。组件级判决：4 专家/top-k=2 探针中把专家 3 全部 W13 通道 scale ×4 **输出无任何变化**（该专家被 4 个路由槽选中）；实验性分离两标志后扰动即影响输出、修正后的 legacy 与手工模块路径输出一致。#57092 修的是**相反组合**（per-token 激活 × per-tensor 权重），本组合在其更新后的组合测试中仍被跳过） · Cov: `NEW`（双标志共用单开关子签名；与 7.91（block-fp8 else 吞不支持值 fail-late）同属"量化粒度矩阵的未覆盖格"但本条是索引布局错读而非静默回退） · 触发 `config` · 置信度 `documented`
+
+- **机制**：共享非 block W8A8 内核的 `per_channel_quant` 单布尔同时控制 per-token 激活 scale 读取与 per-channel 权重 scale 读取；Quark static INT8 的粒度组合落在两标志耦合的缺口上。组件级观察（overlay 探针 + 代码核对 `00b7847c`），**非完整模型评测**；报告者自述确定性复现脚本尚未在 GPU 运行（预测性失败声明）。
+- **来源**：vLLM #58532（2026-09-24 open，含组件探针设计、未路由专家控制组、双问题定位（config factory + 共享索引点）、#57092/#54959 关联与修复提案）。https://github.com/vllm-project/vllm/issues/58532
+- **行为效应**：无 crash——路由专家的 per-channel 校准被静默按错误布局索引（扰动不可见=校准失效面），静态 INT8 Quark MoE 输出携带系统性量化误差；FP8 共享同一实现属兼容范围但未单独复现。
+- **触发面**：vLLM + Quark 静态 INT8 W8A8 MoE（legacy Triton 路径）+ per-channel 权重 scale（config：量化格式即触发）
+- **发现来源**：2026-09-24 每日扫描。
+
 
 ## §3.5 长上下文（prompt 级标签）
 
@@ -8455,6 +8559,16 @@
 - **行为效应**：无 crash——**结构化/工具调用文本的 logprob 分布静默位移**（top-1 翻转率 12.66%），perplexity 级监控恒绿；agent/工具调用管线的确定性（temperature=0 重放一致性）在版本升级间被破坏，A/B 评测与蒸馏数据质量受影响。
 - **触发面**：vLLM nightly cd10ed6f 及后 + DeepSeek-V4.1-Flash + `--kv-cache-dtype fp8_ds_mla`（hw_specific：SM103 报告、GB300）
 - **发现来源**：2026-09-23 每日扫描。
+
+### 8.93 `ttmetal_gemma4_exact_window_sliding_ring_spec_verify_loses_in_window_kv_warning_only`
+
+`infra_off`（tt-metal Gemma4 服务路径（`Gemma4DFlashForCausalLM`/`Gemma4MTPForCausalLM`）：bounded sliding KV 的 ring 默认等于窗口（31B 为 1024），speculative verify 一次把 K+1 行 KV 写进 ring——**写 p+j 即覆写 p+j−1024，而该位置仍在查询 p..p+j−1 的因果窗口内**：anchor query 的窗口从 1024 缩到 1019（每 query 丢 K−i 个最老位置），**50 个 sliding 层的 committed token 全部来自缩短窗口**；被拒 draft 行留在 ring 里被后续 plain decode 当窗口内历史读（随后 K−a−1 步）；由缩短窗口算出的 KV 行持续驻留缓存（错误持久化）。ring 内代码注释自证（"Measured at 32k: K=1 stays token-correct, K=5 corrupts from the first token"；`_reserve_spec_ring_headroom` 注释"a SERVER ... corrupted from the first token at K>1"），服务类**只打一条启动 warning 后照常在精确 ring 上 speculate**；推荐的 headroom ring（2048）在 main 上因 bounded page tables 按窗口计尺寸而 warmup 失败（#57573，修复 #57655 在途）。触发为 `--max-model-len ≥ bounded_isl_min` 自动开或 env 显式开；CI 与 tt-inference-server 的 31B dFlash/MTP 配置（262144 上下文）全部落在自动开启区） · Cov: `NEW`（有界环写驱逐窗口内 token 子签名；与 6.172（PD Mamba spec padding 窗口穿过 align 裁剪）同属 spec 窗口 × 有界状态交互但本条在 sliding ring 环地址维度） · 触发 `config` · 置信度 `verified`
+
+- **机制**：ring 槽 mask 公式（`_pv_host_masks`/`_pv_upload`，dflash_drafter.py:1596/:1628，spec_decode.py:862-866 同式）只保留"写后位置在因果窗内"的槽——每 query 恰好丢被覆写的最老 K−i 个位置；正确做法（#57542 Gemma4DFlashContract）在 verify 将绕环时停止提案、退 plain decode，输出与 eager 参考一致但 >1019 token 后无加速。
+- **来源**：tt-metal #57701（2026-09-24 open，Bad Outputs，含逐位置覆写/窗口缩短推导、代码注释自证、受影响配置矩阵（CI leg + tt-inference-server model_specs 四配置）与规避路径谱系）。https://github.com/tenstorrent/tt-metal/issues/57701
+- **行为效应**：无 crash、无失败请求——**>1019 token 上下文的 speculative 输出静默损坏**（自首 token 起），唯一痕迹是一条启动 warning；block-rail 生产服务器（262144 上下文、bounded 自动开）在 K>1 下系统受害。
+- **触发面**：tt-metal + Gemma4 服务（dFlash/MTP spec）+ bounded sliding ring（默认=窗口）+ 上下文 > ~1019（config：长上下文自动开启；#57655 落地前 headroom ring 不可用）
+- **发现来源**：2026-09-24 每日扫描。
 
 
 ## §3.4 过度量化
@@ -10545,6 +10659,16 @@
 - **行为效应**：无 crash——**预算耗尽点生成质量坍塌为逐字重复循环**直至 max_tokens：烧尽输出预算、产出不可用文本；触发点确定（恰在 budget 边界），无日志；依赖 thinking budget 的生产 agent 在长思考请求上系统受害。
 - **触发面**：vLLM + `thinking_token_budget` + forced/natural end 配置不同 + 预算耗尽（config：单参数触发）
 - **发现来源**：2026-09-23 每日扫描。
+
+### 11.87 `vllm_v1_thinking_budget_spec_decoding_multi_token_end_forcing_desync_corrupts_end_sequence`
+
+`infra_off`（vLLM V1（`VLLM_USE_V2_MODEL_RUNNER=0` 或 V1-only spec 特性——`ngram`/`draft_model`/`medusa` 等仍路由 MRV1）：`thinking_token_budget` 强制结束机制在**多 token `reasoning_end_str`（实测 14 token）+ speculative decoding**下损坏结束序列——`thinking_budget_state.py` 的全部 16 处 `force_index` 赋值要么 `[]` 要么**单元素列表**（类型上"至多一个位置/步"）；后续步走 `spec_token_ids` 匹配推进 `end_count`：draft 恰好匹配下一 end token 的位置**不被强制**、由 target 自由采样，target 若采出别的 token 该 draft 被拒、但 `end_count` 已越过它——**下一步从更后的索引强制，被跳过的 end token 永不发出**，产出"I have to give final based on …"式残缺结束短语。GB10 + 27B + MTP 实测 32 请求：17/32 结束序列损坏、5/32 推理烧到 max_tokens、21/32 得到最终答案；**同一 main 走 V2 全净（32/32 intact）**、#52677 树 V1 全净（Fisher p=8.2e-7）；CPU 单测 6 例中 5 例对未修代码失败。loop-breaker（#52677 引入）共用该强制路径同病（两 host 6/25 vs 23/51 损坏）） · Cov: `var:vllm_thinking_token_budget_forced_end_prefix_realign_repetition_loop_at_exhaustion`（11.86 thinking-budget 强制结束状态机族——姊妹半边：11.86 是预算边界处重复死循环、本条是 spec 窗口内多 token 序列被跳跃性损毁；两缺陷同文件不同分支） · 触发 `config` · 置信度 `documented`
+
+- **机制**：强制进展以"draft 匹配即放行"推进，但匹配 draft 被拒绝时已推进的游标不回退（进展应取自 accepted output 而非 draft 匹配）；修复（#52677）：end 序列进展改由 accepted 输出驱动、verify 窗口每个位置（含 bonus）各强制到自己的 end token、部分起步的窗口同样处理——含 V1 调用序（bonus pass 在 Sampler、target pass 在 RejectionSampler）的 CPU 单测。
+- **来源**：vLLM #58485（2026-09-24 open，含 32 请求×3 臂对照表、逐文件 force_index 赋值清单（16 处）、机制逐行游标示例、6 例单测通过率与 #52677 关联；评论含 hclsys 源码级独立复核（"单位置"半边成立且比报告更强）、njhill 指示 MRV2、hclsys 实测 V2 干净并指出 V1-only spec 特性组合仍可达）。https://github.com/vllm-project/vllm/issues/58485
+- **行为效应**：无 crash——**预算触发时结束序列被静默替换为残缺变体**（真词表 token、非乱码）：推理段闭合与最终答案跟随率双降（27/32→全闭、21/32→答案），thinking budget + V1 spec 用户得到格式损毁的输出；温度 0 下同模型 297 个此类位置未见损坏（依赖模型在序列内"不同意正确 draft"的采样）。
+- **触发面**：vLLM V1 + `thinking_token_budget`/loop-breaker + speculative decoding + 多 token `reasoning_end_str`（config：MRV2 默认不可达，V1-only spec 特性组合可达）
+- **发现来源**：2026-09-24 每日扫描。
 
 
 ---
