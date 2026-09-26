@@ -33,7 +33,9 @@
 
 ---
 
-## 滚动汇总（共 1218 条，逐条解析自本文档正文，非人工计数）
+## 滚动汇总（共 1224 条，逐条解析自本文档正文，非人工计数）
+
+> 2026-09-26 更新：合并每日扫描 2026-09-26 的发现（3 个新子签名 + 3 个已知类别变体 = **6 条新增**，1218 → 1224；扫描窗口 created:>=2026-09-19，与 09-25 扫描重叠七日已逐条去重——重叠区间条目昨日已判定者全部按既有判定跳过，本日新判定集中于 09-25 扫描执行后新建 issue：vLLM #58638 起的 09-25 后半 + 09-26 新建、tt-metal #57988 起 09-26 新建）。分布：第 1 类 +3（1.259 floor_div INT32×scalar 截断倒数全零+float floor 跑整数 bits var:1.123、1.260 typecast 整数→bf16 tie away-from-zero 同 op 双舍入规则分裂 var:1.250、1.261 dFlash _shard_argmax rows==1 强制 deallocate 已释放 buffer 视图 NEW）、第 6 类 +1（6.258 SimpleCPU offload 显式不对齐 block-size 只写不读 var:6.227）、第 8 类 +1（8.94 ROCm kpool indexer 非整除 kernel 块 640-token 表未转换按 32-pool 页消费 3/74 页正确 var:8.83）、第 10 类 +1（10.87 llama3_json 流式首字符 `{` 吞整段非调用回复 var:10.42）。观察：1.259 把 floor_div 族从"整除边界差一"（1.123）扩大到**全域错误**——同 op 内 `rounding_mode="floor"` 的正确整数除法就在旁边却未被复合路径复用，且第二重缺陷（float-only floor 对 INT32 bit 的无校验接受）与 1.190/1.250 构成"整数 bit 型被浮点内核重解释"三连；1.260 首次记录**同一 op 内部舍入规则按源 dtype 分裂**（fp32 臂软件 RNE 自证正确做法存在于同文件）；8.94 是 GLM-5.3-Flash kpool 寻址族第三形态——非整除时**完全跳过转换**（守卫的 else 分支无人处理），gfx1030 实测 3/74 页正确、NVIDIA 侧整除分支免疫；10.87 揭示 parser 族新维度：**流式与非流式判定算法不同**（首字符启发式 vs 完整 JSON 解析），同一解析器两条 API 路径对同一生成给出不同结果。来源更正（回访）：1.232（tt-metal #57088）已 closed/completed（09-20）——closed 不证明评分界已按模型深度解析，条目补记；10.86（transformers #49051）已 closed/completed（09-25）——修复方向确认（GemmaConfig.__post_init__ 恢复 gelu→tanh 映射并 warn，十二腿 verifier 实测），含修复 release 待查；10.85（#49066）维护者响应：常量覆盖有意、修复走 tokenizer 映射表不再走 TokenizersBackend（PR 在途），触发面在修复落地前照旧；11.87（vLLM #58485）V1 路线图澄清：MRV1 仍可经 7 类 spec 方法 + ROCm DSA 默认到达、bug 在 V1 未修（#52677 不再覆盖 V1）；7.99（#58729）B300 复现 + 根因收窄：CutlassExpertsMxfp4 仅支持 ep_size==1、MoE 回退 Marlin 即正确、首个分歧恰在 first_k_dense_replace=3 后首 MoE 层；1.244（#57413）Repo Assist 确认 6-entry LUT 为 bfloat16 ULP 最优拟合的真数值回归而非测试抖动；1.247 修复 PR #57463 仍 open 未合并；1.252/#57848/#57867 修复 PR 已开（首读钳制/log1p 零符号/addcmul_bw 乘法重排）均未合并。不收录：vLLM #58677（draft compile cache key 随启动史翻转——根因已定位为 v0.27.1 `enabled/disabled_custom_ops` 计数器入哈希、v0.29 #53378 已修，纯启动开销无输出影响）、#58688（ROCm FP8 PLE weight_scale 加载 ValueError——fail-loud 启动失败）、#58692 同前日、#58697/#58638（RFC）、#58733（DFlash drafter 启动 ValueError/尺寸不匹配——fail-loud）、#58849（WSL2 pin memory——纯性能）、#58850（pynccl all_reduce CUDA graph 捕获期 Xid 31 MMU fault——启动期 fail-loud crash 域、无静默错值证据，与 6.248（生产流量 Xid 13/31 三连崩）同 Xid 谱系但触发面为启动捕获期，留观）、#58640（V4.1 DSML 前导空格破坏 V4 parser 流式——tool call 参数无法流式返回+arg delta 过滤吞增量，10.55/10.75 DSML parser 族语境补充、willweimike 已认领在修，待修复 PR 落地后并入族条目不另占编号）、#58680（Rust frontend top_logprobs 重复采样 token + 超长静默截断——API 契约域双缺陷、logprobs 元数据错误真实但非生成内容错值，留观）、tt-metal #57988（slice step≤0：负 step 静默空张量真实（S1）但属"静默空结果"防御缺失域、step=0 为 fail-loud SIGFPE（S2）、ttsim 已复现——1.243 slice 族语境补充留观，待上游修复方向明确后定）、SGLang #41192→已编目 5.46（0 评论无变化）。arxiv 当日 6 组查询**全部失败**：export.arxiv.org 对一切含引号短语/AND 复合查询持续返回 HTTP 406（单 token 查询 200 正常；curl/urllib/http.client × 多 UA × %22/%20/+ 编码在 30s/20s 退避重试后均同）——覆盖缺口如实记录，补查窗口 2026-09-19..09-26 顺延至下次扫描。GitHub Search API 当日 11 组查询全部有效、分页完整（fetched==total：41/58/18/6/1/1/143(100+43)/4/89/63/0）、无限流 403、无 Validation Failed；core REST 详情/评论/PR 47 次调用全部成功（`--http1.1`，额度 60 制、剩 8 停）。
 
 > 2026-09-25 更新：合并每日扫描 2026-09-25 的发现（5 个新子签名 + 7 个已知类别变体 = **12 条新增**，1206 → 1218；扫描窗口 created:>=2026-09-18，与 09-24 扫描重叠七日已逐条去重——重叠区间条目昨日已判定者全部按既有判定跳过）。分布：第 1 类 +6（1.253 SFPU v_if 非末 block `v_and` 谓词取反时机错误反逻辑 NEW、1.254 分布式 layernorm bf16 统计 E[x²]−E[x]² 相消方差塌缩/负 NaN var:1.231、1.255 requantize Tensor 拼写走 bf16 中转 80 LSB var:7.83、1.256 moreh_norm 无 max 重缩放 subnormal flush 精确零 var:1.183、1.257 expm1/log1p −0.0 符号丢失 var:1.251、1.258 addcmul_bw 先乘两大操作数中间 inf var:1.171）、第 5 类 +1（5.46 DiT TP2 调制/norm 按普通 FFN 切分 chroma speckle 跨双引擎 NEW）、第 6 类 +1（6.257 Gemma4 共享调度 chunk 多请求 ragged 偏移跨请求 KV 错配 NEW）、第 7 类 +1（7.99 GLM MXFP4 DEP8+EP8 GB200 GSM8K 塌 0 nightly 09-14 后回归 NEW）、第 9 类 +1（9.29 hf-overrides rope_scaling 整体替换丢 rope_theta 静默换 base var:9.18）、第 11 类 +1（11.88 SGLang spec-v2 四 worker 签名分歧 pp_proxy_tensors TypeError NEW）、第 13 类 +1（13.40 MTP predictor 继承 pack-quantized target 配置密集 draft 加载崩 var:12.41）。观察：9.29 是首条"**照厂商文档操作即中招**"的 RoPE 故障（重述 checkpoint 自身 rope_scaling 应为 no-op 却把 base 换成 10000，top300 模型 36% 受影响，GSM8K 379→279 输出仍流畅）；5.46 是 diffusion 输出域首个经双引擎（SGLang+vLLM-Omni 独立 TP 实现）交叉验证的数值损坏；1.254 把"教科书统计公式直接进窄尾数域"落到分布式归一化默认路径（σ≲μ/23 完全塌缩、两种精度开关配置各败其道）；1.255 首次把触发面定到**参数拼写**（scalar vs Tensor）——最小测试恒绿而 torch 导出路径必中。来源更正：6.248（vLLM #57822）报告者 09-23 评论补记——环境表 torch 版本系误读 v0.24 回滚容器；v0.29.0 同机 2.5 天 80,000 请求 0 崩溃 0 Xid、v0.28 上按崩溃记录形状合成重放 29,404 请求不可复现（触发面窄于记录形状）；判定不变、边界事实补入条目。不收录：vLLM #58727（Anthropic 内联 system 提升——前缀缓存/语义面，主影响性能与语义位置、#58647 拆分项，留观）、#58692（Dynamic SD ZeroDivisionError——fail-loud 启动 crash）、#58675→已编目 9.29、#58726（GB10 权重加载慢——性能）、#58719/#58742（MFU/MBU 统计口径——观测指标域）、#58804（Tiered Offloading 性能）、SGLang #40155→已编目 11.88、#41192→已编目 5.46、tt-metal #57827（pipeline-prefill 性能追踪）、#57835（grid_sample nearest 舍入 tie-break 单像素——视觉重采样域、非推理数值契约留观）、#57847/#57848→合并编目 1.257、#57852→已编目 1.255、#57853（dFlash warmup trace 捕获后从不回放——纯浪费 warmup/trace 资源、数值面无影响）、#57856（LLK unit_dim 非法值静默 no-op——当前无活调用路径的防御缺失留观）、#57861→已编目 1.254、#57867→已编目 1.258、#57869→已编目 1.256、#57873→已编目 6.257、#57889→已编目 1.253、#57899（GLM 5.2/5.3 MTP 多轮 token 分片描述——无失败证据的设计说明）、#57902（Quasar eltwise tiny-tile 数学与 unpack 工作项——PR 议题）、#57920（SDPA windowed is_causal=True 功能请求）、#57923（MiniMax-H3 ring SDPA chunk 表 keyed 未 bucketed——性能表失配、报告者自证 mostly harmless）、#57929（Gemma4 Ring→Linear 降级——纯性能 -16%）、#57948/#57955（fabric2d 背靠背 hazard/放置启发式——hang 域与性能、combine barrier 缺失为真实设计债留观）、#57950（Quasar packer remapper teardown 竞态——craq-sim 层、硅上仅 sticky bit）、#57954（MatmulMultiCoreReuse per_core_M<Mt 块数超核输出 tile 未写——与 1.119 同族同 op 的第二形态、已按 var 并入 1.119 语境跟踪）、#57965（分布式 RMSNorm/LayerNorm fp32 stats 列 16/48 未定义被 post 求和——#57861 相邻数值面、issue 自证 layer norm 均值 100 已含 inf，深查待设备数据并入 1.254 关联）、flashinfer #5318（v0.7.0 分支漏 cherry-pick #5097——发布工程）、#5334/#5339/#5393/#5438（已编目/已判）。arxiv 当日 6 组查询全部成功（引号短语+AND 语法，无 429）：命中全部已编目或已判方法论文；**2608.23663**（Confidently Wrong, Silently So——端侧模型可靠性审计：校准/假前提 confabulation/过度拒答，AUROC 0.55 表面不可区分）为能力/对齐审计论文不收录（与第 15 类语境关联已记录于当日报告）；**2609.25881**（虚拟试穿不对称信息动力学——非 LLM 域）。GitHub Search API 当日 11 组查询全部有效、分页完整（fetched==total：50/61/22/6/1/1/155(100+55)/6/103(100+3)/66/1）、无限流 403、无 Validation Failed；core REST 详情/评论/状态 23 次调用全部成功（`--http1.1`，起始额度 60、剩余 8 时停止）。
 
@@ -133,10 +135,10 @@
 
 || 轴 | 分布 |
 ||---|---|
-|| **族（Family）** | `infra_off` **1049** · `model_on` **71** · `ambiguous` **94** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
-|| **触发（vLLM/CUDA）** | `config` **255+6⚠** · `other_stack` **209+25⚠** · `partial` **242** · `hw_specific` **311** · `yes` **122** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
-|| **置信度** | `documented` **701** · `verified` **510** · `speculative` **6** · 源文档未给出（10.4）**1** |
-|| **覆盖（Cov）** | `NEW` **888** · `var:x` **327** · `rationale` / `baseline` / `existing` **3** |
+|| **族（Family）** | `infra_off` **1055** · `model_on` **71** · `ambiguous` **94** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
+|| **触发（vLLM/CUDA）** | `config` **257+6⚠** · `other_stack` **209+25⚠** · `partial` **242** · `hw_specific` **315** · `yes` **122** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
+|| **置信度** | `documented` **705** · `verified` **512** · `speculative` **6** · 源文档未给出（10.4）**1** |
+|| **覆盖（Cov）** | `NEW` **889** · `var:x` **332** · `rationale` / `baseline` / `existing` **3** |
 
 > **可直接动手的是未标 ⚠ 的 `config` + `yes` = 365 条（30.3%），再加 `partial` 共 607 条（50.3%）**；
 > `no` + `hw_specific` = 331 条（27.2%），其中 `hw_specific` 仅表示需特定硬件，不等同于不可复现。`other_stack`（210+25⚠ 条）指原报告主路径或依赖栈非本项目默认路径，需按条目触发面复核。
@@ -149,7 +151,9 @@
 
 ## 目录
 
-**编号编目（1104 条，1.1–15.10）** — 15 类真实世界故障调研（含 14 条本项目早期实测条目）
+**编号编目（1110 条，1.1–15.10）** — 15 类真实世界故障调研（含 14 条本项目早期实测条目）
+
+> 2026-09-26 更新：新增 6 条（第 1 类 +3、第 6 类 +1、第 8 类 +1、第 10 类 +1），1104 → 1110。
 
 > 2026-09-25 更新：新增 12 条（第 1 类 +6、第 5 类 +1、第 6 类 +1、第 7 类 +1、第 9 类 +1、第 11 类 +1、第 13 类 +1），1092 → 1104。
 
@@ -240,16 +244,16 @@
 
 || 类 | 主题 | 条数 |
 ||---|---|---|
-|| 1 | 硬件 / 静默数据损坏（SDC） | 257 |
+|| 1 | 硬件 / 静默数据损坏（SDC） | 260 |
 || 2 | GPU 显存故障（HBM/GDDR ECC、rowhammer、磨损） | 3 |
 || 3 | 比特翻转攻击与定向权重篡改（BFA 家族） | 20 |
 || 4 | 数值 / 精度 / 不确定性（**本项目的噪声底**） | 26 |
 || 5 | 分布式 / 多 GPU / 并行推理 | 46 |
-|| 6 | 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM） | 257 |
+|| 6 | 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM） | 258 |
 || 7 | 量化（PTQ / 低位 / FP8 / 微缩度） | 99 |
-|| 8 | KV 缓存 / 注意力机制故障 | 93 |
+|| 8 | KV 缓存 / 注意力机制故障 | 94 |
 || 9 | 位置编码 / RoPE 配置故障 | 29 |
-|| 10 | 分词器 / 对话模板故障 | 86 |
+|| 10 | 分词器 / 对话模板故障 | 87 |
 || 11 | 解码 / 采样故障（多为 post-forward **结构性盲点**） | 87 |
 || 12 | 权重 / 适配器 / 检查点加载故障 | 43 |
 || 13 | 模型图 / 架构配置故障 | 40 |
@@ -2723,7 +2727,7 @@
 `infra_off`（tt-metal disaggregated-prefill KV gate 以**字面量** `PREFILL_NUM_LAYERS=61`（Kimi-K2.7 的深度）定界评分循环：`prefill_producer.py` 的 `NUM_LAYERS = int(os.environ.get("PREFILL_NUM_LAYERS", 61))`——已核验 `kimi27`/`glm52`/`glm51`/`deepseek_v3`/`mistral4` 全部 manifest **均不声明**该变量，`run_multirank_pcc.sh` 仅在 sc1 臂且仅对设 `SC1_NUM_LAYERS` 的模型导出，**sc4 臂所有模型一律按 61 层运行**。KV gate 两次以该数为界（`expected_slabs = set(range(NUM_LAYERS))` 与 `for layer in range(NUM_LAYERS)`）：GLM-5.2（78 层）的 `prefill_runner_kv_pcc` sc4 腿只评分 0..60、**从未检查 61..77**——而深层恰是 KV PCC 最低处（GLM-5.2 公布的 per-rank 最低 0.8621@bar 0.85 正来自深端），17 个未评分层正是会决定最小值的层。缺失层**不报 missing**（循环从未到达）。Kimi-K3 仅因 manifest 显式 pin 而幸免；缺陷在通用默认值） · Cov: `var:ttmetal_comp_pcc_constant_fallback_fp32_tolerance_false_reject`（1.105 验证面失效族） · 触发 `hw_specific` · 置信度 `verified`
 
 - **机制**：环境变量缺省值取自第一个适配模型的字面量深度而非 adapter/config 解析（`prefill_runner.py:77` 已有正确先例 `MODEL_CFG.NUM_LAYERS`）；评分范围与缺省值耦合使"验证通过"对新深度模型给出**系统性假阴性保证**——不是阈值太松而是覆盖面结构性缺失，且无任何缺失报告。
-- **来源**：tt-metal #57088（2026-09-19 open，含 5 个 manifest 缺声明的逐一核验、GLM-5.2 78 层 vs 61 评分界的算术、公布 per-rank PCC 最低值来自深端的交叉引用、与 #54850 rebase 的发现经过）。https://github.com/tenstorrent/tt-metal/issues/57088
+- **来源**：tt-metal #57088（2026-09-19 open，含 5 个 manifest 缺声明的逐一核验、GLM-5.2 78 层 vs 61 评分界的算术、公布 per-rank PCC 最低值来自深端的交叉引用、与 #54850 rebase 的发现经过）。https://github.com/tenstorrent/tt-metal/issues/57088 （**2026-09-26 回访**：issue 已 closed/completed（2026-09-20）；closed 事实本身不证明修复已发布或评分界已改为按模型深度解析，剩余状态待后续 PR 核实，判定与触发面不变。）
 - **行为效应**：无 crash、无 NaN——多机 prefill KV 正确性回归的**CI 守门静默失明**：深层（最可能先坏的区域）回归可全绿通过；Kimi-K2.7 之外一切更深模型的 sc4 门等于不存在。1.135（KV cache PCC 门 parametrize 不可达从未运行）之后验证面失效族新成员：本条在**字面量默认深度 × 未声明环境变量**维度，失效是确定性的且自模型引入日起持续。
 - **触发面**：tt-metal + disaggregated prefill CI + 深于 61 层的模型 + 无 manifest pin（hw_specific：CI 门失效）
 - **发现来源**：2026-09-19 每日扫描。
@@ -2990,6 +2994,36 @@
 - **行为效应**：无 crash——大梯度×大权重（训练/微调场景常态）的 addcmul 反向**静默 inf**，沿反传链污染（inf×0=NaN 二次爆发）。1.171 之后反向域损失族在**乘法次序溢出**维度首例；"前向已修、反向漏修"的修复传播缺口模式与 7.83（修复未跨副本传播）同构、位点在 backward。
 - **触发面**：tt-metal + `ttnn.addcmul_bw` + 大幅值 grad/tensor（hw_specific：默认路径；addcdiv_bw 与前向已免疫）
 - **发现来源**：2026-09-25 每日扫描。
+
+### 1.259 `ttmetal_floor_div_int32_scalar_truncated_reciprocal_allzero_float_floor_on_int_bits`
+
+`infra_off`（`ttnn.floor_div(INT32 tensor, scalar)` 的 scalar 复合路径无整数实现：`binary_composite_op.cpp:876` 直接 `floor(multiply(input, 1.0f/value_f))`——(a) `multiply(int32, float<1)` 把 float 标量截断为整数 0，`|s|>1` 时**全部元素先归零**；(b) `ttnn.floor` 文档仅支持浮点 dtype 却无校验接受 INT32 并对**原始整数 bit 位**跑 float SFPU 内核：正整数是 denormal 位型被 flush 为 0、负整数是 NaN 位型原样穿过（`s=1` 时恰 ~50% 错——正半域全灭）。实测错误率：s=2/3/7/−2 全域 **100%**、s=1000 99.6%、s=1 48.7–57%（两种输入分布）；输出 dtype INT32、op 以 `kFloatAndInt32Dtypes` 宣称支持，无任何信号。同输入 `ttnn.div(t, 2, rounding_mode="floor")` **0% 错**——正确整数 floored divide 已在同 op 存在却未被复合路径复用） · Cov: `var:ttmetal_floor_div_host_reciprocal_exact_divisible_off_by_one`（1.123 floor_div 整数除法域——本条把同 op 的 INT32 tensor×scalar 路径从"整除边界差一"扩大到"全域错误"，且复合第二重缺陷：float-only floor 对整数 bit 的无校验接受） · 触发 `hw_specific` · 置信度 `verified`
+
+- **机制**：双重独立缺陷叠加（截断倒数乘法 + floor 的 dtype 松弛）；判决例 `[7,-7,100,2147483647,-9,1,3,0]÷2` → ttnn 全 0 vs torch `[3,-4,50,1073741823,-5,0,1,0]`；六除数 × 4096 随机输入错误率矩阵在 issue 内。
+- **来源**：tt-metal #58000（2026-09-26 open，Bad Outputs/silent，含对照脚本、错误率矩阵与双机制源码定位）。https://github.com/tenstorrent/tt-metal/issues/58000
+- **行为效应**：无 crash——任何走 tensor×scalar floor_div 的整数索引/分桶管线**全域静默错值**（多为 0）。1.123 之后 floor_div 族第二形态：该条只错整除边界、本条错一切输入；"文档化 dtype 契约 × 无校验接受 × bit 型重解释"与 1.190/1.250 typecast 整数域处理谱系同构。
+- **触发面**：tt-metal + `ttnn.floor_div` INT32 tensor × Python int 标量（hw_specific：默认路径；tensor-tensor 与 `rounding_mode="floor"` 干净）
+- **发现来源**：2026-09-26 每日扫描。
+
+### 1.260 `ttmetal_typecast_int_to_bf16_ties_away_from_zero_dual_rounding_rule_split`
+
+`infra_off`（`ttnn.typecast` 整数源（UINT16/INT32/UINT32）→ BFLOAT16 经 `SFPCAST` 转 fp32 后交给**硬件 rounder**——tie **away from zero**；同 op 的 float32→bfloat16 臂却是软件 RNE（`0x7FFF`+LSB，#46231）——**同一算子按源 dtype 施加两种舍入规则**：整数源在每个 binade `[2^k,2^(k+1))`（k≥8）的 128 个 tie 中 64 个背离 torch（RNE 取低时被本 op 推高）；[256,65535] 穷举 1024 tie 中 512 错（int32 域 2048 tie/1024 错）；非 tie 输入全对。bf16 仅 8 位有效数字使小整数 tie 密集：[256,512) 内**每个奇数都是 tie**、该区间 1/4 整数错） · Cov: `var:ttmetal_typecast_uint32_float32_double_rounding_bit31_one_ulp`（1.190/1.250 typecast 舍入族——本条在 tie-break 方向维度：非双重舍入而是同 op 内舍入模式分裂） · 触发 `hw_specific` · 置信度 `documented`
+
+- **机制**：`ckernel_sfpu_typecast.h` 整数臂复用 fp32→bf16 硬件 rounder（away-from-zero），fp32 臂软件 RNE（`d7618ac998` 处 main）；[256,65535] 全 tie 穷举表在 issue 内，0 评论（Repo Assist 未响应）。
+- **来源**：tt-metal #58001（2026-09-26 open，Bad Outputs/silent，含三 dtype × 穷举 tie 计数与双臂代码行定位）。https://github.com/tenstorrent/tt-metal/issues/58001
+- **行为效应**：无 crash——整数→bf16 转换在 tie 上 50% 静默 1-ULP 偏差且方向系统性向大；嵌入 ID/计数/哈希经 bf16 中转的管线偏差不抵消。1.250（双舍入 1 ULP）之后 typecast 族新维度：**同一 op 内部舍入规则分裂**，fp32 臂自证正确做法存在于同文件。
+- **触发面**：tt-metal + `ttnn.typecast` {uint16,int32,uint32}→bfloat16 + 恰好 tie 的整数值（hw_specific）
+- **发现来源**：2026-09-26 每日扫描。
+
+### 1.261 `ttmetal_dflash_shard_argmax_dealloc_freed_buffer_view_rows1`
+
+`infra_off`（tt-metal Gemma4 dFlash drafter `_shard_argmax` 在 `rows==1` 时 `ttnn.reshape` 返回与 `sel_u` **共享设备 buffer 的视图**（`buffer_address()` 相等；rows≥4 时 reshape 拷贝故无害），紧接着 `sel_u.deallocate(True)` **强制释放该 buffer**——返回的 draft id 从已释放内存读出，后续分配覆写（最小重现：4 个 32×32 int32 分配后 ids 被 7 填充）。触发面：`GEMMA4_DFLASH_SHARD_ARGMAX=1` + TP>1 + 单 drafter 行（`GEMMA4_DFLASH_BLOCK=2` 的 drafter 路径或 B=1、K1=2 批处理）；verify 调用 ≥2 行免疫、默认配置不中） · Cov: `NEW`（reshape 视图别名 × 强制 deallocate 生命周期断裂子签名） · 触发 `hw_specific` · 置信度 `documented`
+
+- **机制**：`deallocate(True)` 绕过共享引用检测（非强制版会跳过仍有 tensor 引用的 buffer）；报告者附 buffer_address 相等性证明与免模型最小重现（无 GPU 权重即复现 freed-memory 读）。修复方向：延后释放或改非强制释放。
+- **来源**：tt-metal #57989（2026-09-26 open，Bad Outputs，含 buffer 别名证明、rows∈{1,4} 对照重现与可达配置枚举）。https://github.com/tenstorrent/tt-metal/issues/57989
+- **行为效应**：无 crash、无报错——分片 argmax 选出的 draft token id **来自已释放内存**：内容依赖后续分配时序（垃圾/陈旧值），失败形态不可复现地漂移。与 1.237（ProgramSpec 缓存别名预热绑定冻结）构成 reshape/缓存**别名生命周期**对：本条在设备 buffer 强制释放维度，且是 spec draft 路径上第一个 UAF 形态。
+- **触发面**：tt-metal + Gemma4 dFlash + `GEMMA4_DFLASH_SHARD_ARGMAX=1` + TP>1 + 单行 drafter 批（hw_specific：非默认开关）
+- **发现来源**：2026-09-26 每日扫描。
 
 
 ## §3.2 权重位翻转（持久静默权重损坏）
@@ -6654,6 +6688,16 @@
 - **触发面**：tt-metal + vLLM TT plugin + Gemma4 + chunked prefill + 多请求同 step（ragged 偏移）（hw_specific：P150x8 实测；单请求/顺序 prefill 免疫）
 - **发现来源**：2026-09-25 每日扫描。
 
+### 6.258 `vllm_simplecpu_offload_misaligned_explicit_block_size_write_only_offload`
+
+`infra_off`（vLLM hybrid GDN 模型（Qwen3.5/Qwen3.8 族，linear_attention + 周期 full_attention）+ `VLLM_USE_SIMPLE_KV_OFFLOAD=1` + **显式 `--block-size` 与 mamba 页对齐不一致**时，CPU KV 卸载连接器退化为**只写不读**：CPU 侧 RSS 持续增长（写路径活跃）、`external_kv_transfer` 恒 0、强制逐出后 re-ask 的 T3/T1 = 1.006–1.46（≈全冷 prefill）；省略 `--block-size` 让引擎自动计算对齐尺寸则完全正常。**无错误无警告**——外部观察与"offload 正常工作"不可区分。启动日志自证机制：`Setting attention block size to 896 tokens to ensure that attention page size is >= mamba page size` → KV cache group 896 对齐，而 connector 的传输粒度仍按显式 block-size 计算的页/块映射，读路径的 slot 映射全部落空。两独立部署（A：Qwen3.8-27B W4A16 + fp8 KV + MTP + 16 GiB offload；B：fp32 mamba cache + 30 GB/584 blocks）同 wheel 同病） · Cov: `var:vllm_cpu_offload_gb_lost_across_enginecore_boundary_noopoffloader`（6.227 配置静默失效族——本条在对齐边界维度：offload 半功能失效而非预算丢失） · 触发 `config` · 置信度 `documented`
+
+- **机制**：mamba 页对齐约束使引擎内部实际 attention block size（如 896）≠ 用户显式 `--block-size`（如 128）；SimpleCPU connector 的读写映射按显式值构建，写路径容忍错配（存得进）而读路径的块查找永 miss（读不出）。报告者提供冷/热/逐出/re-ask 四腿计时 + `prompt_tokens_by_source` 指标差分与两部署环境表。
+- **来源**：vLLM #58653（2026-09-25 open，含两独立生产部署对照、T3/T1 计时、external_kv_transfer=0 指标证据与建议修复"启动时拒绝或警告"）。https://github.com/vllm-project/vllm/issues/58653
+- **行为效应**：无 crash、输出正确——受害者是**成本与容量规划**：CPU 内存被逐出块填满（写路径活跃）却从不回收收益（读路径死），长上下文服务退化为准无卸载系统；显存节省假设失效。6.227（`--cpu-offload-gb` 跨边界归零 → Noop）之后"offload 配置静默失效"族第二形态：本条失效是**半边的**（写活读死），比全 Noop 更具伪装性（RSS 增长像在干活）。
+- **触发面**：vLLM + hybrid GDN + `VLLM_USE_SIMPLE_KV_OFFLOAD=1` + 显式不对齐 `--block-size`（config；省略 flag 即免疫）
+- **发现来源**：2026-09-26 每日扫描。
+
 
 ## 第 7 类 · 量化（PTQ / 低位 / FP8 / 微缩度）
 
@@ -8664,6 +8708,16 @@
 - **触发面**：tt-metal + Gemma4 服务（dFlash/MTP spec）+ bounded sliding ring（默认=窗口）+ 上下文 > ~1019（config：长上下文自动开启；#57655 落地前 headroom ring 不可用）
 - **发现来源**：2026-09-24 每日扫描。
 
+### 8.94 `vllm_rocm_kpool_indexer_block_table_unconverted_640_token_table_as_32pool_pages`
+
+`infra_off`（vLLM GLM-5.3-Flash kpool indexer 在 ROCm 上：`Glm5NextIndexerCache` 以 32-pool 页（128-token 存储块）存 pooled keys，而 hybrid KDA 页规则使 attention/kernel 块为 **640**；indexer metadata builder 仅当存储块整除 kernel 块（`block_size % kernel_block_size == 0`）时做 `// factor` 表转换——**128 % 640 ≠ 0，640-token 表被原样传给 kpool writer 与 gather 内核**，每个表项被当作一个 32-pool 页号解释。实测（gfx1030，真实 kpool writer + gather 对 9,432-token prompt 回读比对）：builder 原表 74 页仅 **3 页正确**（全零页 + 错 keys 页 + mask 页遍布）；页粒度修正表（block b → pages 5b..5b+4）74/74 全对。NVIDIA 侧 kernel 块为 64、整除分支命中故免疫； gfx942/gfx950 共享该代码路径（`get_supported_kernel_block_sizes` 接受 `MultipleOf(16)` 使 `select_common_block_size` 保持 640）但无 MI300/MI355 实测确认） · Cov: `var:vllm_glm53flash_rocm_indexer_block_table_granularity_mismatch_kpool_generic_slotmap`（8.83 GLM-5.3-Flash indexer 寻址族——本条在 ROCm kernel-block 维度：非整除时**完全跳过转换**而非转换错误，损坏面从长上下文尾部扩展到全域） · 触发 `hw_specific` · 置信度 `documented`
+
+- **机制**：`vllm/v1/attention/backends/mla/indexer.py` prefill/decode 两分支的 `if storage_block % kernel_block == 0` 守卫：非整除时无声落入按 32-pool 页消费的路径；报告者附免模型 reproducer（真实 writer/slot mapping/gather 双臂对照，gfx1030 两 run 一致）。
+- **来源**：vLLM #58858（2026-09-26 open Question，含双臂 74 页比对图、gfx1030 复现脚本链接与 NVIDIA 侧整除分支分析；请求 gfx942/gfx950 硬件确认，ROCm bot 已 CC 维护者）。https://github.com/vllm-project/vllm/issues/58858
+- **行为效应**：无 crash——**indexer 检索全域静默失效**（3/74 页正确：块未分配时写入落 padding、越块位置别名 block 0、超 52 列表宽被 gather mask）：sparse attention 的 top-k 检索基于错 keys/零 keys，输出退化为无索引注意力。8.83（存储页 vs manager 块粒度断裂）之后同族第三形态：**整除守卫的非整除分支从未被正确处理**；与 8.73（top-k 2048 宽溢出）共同构成 GLM-5.3-Flash kpool 寻址三缺陷谱系。
+- **触发面**：vLLM + GLM-5.3-Flash + ROCm（gfx1030 实测；gfx942/gfx950 疑似待确认）+ kpool indexer（hw_specific）
+- **发现来源**：2026-09-26 每日扫描。
+
 
 ## §3.4 过度量化
 
@@ -9860,7 +9914,7 @@
 `infra_off`（transformers v4→v5 回归：`Qwen2Tokenizer.__init__` 新建 backend tokenizer 后用**模块级常量 `PRETOKENIZE_REGEX` 覆盖 `tokenizer.json` 刚加载的 `pre_tokenizer`**（`tokenization_qwen2.py` L75-86）——Qwen3.6/Qwen3.8 发布的 refined pattern（两个字符类新增 `\p{M}` combining marks）被静默丢弃：`Qwen/Qwen3.8-Flash-Next` 上 `"नमस्ते दुनिया"`（含 combining marks）发布 tokenizer 编码 6 token、`AutoTokenizer` 加载编码 8 token——**全族 Qwen3.6/3.8 模型 token IDs 全错**；4.57.6 行为正确、5.17.0 错。tokenizer-only 复现（无需模型）） · Cov: `var:trtllm_llm_args_tokenizer_alias_table_drift_bare_alias_crash`（10.56 tokenizer 双源漂移族——本条在 pre_tokenizer 正则维度：硬编码常量 vs 发布文件） · 触发 `config` · 置信度 `verified`
 
 - **机制**：旧 Qwen 系（≤Qwen3）发布文件与常量一致使覆盖无害；Qwen3.6/3.8 refined 正则后常量过期，`__init__` 的无条件赋值使**hub 文件的新行为被旧常量回写覆盖**——加载顺序上文件先生效后被冲掉，`tokenizer.json` 的权威性被破坏。凡 token 边界涉及 combining marks（印地语、阿拉伯语、带变音符文本）的输入 tokenization 分歧。
-- **来源**：transformers #49066（2026-09-23 open，含发布 tokenizer vs AutoTokenizer 编码长度对照（6 vs 8）、v4.57.6/v5.17.0 版本 bisect、代码行定位）。https://github.com/huggingface/transformers/issues/49066
+- **来源**：transformers #49066（2026-09-23 open，含发布 tokenizer vs AutoTokenizer 编码长度对照（6 vs 8）、v4.57.6/v5.17.0 版本 bisect、代码行定位）。https://github.com/huggingface/transformers/issues/49066 （**2026-09-26 回访补记**：独立复核者以 `Qwen/Qwen2.5-0.5B-Instruct` + 打补丁的 `\p{M}` 模式证明无需 gated 模型即可复现（发布 pattern 含 `\p{M}` 检测 False、save_pretrained 传播 False），且 ID 分歧是 vocab 相关（阿拉伯语 `مُحَمَّد` 5→8 token 捕获、泰文同错、天城文在该 vocab 上不发散）——回归测试须选对语言样本；5.16.1 同病确认 v5 全系回归。维护者（itazap）09-25 响应：常量覆盖是**有意的**（v5 把 checkpoint 的 `tokenization_<model>.py` 当 ground truth，允许从零构造 Qwen2Tokenizer），修复方向是**更新 tokenizer 映射表使该族不再走 TokenizersBackend** 并开 PR——判定不变：走 TokenizersBackend 路径的该族 tokenization 仍静默错，修复未落地前触发面照旧。）
 - **行为效应**：无 crash——**受影响模型族的 tokenization 静默全错**：相同文本在训练/评测栈（走发布文件）与 transformers 推理栈（走常量）产生不同 token 序列，logits/续写系统性分歧；多语言（combining marks）场景受害，英文不可见——评测若只用英文即恒绿。
 - **触发面**：transformers ≥v5（v4.48 系列引入、5.x 仍在）+ Qwen3.6/Qwen3.8 系 tokenizer（config：加载该族 tokenizer 即触发）
 - **发现来源**：2026-09-23 每日扫描。
@@ -9870,10 +9924,20 @@
 `infra_off`（transformers 自 **v4.48.0** 起（#35235 移除 `hidden_activation` 守卫）对 **Gemma 1.0 原 checkpoint（gemma-2b/7b/-it、codegemma-2b）静默改用 exact erf GELU**，而这些模型训练时用的是 `gelu_pytorch_tanh` 近似——无任何警告。受影响 checkpoint 的 config `hidden_act: "gelu"` 在 v4.47.1 被守卫改写为 `gelu_pytorch_tanh`、v4.48.0 起按字面执行 exact erf。Gemma 1.1/CodeGemma 7B-it/Gemma 2 不受影响（config 本身写明 tanh）。版本 bisect 精确到 v4.47.1→v4.48.0；独立 Rust 实现（candle-mi `validate_gemma_forward.rs`）交叉验证暴露） · Cov: `var:sglang_glm53_flash_pinned_transformers_missing_glm5_next_processor_degrades_tokenizer`（12.39 版本 pin 摩擦谱系——本条在激活语义维度：跨版本 unpublished 契约丢失） · 触发 `config` · 置信度 `verified`
 
 - **机制**：Gemma 1 checkpoint 的 `hidden_act` 字面值 `gelu`（exact）与训练时实际激活（tanh 近似）不一致，历史守卫代码（`if hidden_act == "gelu": hidden_act = "gelu_pytorch_tanh"`）承载这一 unpublished 事实；#35235 清理时删守卫未发现该隐含契约。erf-GELU 与 tanh-GELU 逐元素差虽小（~1e-3 量级），但对以 tanh-GELU 训练的权重是系统性分布位移。
-- **来源**：transformers #49051（2026-09-23 open，含版本 tag bisect 表（v4.47.1 有守卫/v4.48.0 无）、受影响 repo 清单、candle-mi Rust 交叉验证、维护者确认修复方向（config post-init 恢复映射并 warn））。https://github.com/huggingface/transformers/issues/49051
+- **来源**：transformers #49051（2026-09-23 open，含版本 tag bisect 表（v4.47.1 有守卫/v4.48.0 无）、受影响 repo 清单、candle-mi Rust 交叉验证、维护者确认修复方向（config post-init 恢复映射并 warn））。https://github.com/huggingface/transformers/issues/49051 （**2026-09-26 回访**：issue 已 closed/completed（2026-09-25）；末轮评论确认修复路径——`GemmaConfig.__post_init__`（modular_gemma.py）恢复 `gelu→gelu_pytorch_tanh` 映射并 warn，覆盖 from_dict/Hub 加载全体受影响人群；报告者以四树×CPU/GPU×F32/BF16 十二腿 verifier 实测两修复 PR；维护者另关闭了两个 AI bot PR、由报告者按该方向提 PR。**closed+修复方向确认不等于已发布版本**，含修复的 release 待查。）
 - **行为效应**：无 crash——**受影响 Gemma 1 checkpoint 的输出自 v4.48.0 起静默偏离训练分布**：质量退化幅度小但系统性，用户无从归因（升级 transformers 与质量下降间隔可能数月）；复现/评测对比跨版本不一致。
 - **触发面**：transformers ≥v4.48.0 + Gemma 1.0 / CodeGemma-2B checkpoint（config：加载该族 checkpoint 即触发）
 - **发现来源**：2026-09-23 每日扫描。
+
+### 10.87 `vllm_llama3_json_tool_parser_streaming_swallows_leading_brace_plain_content`
+
+`infra_off`（vLLM `Llama3JsonToolParser.extract_tool_calls_streaming` 仅凭首字符 `current_text.startswith("{")`（或 `<|python_tag|>`）判定 tool call 且**永不回退**——流式与非流式对同一输出三处分裂：(1) 以 `{` 开头的**普通回答**（JSON 答案、`{}`、`{"a": 1} is a dict`）：非流式返回 content、流式返回 `content=None` 且零 tool call——**模型整段回复在流式路径消失**；(2) 空参数调用：非流式 `arguments='{}'`、流式 `arguments=''`；(3) 调用前有文字（`Let me check. {"name": ...}`，含 `<|python_tag|>` 调用 detokenize 后形态）：非流式返回调用丢文字（文档化行为）、流式把含 JSON 的全部内容当 content 返回零调用。纯 parser 复现：CPU + tokenizer 即可，无 GPU/权重/服务器。修复 #58829（latch：缓冲对象完成解析且无 name/parameters/arguments 则全部 flush 为 content）已开源但未合并，社区审查指出 latch 翻转后不复位（同流后续真调用会被吞为 content）待回归测试） · Cov: `var:vllm_kimi_k3_parser_channel_terminator_assumption_tool_call_silent_drop`（10.42/10.75 parser 首标记假设族——本条在流式/非流式首字符判定维度：非流式有完整 JSON 解析兜底、流式只有首字符启发式） · 触发 `config` · 置信度 `verified`
+
+- **机制**：流式分支以首字符二分 content/tool-call 且无"后来证明不是调用"的回退路径；非流式分支先完整解析 JSON 再判 name 键。报告者附逐 token 三场景对照脚本（`unsloth/Llama-3.3-70B-Instruct` tokenizer，v0.30.0 与 main 复现）。
+- **来源**：vLLM #58824（2026-09-26 open，含 parser-only 复现脚本、三场景流式/非流式行为矩阵；修复 PR #58829/#58826 讨论与 ParserEngine #51577 谱系）。https://github.com/vllm-project/vllm/issues/58824
+- **行为效应**：无 crash、HTTP 200——**流式客户端丢失模型的整段回复**（以 `{` 开头的合法 JSON 回答在 agentic/结构化场景常见）；空参数调用拿到损坏的 arguments。10.42（通道终止符假设）、10.75（converter 尾参丢失）之后 parser 族新成员：**同一解析器流式/非流式判定算法不同**（首字符启发式 vs 完整 JSON 解析）使两 API 对同一生成给出不同结果——流式路径结构性地比非流式更激进地吞内容。
+- **触发面**：vLLM + Llama 3.x `llama3_json` tool parser + tools + 流式 + 模型输出以 `{` 开头（config：API 形态 + 模型输出分布）
+- **发现来源**：2026-09-26 每日扫描。
 
 
 ## 第 11 类 · 解码 / 采样故障（多为 post-forward — 结构性盲点）
