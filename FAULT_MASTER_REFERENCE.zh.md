@@ -33,7 +33,9 @@
 
 ---
 
-## 滚动汇总（共 1224 条，逐条解析自本文档正文，非人工计数）
+## 滚动汇总（共 1229 条，逐条解析自本文档正文，非人工计数）
+
+> 2026-09-27 更新：合并每日扫描 2026-09-27 的发现（1 个新子签名 + 4 个已知类别变体 = **5 条新增**，1224 → 1229；扫描窗口 created:>=2026-09-20，与 09-26 扫描重叠七日已逐条去重——重叠区间条目昨日已判定者全部按既有判定跳过，本日新判定集中于 09-26 扫描执行（约 09-26 23:39 UTC 前）后新建 issue：vLLM #58864/#58882/#58886/#58893/#58894/#58899/#58902/#58909/#58910/#58912/#58913/#58922/#58930/#58931/#58943（09-27 新建）、transformers #49134、SGLang #41466/#41467/#41471、tt-metal #58030/#58031/#58044/#58046（09-27 新建））。分布：第 1 类 +1（1.262 matmul 1D in0-mcast sharded 输出 out_block_w<per_core_N 验证放行错值 var:1.119）、第 6 类 +1（6.259 DFlash2 前缀命中后 acceptance 永久 0% mamba state 边界错配 var:6.204）、第 9 类 +1（9.30 Qwen3-Omni M-RoPE offset 双计模态起始 token 全多模态请求位置错一位 NEW）、第 10 类 +1（10.88 xgrammar structural_tag 嵌套 schema 绕过 unsupported-feature 检查 var:10.40）、第 13 类 +1（13.41 UMT5 decoder self-attention 非因果 SDPA 迁移回归 var:13.27）。观察：**9.30 与 9.16/9.17 构成 Qwen M-RoPE 跨栈对偶**——SGLang fused kernel 内部数值错 vs vLLM 位置装配 offset 契约误解，两栈各自独立破坏"位置 id 精确"这一前提，且本条 stock 模板下全多模态请求静默中招；**13.41 是 SDPA 迁移回归形态的掩码丢失**（单 flag 语义下沉后子类失传，与 10.86 Gemma1 GELU 守卫移除同谱系，v5.15.0+ 全系中招）；**6.259 把 6.204 的显形谱系补全为三态**（Xid 崩引擎/静默错 state/spec acceptance 永久 0%），同一未合并修复 #55601 跨 Orin/x86 双硬件验证；**10.88 使约束静默失效族（10.40/10.47/10.64/10.73）横跨第五个独立机制**——校验准入存在但分派粒度错过嵌套载荷，gpt-oss Harmony 全系与 strict tools 用户默认路径命中；**1.262 与昨日 #57954（并入 1.119 语境）把 MatmulMultiCoreReuse 族的能力契约缺口撑成两个方向**（块数超核丢块 / 验证豁免谓词放行错值）。来源更正（回访）：10.87（vLLM #58824）补 3 条评论——修复 #58829 latch 形状被 he-yufeng 判定正确、latch 不复位缺口已文档化+补测试，PR open 未合并；13.40（#58807）he-yufeng 认领修复（按 safetensors index 实际 tensor 名检测），PR 即将附红绿测试；7.99（#58729）michaelmanly 09-27 响应待 vllm serve 命令做 Badgr Serve 验收。不收录：vLLM #58864（GLM-5.3-MXFP4 DP8 无 EP FlashInfer autotune IMA——fail-loud 启动崩溃、8 DP worker 全挂，sparse MLA top-k index 转换栈，无静默错值证据）、#58886（ROCm AITER MLA FP8 prefill async 调度 GPU memory fault——fail-loud 崩溃，修复 #58887 已开（pinned host staging 排序），ROCm/aiter#5879 跟踪）、#58893（AITER v0.1.23 bump Gluon backend AttributeError——依赖版本失配 fail-loud，依赖锁定议题）、#58910（DSV4.1-Flash SM120 长 prefill Xid 31——fail-loud 崩溃域、70+ 实验定性 eager 25% flaky/graph 100%，flashinfer #5608 跨投内核层，与 6.248/#58850 同 Xid 谱系留观）、#58912（XPU logits_soft_cap 静默丢弃 Gemma-2/4 无 softcap——静默数值面真实且机制定位（_xpu_ops.py 注释掉转发+fallback 短路），但 XPU 非默认栈且报告者未附任务质量实测，留观待质量证据后并入）、#58913（XPU get_attn_backend_cls 不调 validate_configuration——能力门死代码结构缺陷，同上 XPU 域+无具体错值实例留观）、#58931（MooncakeStoreConnector reset_prefix_cache 抢占顺序错杀 EngineCore——fail-loud（assert/TypeError）为主 + async 形态永久 WAITING_FOR_REMOTE_KVS 挂起面真实，6.139 offload 族语境，留观）、#58882（LBNHC/NHD layout 特性请求）、#58922（rocm_unquantized_gemm CPU tensor crash——CI 测试面 fail-loud）、#58943（MiniCPM-V-4.6 GPTQ/AWQ vision tower 量化加载失败——fail-loud）、#58909（RFC）、SGLang #41466/#41467（/generate 无类型校验单请求杀服务器——fail-loud SIGQUIT 域，6.192 引擎自杀族语境补充）、#41471（DisallowedTokensLogitsProcessor 并发异参数 assert 杀引擎——fail-loud，同 6.192 族语境）、tt-metal #58030（ring_joint_sdpa 占用/打包 K/V 性能提案——性能域但含 per-head KV PCC 0.913 界定、#57965 谱系跟踪）、#58031（gemma4_d_p chunk 开销性能）、#58044（GPT-OSS BH Galaxy all_to_all_dispatch_metadata 内核不编译——bring-up fail-loud）、transformers #49126（serge CI triage）。arxiv 当日**全部查询形态持续 HTTP 406**（连续第二天：单 token `all:electron` 200 正常、双词/AND/引号/括号/任意字段组合一律 406，curl -fsSL 跟随重定向与 %22/%20/+ 多编码均同；补查窗口 2026-09-19..09-27 顺延至下次扫描）。GitHub Search API 当日 11 组查询全部有效、分页完整（fetched==total：42/56/18/6/1/1/143(100+43)/3/89/64/0）、无限速 403、无 Validation Failed；core REST 详情/评论/PR 29 次调用全部成功（`--http1.1`，未认证 60/小时额度内）。
 
 > 2026-09-26 更新：合并每日扫描 2026-09-26 的发现（3 个新子签名 + 3 个已知类别变体 = **6 条新增**，1218 → 1224；扫描窗口 created:>=2026-09-19，与 09-25 扫描重叠七日已逐条去重——重叠区间条目昨日已判定者全部按既有判定跳过，本日新判定集中于 09-25 扫描执行后新建 issue：vLLM #58638 起的 09-25 后半 + 09-26 新建、tt-metal #57988 起 09-26 新建）。分布：第 1 类 +3（1.259 floor_div INT32×scalar 截断倒数全零+float floor 跑整数 bits var:1.123、1.260 typecast 整数→bf16 tie away-from-zero 同 op 双舍入规则分裂 var:1.250、1.261 dFlash _shard_argmax rows==1 强制 deallocate 已释放 buffer 视图 NEW）、第 6 类 +1（6.258 SimpleCPU offload 显式不对齐 block-size 只写不读 var:6.227）、第 8 类 +1（8.94 ROCm kpool indexer 非整除 kernel 块 640-token 表未转换按 32-pool 页消费 3/74 页正确 var:8.83）、第 10 类 +1（10.87 llama3_json 流式首字符 `{` 吞整段非调用回复 var:10.42）。观察：1.259 把 floor_div 族从"整除边界差一"（1.123）扩大到**全域错误**——同 op 内 `rounding_mode="floor"` 的正确整数除法就在旁边却未被复合路径复用，且第二重缺陷（float-only floor 对 INT32 bit 的无校验接受）与 1.190/1.250 构成"整数 bit 型被浮点内核重解释"三连；1.260 首次记录**同一 op 内部舍入规则按源 dtype 分裂**（fp32 臂软件 RNE 自证正确做法存在于同文件）；8.94 是 GLM-5.3-Flash kpool 寻址族第三形态——非整除时**完全跳过转换**（守卫的 else 分支无人处理），gfx1030 实测 3/74 页正确、NVIDIA 侧整除分支免疫；10.87 揭示 parser 族新维度：**流式与非流式判定算法不同**（首字符启发式 vs 完整 JSON 解析），同一解析器两条 API 路径对同一生成给出不同结果。来源更正（回访）：1.232（tt-metal #57088）已 closed/completed（09-20）——closed 不证明评分界已按模型深度解析，条目补记；10.86（transformers #49051）已 closed/completed（09-25）——修复方向确认（GemmaConfig.__post_init__ 恢复 gelu→tanh 映射并 warn，十二腿 verifier 实测），含修复 release 待查；10.85（#49066）维护者响应：常量覆盖有意、修复走 tokenizer 映射表不再走 TokenizersBackend（PR 在途），触发面在修复落地前照旧；11.87（vLLM #58485）V1 路线图澄清：MRV1 仍可经 7 类 spec 方法 + ROCm DSA 默认到达、bug 在 V1 未修（#52677 不再覆盖 V1）；7.99（#58729）B300 复现 + 根因收窄：CutlassExpertsMxfp4 仅支持 ep_size==1、MoE 回退 Marlin 即正确、首个分歧恰在 first_k_dense_replace=3 后首 MoE 层；1.244（#57413）Repo Assist 确认 6-entry LUT 为 bfloat16 ULP 最优拟合的真数值回归而非测试抖动；1.247 修复 PR #57463 仍 open 未合并；1.252/#57848/#57867 修复 PR 已开（首读钳制/log1p 零符号/addcmul_bw 乘法重排）均未合并。不收录：vLLM #58677（draft compile cache key 随启动史翻转——根因已定位为 v0.27.1 `enabled/disabled_custom_ops` 计数器入哈希、v0.29 #53378 已修，纯启动开销无输出影响）、#58688（ROCm FP8 PLE weight_scale 加载 ValueError——fail-loud 启动失败）、#58692 同前日、#58697/#58638（RFC）、#58733（DFlash drafter 启动 ValueError/尺寸不匹配——fail-loud）、#58849（WSL2 pin memory——纯性能）、#58850（pynccl all_reduce CUDA graph 捕获期 Xid 31 MMU fault——启动期 fail-loud crash 域、无静默错值证据，与 6.248（生产流量 Xid 13/31 三连崩）同 Xid 谱系但触发面为启动捕获期，留观）、#58640（V4.1 DSML 前导空格破坏 V4 parser 流式——tool call 参数无法流式返回+arg delta 过滤吞增量，10.55/10.75 DSML parser 族语境补充、willweimike 已认领在修，待修复 PR 落地后并入族条目不另占编号）、#58680（Rust frontend top_logprobs 重复采样 token + 超长静默截断——API 契约域双缺陷、logprobs 元数据错误真实但非生成内容错值，留观）、tt-metal #57988（slice step≤0：负 step 静默空张量真实（S1）但属"静默空结果"防御缺失域、step=0 为 fail-loud SIGFPE（S2）、ttsim 已复现——1.243 slice 族语境补充留观，待上游修复方向明确后定）、SGLang #41192→已编目 5.46（0 评论无变化）。arxiv 当日 6 组查询**全部失败**：export.arxiv.org 对一切含引号短语/AND 复合查询持续返回 HTTP 406（单 token 查询 200 正常；curl/urllib/http.client × 多 UA × %22/%20/+ 编码在 30s/20s 退避重试后均同）——覆盖缺口如实记录，补查窗口 2026-09-19..09-26 顺延至下次扫描。GitHub Search API 当日 11 组查询全部有效、分页完整（fetched==total：41/58/18/6/1/1/143(100+43)/4/89/63/0）、无限流 403、无 Validation Failed；core REST 详情/评论/PR 47 次调用全部成功（`--http1.1`，额度 60 制、剩 8 停）。
 
@@ -135,10 +137,10 @@
 
 || 轴 | 分布 |
 ||---|---|
-|| **族（Family）** | `infra_off` **1055** · `model_on` **71** · `ambiguous` **94** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
-|| **触发（vLLM/CUDA）** | `config` **257+6⚠** · `other_stack` **209+25⚠** · `partial` **242** · `hw_specific` **315** · `yes` **122** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
-|| **置信度** | `documented` **705** · `verified` **512** · `speculative` **6** · 源文档未给出（10.4）**1** |
-|| **覆盖（Cov）** | `NEW` **889** · `var:x` **332** · `rationale` / `baseline` / `existing` **3** |
+|| **族（Family）** | `infra_off` **1060** · `model_on` **71** · `ambiguous` **94** · `n/a` **2**（K 层资源/结构性条目） · 历史条目家族标签特例（`hw_specific`，1.58）**1** · 源文档未给出（10.4）**1** |
+|| **触发（vLLM/CUDA）** | `config` **261+6⚠** · `other_stack` **209+25⚠** · `partial` **242** · `hw_specific` **316** · `yes` **122** · `no` **23** · `n/a` **22+1⚠** · 非标标签 **2**（5.25 `ncclCommWindowRegister`、6.162 `shutdown()`） |
+|| **置信度** | `documented` **706** · `verified` **516** · `speculative` **6** · 源文档未给出（10.4）**1** |
+|| **覆盖（Cov）** | `NEW` **890** · `var:x` **336** · `rationale` / `baseline` / `existing` **3** |
 
 > **可直接动手的是未标 ⚠ 的 `config` + `yes` = 365 条（30.3%），再加 `partial` 共 607 条（50.3%）**；
 > `no` + `hw_specific` = 331 条（27.2%），其中 `hw_specific` 仅表示需特定硬件，不等同于不可复现。`other_stack`（210+25⚠ 条）指原报告主路径或依赖栈非本项目默认路径，需按条目触发面复核。
@@ -151,7 +153,9 @@
 
 ## 目录
 
-**编号编目（1110 条，1.1–15.10）** — 15 类真实世界故障调研（含 14 条本项目早期实测条目）
+**编号编目（1115 条，1.1–15.10）** — 15 类真实世界故障调研（含 14 条本项目早期实测条目）
+
+> 2026-09-27 更新：新增 5 条（第 1 类 +1、第 6 类 +1、第 9 类 +1、第 10 类 +1、第 13 类 +1），1110 → 1115。
 
 > 2026-09-26 更新：新增 6 条（第 1 类 +3、第 6 类 +1、第 8 类 +1、第 10 类 +1），1104 → 1110。
 
@@ -244,19 +248,19 @@
 
 || 类 | 主题 | 条数 |
 ||---|---|---|
-|| 1 | 硬件 / 静默数据损坏（SDC） | 260 |
+|| 1 | 硬件 / 静默数据损坏（SDC） | 261 |
 || 2 | GPU 显存故障（HBM/GDDR ECC、rowhammer、磨损） | 3 |
 || 3 | 比特翻转攻击与定向权重篡改（BFA 家族） | 20 |
 || 4 | 数值 / 精度 / 不确定性（**本项目的噪声底**） | 26 |
 || 5 | 分布式 / 多 GPU / 并行推理 | 46 |
-|| 6 | 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM） | 258 |
+|| 6 | 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM） | 259 |
 || 7 | 量化（PTQ / 低位 / FP8 / 微缩度） | 99 |
 || 8 | KV 缓存 / 注意力机制故障 | 94 |
-|| 9 | 位置编码 / RoPE 配置故障 | 29 |
-|| 10 | 分词器 / 对话模板故障 | 87 |
+|| 9 | 位置编码 / RoPE 配置故障 | 30 |
+|| 10 | 分词器 / 对话模板故障 | 88 |
 || 11 | 解码 / 采样故障（多为 post-forward **结构性盲点**） | 87 |
 || 12 | 权重 / 适配器 / 检查点加载故障 | 43 |
-|| 13 | 模型图 / 架构配置故障 | 40 |
+|| 13 | 模型图 / 架构配置故障 | 41 |
 || 14 | 长上下文能力失效（model_on — 健康模型盲点） | 8 |
 || 15 | 幻觉 / 忠实性 / 对齐（检测器已验证的信号） | 10 |
 
@@ -3024,6 +3028,17 @@
 - **行为效应**：无 crash、无报错——分片 argmax 选出的 draft token id **来自已释放内存**：内容依赖后续分配时序（垃圾/陈旧值），失败形态不可复现地漂移。与 1.237（ProgramSpec 缓存别名预热绑定冻结）构成 reshape/缓存**别名生命周期**对：本条在设备 buffer 强制释放维度，且是 spec draft 路径上第一个 UAF 形态。
 - **触发面**：tt-metal + Gemma4 dFlash + `GEMMA4_DFLASH_SHARD_ARGMAX=1` + TP>1 + 单行 drafter 批（hw_specific：非默认开关）
 - **发现来源**：2026-09-26 每日扫描。
+
+### 1.262 `ttmetal_matmul_1d_in0_mcast_sharded_output_out_block_w_lt_per_core_n_wrong`
+
+`infra_off`（`MatmulMultiCoreReuseMultiCast1DProgramConfig`（`mcast_in0=True`）+ **sharded L1 输出**在 `out_block_w < per_core_N` 时输出错值：验证器 `validate_output_subblock_block_divides_per_core_n` 因 `out_block_h == 1` 放行（`out_block_w == per_core_N || out_block_h == 1`），但该条件对 sharded 输出不成立——实测 8×8 grid bf16 `32×1024 @ 1024×4096`（per_core_N=2）：`out_block_w=2` INTERLEAVED/WIDTH_SHARDED 均 PCC 0.9999，`out_block_w=1` WIDTH_SHARDED **PCC 0.6322**（INTERLEAVED 同参正确）；生产形状 `1×2048×39576`（per_core_N=20）：out_block_w=20 PCC 0.9999、10/5/4/2 → **0.48/0.31/0.31/0.10**；`1×1280×51866`（per_core_N=26）：13/2 → 0.62/0.13。与 in0_block_w、bias、A 布局、N 是否整除 per_core_N×cores 无关；DRAM 输出全对；2D 工厂走同一验证检查未测） · Cov: `var:ttmetal_matmulmulticorereuse_oversubscription_silent_block_drop`（1.119 MatmulMultiCoreReuse 同 op 族——本条在 1D in0-mcast + sharded 输出维度：验证器谓词对输出布局过度放行而非块数超核） · 触发 `hw_specific` · 置信度 `verified`
+
+- **机制**：输出子块验证谓词把 `out_block_h == 1` 当作普适豁免，但 sharded 输出的写路径要求输出子块宽度与 per-core 列宽对齐；验证接受 ≠ 内核正确，错值幅度随 out_block_w/per_core_N 比值单调恶化。报告者附 repro 脚本与 5 组 M×K×N 矩阵。
+- **来源**：tt-metal #58046（2026-09-27 open，Bad Outputs，含 pcc 函数、双形状矩阵、无关变量排除表与"验证收紧或内核修复"双修复方向）。https://github.com/tenstorrent/tt-metal/issues/58046
+- **行为效应**：无 crash——PCC 0.10–0.63 级**静默错值**，且 `out_block_w == per_core_N` 的"合理"配置全对使问题极易在稀疏测试下漏网；1.119（2D 过订阅丢块）之后 MatmulMultiCoreReuse 族新成员：**验证器豁免谓词与 sharded 写路径契约不符**——"通过验证的每个配置都应正确，否则验证必须拒绝"的契约缺口。
+- **触发面**：tt-metal ttnn.matmul + 1D in0-mcast program_config + width-sharded L1 输出 + out_block_w < per_core_N（hw_specific；DRAM/interleaved 输出免疫）
+- **发现来源**：2026-09-27 每日扫描。
+
 
 
 ## §3.2 权重位翻转（持久静默权重损坏）
@@ -6698,6 +6713,17 @@
 - **触发面**：vLLM + hybrid GDN + `VLLM_USE_SIMPLE_KV_OFFLOAD=1` + 显式不对齐 `--block-size`（config；省略 flag 即免疫）
 - **发现来源**：2026-09-26 每日扫描。
 
+### 6.259 `vllm_dflash2_prefix_cache_hit_permanent_acceptance_zero_hybrid_mamba_state_boundary_misregistration`
+
+`infra_off`（vLLM v0.30.0 DFlash2 speculative + Qwen3.5 家族 hybrid GDN + `--enable-prefix-caching`：**首个前缀命中瞬间 acceptance 从 ~20–90% 塌到精确 0.0% 且永不恢复**（此后整个 server 生命期 drafter 照常 ~28-29 tok/s 出 draft、`Mean acceptance length` 恒 1.00、`Accepted throughput` 0.00——即持续付全额 verify 成本换零接受 token）；两次独立容器重启复现（fresh compile/KV cache），v0.29.0 同模型同配置正常（跨版本回归）。根因经社区三路收窄：(a) x86 RTX 6000 Ada + Qwen3.8-27B-FP8 + DFlash2 k=5 fp8 KV 上同场景首个 12,928-token 命中直接 **IMA 杀引擎**，twu3202 定位与 6.204/#55600 同因——running mamba state index 以 `(num_computed_tokens-1)//cache_config.block_size` 播种而 `block_size` 已被降到 DFlash2 SW 组的 64 而非 mamba block size：长命中越 block-table 行宽 fault、**短命中行宽内恢复错 recurrent state**（恰解释 0% 形态）；打上 #55601 后 12,928-token 命中正常完成且 acceptance 保持 33–46%；(b) he-yufeng 读 main cache 路径确认启动警告（`_warn_if_unannotated_eagle_mamba` 对 DFlash2 draft 无匹配规则、KVCacheCoordinator 保守 flag 全组）为真但仅卫生问题；(c) 报告者 09-27 确认 #55601 在 Orin 上亦恢复正常（"thinks a lot faster now"）） · Cov: `var:vllm_hybrid_mamba_state_idx_engine_lowered_block_size_oob`（6.204 双 block-size 域混淆族——本条在 spec acceptance 塌方显形维度：6.204 收录时的 Xid/静默错 state 双形态之外第三显形"draft 全拒"，且给出 #55601 修复跨硬件双验证） · 触发 `config` · 置信度 `documented`
+
+- **机制**：6.204 的 mamba state 索引播种缺陷经 prefix 命中路径显形为 spec verify 全拒——恢复的 recurrent state 与 drafter 重算状态不对应，draft token 恒被拒；修复 PR #55601（改用 `cache_config.mamba_block_size` 播种）当前 **open 未合并**（本轮 core REST 核实 state=open/merged=False，3 条评论），v0.30.0 发布带病。
+- **来源**：vLLM #58894（2026-09-27 open，Jetson AGX Orin SM8.7 v0.30.0，含双重启日志对照、命中瞬间 metrics 转换摘录、7+ 分钟 0% 持续观察；twu3202/he-yufeng/报告者三方评论收窄）。https://github.com/vllm-project/vllm/issues/58894
+- **行为效应**：无 crash（Orin 形态）——**spec decoding 静默失效为纯开销**：throughput 掉到 ~35 tok/s 级、acceptance 永久 0%；x86 形态则 fail-loud IMA。6.204 之后该族显形谱系补全：**同一 mamba state 边界错配在同一版本内既可崩引擎也可无声废掉 drafter**——acceptance 指标是唯一线索，与 12.35（量化 drafter 0% 接受）共享"accept-len 恒 1"观测面但根因完全不同（缓存状态错位 vs 权重量化）。
+- **触发面**：vLLM v0.30.0（≤#55601 合并）+ Qwen3.5/hybrid GDN + DFlash2 draft + `--enable-prefix-caching` + 前缀命中（config：组合即触发，v0.29.0 免疫）
+- **发现来源**：2026-09-27 每日扫描。
+
+
 
 ## 第 7 类 · 量化（PTQ / 低位 / FP8 / 微缩度）
 
@@ -9037,6 +9063,16 @@
 - **触发面**：vLLM（0.30 系列）+ transformers v5 + `--hf-overrides` 传 `rope_scaling` + 模型文件直传 rope_parameters 的架构（config：一行 override 即触发；config.json 内同值无恙）
 - **发现来源**：2026-09-25 每日扫描。
 
+### 9.30 `vllm_qwen3_omni_mrope_offset_double_counts_modality_start_token_all_multimodal_requests`
+
+`infra_off`（vLLM `Qwen3OmniMoeThinkerForConditionalGeneration.get_mrope_input_positions` 误读 `PlaceholderRange.offset`：prompt 替换机制只替换 pad token，`offset` 指向第一个 `<|image_pad|>`、模态起始 token（`<|vision_start|>`/`<|audio_start|>`）已被前段文本覆盖——函数却把 `offset` 当模态起始索引、**每个媒体项多发一个 bos 槽位**，组装出的 M-RoPE 位置比实际 token 跨度**长一格**。双显形：stock chat template（媒体后有文本）时多余槽位被尾部文本静默吸收——**无报错但首个 pad token 起全部 M-RoPE 位置偏移一位，所有多模态请求（图/音/视频）位置全错**；模板以媒体项结尾时一致性守卫 raise `RuntimeError: Position ids length mismatch`。音频/视频分支同构 off-by-one，audio-in-video 共享该结构。免 GPU/免权重最小复现在链接 PR 的合成输入单测（6 token 序列 `PlaceholderRange(offset=1, length=4)` 发出 7 个位置）） · Cov: `NEW`（Qwen M-RoPE 位置装配 off-by-one——与 9.16/9.17（SGLang fused kernel 数值错）同任务域但机制独立：本条是 vLLM 侧位置 id 装配层的 offset 契约误解，位置 id 本身逐位错） · 触发 `config` · 置信度 `verified`
+
+- **机制**：`PlaceholderRange.offset` 的契约（pad 区起点）与函数假设（模态起点）相差一个模态标记 token；修复 PR #58890 删冗余 bos 槽并修各分支 `st` 前进量，使输出位置数恒等于 seq_len、audio-in-video 值结构与 Qwen2.5-Omni HF 行为一致。
+- **来源**：vLLM #58902（2026-09-27 open，含 offset 语义推导、双症状形态、免模型单测描述与修复 PR #58890（open 未合并））。https://github.com/vllm-project/vllm/issues/58902
+- **行为效应**：无 crash（stock 模板）——**每个多模态请求的 M-RoPE 位置系统性错位一位**：视觉/音频 grounding、多模态理解质量静默退化，输出仍流畅；只有自定义结尾模板才 fail-loud。9.17（SGLang fused kernel 数值错）之后 Qwen M-RoPE 族新成员：本条在 **vLLM 位置装配的 offset 契约误解**维度，位置 id 本身逐位错而非融合 kernel 内部错——两栈各自独立地破坏"位置 id 精确"这一前提。
+- **触发面**：vLLM v0.30.0 + Qwen3-Omni（Thinker MoE）+ 任一多模态请求（image/audio/video；stock 模板即触发静默形态）
+- **发现来源**：2026-09-27 每日扫描。
+
 ## §3.9 null / 噪声底校准（管线阳性对照，预期不可检测）
 
 > 以下三条**不是故障**。它们是管线的阳性对照（positive control）兼噪声底校准项：注入器确实被调用、hook 确实被注册、权重确实被改写并还原，但扰动在设计上小到（或恰好等于）零。它们的**预期结果就是不可检测**；任一条被检测器"命中"即判定为**管线 bug**（例如检测器在对 hook 注册本身、对权重拷贝的副作用、或对随机种子的变化作出反应），而不是发现了新故障。任何监控栈在部署前都应先在这类校准项上测得自己的噪声底，再谈检测灵敏度。
@@ -9938,6 +9974,18 @@
 - **行为效应**：无 crash、HTTP 200——**流式客户端丢失模型的整段回复**（以 `{` 开头的合法 JSON 回答在 agentic/结构化场景常见）；空参数调用拿到损坏的 arguments。10.42（通道终止符假设）、10.75（converter 尾参丢失）之后 parser 族新成员：**同一解析器流式/非流式判定算法不同**（首字符启发式 vs 完整 JSON 解析）使两 API 对同一生成给出不同结果——流式路径结构性地比非流式更激进地吞内容。
 - **触发面**：vLLM + Llama 3.x `llama3_json` tool parser + tools + 流式 + 模型输出以 `{` 开头（config：API 形态 + 模型输出分布）
 - **发现来源**：2026-09-26 每日扫描。
+- **回访（2026-09-27）**：#58824 新增 3 条评论（09-26）——neevmodh 开出 scoped 修复 #58829（latch：缓冲对象完成解析且无 name/parameters/arguments 即全部 flush 为 content）；he-yufeng 对读两份竞争修复（#58826 只修中途 MalformedJSON 分支、完成态仍丢）判定 **#58829 latch 形状正确**但指出 latch 翻转后不复位（同流 plain-JSON 先行 + 真 tool call 会被吞）与缺回归测试两缺口；neevmodh 已补三场景测试并文档化 latch 限制。PR 仍 open 未合并，判定与条目记载一致。
+
+### 10.88 `vllm_xgrammar_structural_tag_nested_json_schema_skips_unsupported_feature_check_constraints_silent`
+
+`infra_off`（vLLM `validate_xgrammar_grammar()` 对 **structural tag 内嵌套的 JSON schema 不做 unsupported-feature 检查**：plain `json` 约束经 `has_xgrammar_unsupported_json_features()` 拒绝 xgrammar 会编译错的 schema（如 `multipleOf`——xgrammar 仅 log warning 后忽略）、触发 guidance/outlines 回退；`structural_tag` 分支只编译 tag 本身，**嵌套 `json_schema` 完全跳过检查**——验证通过、请求留在 xgrammar、输出可违反 schema。schema 进入 structural tag 的三条路径全部复现（`{"type":"number","multipleOf":0.5}` 编译出的 grammar 接受 `0.3`）：(1) 用户自供 `structural_tag`（response_format/structured_outputs，新 `format` 与 legacy `structures`/`triggers` 形态）；(2) strict tool 的参数 schema（任何构建 tool-call tag 的 `tool_choice`：required/auto/named）；(3) Harmony（gpt-oss）把一切 response_format/structured_outputs 约束包进 structural tag（无 tools 也中）。同 schema 以 plain json 递交则被正确拒绝（main `2b9b55c7f1` + xgrammar 0.2.7 复现）） · Cov: `var:vllm_legacy_guided_json_silently_dropped_unconstrained_200`（10.40/10.47/10.73 约束静默失效族——本条在校验准入维度：嵌套 schema 绕过 unsupported-feature 检查使本应回退 guidance/outlines 的请求留在 xgrammar） · 触发 `config` · 置信度 `verified`
+
+- **机制**：结构化输出校验按"顶层约束类型"分派，structural tag 分支没有递归检查内嵌 schema 的 unsupported features——准入检查的存在（plain json 路径）自证正确做法已在同文件；修复 PR #58940（09-27 已开、open 未合并）对 legacy/新两种形态的嵌套 schema 施加同一检查，使 `multipleOf` 等抛 `XgrammarUnsupportedJsonFeaturesError` 并使 `backend="auto"` 回退 guidance/outlines。
+- **来源**：vLLM #58930（2026-09-27 open，含三路径复现脚本（validate/accepts/Grammar.from_structural_tag）、main commit 与 xgrammar 0.2.7 环境表；维护者认领并已开 PR #58940 附回归测试计划）。https://github.com/vllm-project/vllm/issues/58930
+- **行为效应**：无 crash——**strict tool 参数与 Harmony 结构化输出静默违反声明的 schema**（`multipleOf` 等约束不生效）：下游按 schema 解析的消费者拿到违约值；三条路径覆盖 gpt-oss 全系与一切 strict tools 用户。10.47（SGLang 约束子集丢弃）、10.73（reasoning 门控 bitmask 不施加）之后约束静默失效族新成员：本条在 **校验准入的嵌套盲区**维度——检查存在但因分派粒度错过实际载荷。
+- **触发面**：vLLM（main + v0.30 世代）+ xgrammar 后端（默认 auto）+ strict tools 参数 schema / structural_tag / Harmony response_format 含 xgrammar 不支持特性（config）
+- **发现来源**：2026-09-27 每日扫描。
+
 
 
 ## 第 11 类 · 解码 / 采样故障（多为 post-forward — 结构性盲点）
@@ -11742,6 +11790,17 @@
 - **行为效应**：fail-loud 加载崩溃（引擎不到运行期）——非静默错值；收录在**结构模式**：量化配置继承自 target 是 draft 加载的默认假设，第三种量化格式缺口使"量化器合法输出的 checkpoint"在 vLLM MTP 路径不可服务，且 ignore 列表不完整时无诊断指引（错误只报缺模块名）。
 - **触发面**：vLLM v0.30 + compressed-tensors pack-quantized target + 密集 BF16 MTP 分片 + mtp speculative config（config：checkpoint 形态+spec 组合）
 - **发现来源**：2026-09-25 每日扫描。
+- **回访（2026-09-27）**：#58807 新增 1 条评论（09-27 he-yufeng）——已认领修复：检测读 checkpoint safetensors index 的实际 tensor 名（`mtp.*` 是否带 `weight_packed` 等量化后缀）决定 predictor 整体量化与否，镜像 GPTQ dynamic/modelopt_fp4 先例；单文件 checkpoint 无 index 保持现行为；PR 将附红绿测试。修复在途，判定不变。
+
+### 13.41 `transformers_umt5_decoder_self_attention_is_causal_flag_never_reaches_attention_sdpa_regression`
+
+`infra_off`（`UMT5ForConditionalGeneration` 的 decoder self-attention **不做因果掩码**：`UMT5LayerSelfAttention` 不传 `is_causal=config.is_decoder`（T5Layer/MT5Layer 均传），SDPA 路径下该 flag *就是* 掩码本身——teacher-forced 全序列前向中每个位置可注意其后的位置，**位置 0 的 logits 随 decoder_input_ids 追加 token 而改变**（drift 复现脚本输出 `LEAKING`，T5/MT5 同脚本 `CAUSAL`）。**v5.14.1 正确，v5.15.0 起回归**（#47014 `560f36cc56` 2026-07-30 把 T5 家族迁到 SDPA 时 UMT5 分支漏传 flag）；受影响 v5.15.0/v5.16.0/v5.17.0 与 main。模型加载、生成流畅、无任何错误——翻译质量静默退化（未来信息泄漏进每步条件分布）） · Cov: `var:hf_gpt2_encoder_attention_mask_silently_discarded`（13.27 掩码参数在模型层被静默丢弃族——本条在 SDPA is_causal 传递维度：回归引入、错误形态为因果性整体缺失而非 padding 污染） · 触发 `config` · 置信度 `verified`
+
+- **机制**：SDPA 的掩码语义收敛到单一布尔 flag 后，子类忘记传递即等于"无掩码"；UMT5 与 T5/MT5 共享 masking 基建但 layer 封装独立，迁移 PR 逐模型改动时漏掉一个分支。报告者附 Hub 直跑 drift 对照脚本（UMT5 drift>1e-5 LEAKING / T5 CAUSAL，`_attn_implementation` 与 `is_causal` 属性打印自证 flag 缺失）。
+- **来源**：transformers #49134（2026-09-27 open，"[Regression v5.15.0+] UMT5 decoder self-attention is not causal"，含双模型 drift 复现、回归 PR 定位 #47014、受影响版本枚举）。https://github.com/huggingface/transformers/issues/49134
+- **行为效应**：无 crash——teacher forcing 评估（BLEU/翻译基准）拿到的分布与自回归推理不一致，训练侧若用作 logprob 目标同样污染；用户可见症状仅为翻译质量下降且无诊断线索。13.27（GPT2 encoder_attention_mask 硬编码 None）之后掩码丢失族新成员：本条是 **SDPA 迁移回归**形态（单 flag 语义下沉后子类失传），与 10.86（Gemma1 GELU 守卫移除）同属"重构 PR 静默改变激活/掩码语义"谱系。
+- **触发面**：HF transformers v5.15.0+（≤main）+ UMT5 系（google/umt5-*，AutoConfig 无 model_type 需显式类加载）+ teacher-forced 前向（config：版本回归）
+- **发现来源**：2026-09-27 每日扫描。
 
 ## 第 14 类 · 长上下文能力失效（model_on — 健康模型的盲点）
 
