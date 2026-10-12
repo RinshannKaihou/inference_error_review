@@ -122,3 +122,100 @@ GitHub Search API 8 组查询全部有效、**分页完整（fetched == total �
 
 - 暂存：`FAULT_MASTER_REFERENCE.zh.md`、`daily_scan_2026-10-12.md`、`fault_catalog.csv`、`fault_catalog.xlsx`（仅本轮实际变更文件）
 - 提交与推送结果见最终摘要（Git 操作在摘要前完成）。
+
+---
+
+# 晚间轮增补（2026-10-12 23:01 UTC 起，当日第二次扫描）
+
+- **执行时刻**：2026-10-12 23:01 UTC（cron）；Git 前置检查通过（main 干净、fetch 成功、HEAD == origin/main == `251ce97`，即上方早轮 02:28 UTC 的提交）。
+- **扫描窗口**：GitHub `created:>=2026-10-12`（cutoff 按 UTC 计算；语义为"早轮 commit 后新建的 issue"，与早轮 created:>=2026-10-05 窗口的重叠区间条目按早轮判定跳过）。arXiv 无 created 限定、按提交日降序核对（近月命中全已编目）。
+
+## 晚间轮 GitHub Search API 查询清单（全部带 created:>=2026-10-12）
+
+| # | 查询 | total/fetched | incomplete | 结果 |
+|---|---|---|---|---|
+| 1 | vllm is:issue label:bug | 6/6 | false | #61252 #61229 #61206 #61197 #61172 #61170 |
+| 2 | vllm silent wrong output | 4/4 | false | #61150 #61229(重复) #61225 #61157 |
+| 3 | vllm quantization correctness | 0/0 | false | 无命中 |
+| 4 | vllm KV cache | 11/11 | false | #61225 #61208 #61160 #61131 #61229 #61281 #61144 #61150(重复) #61157(重复) #61239 #61252(重复) |
+| 5 | sglang label:bug | 0/0 | false | 无命中（sglang 不用该 label 流） |
+| 6 | sglang wrong OR incorrect OR corrupt OR gibberish | 7/7 | false | #43857 #43765 #43929 #43874 #43738 #43888 #43741 |
+| 7 | triton wrong OR incorrect OR numerical | 0/0 | false | 窗口内无命中 |
+| 8 | tt-metal label:bug | 11/11 | false | #60342 #60338 #60294 #60286 #60285 #60277 #60262 #60246 #60245 #60244 #60243 |
+| 9 | tt-metal wrong OR incorrect OR silently OR corrupt OR PCC | 21/21 | false | 上表 + #60325 #60321 #60318 #60319 #60241 #60347 #60249 #60247 #60252–#60256 |
+| 10 | TensorRT-LLM 全部 | 6/6 | false | #20170 #20169 #20168 #20141 #20138 #20126 |
+| 11 | transformers label:bug | 5/5 | false | #49540 #49519 #49516 #49513 #49510 |
+| 12 | flashinfer 全部 | 8/8 | false | #6391 #6389 #6354 #6352 #6350 #6348 #6347 #6344 |
+
+- 逐组 fetched==total、incomplete=false；查询间 ≥7s 间隔，无限速 403、无 Validation Failed。
+- **执行事故记录**：第一批执行时 shell 变量未展开，vllm KV 与 sglang 两组曾退化为全时间窗查询（命中 5601/旧库）——该两次结果作废，已带 cutoff 重发（表中数字为重发值）。
+- **core REST 限额**：issue 详情调用触 403（未认证 60/h 被占）。正文深读改经两条合规路径补齐：① search API 快照自带 body（3000 字符）；② GitHub issue 页面 HTML 内嵌 JSON 直接抓取全文——14 个候选 issue 全部取得完整正文，无正文缺口。状态回访经 search 单号查询完成。
+
+## 晚间轮新增合并条目（20 条：15 NEW + 5 var；1342 → 1362）
+
+### vLLM
+- **6.281** [vllm-project/vllm#61150](https://github.com/vllm-project/vllm/issues/61150) PIECEWISE cudagraph + splitting_ops 含 moe_forward：重放陈旧地址静默垃圾（四臂对照 0/10 vs 10/10）→ NEW（config）。
+- **6.282** [#61229](https://github.com/vllm-project/vllm/issues/61229) NixlConnector lease 过期无条件释放 KV 块 × 在途远端 READ：decode 静默消费复用后他请求内容，5/5+5/5 确定性复现 → NEW（other_stack）。
+- **6.283** [#61160](https://github.com/vllm-project/vllm/issues/61160) NIXL PD 分离 + 默认 prefix caching 共享前缀跨请求内容污染：46/48 顺序、122/128 并发串答，关 prefix caching 即消失 → NEW（other_stack；机制未定位留待上游）。
+- **6.284** [#61208](https://github.com/vllm-project/vllm/issues/61208) MooncakeStoreConnector 把 list 值层缓存 reduce 成 cache[0]，V 视图被丢：save/lookup/load 全成功后 fresh consumer 损坏输出 → NEW（other_stack）。
+- **8.100** [#61225](https://github.com/vllm-project/vllm/issues/61225) nvfp4 KV 写内核 head-major 内部公式 × reader 实际 stride，QSA 后端默认 BLNHC token-major 布局下双向错位：全上下文长度乱、NIAH 0/N、自建 buffer 测试结构性失明 → var:8.53（nvfp4 KV 布局契约族第三站）。
+- **10.111** [#61172](https://github.com/vllm-project/vllm/issues/61172) Anthropic /v1/messages system 非文本块（image）静默丢弃，200 成功 → NEW（config）。
+- **10.112** [#61206](https://github.com/vllm-project/vllm/issues/61206) qwen3 reasoning parser 剥离 tool 参数内字面 `</think>`（双 parser 串联边界）+ 同 issue 另两缺陷（cutoff 报告、tool result 配对错序）→ var:10.42。
+- **12.53** [#61197](https://github.com/vllm-project/vllm/issues/61197) MTP draft 不继承 target --revision、从默认分支加载（0.29→0.31 回归，ZeroDivisionError 形态；静默错误权重风险为推断、留观）→ NEW（config）。
+
+### flashinfer
+- **8.101** [flashinfer-ai/flashinfer#6389](https://github.com/flashinfer-ai/flashinfer/issues/6389) trtllm-gen sparse MLA FP8 64-head persistent KeepsAb 内核随机 16-head tile 损坏（NaN LSE）；32×2/128/BF16 对照全对 → NEW（hw_specific，B300）。
+
+### SGLang
+- **9.34** [sgl-project/sglang#43857](https://github.com/sgl-project/sglang/issues/43857) sglang-mm token layout u32 回绕（≥2^32 token prompt）：M-RoPE 守卫用真实 64 位长度校验回绕 pair 恒过，位置表静默错位；CPU-only 源码级 repro → NEW（other_stack；verified）。
+- **9.35** [#43738](https://github.com/sgl-project/sglang/issues/43738) DSV4.1-Flash 多轮会话命中钉死 11,520（恰系统提示 45 页），60–80K 前缀逐轮全量重 prefill；GLM-5.3-Flash 同栈正常、三成因排除、机制未定位 → NEW（other_stack；主影响性能，正确性面留观）。
+
+### TensorRT-LLM（Qwen3-VL 视频管线双缺陷）
+- **10.109** [NVIDIA/TensorRT-LLM#20141](https://github.com/NVIDIA/TensorRT-LLM/issues/20141) total_num_frames 重写不重算 fps：默认路径视频恒 4 帧摘要 + 时间戳按 decoded/source 压缩 → NEW（other_stack）。
+- **10.110** [#20138](https://github.com/NVIDIA/TensorRT-LLM/issues/20138) 多模态 E/PD 交接丢 per-frame 时间戳 token 与帧标记，PD 侧对 mRoPE ids 无校验按短 prompt 切片 → NEW（other_stack）。
+
+### transformers
+- **9.29 补充来源**（非新条目）[#49519](https://github.com/huggingface/transformers/issues/49519)：v4 风格 rope_scaling setter 整体替换 rope_parameters 丢 rope_theta——9.29/9.32（vLLM/SGLang 静默换 base 10000）的上游本体根因坐实（PR #49515 修复在途）；判定不变、根因面上收。
+
+### tt-metal（含早轮"下轮优先"2 项补录）
+- **1.295**（补录）[#59530](https://github.com/tenstorrent/tt-metal/issues/59530) F32 HEIGHT_SHARDED 宽 concat 经 SrcA unpack 截断 TF32（8190/8192 错、与 TF32 参考 bit-exact）；早轮预测 var:1.266 族，实读后判独立机制（unpack mode 差错）→ NEW（hw_specific）。
+- **1.296**（补录）[#59824](https://github.com/tenstorrent/tt-metal/issues/59824) update_cache num_users>32 且非 32 倍数：tile padding 行被当真实 user 越界写 cache 外 DRAM（源码行级 + worked example）→ var:8.96（写侧姊妹：地址面 vs 数值面）。
+- **1.297** [#60245](https://github.com/tenstorrent/tt-metal/issues/60245) convert_u32_to_bfp exp-A 下溢分支后无条件加 hidden bit：微小值膨胀 ±2^-15（1e-6→3.05e-5）→ NEW（verified）。
+- **1.298** [#60244](https://github.com/tenstorrent/tt-metal/issues/60244) tilize 转置×非方 face：heap overflow READ/WRITE + 往返不闭合、边界检查打印后仍 memcpy → NEW（verified）。
+- **1.299** [#60262](https://github.com/tenstorrent/tt-metal/issues/60262) 单行 sort 哨兵值与真实值并列：pad index（≥n）泄入返回（values 全对、indices 错）→ var:1.23。
+- **1.300** [#60246](https://github.com/tenstorrent/tt-metal/issues/60246) equal_within_n_sig_figs 字符串比较不对称假匹配（0.5 vs 5.5 判真）→ var:1.234（验证面恒绿族）。
+- **10.113** [#60342](https://github.com/tenstorrent/tt-metal/issues/60342) Phi-3 强制 trust_remote_code：零 mismatch 报告下 130 参数随机初始化、双设备垃圾输出而 accuracy demo 恒绿 → var:12.46（报告成功≠权重到达族；verified）。
+
+## 晚间轮不收录（判定与理由）
+
+- vLLM **#61157** GLM hybrid-SSM+MTP 并发请求到达瞬间 deep-ctx agent session 退化（伪造 tool args、自失忆；#58454/#58368 修复后仍现）——取证极详尽但机制未定位、无合成复现，强留观下轮优先。
+- vLLM **#61281** Mamba align 边界状态块中途释放/驱逐次序倒置——纯 KVCacheManager 级无 GPU 复现、主影响性能，正确性面留观。
+- vLLM **#61239** FlashInfer metadata builder 异步调度 pinned workspace 覆写竞态（#57214 起）——IMA/hang 崩溃域主导，留观。
+- vLLM #61144（MI300X SR-IOV VF XGMI 崩溃 fail-loud）、#61252（Ministral 3 启动失败 fail-loud closed）、#61170（audio 边界拒绝）、#61131（CPU 无 Triton fail-loud）。
+- SGLang #43765（aiter 移除 pa_decode_sparse import 失败）、#43929（bench 计数工具域）、#43874（ComfyUI 插件 14 bug 打包帖，待单项证据整批留观）、#43888（计费 u32 回绕，计费元数据域）、#43741（fp8 KV QSA crash fail-loud）。
+- flashinfer #6391（fast_decode_plan 采纳 host 元数据 IMA——拒绝面/防御缺失，无静默错值证据）、#6344/#6347/#6348/#6350/#6352/#6354（CI/测试基建/feature）。
+- transformers #49540（tp_plan DTensor 混用 fail-loud）、#49516（T5 SDPA 回退纯性能）、#49513（closed）、#49510（auto_map 加载）。
+- TRT-LLM #20170（NVRTC uv 环境 fail-loud）、#20168/#20169（EAGLE-3 延迟性能；20168 为 20169 重复帖已 closed）、#20126（IPv6 部署域）。
+- tt-metal #60338（mesh trace 挂起）、#60294（concat NOC burst 挂起——hang 域）、#60277/#60285/#60286（Quasar 实验性 API 窄域）、#60241（LLK 硬件条件静态审计）、#60243（FreeListOpt OOM 泄漏——资源治理）、#60247（matmul bias 逻辑 h 校验缺失——候选：h∈(1,M) padding 行入输出真实、PR #59819 在途，合并量控制留观下轮优先）、#60249（1D mcast 校验用 device grid——弱触发）、#60252–#60256（squad-plan 重构批）、#60318/#60319/#60321/#60325（MiniMax-M3 batching 工作项）、#60347（CI 超时）。
+- triton 窗口 0 命中——无候选可判。
+
+## 晚间轮来源回访
+
+1. **9.29 族根因坐实**：transformers #49519（open）——9.29（vLLM）与 9.32（SGLang #41227，GSM8K 161→106/200）的 RoPE base 静默替换统一上收到 transformers v4 setter 缺陷；PR #49515 修复在途。判定与条目数不变，9.29 补充来源与说明。
+2. **6.261**（SGLang #41617）仍 open、修复 PR #41767 仍 open（search 快照核实）。
+3. **早轮"下轮优先"两项**：tt-metal #59530 仍 open（修复 PR #59639 open；#59634 为 closed 前身）、#59824 仍 open——正文本日深读并补录为 1.295/1.296。
+- 未覆盖：core REST 限额致本轮无法做评论级复查（10.87/4.27 两个旧 open 长期来源仅确认无 state 翻转，评论正文未读——与早轮相同的未了项，顺延下轮）。
+
+## 晚间轮 arXiv
+
+9 组查询全部 HTTP 200（引号短语+AND）：`"silent data corruption" AND "LLM inference"`、`"bit flip" AND "LLM inference"`、`"KV cache corruption"`、`"numerical correctness" AND inference`、`"soft error" AND GPU` 及 4 组窄化变体（`"silent data corruption" AND inference`、`"inference SDC"`、`"KV corruption"`、`"wrong output" AND vLLM`，后 3 组 0 命中=窄查询无匹配非失效）。命中全部已编目或已判：SProbe（2609.19743）、JITterFlip（2608.29745）、2601.19912、2609.16742 等；无新编目。
+
+## 晚间轮合并与观察
+
+- 合并后总数 **1362**（1342 + 20；编号编目 1228 → 1248）。分布：第 1 类 +6、第 6 类 +4、第 8 类 +2、第 9 类 +2、第 10 类 +5、第 12 类 +1。滚动汇总、轴表、目录计数均已按实际解析结果更新。
+- 观察：①**nvfp4 KV 布局契约族第三站**（8.100）——早轮 7.110（scale interleave）、6.277（pool 几何）之后 writer/reader stride 公式分裂再现"测试视图窄化 × 真实 allocator 布局"主线；②**跨请求内容泄漏三连发**（6.282 lease 竞态、6.283 PD prefix cache 串扰、6.275 早轮 ZMQ 重绑）——三种独立机制、全部 HTTP 200 零告警；③**Qwen3-VL 视频管线双缺陷同日暴露**（10.109 单位制错配、10.110 分离交接无校验切片）；④**"报告成功≠权重到达"**（10.113 零 mismatch 报告下 130 参数随机、demo 恒绿）与 12.46 成对。
+
+## 晚间轮 Git 交付
+
+- 变更文件：`FAULT_MASTER_REFERENCE.zh.md`、`daily_scan_2026-10-12.md`、`fault_catalog.csv`、`fault_catalog.xlsx`（导出生成）。
+- 提交：`daily scan 2026-10-12: inference`（第二次扫描增量）；推送 `origin HEAD:main` 后以 `git ls-remote` 回读核对远程 SHA == 本地 HEAD。结果见最终摘要。
