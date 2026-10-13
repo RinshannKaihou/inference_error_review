@@ -3,18 +3,18 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1362 条；状态：active 1362
+共 1370 条；状态：active 1362、pending_audit 8
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 22 |
-| 算子/内核 | 308 |
+| 算子/内核 | 312 |
 | 编译器 | 43 |
-| 运行时/执行 | 69 |
+| 运行时/执行 | 70 |
 | 集合通信 | 13 |
 | 并行切分 | 9 |
-| KV缓存 | 283 |
-| 调度/服务 | 68 |
+| KV缓存 | 285 |
+| 调度/服务 | 69 |
 | 输出解析 | 53 |
 | 解码/采样 | 116 |
 | 量化 | 144 |
@@ -3427,7 +3427,7 @@
 - **影响对象**：输出内容（质量退化）
 - **影响详情**：Qwen3.8-27B-FP8 在 MI355X TP4 上高并发服务时准确率坍塌、无 crash；VLLM_ROCM_USE_AITER=1 触发，关闭 AITER 恢复正常
 - **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/vllm-project/vllm/issues/60160
+- **来源**：https://github.com/vllm-project/vllm/issues/60160；https://github.com/sgl-project/sglang/issues/43914
 - **关联**：var:vllm_dsv4_flash_fp8_mi300x_length_smooth_degradation
 
 ### INF-0899 `sglang_qwen38_nvfp4_fused_qknorm_rope_outgate_grounding` SGLang 融合 RoPE 路径致 Qwen3.8 NVFP4 坐标偏移
@@ -3762,6 +3762,51 @@
 - **影响详情**：FP8 且 num_heads_q==64、批达数百行时，sparse MLA decode/extend 随机 (row, 16-head tile) 输出错值 + NaN/错 LSE，批越大命中率越高，无 crash；同输入 32-head×2、128 heads 或 BF16 均正确。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/flashinfer-ai/flashinfer/issues/6389
+
+### INF-1366 `vllm_lfm2_hybrid_mamba_greedy_nondeterministic_warm_rounds` vLLM LFM2 hybrid mamba 贪心解码暖轮间不可复现
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-10-13
+
+- **原因对象**：算子/内核 / vllm / hybrid mamba 前向非确定归约
+- **原因行为**：LFM2（conv+SSM+full-attention 混合）前向存在非确定性归约（疑似 atomicAdd/split-K 累加顺序），时间/调度顺序变化使 logits 微扰并在贪心 argmax 边界翻转 token；具体内核未定位
+- **影响对象**：输出内容；输出分布（不可复现）
+- **影响详情**：同引擎同 seed 同 prompt 的 temperature=0 两次 generate() 输出序列不同：长公共前缀+单 token 分岔+再对齐的归约序签名；评测/A-B 跨轮比较出现幻影差异
+- **改进措施**：检测 待定；修复 待定（报告者已排除 CUDA graph 重放（NONE 模式仍发散）、采样 RNG（temperature=0）、缓存冷热（暖对暖发散）；同机 Qwen1.5-MoE 稠密注意力对照稳定，归因收窄到 LFM2/hybrid-mamba 特有路径但未定位内核）
+- **来源**：https://github.com/vllm-project/vllm/issues/61319（2026-10-13
+- **关联**：var:INF-0328
+
+### INF-1368 `ttmetal_chunk_gated_delta_rule_chunk64_dl_tile_wrong_slot` ttnn chunk_gated_delta_rule chunk64 装错槽
+
+`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-13
+
+- **原因对象**：算子/内核 / tt-metal / decay_all pack_tile 调用序
+- **原因行为**：pack_tile 按调用顺序而非给定索引写；i==0 时 dl 被插入 decayfac 循环，Ct==2 时 CB 实际序 decayfac_0,dl,decayfac_1，读者按 slot 取值时 dl 与 decayfac_1 错位
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：chunk_size=64（Ct==2）时 dl 与 k_dec_t 后半错：final state PCC 0.003、output PCC 0.995（B=1,T=256,4 头,K=V=128，fused 与 phased 路径同错）；chunk_size=32 正确
+- **改进措施**：检测 待定；修复 待定（现有 chunk-64 测试只比较设备路径互相之间（test_scan_mcast_bit_exact[chunk64_ct2]、test_fused_tinv_chunk64），全部路径共享缺陷故恒绿；报告者已参数化 test_prep_outputs_vs_torch 至 chunk64 抓到 k_dec_t PCC 3.4e-5<0.999，PR to follow；同一 i==0 模式也在 #58891 分支上）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60393（2026-10-13
+
+### INF-1369 `ttmetal_gather_rank5_dim_lt_rank_minus_3_scrambled_inverse_transpose` ttnn.gather rank>4 且 dim<rank-3 时输出错乱
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-13
+
+- **原因对象**：算子/内核 / tt-metal / gather 低维合并逆转置
+- **原因行为**：gather 对 rank>4 张量把低维合并进带 batch 的 4D 视图再转置送入内核，dim<rank-3 时所用逆转置与合并方式不匹配，输出形状正确但内容按错误排列返回，无任何报错
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：rank5 dim∈{0,1}、rank6 dim∈{0,1,2} 全错（唯一例外 dim==rank-4 且其前全 1 时正确）；TILE codegen、ROW_MAJOR native、TILE forced native 三路同错
+- **改进措施**：检测 待定；修复 待定（#58402 条目 18 拆出独立跟踪；同缺陷亦在 #56880 评论报告；Wormhole main @337e303cd55 复现）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60398（2026-10-13
+
+### INF-1370 `ttmetal_matmul_reuse_dram_sharded_srca_reload_tf32_truncation` ttnn matmul 三工厂 SrcA 重载 fp32 部分和 TF32 截断
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-13
+
+- **原因对象**：算子/内核 / tt-metal / reuse/DRAM-sharded 部分和重载
+- **原因行为**：reuse、DRAM-sharded、batched 三个 matmul 工厂把 fp32 部分和经 SrcA 重载，SrcA 截断为 TF32，损失随 K block 数增长；mcast_1d/2d 已在 #50250 改无损，这三个未改
+- **影响对象**：数值结果（质量退化）
+- **影响详情**：fp32_dest_acc_en=True 时相对最大误差随 K 增长：reuse 2.47e-2、DRAM-sharded decode 路径 2.44e-2、batched 2.55e-2（对照 mcast 工厂 8.3e-5）；系统性负偏置（截断），LLM decode 形状实测
+- **改进措施**：检测 待定；修复 待定（#50250 已为 mcast_1d/2d 工厂实现无损重载，三个受影响工厂可参照；issue 2026-10-08 创建、2026-10-09 closed/completed，修复 PR 未在扫描窗口内核实——closed 不自动证明修复已发布）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/59828（2026-10-08；https://github.com/tenstorrent/tt-metal/issues/59828#issuecomment（jberkowitzTT
 
 ## 编译器
 
@@ -5023,6 +5068,18 @@
 - **影响详情**：splitting_ops 含 moe_forward 时，首个 token（prefill 不重放）正确，随后 decode 退化为重复垃圾；非 DEBUG 日志级别下完全静默，仅 VLLM_LOGGING_LEVEL=DEBUG 时 CUDAGraphWrapper 输入地址断言触发。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/61150
+
+### INF-1365 `vllm_qwen4exp_amd_ple_ngram_stale_query_start_loc_tail_piecewise` vLLM Qwen4Exp AMD PLE n-gram 陈旧行映射
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `verified` · `var` · 发现 2026-10-13
+
+- **原因对象**：运行时/执行 / vllm / PIECEWISE 图内 PLE 缓冲刷新
+- **原因行为**：AMD 路径把 PLE n-gram ID 生成留在 PIECEWISE 图 piece 内，捕获时按 dummy 请求数固化读取长度，重放时读到未刷新的 query_start_loc/ngram_context 陈旧尾部并按其分配请求行
+- **影响对象**：输出内容；输出分布（不可复现）
+- **影响详情**：非均匀小批量步（短 prompt、短末 chunk、混批）真实 token 被按陈旧行分配错误 n-gram ID，输出随服务历史漂移：并发突发后 10 探针 0/10 一致，修复后 10/10；CPU 模型 46 步 94 处 ID 错
+- **改进措施**：检测 待定；修复 issue 内给出最小修复（刷新范围外填 input_batch.num_tokens 非递减 padding + ngram_context 全行填 EOS）与替代方案（把 AMD n-gram op 注册为 splitting op，与 NVIDIA 路径一致）；报告者已在 2x R9700 TP1/TP2 验证修复后 10/10 一致、eager/FULL 位级不变；上游修复状态未核实
+- **来源**：https://github.com/vllm-project/vllm/issues/61486（2026-10-13
+- **关联**：var:INF-1349
 
 ## 集合通信
 
@@ -8468,6 +8525,28 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/sgl-project/sglang/issues/43738
 
+### INF-1363 `sglang_hicache_host_restore_missing_dsa_indexer_keys_wrong_answer` SGLang HiCache host 回载缺 indexer 键致静默错答
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `verified` · `NEW` · 发现 2026-10-13
+
+- **原因对象**：KV缓存 / sglang / HiCache host 层池声明
+- **原因行为**：hybrid KDA+DSA 的 host 层策略只声明 KV+MAMBA 池、不备份 DSA indexer 键，L2→L1 回载只还原 KV，稀疏注意力索引器键缺失，恢复的前缀对 DSA 不完整
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：host-tier 命中的请求报满前缀命中、正常完成且答案流畅但事实错误（verbatim-recall 18/20 错 vs 冷/device 命中 0/20）；4x B300 TP4 GLM-5.3-Flash FP8 实测
+- **改进措施**：检测 待定；修复 main 已由 PR #40913+#40915 修复（声明 INDEXER host 池，v0.5.21 分支点后合入）；v0.5.21 backport PR #43998 open（2026-10-13）；规避：关闭 --enable-hierarchical-cache 或使用含 #40915 的构建
+- **来源**：https://github.com/sgl-project/sglang/issues/43997（2026-10-13；https://github.com/sgl-project/sglang/pull/43998（open
+
+### INF-1364 `sglang_pd_prefill_early_send_cached_prefix_stale_h2d_kv` SGLang PD prefill 早发前缀在 H2D 回载完成前送出陈旧 KV
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `verified` · `NEW` · 发现 2026-10-13
+
+- **原因对象**：KV缓存 / sglang / 早发前缀×load-back 竞态
+- **原因行为**：commit_load_back 在 H2D 拷贝仅入队时就把新 device 页挂上 radix 节点，早发路径把同批第二个请求重匹配到这些页并在拷贝仍在写时先行发送该区间且不再重发
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：decode 端静默收到部分前缀的陈旧 KV，答案随重载区间内上下文改变；GB300 1P1D NIXL Qwen3-4B 双 100K 同前缀请求 39/40（direct）、29/30（kernel）、29/30（+checksum，全部被 KV checksum mismatch 标记）损坏
+- **改进措施**：检测 待定（--disaggregation-enable-kv-checksum 可标记每次损坏，但默认不拦截）；修复 规避：SGLANG_DISAGG_PREFILL_EARLY_SEND_CACHED_PREFIX=0（0/84）；候选修复（issue 内提议，未实现）：批内排队过 load-back 时跳过早发（batch.hicache_consumer_index>=0）或让 KV 传输等待 load-back finish event
+- **来源**：https://github.com/sgl-project/sglang/issues/44070（2026-10-13
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -9233,6 +9312,17 @@
 - **影响详情**：含图像等非文本系统块的请求返回 200 成功，但该块从未进入 prompt，模型行为与用户意图偏离；count_tokens 的 token 计数与计费/上下文估计同步低估。无错误无警告。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/61172
+
+### INF-1367 `vllm_explicit_truncation_side_drops_tokenizer_special_tokens` vLLM 显式 truncation_side 截掉特殊 token
+
+`故障` · `pending_audit` · `infra_off` · `config` · `verified` · `NEW` · 发现 2026-10-13
+
+- **原因对象**：调度/服务 / vllm / truncate_prompt_tokens 截断
+- **原因行为**：带显式 truncation_side（即使与默认同值）时截断作用于加特殊 token 后的序列而非 prompt，截断端特殊 token（BOS/[CLS]/[SEP]/EOS）被切掉；不设该字段则保留特殊 token
+- **影响对象**：输入编码（静默错误）
+- **影响详情**：嵌入/池化模型的 prompt token 序列静默缺结构性特殊 token：BERT 类丢 [CLS]/[SEP]、Llama 丢 BOS、Qwen3-Embedding 丢 pooling 用 EOS；Cohere /v2/embed truncate=START 同路径
+- **改进措施**：检测 待定；修复 待定（issue 提供可复现 CPU 级最小复现：render server + tiny-random-LlamaForCausalLM 的 /v1/completions/render，unset vs "left" 输出 [1,17366,11203,29889] vs [278,17366,11203,29889]；与 AutoTokenizer 行为对照）
+- **来源**：https://github.com/vllm-project/vllm/issues/61359（2026-10-13
 
 ## 输出解析
 
