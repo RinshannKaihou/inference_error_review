@@ -1,0 +1,5 @@
+# Per-repo settings for tools/catalog_tool.py (the tool file is identical in both catalog repos).
+namespace: INF
+title: LLM 推理故障模式编目
+# narrative fields the daily scan must write under "original" for every new entry
+narrative_required: [mechanism, source, behavior, trigger_surface, discovery]
