@@ -1,0 +1,188 @@
+{"job": "baseC|INF-1345|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1343|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1346|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1344|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1343|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1347|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1347|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1343|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1347|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1344|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1345|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1348|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "观测/评测", "effect": "测试判定", "visibility": "静默错误"}}
+{"job": "baseC|INF-1348|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "观测/评测", "effect": "测试判定", "visibility": "静默错误"}}
+{"job": "baseC|INF-1344|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1349|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1350|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1350|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "baseC|INF-1351|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "baseC|INF-1351|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "baseC|INF-1351|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "baseC|INF-1345|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1352|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1348|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "观测/评测", "effect": "测试判定", "visibility": "静默错误"}}
+{"job": "baseC|INF-1346|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "报错"}}
+{"job": "baseC|INF-1349|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1352|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1350|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "baseC|INF-1354|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|INF-1353|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1353|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1356|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|INF-1352|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1349|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1353|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1356|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|INF-1357|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1355|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1346|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "报错"}}
+{"job": "baseC|INF-1354|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|INF-1355|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1357|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1359|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1358|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1360|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "输出解析", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1357|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1360|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "输出解析", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1359|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1361|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1358|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1360|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "输出解析", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1359|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1362|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|INF-1356|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "baseC|INF-1361|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|INF-1362|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseF|INF-1343|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1344|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "writer 按 padded 高逐 user 行走", "evidence": "writer 按 `num_batched_heads × min(32, Bcache)` 逐 user 行走、只在 `b == B`（padded 高）re-base cache_id"}}]}
+{"job": "baseC|INF-1361|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseF|INF-1345|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1355|kimi-k3", "model": "kimi-k3", "result": null}
+{"job": "baseF|INF-1346|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1343|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1362|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "模型权重", "visibility": "报错"}}
+{"job": "baseF|INF-1344|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1347|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "非 2 幂宽走 Single Row 工厂且输入含哨兵极值时触发", "evidence": "ttnn.sort(stable=False) + 非 2 幂宽 ≤2048 + 输入含 dtype 哨兵极值；Single Row Single Core 工厂（padded 宽 ≤2048，非 2 幂宽 sort 全走此工厂）"}}]}
+{"job": "baseC|INF-1354|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseF|INF-1345|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1348|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1348|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1344|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1349|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1346|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1350|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "consumer 读到的字节已是复用后其他请求内容", "evidence": "consumer 侧块描述符无内容/身份绑定，读到的字节可能已是复用后的其他请求内容"}}]}
+{"job": "baseF|INF-1343|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "FLOAT32 且 L1 height-sharded 时 concat 选中 S2S 工厂", "evidence": "`ttnn.concat([a, b], dim=-1)` FLOAT32 TILE 输入且 **L1 HEIGHT_SHARDED** 时选中 `ConcatS2STiledProgramFactory`"}, "detail": {"problem": "missing_condition", "quote": "L1 height-sharded FLOAT32 宽 concat（dim=-1）全元素静默 TF32 截断", "evidence": "tt-metal + ttnn.concat dim=-1 + FLOAT32 TILE + L1 HEIGHT_SHARDED"}}]}
+{"job": "baseF|INF-1348|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1351|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1346|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1358|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseF|INF-1351|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1352|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1349|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1347|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "非 2 幂宽走 Single Row 工厂且输入含哨兵极值时触发", "evidence": "tt-metal + ttnn.sort(stable=False) + 非 2 幂宽 ≤2048 + 输入含 dtype 哨兵极值"}}]}
+{"job": "baseF|INF-1349|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1353|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1350|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1354|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "numHeadsQ>32 时", "evidence": "FP8 Q/KV + num_heads_q==64……时选中 `…Q64Kv128PersistentKeepsAbForGen` 内核；128 heads（选 2CTA KeepsAb）"}, "detail": {"problem": "missing_condition", "quote": "FP8 且 num_heads_q==64、批达数百行时", "evidence": "FP8 + 64 query heads 时选中……内核，批达数百行且 KV 短时随机 (row, 16-head tile) 单元输出错值 + NaN/错 LSE"}}]}
+{"job": "baseF|INF-1352|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1345|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "约 30 倍", "evidence": "exp-A 模式 Bfp8/4/2 打包的微小值静默膨胀 30×+（1e-6 量级）"}}]}
+{"job": "baseF|INF-1355|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1351|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1355|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1353|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1356|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1350|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1352|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1357|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1353|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1358|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1354|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "numHeadsQ>32 时 selectSparseMlaGenerationKernel 选中 Q64 FP8 KeepsAb trtllm-gen 内核", "evidence": "FP8 + **64 query heads** 时选中 `…Q64Kv128PersistentKeepsAbForGen` 内核，批达数百行且 KV 短时**随机 (row, 16-head tile) 单元输出错值 + NaN/错 LSE**；同输入走两个 32-head 调用（选 SwapsAb 内核）、128 heads（选 2CTA KeepsAb）或 BF16 全部正确。"}, "detail": {"problem": "missing_condition", "quote": "FP8 且 num_heads_q==64、批达数百行时", "evidence": "FP8 + **64 query heads** 时选中 `…Q64Kv128PersistentKeepsAbForGen` 内核，批达数百行且 KV 短时**随机 (row, 16-head tile) 单元输出错值 + NaN/错 LSE**"}}]}
+{"job": "baseF|INF-1358|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1359|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1358|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1359|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1360|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1359|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1361|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1357|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1361|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1347|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "非 2 幂宽走 Single Row 工厂且输入含哨兵极值时触发", "evidence": "【触发面】tt-metal + ttnn.sort(stable=False) + 非 2 幂宽 ≤2048 + 输入含 dtype 哨兵极值（hw_specific）"}}]}
+{"job": "baseF|INF-1356|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1357|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1354|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "FP8 且 num_heads_q==64、批达数百行时", "evidence": "批达数百行且 KV 短时**随机 (row, 16-head tile) 单元输出错值 + NaN/错 LSE**；机制亦称『特定 batch/KV 长度域』——detail 漏掉『KV 短』限定，使触发面变宽"}}]}
+{"job": "baseF|INF-1362|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "draft 从默认分支加载。", "evidence": "从非默认分支加载 target（如 `--revision pre-final`）时 draft config/权重从仓库默认分支加载"}}]}
+{"job": "baseF|INF-1355|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1360|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1356|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "每轮仅命中恒定 11,520 cached token（45×256 页，恰为系统提示长度）", "evidence": "behavior 字段已述『前缀缓存每轮命中钉死在系统提示边界（恒定 11,520 token）』，detail 重复了该原因行为；原文出处为『长 agentic 会话每轮命中**恒定 11,520 cached token**（45×256 页 = 恰系统提示长度）』"}}]}
+{"job": "baseF|INF-1361|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1362|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1360|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1362|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1343|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1344|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1343|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1343|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1345|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1343|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1345|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1345|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1346|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1346|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1344|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "panelC|INF-1350|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "panelC|INF-1344|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1346|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1354|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|INF-1356|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "性能退化"}}
+{"job": "panelC|INF-1345|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1356|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "panelC|INF-1354|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|INF-1350|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "panelC|INF-1356|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "panelC|INF-1362|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "配置/参数", "effect": "模型权重", "visibility": "报错"}}
+{"job": "panelC|INF-1346|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1354|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|INF-1350|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "panelC|INF-1350|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "跨请求/跨样本数据", "visibility": "静默错误"}}
+{"job": "panelF|INF-1343|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "FLOAT32 且 L1 height-sharded 时 concat 选中 S2S 工厂", "evidence": "ttnn.concat([a, b], dim=-1) FLOAT32 TILE 输入且 L1 HEIGHT_SHARDED 时选中 ConcatS2STiledProgramFactory；【触发面】FLOAT32 TILE + L1 HEIGHT_SHARDED"}}]}
+{"job": "panelC|INF-1362|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "panelC|INF-1362|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "panelF|INF-1344|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "同 run 中无关张量的莫名损坏", "evidence": "表现为后续运行中无关张量的莫名损坏"}}]}
+{"job": "panelC|INF-1362|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "panelF|INF-1343|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1344|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelF|INF-1345|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1346|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1356|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "性能/资源", "visibility": "性能退化"}}
+{"job": "panelF|INF-1345|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1344|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "输入 tilize 到 64 行高后", "evidence": "batch size（num_users）**>32 且非 32 倍数**（如 48——普通服务形状）时，输入 tilize 到 64 行高"}}]}
+{"job": "panelF|INF-1345|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1350|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1345|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1343|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": true, "component": false, "behavior": true, "detail": false}, {"title": {"problem": "missing_condition", "quote": "sharded", "evidence": "height-sharded FLOAT32 宽 concat 全元素静默 TF32 截断"}, "behavior": {"problem": "missing_condition", "quote": "FLOAT32 且 L1 height-sharded 时 concat 选中 S2S 工厂", "evidence": "`ttnn.concat([a, b], dim=-1)` FLOAT32 TILE 输入且 **L1 HEIGHT_SHARDED** 时选中 `ConcatS2STiledProgramFactory`"}}]}
+{"job": "panelF|INF-1344|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1346|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "仅 C++ API 的转置 tile × 非方 face 触发；方 face、非转置均正常，Python binding 不达此路径", "evidence": "【触发面】tt-metal C++ API + 转置 tile + 非方 face_shape（hw_specific）；元数据：Python Tile binding 只建默认方 face，C++ API 可达；32×32/16×16、16×32/16×16 转置、16×32/8×16 非转置全通过——触发精确钉在转置×非方 face 组合。"}}]}
+{"job": "panelF|INF-1354|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1344|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1356|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1350|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "consumer 读到的字节已是复用后其他请求内容", "evidence": "consumer 侧块描述符无内容/身份绑定，读到的字节可能已是**复用后的其他请求内容**并直接送入模型。"}}]}
+{"job": "panelF|INF-1346|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1346|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1362|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1354|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "批达数百行时", "evidence": "批达数百行且 KV 短时"}}]}
+{"job": "panelF|INF-1354|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "numHeadsQ>32 时 selectSparseMlaGenerationKernel 选中 Q64 FP8 KeepsAb trtllm-gen 内核", "evidence": "【元数据】选择逻辑 `selectSparseMlaGenerationKernel`（`numHeadsQ > 32` → KeepsMmaAb, tileSizeQ 64）在 main（2026-10-12）未变。FP8 + **64 query heads** 时选中 `…Q64Kv128PersistentKeepsAbForGen` 内核；128 heads（选 2CTA KeepsAb）。【触发面】flashinfer trtllm-gen sparse MLA decode/extend + FP8 Q/KV + num_heads_q==64"}, "detail": {"problem": "missing_condition", "quote": "批达数百行时", "evidence": "【元数据】批达数百行且 KV 短时**随机 (row, 16-head tile) 单元输出错值 + NaN/错 LSE**；【机制】在特定 batch/KV 长度域"}}]}
+{"job": "panelF|INF-1350|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "consumer 读到的字节已是复用后其他请求内容", "evidence": "读到的字节可能已是复用后的其他请求内容并直接送入模型"}}]}
+{"job": "panelF|INF-1356|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1356|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1354|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelF|INF-1356|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "overstated", "quote": "DSPARK/FlashMLA 混合 KV 池", "evidence": "DSPARK/FlashMLA 混合 KV 池交互为疑点"}}]}
+{"job": "panelF|INF-1362|hy3", "model": "hy3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "从默认分支加载致启动崩溃", "evidence": "从非默认分支加载 target（如 `--revision pre-final`）时 draft config/权重从仓库**默认分支**加载，revision 不匹配可致启动 `ZeroDivisionError`"}}]}
+{"job": "panelF|INF-1362|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1362|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1354|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "批达数百行时", "evidence": "批达数百行且 KV 短时**随机 (row, 16-head tile) 单元输出错值 + NaN/错 LSE**；机制段亦限定“在特定 batch/KV 长度域产生随机 tile 级损坏”"}}]}
+{"job": "panelF|INF-1350|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "consumer 读到的字节已是复用后其他请求内容", "evidence": "读到的字节可能已是复用后的其他请求内容并直接送入模型"}}]}
+{"job": "panelF|INF-1343|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "FLOAT32 且 L1 height-sharded 时 concat 选中 S2S 工厂", "evidence": "tt-metal + ttnn.concat dim=-1 + FLOAT32 TILE + L1 HEIGHT_SHARDED；FLOAT32 TILE 输入且 **L1 HEIGHT_SHARDED** 时选中 `ConcatS2STiledProgramFactory`"}}]}
+{"job": "fix|INF-1354", "model": "qwen3.8-max", "result": null}
+{"job": "fix|INF-1347", "model": "qwen3.8-max", "result": {"detail": "无crash；values正确，indices含≥n越界值，下游gather/scatter静默OOB读。触发：tt-metal中ttnn.sort(stable=False)、非2幂宽≤2048且输入含dtype哨兵极值；非2幂宽sort走Single Row Single Core工厂。"}}
+{"job": "verify|INF-1347|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1347|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

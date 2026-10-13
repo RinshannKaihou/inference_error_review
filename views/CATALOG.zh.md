@@ -3,32 +3,32 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1342 条；状态：active 1342
+共 1362 条；状态：active 1362
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 22 |
-| 算子/内核 | 304 |
+| 算子/内核 | 308 |
 | 编译器 | 43 |
-| 运行时/执行 | 68 |
+| 运行时/执行 | 69 |
 | 集合通信 | 13 |
 | 并行切分 | 9 |
-| KV缓存 | 277 |
-| 调度/服务 | 64 |
-| 输出解析 | 52 |
-| 解码/采样 | 115 |
-| 量化 | 143 |
+| KV缓存 | 283 |
+| 调度/服务 | 68 |
+| 输出解析 | 53 |
+| 解码/采样 | 116 |
+| 量化 | 144 |
 | 位置编码 | 33 |
 | 分词/模板 | 28 |
 | 模型定义 | 42 |
-| 权重/检查点 | 32 |
+| 权重/检查点 | 33 |
 | 数据管线 | 1 |
 | 优化器 | 2 |
 | 损失计算 | 1 |
 | MoE路由 | 21 |
 | 重计算/卸载 | 5 |
 | RL训练回路 | 1 |
-| 观测/评测 | 14 |
+| 观测/评测 | 15 |
 | 配置/参数 | 5 |
 | 构建/发布 | 5 |
 | 模型自身 | 16 |
@@ -3718,6 +3718,51 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：引用：`gh`：vLLM flash-attention PR #104 + FP8-KV 博客（91%→13% NIAH → 89%）。
 
+### INF-1343 `ttmetal_concat_f32_height_sharded_width_tf32_truncation_via_unpacktosrc` ttnn.concat FLOAT32 sharded 静默截断为 TF32
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 1.295
+
+- **原因对象**：算子/内核 / tt-metal / ConcatS2S 工厂 UnpackToSrc
+- **原因行为**：FLOAT32 且 L1 height-sharded 时 concat 选中 S2S 工厂，三个 buffer unpack mode 全设 UnpackToSrc，tile 经 SrcA 截断为 TF32，丢低 13 位尾数。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：L1 height-sharded FLOAT32 宽 concat（dim=-1）全元素静默 TF32 截断：8192 元素 8190 错，与 TF32 截断参考 bit-exact 相等；DRAM/L1 interleaved 同调用逐位正确。ttsim Blackhole 复现，硅上待确认。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/59530
+
+### INF-1346 `ttmetal_tilize_transposed_nonsquare_face_heap_overflow_corrupt_roundtrip` tt-metal tilize 转置非方 face 越界读写堆、往返数据错
+
+`故障` · `active` · `infra_off` · `hw_specific` · `verified` · `NEW` · 发现 2026-10-12 · 旧号 1.298
+
+- **原因对象**：算子/内核 / tt-metal / tilize_utils.cpp 格式转换器
+- **原因行为**：Tile 构造器接受非方 face 转置 tile，但四个转换器假设 face_H==face_W，循环边界越界读写 face 外；377-382 行边界检查打印 idx 后仍 memcpy 不拦截。
+- **影响对象**：数值结果；可用性/进度（静默错误）
+- **影响详情**：heap 越界读写：ASan 捕获；无 ASan 时 glibc free() invalid next size abort 或往返数据静默错。仅 C++ API 的转置 tile × 非方 face 触发；方 face、非转置均正常，Python binding 不达此路径。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60244
+
+### INF-1347 `ttmetal_single_row_sort_padding_value_tie_returns_out_of_range_indices` ttnn.sort Single Row 工厂哨兵并列返回越界 index
+
+`故障` · `active` · `infra_off` · `hw_specific` · `verified` · `var` · 发现 2026-10-12 · 旧号 1.299
+
+- **原因对象**：算子/内核 / tt-metal / ttnn.sort Single Row 工厂
+- **原因行为**：pad 到 2 幂时用应排最后的哨兵值（float ±inf 等）填充；哨兵是合法输入值，输入含该值时真实元素与 padding 并列，stable=False 按位置破并列使 padding（index≥n）混入返回 indices。
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：无crash；values正确，indices含≥n越界值，下游gather/scatter静默OOB读。触发：tt-metal中ttnn.sort(stable=False)、非2幂宽≤2048且输入含dtype哨兵极值；非2幂宽sort走Single Row Single Core工厂。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60262
+- **关联**：var:INF-0023
+
+### INF-1354 `flashinfer_mla_fp8_q64_persistent_keepsab_tile_corruption` flashinfer Q64 KeepsAb FP8 内核随机 tile 错值
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 8.101
+
+- **原因对象**：算子/内核 / flashinfer / Q64 PersistentKeepsAb 内核
+- **原因行为**：numHeadsQ>32 时 selectSparseMlaGenerationKernel 选中 Q64 FP8 KeepsAb trtllm-gen 内核，其在特定 batch/KV 长度域产生随机 tile 级损坏。
+- **影响对象**：数值结果；输出内容（数值异常）
+- **影响详情**：FP8 且 num_heads_q==64、批达数百行时，sparse MLA decode/extend 随机 (row, 16-head tile) 输出错值 + NaN/错 LSE，批越大命中率越高，无 crash；同输入 32-head×2、128 heads 或 BF16 均正确。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/6389
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -4967,6 +5012,17 @@
 - **影响详情**：跨节点 KV 传输且完整缓存命中时偶发输出错误，损坏集中在命中前缀段、后缀正常；因是竞态，复现依赖时序，服务无报错。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/29608；https://github.com/vllm-project/vllm/pull/31057
+
+### INF-1349 `vllm_piecewise_cudagraph_split_moe_forward_stale_replay_address_silent_garbage` PIECEWISE cudagraph 重放 moe_forward 陈旧地址
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 6.281
+
+- **原因对象**：运行时/执行 / vllm / PIECEWISE CUDA graph 捕获重放
+- **原因行为**：FX 级 split 引入的中间张量（MoE 输出）捕获后被分配器复用，CUDA graph 重放时仍按捕获时的陈旧地址读写该中间张量，而非当前实际地址。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：splitting_ops 含 moe_forward 时，首个 token（prefill 不重放）正确，随后 decode 退化为重复垃圾；非 DEBUG 日志级别下完全静默，仅 VLLM_LOGGING_LEVEL=DEBUG 时 CUDAGraphWrapper 输入地址断言触发。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61150
 
 ## 集合通信
 
@@ -8344,6 +8400,74 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：引用：来源：ai.google.dev/gemini-api/docs/caching（原文警告）。
 
+### INF-1344 `ttmetal_update_cache_num_users_gt32_tile_pad_rows_walked_oob_dram_write` update_cache padding 行越界写 cache 外 DRAM
+
+`故障` · `active` · `infra_off` · `hw_specific` · `verified` · `var` · 发现 2026-10-12 · 旧号 1.296
+
+- **原因对象**：KV缓存 / tt-metal / update_cache writer
+- **原因行为**：输入 tilize 到 64 行高后，writer 按 padded 高逐 user 行走、无 Bcache 钳制，padding 行 48..63 被当真实 user 写出，越出 cache 张量页数。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：num_users>32 且非 32 倍数（如 48）时触发；无 TT_FATAL、无 crash，cache 内部值全对，越界 NOC 写落在 cache 外部 DRAM，表现为同 run 中无关张量的莫名损坏，极难归因。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/59824
+- **关联**：var:INF-0880
+
+### INF-1350 `vllm_nixl_lease_expiry_releases_blocks_under_inflight_read_cross_request_kv_substitution` vLLM NixlConnector lease 到期释放 KV 块致跨请求串答
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 6.282
+
+- **原因对象**：KV缓存 / vllm / NixlConnector lease 生命周期
+- **原因行为**：producer 在 kv_lease_duration 到期时无条件释放请求 KV 块，不检查 consumer 的远端 READ 是否在途；块描述符无内容/身份绑定，NIXL 兼容检查只比 layout hash，不校验内容身份。
+- **影响对象**：跨请求/跨样本数据；输出内容（静默错误）
+- **影响详情**：无 crash、无报错：consumer 读到的字节已是复用后其他请求内容，直接送入模型，decode 输出延续他请求内容；decode 停顿（GC/调度）超过默认 30s lease 即触发；SIGSTOP 33.6s 可确定性复现 5/5；仅事后告警，部分运行不触发。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61229
+
+### INF-1351 `vllm_pd_shared_prefix_autocaching_cross_request_contamination` vLLM PD 分离 + prefix caching 共享前缀跨请求上下文串扰
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 6.283
+
+- **原因对象**：KV缓存 / vllm / PD 分离下共享前缀 KV 复用路径
+- **原因行为**：在 PD 分离拓扑下，共享前缀 KV 复用路径将 A 请求的会话内容泄漏进 B 请求的上下文（具体机制未定位，#57662 是否覆盖待查）。
+- **影响对象**：跨请求/跨样本数据；输出内容（静默错误）
+- **影响详情**：无关会话共享长公共前缀（如同一系统提示）时，响应间歇性包含其他请求的内容（如他人 canary 代码、文件名/指令）；HTTP 200、服务端零告警。可脚本复现：48 顺序请求中 46 个串答，并发 128 时 122/128；关闭 prefix caching 后串扰消失。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61160
+
+### INF-1352 `vllm_mooncake_store_connector_drops_secondary_kv_views_corrupted_loadback` vLLM Mooncake 只存 list 值层缓存首个视图，加载后静默损坏
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 6.284
+
+- **原因对象**：KV缓存 / vllm / MooncakeStoreConnector
+- **原因行为**：观测配置中层以 list 值缓存同一存储不同 offset 的 [K, V] 视图；store worker 把 list 值 reduce 成 cache[0]，物理 buffer 注册覆盖全存储但传输 layout 丢掉 V。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：save/lookup/load 全链路成功无报错；tuple 值直接断言失败，单张量缓存不走该分支。fresh consumer 加载 15,360 token KV 成功后静默生成损坏输出（V 缺失）。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61208
+
+### INF-1353 `vllm_nvfp4_kv_writer_reader_stride_split_token_major_blnhc_all_context_garbage` nvfp4 KV 写读 stride 公式分裂，BLNHC 布局全上下文垃圾
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `var` · 发现 2026-10-12 · 旧号 8.100
+
+- **原因对象**：KV缓存 / vllm / nvfp4 KV 写/读内核 stride 推导
+- **原因行为**：writer 按内部 head-major 公式推导数据 stride 与 data|scale 分区，reader 按实际张量 stride × data_dim/full_dim 切分，两套公式仅 head-major 页一致。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：QSA 后端默认布局解析选 BLNHC（token-major）时，writer/reader 落点系统性错位，每次 K/V 写入含 block scale 均落错误字节；任意上下文长度输出不连贯，常识检查全败、NIAH 0 命中，服务无异常在线。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61225
+- **关联**：var:INF-0837
+
+### INF-1356 `sglang_dsv41_flash_multiturn_prefix_hit_pinned_11520_system_prompt_boundary` SGLang DSV4.1-Flash 多轮前缀命中钉死在系统提示边界
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 9.35
+
+- **原因对象**：KV缓存 / sglang / DSPARK/FlashMLA 混合 KV 池
+- **原因行为**：机制未定位：长多轮 agentic 会话运行数小时后，前缀缓存每轮命中钉死在系统提示边界（恒定 11,520 token），首 chunk 命中跨轮不增长；疑与 DSPARK/FlashMLA 混合 KV 池交互有关。
+- **影响对象**：性能/资源（性能退化）
+- **影响详情**：每轮仅命中恒定 11,520 cached token（45×256 页，恰为系统提示长度），60–80K 会话前缀逐轮全量重 prefill，TTFT 逐轮恶化且状态持续不恢复；池占用 0.00 排除容量驱逐，正确性面未见静默错值。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/sgl-project/sglang/issues/43738
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -9066,6 +9190,50 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/sgl-project/sglang/issues/26263；https://github.com/sgl-project/sglang/pull/27430
 
+### INF-1355 `sglang_mm_token_layout_u32_wrap_multimodal_mrope_corruption` sglang-mm u32 回绕致 M-RoPE 位置表静默错位
+
+`故障` · `active` · `infra_off` · `other_stack` · `verified` · `NEW` · 发现 2026-10-12 · 旧号 9.34
+
+- **原因对象**：调度/服务 / sglang / token_layout.rs u32 截断
+- **原因行为**：apply_layout 用 u32 (start,end) 报媒体项位置，展开后 prompt 全长为 i64，≥2^32 token 时回绕；回绕值流入 Qwen-VL M-RoPE 守卫，与真实 64 位长度比较恒真。
+- **影响对象**：输入编码；隐状态；输出内容（静默错误）
+- **影响详情**：无 crash 无报错：图像 M-RoPE 坐标被写进位置表约 2^32 token 之前的位置，位置表静默错位、媒体错置、输出错。触发需多模态占位符展开后 ≥2^32 token 的极端 prompt；入口只查媒体项数与字节数，不拦截；CPU 侧预处理即可复现。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/sgl-project/sglang/issues/43857
+
+### INF-1357 `trtllm_qwen3vl_total_num_frames_rewrite_fps_misresample_4frame_summary_wrong_timestamps` TRT-LLM Qwen3-VL重写帧数未重算fps，视频恒采4帧且时间戳错
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 10.109
+
+- **原因对象**：调度/服务 / tensorrt-llm / InputProcessor 视频元数据重写
+- **原因行为**：_preprocess 把 total_num_frames 重写为 len(vd.frames) 但不重算 fps，单位不匹配使下游 HF Qwen3VLVideoProcessor 按错误时长采样与计算时间戳。
+- **影响对象**：输入编码；输出内容（静默错误）
+- **影响详情**：默认采样路径下视频静默退化为恒4帧摘要：10s/24fps/240帧已解码为40帧，按40/24≈1.67s采样，fps=2、min_frames=4下取4帧，30s clip同样4帧；时间戳token被压缩（0/3.3/6.7/10s变0.3/1.4s）。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/NVIDIA/TensorRT-LLM/issues/20141
+
+### INF-1358 `trtllm_qwen3vl_epd_handoff_drops_timestamp_tokens_mrope_misalignment` TensorRT-LLM E/PD 交接丢视频时间戳token致mRoPE错位
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 10.110
+
+- **原因对象**：调度/服务 / tensorrt-llm / E/PD 交接的 prompt 重建
+- **原因行为**：分离路径 PD 侧重建的 prompt 缺少 per-frame-group 时间戳 token 与 vision 标记，对 encoder 传来的 mRoPE position ids/deltas 无校验即按更短 prompt 切片。
+- **影响对象**：输入编码；输出内容（静默错误）
+- **影响详情**：E/PD 分离部署输入 Qwen3-VL 视频时，视觉 token 位置与 decode 期 mRoPE delta 错位，输出前几个 token 即偏离聚合路径，模型失去时间感但帧内容仍可识别，无任何报错。LLM API 路径触发；trtllm-serve 协议尚不载多模态 handle。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/NVIDIA/TensorRT-LLM/issues/20138
+
+### INF-1359 `vllm_anthropic_messages_system_drops_nontext_blocks_silently` vLLM /v1/messages 兼容层静默丢弃 system 非文本块
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 10.111
+
+- **原因对象**：调度/服务 / vllm / _convert_system_message
+- **原因行为**：请求 schema 宽松接受 system 字段的 content block 列表（含 image 块），但转换器只 append text 块，未支持的非文本块既不拒绝也不告警，被静默丢弃。
+- **影响对象**：输入编码；输出内容（静默错误）
+- **影响详情**：含图像等非文本系统块的请求返回 200 成功，但该块从未进入 prompt，模型行为与用户意图偏离；count_tokens 的 token 计数与计费/上下文估计同步低估。无错误无警告。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61172
+
 ## 输出解析
 
 ### INF-0574 `vllm_qwen3_xml_tool_choice_required_silently_acts_as_auto` vLLM qwen3 parser 强制 tool_choice 被静默降级
@@ -9662,6 +9830,18 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/sgl-project/sglang/issues/39782
 - **关联**：var:INF-0971
+
+### INF-1360 `vllm_qwen_reasoning_parser_strips_literal_think_marker_in_tool_args` vLLM reasoning parser 剥 tool 参数内</think>
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `var` · 发现 2026-10-12 · 旧号 10.112
+
+- **原因对象**：输出解析 / vllm / qwen3 reasoning parser
+- **原因行为**：reasoning parser 全局扫描流中 </think> 时无上下文感知，与 qwen3_coder tool parser 串联时也无参数内字面标记透传契约，tool 参数文本中的字面闭合标记被 reasoning 层先行剥离。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：含字面 think 标记的工具参数被静默破坏（标记消失），工具调用语义改变，无 crash。触发条件：vLLM + qwen3_coder/qwen3 双 parser 串联 + enable_thinking + 工具参数含字面 </think>；92 请求 harness 已复现，打补丁后通过。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61206
+- **关联**：var:INF-0958
 
 ## 解码/采样
 
@@ -10954,6 +11134,17 @@
 - **影响详情**：两个特性各自可用、组合即坏：稠密与混合注意力模型上生成都陷入 token 级重复循环；TurboQuant KV 与任意推测解码组合同样出现。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/41559；https://github.com/vllm-project/vllm/issues/40831
+
+### INF-1362 `vllm_mtp_draft_ignores_target_revision_loads_default_branch` vLLM MTP draft 不继承 revision，从默认分支加载致启动崩溃
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-12 · 旧号 12.53
+
+- **原因对象**：解码/采样 / vllm / MTP draft 配置构造
+- **原因行为**：SpeculativeConfig.__post_init__ 对 MTP 只复制 model 与 quantization 到 draft ModelConfig，不复制 revision，draft 从默认分支加载。
+- **影响对象**：可用性/进度（报错）
+- **影响详情**：vLLM 0.31.0 + MTP speculative 且用 --revision 从非默认分支加载 target 时，启动报 ZeroDivisionError（n_predict 解析为 0）；0.29 正常，0.31.0 回归；显式传 revision 可绕过。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/61197
 
 ## 量化
 
@@ -12582,6 +12773,17 @@
 - **来源**：https://github.com/ggml-org/llama.cpp/issues/19036
 - **关联**：var:INF-1267
 
+### INF-1345 `ttmetal_bfp_pack_exp_a_underflow_hidden_bit_inflates_to_2pow_minus15` tt-metal is_exp_a 块浮点打包下溢仍追加 hidden bit
+
+`故障` · `active` · `infra_off` · `hw_specific` · `verified` · `NEW` · 发现 2026-10-12 · 旧号 1.297
+
+- **原因对象**：量化 / tt-metal / convert_u32_to_bfp
+- **原因行为**：is_exp_a=true 打包在 se<0 下溢分支清 mantissa 后仍无条件追加 hidden 1，下溢元素编码为 1.0×2^(0-15)；get_max_exp 亦把共享指数钳到 0，整行小值解码为 ±2^-15。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：exp-A 模式 Bfp8/4/2 打包的微小值静默膨胀约 30 倍（1e-6 → 3.052e-05，-1e-6 → -3.052e-05），无 crash、无报错；默认 exp-B（BFLOAT8_B/BFLOAT4_B）路径不受影响。CPU-only 可确定性复现。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60245
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -14106,6 +14308,18 @@
 - **来源**：https://github.com/vllm-project/vllm/issues/59799
 - **关联**：var:INF-1158
 
+### INF-1361 `ttmetal_phi3_trust_remote_code_silent_random_weights_garbage_passing_demo` tt-metal强制trust_remote_code致Phi-3权重未加载
+
+`故障` · `active` · `infra_off` · `other_stack` · `verified` · `var` · 发现 2026-10-12 · 旧号 10.113
+
+- **原因对象**：权重/检查点 / tt-metal / trust_remote_code 强制加载路径
+- **原因行为**：强制 trust_remote_code=True 加载 Phi-3：transformers 5.12.1 下零 key mismatch，但130个参数（embedding、LM head、32 层 linear）保持随机初始化。
+- **影响对象**：模型权重；输出内容（静默错误）
+- **影响详情**：无 crash，随机权重生成 extextext… 垃圾文本；双设备官方 accuracy demo 不校验生成文本、仍报 1 passed，门禁失明。原生 Phi-3 类（trust_remote_code=False）加载正确，去除强制项后双设备恢复连贯输出。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60342
+- **关联**：var:INF-1162
+
 ## 数据管线
 
 ### INF-0889 `datacollator_zero_based_position_ids` 扁平化 collator 的 0 起位置 id 使 RoBERTa 位置错位
@@ -14630,6 +14844,18 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/NVIDIA/TensorRT-LLM/issues/17022
 - **关联**：var:INF-0922
+
+### INF-1348 `ttmetal_equal_within_n_sig_figs_asymmetric_string_compare_false_match` equal_within_n_sig_figs 单侧跳前导字符，<1 错值判真
+
+`故障` · `active` · `infra_off` · `hw_specific` · `verified` · `var` · 发现 2026-10-12 · 旧号 1.300
+
+- **原因对象**：观测/评测 / tt-metal / equal_within_n_sig_figs
+- **原因行为**：逐字符比较 std::to_string：前导 '0'/'.' 只按 a 单侧跳过同索引进 b，不对称（0.5 vs 5.5 判真、反向判假）；6 位小数使 <1e-6 值互等；n 位未达即短路 true。
+- **影响对象**：测试判定（静默错误）
+- **影响详情**：无 crash，测试基础设施静默放过 <1 的错值断言。当前唯一消费者 SFPU exponential 测试因输出 ≥1 未实际中招，属潜伏验证盲点；任何输出值 <1 的测试复用该比较器即可放过错误数值。CPU-only 四断言确定性复现。
+- **改进措施**：检测 待定；修复 待定
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60246
+- **关联**：var:INF-0233
 
 ## 配置/参数
 

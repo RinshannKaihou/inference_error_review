@@ -44,7 +44,8 @@ class CatalogToolTest(unittest.TestCase):
         for name in ("config.yaml", "vocab.yaml"):
             shutil.copy(os.path.join(REPO, "catalog", name), os.path.join(self.tmp, "catalog"))
         with open(os.path.join(self.tmp, "catalog", "id_registry.tsv"), "w") as fh:
-            fh.write("new_id\tlegacy_id\nINF-0007\t1.7\n")
+            ns0 = yaml.safe_load(open(os.path.join(self.tmp, "catalog", "config.yaml")))["namespace"]
+            fh.write(f"new_id\tlegacy_id\n{ns0}-0007\t1.7\n")
         ns = yaml.safe_load(open(os.path.join(self.tmp, "catalog", "config.yaml")))["namespace"]
         self.ns = ns
         self.run_tool("new", "--legacy-id", "1.8", stdin=json.dumps(good_entry(
@@ -91,7 +92,7 @@ class CatalogToolTest(unittest.TestCase):
         self.assertIn(f"{self.ns}-0008", res["errors"][0])
         code, _ = self.run_tool("new", "--allow-duplicate-source", stdin=json.dumps(dup))
         self.assertEqual(code, 0)
-        var = good_entry(slug="variant", labels=dict(good_entry()["labels"], coverage="var"), relations=[{"kind": "var", "target": "INF-9999"}])
+        var = good_entry(slug="variant", labels=dict(good_entry()["labels"], coverage="var"), relations=[{"kind": "var", "target": "ZZZ-9999"}])
         code, res = self.run_tool("new", stdin=json.dumps(var))
         self.assertEqual(code, 2)
         self.assertTrue(any("var 目标" in m for m in res["errors"]))
