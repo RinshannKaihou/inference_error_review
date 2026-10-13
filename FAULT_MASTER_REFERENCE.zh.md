@@ -1,3 +1,5 @@
+> ⚠️ **本文件已于 2026-10-13 冻结，不再更新。** 编目真源已迁至结构化条目 `catalog/entries/*.yaml`（写入与查询用 `tools/catalog_tool.py`，字段见 `catalog/SCHEMA.md`；浏览用 `views/CATALOG.zh.md`、`views/fault_catalog.csv`）。本文件条目与新编号的对照见 `catalog/id_registry.tsv`。
+
 # LLM 推理故障模式总参考（Master Fault Reference）
 
 > **本文档是什么**：本项目全部已编目故障模式的**单一自包含参考**。此前故障散落在三份互不重叠的文件里
