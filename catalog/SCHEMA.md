@@ -52,6 +52,8 @@ python3 tools/catalog_tool.py new --file /tmp/entry.json         # 返回 {"ok":
 }
 ```
 
+**`original` 是完整的原始说明，结构化字段是它的压缩**：`original.mechanism` 要像以往 Markdown 条目一样写全——代码/配置层面的具体原因、涉及的版本与配置、证据（复现、源码定位、维护者结论）和条件；`original.behavior` 写清观察到的现象与触发条件。`title`、`component`、`cause.behavior`、`effect.detail` 里的每个事实都必须能在 `original` 里找到——每日审计以 `original` 为准，原文没写的事实会被判为“写了原文没有的事实”并改写掉。工具要求 `original.mechanism` 不短于 80 字且不短于 `cause.behavior`，`original.behavior` 不短于 40 字且不短于 `effect.detail`。
+
 工具会：分配编号、提取来源链接、检查来源是否已被其他条目引用（同一机制请改用 update 补证据）、检查 `var` 目标存在、按词表和长度上限校验，然后写入 `status: pending_audit`。
 
 ## 修改已有条目

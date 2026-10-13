@@ -271,6 +271,14 @@ def cmd_new(a):
     for k in cfg["narrative_required"]:
         if not str(original.get(k, "")).strip():
             errors.append(f"original.{k} 不能为空（扫描的原始说明）")
+    # the narrative is the full write-up the audit checks against; the structured fields compress it
+    cause = data.get("cause") if isinstance(data.get("cause"), dict) else {}
+    effect = data.get("effect") if isinstance(data.get("effect"), dict) else {}
+    for k, summary, floor in (("mechanism", cause.get("behavior"), 80), ("behavior", effect.get("detail"), 40)):
+        n, need = len(str(original.get(k, "") or "")), max(floor, len(str(summary or "")))
+        if 0 < n < need:
+            errors.append(f"original.{k} 只有 {n} 字，至少 {need} 字：原始说明要写全（代码/配置层面的原因、版本、证据、条件），"
+                          "结构化字段只是它的压缩，其中每个事实都必须能在原始说明里找到")
     evidence = evidence_of(original.get("source", ""))
     if not evidence:
         errors.append("original.source 必须含至少一个可点击链接（GitHub issue/PR、arXiv 或论文 URL）")

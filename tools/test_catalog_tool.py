@@ -27,9 +27,9 @@ def good_entry(**over):
         "labels": {"family": "infra_off", "trigger": "hw_specific", "trigger_review": False, "trigger_note": "tt-metal 专用",
                    "stage": "N/A", "confidence": "documented", "coverage": "NEW", "discovered": "2026-10-13"},
         "relations": [], "remarks": "",
-        "original": {"mechanism": "单核 factory 硬编码 GENERATE_INDICES = 1 # 注意这里有井号",
+        "original": {"mechanism": "ttnn.topk 的单核 topk_single_core_program_factory 把 GENERATE_INDICES 硬编码为 1 # 注意这里有井号，忽略调用方传入的 indices_tensor payload，只有多核 factory 才读取该张量；单核形状包括 W<8192、非 2 的幂等。",
                      "source": "tt-metal #59639 https://github.com/tenstorrent/tt-metal/issues/59639",
-                     "behavior": "静默返回 iota", "trigger_surface": "tt-metal 单核", "discovery": "2026-10-13 每日扫描"},
+                     "behavior": "单核形状下静默返回 generated iota [0,1,2,...] 而非调用方提供的索引，无 crash、无 NaN。", "trigger_surface": "tt-metal 单核", "discovery": "2026-10-13 每日扫描"},
     }
     e.update(over)
     return e
@@ -84,6 +84,14 @@ class CatalogToolTest(unittest.TestCase):
         for needle in ("title 长 41", "effect.objects", "缺少 effect.visibility", "cause.objects.subsystem", "可点击链接"):
             self.assertIn(needle, text)
         self.assertEqual(sorted(os.listdir(os.path.join(self.tmp, "catalog", "entries"))), before)
+
+    def test_thin_narrative_rejected(self):
+        thin = good_entry(slug="thin", original=dict(good_entry()["original"], mechanism="硬编码索引", behavior="返回错",
+                                                     source="https://github.com/o/r/issues/77"))
+        code, res = self.run_tool("new", stdin=json.dumps(thin))
+        self.assertEqual(code, 2)
+        self.assertTrue(any(m.startswith("original.mechanism 只有") for m in res["errors"]))
+        self.assertTrue(any(m.startswith("original.behavior 只有") for m in res["errors"]))
 
     def test_duplicate_source_and_var_target(self):
         dup = good_entry(slug="other", original=dict(good_entry()["original"], source="https://github.com/o/r/issues/1"))
