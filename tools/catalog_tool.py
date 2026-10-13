@@ -113,6 +113,30 @@ def norm_url(u):
     return re.sub(r"[#?].*$", "", u).rstrip("/").lower()
 
 
+REPO_ALIASES = {"tensorrt-llm": ("tensorrt-llm", "trt-llm", "trtllm"), "text-generation-inference": ("tgi", "text-generation-inference"),
+                "megatron-lm": ("megatron-lm", "megatron"), "deepspeed": ("deepspeed",), "llama.cpp": ("llama.cpp",)}
+
+
+def gh_refs(urls):
+    """{(repo_short, number)} for GitHub issue/PR URLs."""
+    out = set()
+    for u in urls:
+        m = re.search(r"github\.com/[^/]+/([^/]+)/(?:issues|pull)/(\d+)", u or "")
+        if m:
+            out.add((m.group(1).lower(), m.group(2)))
+    return out
+
+
+def mentions(entry, repo_short, number):
+    """True when the entry's narrative cites repo_short #number without a link (e.g. 'vLLM #60342/#60421')."""
+    names = REPO_ALIASES.get(repo_short, (repo_short,))
+    text = "\n".join(str(v) for v in (entry.get("original") or {}).values()).lower()
+    for line in text.splitlines():
+        if re.search(rf"#{number}\b", line) and any(n in line for n in names):
+            return True
+    return False
+
+
 def evidence_of(source_text):
     urls = []
     for u in URL_RE.findall(source_text or ""):
@@ -256,8 +280,10 @@ def cmd_new(a):
         errors.append(f"旧编号 {a.legacy_id} 已登记")
     if evidence and not a.allow_duplicate_source:
         seen = {norm_url(x["url"]) for x in evidence}
-        dup = sorted(i for i, e in entries.items() if isinstance(e["evidence"], list)
-                     and seen & {norm_url(x["url"]) for x in e["evidence"] if x.get("url")})
+        refs = gh_refs(x["url"] for x in evidence)
+        dup = sorted(i for i, e in entries.items()
+                     if (isinstance(e["evidence"], list) and seen & {norm_url(x["url"]) for x in e["evidence"] if x.get("url")})
+                     or any(mentions(e, repo, num) for repo, num in refs))
         if dup:
             errors.append(f"来源已被已有条目引用：{', '.join(dup)}。同一机制请用 update 补充证据；"
                           "确属不同机制时加 --allow-duplicate-source 重新提交")
@@ -379,6 +405,7 @@ def cmd_find(a):
         if (q == eid or q in e.get("legacy_ids", []) or ql in str(e.get("slug", "")).lower()
                 or any(ql in u.lower() for u in urls)
                 or (gh and any(re.search(rf"github\.com/{re.escape(gh.group(1))}/(issues|pull)/{gh.group(2)}\b", u, re.I) for u in urls))
+                or (gh and mentions(e, gh.group(1).split("/")[1].lower(), gh.group(2)))
                 or ql in str(e.get("title", "")).lower() or ql in str(e["original"].get("source", "")).lower()):
             hits.append({"id": eid, "status": e["status"], "slug": e["slug"], "title": e["title"],
                          "legacy_ids": e.get("legacy_ids", []), "evidence": urls[:3]})

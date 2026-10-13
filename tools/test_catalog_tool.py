@@ -97,6 +97,20 @@ class CatalogToolTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertTrue(any("var 目标" in m for m in res["errors"]))
 
+    def test_duplicate_detected_from_unlinked_mention(self):
+        # an existing entry cites "vLLM #60342/#60421" in its narrative without links
+        old = good_entry(slug="parser_audit", original=dict(good_entry()["original"],
+                         source="vLLM #60342/#60343/#60421 三个 parser 审计 https://github.com/vllm-project/vllm/issues/60342"))
+        code, _ = self.run_tool("new", stdin=json.dumps(old))
+        self.assertEqual(code, 0)
+        dup = good_entry(slug="olmo3_parser", original=dict(good_entry()["original"],
+                         source="https://github.com/vllm-project/vllm/issues/60421"))
+        code, res = self.run_tool("new", stdin=json.dumps(dup))
+        self.assertEqual(code, 2)
+        self.assertIn("来源已被已有条目引用", res["errors"][0])
+        _, res = self.run_tool("find", "vllm-project/vllm#60421")
+        self.assertEqual(len(res["hits"]), 1)
+
     def test_update_find_and_validate(self):
         sid = f"{self.ns}-0008"
         code, res = self.run_tool("update", sid, "--add-evidence", "https://github.com/o/r/pull/2", "--note", "回访：已修复",
