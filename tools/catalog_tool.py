@@ -527,8 +527,26 @@ def write_xlsx(entries, path):
             c.alignment = Alignment(wrap_text=True, vertical="top")
     ws.freeze_panes, ws.auto_filter.ref = "A2", ws.dimensions
     wb.properties.created = wb.properties.modified = dt.datetime(2026, 1, 1)
-    wb.save(path)
+    buf = io.BytesIO()
+    wb.save(buf)
+    # openpyxl stamps every zip member with the current time; re-pack with a fixed timestamp so the
+    # same entries always give byte-identical files (no binary churn in every scan/audit commit)
+    import zipfile
+    with zipfile.ZipFile(io.BytesIO(buf.getvalue())) as src, zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as dst:
+        for info in src.infolist():
+            fixed = zipfile.ZipInfo(info.filename, date_time=(2026, 1, 1, 0, 0, 0))
+            fixed.compress_type, fixed.external_attr = zipfile.ZIP_DEFLATED, info.external_attr
+            data = src.read(info.filename)
+            if info.filename == "docProps/core.xml":     # openpyxl overwrites `modified` with now() on save
+                data = re.sub(rb"(<dcterms:modified[^>]*>)[^<]*(</dcterms:modified>)", rb"\g<1>2026-01-01T00:00:00Z\g<2>", data)
+            dst.writestr(fixed, data)
     return True
+
+
+def xlsx_rows(path):
+    import openpyxl
+    ws = openpyxl.load_workbook(path, read_only=True).active
+    return [tuple(row) for row in ws.iter_rows(values_only=True)]
 
 
 def build_views(target_dir):
@@ -581,6 +599,9 @@ def cmd_validate(a):
             mine = os.path.join(VIEWS, name)
             if not os.path.exists(mine) or open(mine, encoding="utf-8").read() != open(os.path.join(tmp, name), encoding="utf-8").read():
                 errors.append(f"views/{name} 与条目不一致：先运行 python3 tools/catalog_tool.py build")
+        fresh, mine = os.path.join(tmp, "fault_catalog.xlsx"), os.path.join(VIEWS, "fault_catalog.xlsx")
+        if os.path.exists(fresh) and (not os.path.exists(mine) or xlsx_rows(mine) != xlsx_rows(fresh)):
+            errors.append("views/fault_catalog.xlsx 与条目不一致：先运行 python3 tools/catalog_tool.py build")
     res = {"ok": not errors, "entries": len(entries), "errors": errors[:200], "n_errors": len(errors),
            "n_warnings": len(warnings), "pending_audit": sum(e["status"] == "pending_audit" for e in entries.values())}
     if a.verbose:

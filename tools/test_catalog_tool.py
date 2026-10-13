@@ -140,6 +140,14 @@ class CatalogToolTest(unittest.TestCase):
         self.run_tool("build")
         code, res = self.run_tool("validate")
         self.assertEqual(code, 0, res)
+        xlsx = os.path.join(self.tmp, "views", "fault_catalog.xlsx")
+        if os.path.exists(xlsx):                                     # openpyxl installed
+            first = open(xlsx, "rb").read()
+            self.run_tool("build")
+            self.assertEqual(open(xlsx, "rb").read(), first)          # byte-identical rebuilds
+            os.remove(xlsx)
+            code, res = self.run_tool("validate")
+            self.assertTrue(any("fault_catalog.xlsx" in m for m in res["errors"]))
 
 
 if __name__ == "__main__":
