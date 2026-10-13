@@ -15,6 +15,19 @@ prints {"ok": true, "id": ...}. Layout and fields: catalog/SCHEMA.md; vocabulary
 per-repo settings: catalog/config.yaml.
 """
 
+import os
+import sys
+
+# Under the hermes cron gateway `python3` is hermes' bundled interpreter, which lacks PyYAML.
+# Re-exec with the system interpreter instead of failing, so `python3 tools/...` works from any caller.
+try:
+    import yaml  # noqa: F401
+except ImportError:
+    for _alt in ("/usr/bin/python3", "/usr/local/bin/python3"):
+        if os.path.exists(_alt) and os.path.realpath(_alt) != os.path.realpath(sys.executable):
+            os.execv(_alt, [_alt] + sys.argv)
+    sys.exit("needs PyYAML: python3 -m pip install pyyaml")
+
 import argparse
 import csv
 import datetime as dt

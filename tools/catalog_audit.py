@@ -14,6 +14,20 @@ Judges are cheap OpenAI-compatible gateway models, never Claude; the writer's fa
 of the base set. Votes are archived under catalog/audit/<date>/. Needs JUDGE_API_KEY. Prints counts only.
 """
 
+import os
+import sys
+
+# Under the hermes cron gateway `python3` is hermes' bundled interpreter, which lacks PyYAML / requests.
+# Re-exec with the system interpreter instead of failing, so `python3 tools/...` works from any caller.
+try:
+    import yaml  # noqa: F401
+    import requests  # noqa: F401
+except ImportError:
+    for _alt in ("/usr/bin/python3", "/usr/local/bin/python3"):
+        if os.path.exists(_alt) and os.path.realpath(_alt) != os.path.realpath(sys.executable):
+            os.execv(_alt, [_alt] + sys.argv)
+    sys.exit("needs PyYAML / requests: python3 -m pip install pyyaml requests")
+
 import argparse
 import json
 import os
