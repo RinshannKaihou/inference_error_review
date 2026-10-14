@@ -42,6 +42,8 @@ original:
   behavior: 无报错；输出依赖服务器历史：并发突发后同一请求的 token/logprobs 改变（0/10 一致），短 prompt、mamba 对齐前缀缓存拆分的短末步、混批等非均匀小步受影响；FULL decode 图与 eager 不受影响
   trigger_surface: vLLM ROCm + Qwen4Exp（Qwen3.8-Flash-Next 量化版）+ MTP 推测解码 + FULL_AND_PIECEWISE CUDA graph + AMD PLE n-gram 路径 + 非均匀 ≤max capture size 批（短 prompt/短末 chunk/混批）
   discovery: 2026-10-13 每日扫描
+  notes:
+  - 2026-10-14 回访 2026-10-14：vllm#61486 仅 ROCm bot CC+info 请求（10-13），无实质进展。
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -59,3 +61,7 @@ migration:
     uncertain:
     - effect
     - visibility
+  updates:
+  - date: '2026-10-14'
+    fields:
+    - original.notes

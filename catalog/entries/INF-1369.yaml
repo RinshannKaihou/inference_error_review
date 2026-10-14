@@ -39,6 +39,8 @@ original:
   behavior: 无 raise 无 assert；输出形状正确但内容乱序（scrambled）；同输入每次运行一致错误（确定性错值，非随机）
   trigger_surface: tt-metal + ttnn.gather + rank>4 且 dim<rank-3；layout 与 route 无关（codegen/native/forced native 同错）
   discovery: 2026-10-13 每日扫描
+  notes:
+  - 2026-10-14 回访 2026-10-14：tt-metal#60398 无新评论（0 条），open 维持。
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -55,3 +57,7 @@ migration:
     - glm-5.3
     rewritten:
     - behavior
+  updates:
+  - date: '2026-10-14'
+    fields:
+    - original.notes

@@ -40,6 +40,8 @@ original:
   behavior: 静默：请求正常完成、无错误日志（开 checksum 时有 mismatch 标记），decode 端收到的部分前缀 KV 为 H2D 写入途中的陈旧数据，当所需上下文落在重载区间内时答案改变；损坏率高（29/30–39/40）
   trigger_surface: SGLang PD prefill + HiCache + 早发缓存前缀默认开启 + 共享 host-only 前缀的两个请求同批 prefill；GB300/NIXL 实测，2026-09 nightly 镜像
   discovery: 2026-10-13 每日扫描
+  notes:
+  - '2026-10-14 回访 2026-10-14：sglang#44070 3 条新评论——社区认领（Vegetog 计划 skip hicache_consumer_index>=0 批次早发，未复现原始竞态）；报告者 agent 已提交修复 PR #44081。判定不变，修复在途。'
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -59,3 +61,7 @@ migration:
     - subsystem
     - effect
     - visibility
+  updates:
+  - date: '2026-10-14'
+    fields:
+    - original.notes

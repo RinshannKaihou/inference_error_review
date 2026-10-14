@@ -48,6 +48,7 @@ original:
   discovery: 2026-09-28 每日扫描。
   notes:
   - 2026-10-13 回访 2026-10-13（补评论级复查）：来源 vllm#58973 仍 open、1 评论、最后更新 2026-09-28——twu3202 DFlash-b16 复现评论后无新增。无修复 PR。
+  - 2026-10-14 评论级复查 2026-10-14：vllm#58973 无新评论（1 条止于 09-28），维持判定。
 migration:
   extractor: opus v1.1
   method: adjudicated
@@ -63,5 +64,8 @@ migration:
     - visibility
   updates:
   - date: '2026-10-13'
+    fields:
+    - original.notes
+  - date: '2026-10-14'
     fields:
     - original.notes

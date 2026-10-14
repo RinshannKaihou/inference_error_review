@@ -39,6 +39,8 @@ original:
   behavior: 无报错；嵌入/池化与渲染路径的输入 token 序列静默缺少结构性特殊 token（BOS/[CLS]/[SEP]/EOS），下游 last-token pooling 与分类语义受影响；客户端无法从响应分辨
   trigger_surface: vLLM + truncate_prompt_tokens + 显式 truncation_side（含 Cohere /v2/embed truncate 参数）；影响 embedding/token_classify 与 completion render
   discovery: 2026-10-13 每日扫描
+  notes:
+  - '2026-10-14 回访 2026-10-14：vllm#61359 新增两条评论——Asthenia0412 提 Draft PR #61524（tokenizer 默认侧自处理方案）；roydonsequeira 指出 #61363 已两侧全修并带测试等待 review，且指出 embedding 侧 truncation_side=left（Cohere truncate=START 同路径）仍走 slice 丢 [CLS]。判定不变。'
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -59,3 +61,7 @@ migration:
         to: 分词/模板
     uncertain:
     - detail
+  updates:
+  - date: '2026-10-14'
+    fields:
+    - original.notes

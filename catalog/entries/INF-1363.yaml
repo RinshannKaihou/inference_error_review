@@ -42,6 +42,8 @@ original:
   behavior: host-tier 命中的请求静默返回错答：verbatim-recall 探针（3.8k-token prompt 植入事实、exact match 评分）host 腿 18/20 运行答错（冷腿 0/20、device 腿 0/20），错答形态为流畅但事实替换（vault 247→234、sector 57→117），10/20 的 host restore 里模型用尽 900-token 预算推理却始终给不出最终答案；temperature=0、无 speculative decoding、无任何报错
   trigger_surface: SGLang v0.5.21 + --enable-hierarchical-cache + hybrid KDA+DSA 模型（GLM-5.3-Flash FP8）+ 前缀在 host 层而非 device 池命中；4x B300 TP4 环境
   discovery: 2026-10-13 每日扫描
+  notes:
+  - '2026-10-14 回访 2026-10-14：sgl#43997 closed 状态维持（1 评论），v0.5.21 backport PR #43998 状态未变（未查到 merge 证据），判定不变。'
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -58,3 +60,7 @@ migration:
     - glm-5.3
     uncertain:
     - effect
+  updates:
+  - date: '2026-10-14'
+    fields:
+    - original.notes

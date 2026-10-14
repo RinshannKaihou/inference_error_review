@@ -42,6 +42,8 @@ original:
   behavior: 无报错；同一引擎两次相同请求输出序列分岔（128 token/prompt，长前缀+单点分岔+再对齐），跨轮持续存在、禁 CUDA graph 不消失；暖轮间即发散
   trigger_surface: vLLM 0.31.0 + LiquidAI/LFM2-8B-A1B（hybrid mamba）+ temperature=0 贪心 + 同引擎重复调用；sm86/sm89 实测
   discovery: 2026-10-13 每日扫描
+  notes:
+  - 2026-10-14 回访 2026-10-14：vllm#61319 无新评论（0 条），判定维持。
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -65,3 +67,6 @@ migration:
     fields:
     - relations
     - remarks
+  - date: '2026-10-14'
+    fields:
+    - original.notes

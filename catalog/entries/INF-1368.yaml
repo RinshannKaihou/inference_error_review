@@ -40,6 +40,8 @@ original:
   behavior: 无报错无 assert；chunk_size=64 时 final state PCC 0.003（近乎全错）、output PCC 0.995；chunk_size=32 完全正确；同二进制内两条实现路径同样错
   trigger_surface: tt-metal + ttnn.transformer.chunk_gated_delta_rule + chunk_size=64；ttsim BH 与 WH n150 实测一致
   discovery: 2026-10-13 每日扫描
+  notes:
+  - '2026-10-14 回访 2026-10-14：tt-metal#60393 已 closed/completed（10-14T16:07Z），修复 PR #60613 同仓 #60395 [Bug fix] GDN prep kernel: wrong dl and k_dec_t at chunk_size 64 已 merged（10-14T16:07:35Z，commit 7086ed4c7a06）。closed+merged 不自动证明已发布版本。'
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -50,3 +52,7 @@ migration:
     - kimi-k3
     - doubao-seed-2.1-pro
     panel: []
+  updates:
+  - date: '2026-10-14'
+    fields:
+    - original.notes
