@@ -3,6 +3,7 @@
 
   python3 tools/catalog_tool.py new [--file entry.json] [--legacy-id 1.295] [--allow-duplicate-source] [--dry-run]
   python3 tools/catalog_tool.py update INF-0044 [--add-evidence URL ...] [--note TEXT] [--set path=value ...]
+                                [--relation var:4.28 ...] [--drop-relation var:INF-0328 ...]
   python3 tools/catalog_tool.py find <ID | legacy id | slug | URL | owner/repo#N | text>
   python3 tools/catalog_tool.py build           # regenerate views/ from catalog/entries
   python3 tools/catalog_tool.py validate        # all entries + registry + views up to date; exit 1 on error
@@ -13,6 +14,10 @@
 On success it assigns the next ID, writes catalog/entries/<ID>.yaml with status pending_audit and
 prints {"ok": true, "id": ...}. Layout and fields: catalog/SCHEMA.md; vocabulary: catalog/vocab.yaml;
 per-repo settings: catalog/config.yaml.
+
+Relation targets (`relations` in the `new` JSON, `update --relation`) may be current ids or old Markdown
+numbers; old numbers are converted, and the result echoes every target with its title — check that it
+is the entry you meant before going on.
 """
 
 import os
@@ -261,6 +266,57 @@ def check_entry(e, voc, strict_lengths=False):
     return errors, warnings
 
 
+# ---------------------------------------------------------------- relations
+
+def resolve_ref(ref, entries, registry):
+    """Entry id or old Markdown number (4.28, HW.01) -> (current id or None, candidate ids)."""
+    ref = str(ref or "").strip()
+    if ref in entries:
+        return ref, [ref]
+    hits = {r[0] for r in registry if len(r) > 1 and r[1] == ref and r[0] in entries}
+    hits |= {i for i, e in entries.items() if ref in (e.get("legacy_ids") or [])}
+    live = {i for i in hits if entries[i].get("status") not in ("merged", "retired")}
+    pick = live if len(live) == 1 else hits
+    return (next(iter(pick)) if len(pick) == 1 else None), sorted(hits)
+
+
+def resolve_relations(relations, entries, registry, ns, self_id=None):
+    """Map relation targets written as old numbers to current ids.
+
+    Returns (relations, echo, errors); echo lists each target's title so the caller can check
+    it is the intended entry (the 2026-10-13 scan meant 4.28 but wrote INF-0328, which is 4.12).
+    Targets in the other catalog (cross links) are kept as written.
+    """
+    out_rel, echo, errors = [], [], []
+    for r in relations or []:
+        if not isinstance(r, dict):
+            errors.append(f"relation 必须是对象: {r}")
+            continue
+        given = r.get("target")
+        tid, cands = resolve_ref(given, entries, registry)
+        local = r.get("kind") == "var" or str(given).startswith(ns + "-") or bool(cands)
+        if tid is None and local:
+            why = f"对应多个条目 {', '.join(cands)}，请写新编号" if len(cands) > 1 else "不存在（可写新编号或旧编号，用 find 查）"
+            errors.append(f"{r.get('kind')} 目标 {given} {why}")
+            out_rel.append(r)
+            continue
+        if tid and tid == self_id:
+            errors.append(f"{r.get('kind')} 目标 {given} 指向条目自己")
+        rel = {**r, "target": tid or given}
+        out_rel.append(rel)
+        item = {"kind": rel.get("kind"), "target": rel["target"]}
+        if tid:
+            item["title"] = entries[tid].get("title")
+            if entries[tid].get("status") != "active":
+                item["status"] = entries[tid].get("status")
+        else:
+            item["title"] = "（不在本编目，按原样保留）"
+        if tid and tid != given:
+            item["from"] = given
+        echo.append(item)
+    return out_rel, echo, errors
+
+
 # ---------------------------------------------------------------- new
 
 def next_id(ns, entries, registry):
@@ -313,12 +369,10 @@ def cmd_new(a):
             errors.append(f"来源已被已有条目引用：{', '.join(dup)}。同一机制请用 update 补充证据；"
                           "确属不同机制时加 --allow-duplicate-source 重新提交")
     labels = data.get("labels") if isinstance(data.get("labels"), dict) else {}
-    relations = data.get("relations") or []
-    if labels.get("coverage") == "var":
-        targets = [r.get("target") for r in relations if isinstance(r, dict) and r.get("kind") == "var"]
-        if not targets:
-            errors.append("coverage=var 时 relations 必须写 [{\"kind\": \"var\", \"target\": \"<已有条目编号>\"}]")
-        errors += [f"var 目标 {t} 不存在（用 find 查编号）" for t in targets if t not in entries]
+    relations, rel_echo, rel_errors = resolve_relations(data.get("relations"), entries, registry, cfg["namespace"])
+    errors += rel_errors
+    if labels.get("coverage") == "var" and not any(r.get("kind") == "var" for r in relations):
+        errors.append("coverage=var 时 relations 必须写 [{\"kind\": \"var\", \"target\": \"<已有条目的新编号或旧编号>\"}]")
 
     mitigation = data.get("mitigation") if isinstance(data.get("mitigation"), dict) else {}
     entry = {
@@ -346,14 +400,16 @@ def cmd_new(a):
     errors += errs
     if errors:
         out({"ok": False, "errors": errors, "warnings": warns}, 2)
+    shown = {"relations": rel_echo} if rel_echo else {}
     if a.dry_run:
-        out({"ok": True, "dry_run": True, "id": entry["id"], "warnings": warns})
+        out({"ok": True, "dry_run": True, "id": entry["id"], **shown, "warnings": warns})
     path = os.path.join(ENTRIES, f"{entry['id']}.yaml")
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(dump_yaml(entry))
     with open(REGISTRY, "a", encoding="utf-8") as fh:
         fh.write(f"{entry['id']}\t{a.legacy_id or ''}\n")
-    out({"ok": True, "id": entry["id"], "path": os.path.relpath(path, ROOT), "status": "pending_audit", "warnings": warns})
+    out({"ok": True, "id": entry["id"], "path": os.path.relpath(path, ROOT), "status": "pending_audit", **shown,
+         "warnings": warns})
 
 
 # ---------------------------------------------------------------- update
@@ -407,6 +463,36 @@ def cmd_update(a):
             pass
         set_path(e, k, v)
         changed.append(k)
+    shown = {}
+    if a.relation or a.drop_relation or any(k.split(".")[0] == "relations" for k in changed):
+        entries, registry = load_entries(), load_registry()
+        rels = list(e.get("relations") or [])
+        errors = []
+        for spec in a.drop_relation or []:
+            kind, _, ref = spec.partition(":")
+            tid, _ = resolve_ref(ref, entries, registry)
+            keep = [r for r in rels if not (r.get("kind") == kind and r.get("target") in (ref, tid))]
+            if len(keep) == len(rels):
+                errors.append(f"没有关系 {spec} 可删除（现有：{', '.join(r.get('kind', '') + ':' + str(r.get('target')) for r in rels) or '无'}）")
+            rels = keep
+        for spec in a.relation or []:
+            kind, _, ref = spec.partition(":")
+            if kind not in ("var", "cross") or not ref:
+                errors.append(f"--relation 写成 var:<编号> 或 cross:<编号>: {spec}")
+                continue
+            rels.append({"kind": kind, "target": ref})
+        rels, echo, rel_errors = resolve_relations(rels, entries, registry, config()["namespace"], self_id=a.id)
+        errors += rel_errors
+        seen = [(r.get("kind"), r.get("target")) for r in rels]
+        errors += [f"重复的关系 {k}:{t}" for (k, t), n in Counter(seen).items() if n > 1]
+        if (e.get("labels") or {}).get("coverage") == "var" and not any(r.get("kind") == "var" for r in rels):
+            errors.append("coverage=var 的条目至少要保留一个 var 关系")
+        if errors:
+            out({"ok": False, "errors": errors}, 2)
+        if rels != (e.get("relations") or []):
+            changed.append("relations")
+        e["relations"] = rels
+        shown = {"relations": echo}
     if not changed:
         out({"ok": False, "errors": ["没有要修改的内容"]}, 2)
     errs, warns = check_entry(e, voc)
@@ -415,7 +501,7 @@ def cmd_update(a):
     e.setdefault("migration", {}).setdefault("updates", []).append({"date": today(), "fields": sorted(set(changed))})
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(dump_yaml(e))
-    out({"ok": True, "id": a.id, "changed": sorted(set(changed)), "warnings": warns})
+    out({"ok": True, "id": a.id, "changed": sorted(set(changed)), **shown, "warnings": warns})
 
 
 # ---------------------------------------------------------------- find
@@ -629,6 +715,9 @@ def main():
     p.add_argument("--add-evidence", action="append")
     p.add_argument("--note")
     p.add_argument("--set", action="append")
+    p.add_argument("--relation", action="append", metavar="KIND:REF",
+                   help="add var:/cross: relation; REF = current id or old number (4.28), echoed with its title")
+    p.add_argument("--drop-relation", action="append", metavar="KIND:REF")
     p = sp.add_parser("find")
     p.add_argument("query")
     sp.add_parser("build")

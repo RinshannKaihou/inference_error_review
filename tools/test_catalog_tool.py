@@ -105,6 +105,39 @@ class CatalogToolTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertTrue(any("var 目标" in m for m in res["errors"]))
 
+    def test_relations_accept_old_numbers_and_echo_titles(self):
+        seed, other_ns = f"{self.ns}-0008", "TRN" if self.ns == "INF" else "INF"
+        var = good_entry(slug="variant", labels=dict(good_entry()["labels"], coverage="var"),
+                         original=dict(good_entry()["original"], source="https://github.com/o/r/issues/5"),
+                         relations=[{"kind": "var", "target": "1.8"}])            # old number of the seed
+        code, res = self.run_tool("new", stdin=json.dumps(var))
+        self.assertEqual(code, 0, res)
+        vid = res["id"]
+        self.assertEqual(self.entry(vid)["relations"], [{"kind": "var", "target": seed}])
+        self.assertEqual(res["relations"], [{"kind": "var", "target": seed, "title": "topk 单核路径忽略传入索引",
+                                             "status": "pending_audit", "from": "1.8"}])   # non-active status shown
+
+        code, res = self.run_tool("update", vid, "--relation", "var:1.7")           # registered, but no entry file
+        self.assertEqual(code, 2)
+        self.assertTrue(any("var 目标 1.7" in m for m in res["errors"]))
+        code, res = self.run_tool("update", vid, "--relation", f"var:{vid}")
+        self.assertEqual(code, 2)
+        self.assertTrue(any("指向条目自己" in m for m in res["errors"]))
+        code, res = self.run_tool("update", vid, "--drop-relation", "var:1.8")       # would leave coverage=var bare
+        self.assertEqual(code, 2)
+        self.assertTrue(any("至少要保留一个 var" in m for m in res["errors"]))
+        self.assertEqual(self.entry(vid)["relations"], [{"kind": "var", "target": seed}])   # unchanged on error
+
+        code, res = self.run_tool("update", vid, "--relation", f"cross:{other_ns}-0001")
+        self.assertEqual(code, 0, res)                                              # other catalog: kept as written
+        self.assertEqual(res["changed"], ["relations"])
+        self.assertEqual(res["relations"][1]["target"], f"{other_ns}-0001")
+        code, res = self.run_tool("update", vid, "--drop-relation", f"cross:{other_ns}-0001")
+        self.assertEqual(code, 0, res)
+        self.assertEqual(self.entry(vid)["relations"], [{"kind": "var", "target": seed}])
+        code, res = self.run_tool("update", vid, "--set", 'relations=[{"kind": "var", "target": "ZZZ-1"}]')
+        self.assertEqual(code, 2)                                                   # --set goes through the same check
+
     def test_duplicate_detected_from_unlinked_mention(self):
         # an existing entry cites "vLLM #60342/#60421" in its narrative without links
         old = good_entry(slug="parser_audit", original=dict(good_entry()["original"],

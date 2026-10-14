@@ -25,7 +25,7 @@
 | `mitigation.detect` / `mitigation.fix` | 改进措施。**扫描时看到修复 PR / 规避方法就写进 `fix`**（写明 PR 链接、状态与是否已发布，未核实就说未核实）；没有就写 `待定` |
 | `labels` | `family`、`trigger`、`trigger_review`、`trigger_note`（推理编目）；`stage`（训练编目）；`confidence`、`coverage`、`discovered` |
 | `evidence[]` | **必填**，由工具从 `original.source` 中的链接提取：`url` + `kind`；无链接的历史条目为 `{kind: citation, text}` |
-| `relations[]` | `{kind: var, target: <已有条目编号>}`；`coverage=var` 时必填 |
+| `relations[]` | `{kind: var, target: <已有条目编号>}`；`coverage=var` 时必填。target 可写新编号或旧编号（如 `4.28`），工具换算成新编号并回显目标标题 |
 | `original` | 扫描写的原始说明：`mechanism`（机制）、`source`（来源，含可点击链接）、`behavior`（行为效应）、`trigger_surface`（触发面，推理编目）、可选 `signature` / `repro`，`discovery`（发现来源）、`notes`（回访记录，由 update 追加） |
 | `migration` | 来历：`scan`（扫描写入）/ 迁移时的抽取与审计记录 / `updates`（修改历史） |
 
@@ -54,7 +54,7 @@ python3 tools/catalog_tool.py new --file /tmp/entry.json         # 返回 {"ok":
 
 **`original` 是完整的原始说明，结构化字段是它的压缩**：`original.mechanism` 要像以往 Markdown 条目一样写全——代码/配置层面的具体原因、涉及的版本与配置、证据（复现、源码定位、维护者结论）和条件；`original.behavior` 写清观察到的现象与触发条件。`title`、`component`、`cause.behavior`、`effect.detail` 里的每个事实都必须能在 `original` 里找到——每日审计以 `original` 为准，原文没写的事实会被判为“写了原文没有的事实”并改写掉。工具要求 `original.mechanism` 不少于 80 字、`original.behavior` 不少于 40 字，且机制+行为效应+触发面的总长不短于 `cause.behavior` 与 `effect.detail` 之和。
 
-工具会：分配编号、提取来源链接、检查来源是否已被其他条目引用（同一机制请改用 update 补证据）、检查 `var` 目标存在、按词表和长度上限校验，然后写入 `status: pending_audit`。
+工具会：分配编号、提取来源链接、检查来源是否已被其他条目引用（同一机制请改用 update 补证据）、把关系目标的旧编号换算成新编号并检查目标存在（结果里回显每个目标的标题，务必核对）、按词表和长度上限校验，然后写入 `status: pending_audit`。
 
 ## 修改已有条目
 
