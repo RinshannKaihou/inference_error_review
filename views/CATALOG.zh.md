@@ -3773,7 +3773,7 @@
 - **影响详情**：同引擎同 seed 同 prompt 的 temperature=0 两次 generate() 输出序列不同：长公共前缀+单 token 分岔+再对齐的归约序签名；评测/A-B 跨轮比较出现幻影差异
 - **改进措施**：检测 待定；修复 待定（报告者已排除 CUDA graph 重放（NONE 模式仍发散）、采样 RNG（temperature=0）、缓存冷热（暖对暖发散）；同机 Qwen1.5-MoE 稠密注意力对照稳定，归因收窄到 LFM2/hybrid-mamba 特有路径但未定位内核）
 - **来源**：https://github.com/vllm-project/vllm/issues/61319（2026-10-13
-- **关联**：var:INF-0328
+- **关联**：var:INF-0344
 
 ### INF-1368 `ttmetal_chunk_gated_delta_rule_chunk64_dl_tile_wrong_slot` ttnn chunk_gated_delta_rule chunk64 装错槽
 
