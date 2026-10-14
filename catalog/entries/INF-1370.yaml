@@ -4,7 +4,7 @@ slug: ttmetal_matmul_reuse_dram_sharded_srca_reload_tf32_truncation
 aliases: []
 title: ttnn matmul 三工厂 SrcA 重载 fp32 部分和 TF32 截断
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: fp32_dest_acc_en=True 时相对最大误差随 K 增长：reuse 2.47e-2、DRAM-sharded decode 路径 2.44e-2、batched 2.55e-2（对照 mcast 工厂 8.3e-5）；系统性负偏置（截断），LLM decode 形状实测
-  visibility: 质量退化
+  detail: fp32_dest_acc_en=True 多 K block累加时输出系统性负偏置；reuse 2.47e-2、DRAM-sharded decode 2.44e-2、batched DRAM-sharded 1.26e-2–8.5e-4、带fused bias 1.3e-2–2.55e-2。
+  visibility: 静默错误
 mitigation:
   detect: 待定
   fix: 待定（#50250 已为 mcast_1d/2d 工厂实现无损重载，三个受影响工厂可参照；issue 2026-10-08 创建、2026-10-09 closed/completed，修复 PR 未在扫描窗口内核实——closed 不自动证明修复已发布）
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-13'
+  audit:
+    round: daily-audit-2026-10-14
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: sglang_pd_prefill_early_send_cached_prefix_stale_h2d_kv
 aliases: []
 title: SGLang PD prefill 早发前缀在 H2D 回载完成前送出陈旧 KV
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-13'
+  audit:
+    round: daily-audit-2026-10-14
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

@@ -1,0 +1,105 @@
+{"job": "baseC|INF-1364|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1365|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "baseC|INF-1363|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1367|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1366|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出分布", "visibility": "不可复现"}}
+{"job": "baseC|INF-1364|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1367|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1368|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1368|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1369|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1369|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1369|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1370|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1366|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "不可复现"}}
+{"job": "baseC|INF-1370|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1370|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1363|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "正常完成且答案流畅但事实错误", "evidence": "host 腿 18/20 运行答错……错答形态为流畅但事实替换……10/20 的 host restore 里模型用尽 900-token 预算推理却始终给不出最终答案；temperature=0、无 speculative decoding、无任何报错"}}]}
+{"job": "baseC|INF-1363|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseF|INF-1364|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1365|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-1364|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseF|INF-1365|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1367|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "baseC|INF-1363|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1368|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1366|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": true, "behavior": true, "detail": false}, {"component": {"problem": "overstated", "quote": "hybrid mamba 前向非确定归约", "evidence": "根因内核未定位（报告者明确为非确定归约假设，未给出 SASS/源码级证据），故标 documented。"}, "behavior": {"problem": "overstated", "quote": "前向存在非确定性归约", "evidence": "非确定归约顺序（atomicAdd/split-K 累加）扰动 logits 使 argmax 翻转的典型形态；根因内核未定位（报告者明确为非确定归约假设，未给出 SASS/源码级证据）"}}]}
+{"job": "baseC|INF-1366|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "不可复现"}}
+{"job": "baseF|INF-1367|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1364|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "unsupported", "quote": "早发路径把同批第二个请求重匹配到这些页", "evidence": "同 prefill 批内第二个请求被重匹配到这些页为 device 前缀（host_hit_length=0）；maybe_send_cached_prefix_chunk 在 forward 之前把这些页发往 decode 侧"}, "detail": {"problem": "missing_condition", "quote": "答案随重载区间内上下文改变", "evidence": "当所需上下文落在重载区间内时答案改变"}}]}
+{"job": "baseF|INF-1363|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1368|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1365|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "并发突发后 10 探针 0/10 一致，修复后 10/10", "evidence": "关前缀缓存时 10 个探针在 8 路并发突发前后 0/10 一致（修复后 10/10，长 prompt 与单请求 decode 位级不变）"}}]}
+{"job": "baseF|INF-1367|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1365|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "不可复现"}}
+{"job": "baseF|INF-1368|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1366|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": true, "behavior": true, "detail": false}, {"component": {"problem": "overstated", "quote": "hybrid mamba 前向非确定归约", "evidence": "根因内核未定位（报告者明确为非确定归约假设，未给出 SASS/源码级证据）"}, "behavior": {"problem": "overstated", "quote": "前向存在非确定性归约", "evidence": "根因内核未定位（报告者明确为非确定归约假设，未给出 SASS/源码级证据）"}}]}
+{"job": "baseF|INF-1369|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "输出形状正确但内容按错误排列返回，无任何报错", "evidence": "输出形状正确、index 与输入同形也无报错；无 raise 无 assert；输出形状正确但内容乱序（scrambled）"}}]}
+{"job": "baseF|INF-1370|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "batched 2.55e-2", "evidence": "batched DRAM-sharded（B=8, 32x2048x64）1.26e-2–8.5e-4；带 fused bias 同样 1.3e-2–2.55e-2"}}]}
+{"job": "baseF|INF-1364|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1369|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "输出形状正确但内容按错误排列返回，无任何报错", "evidence": "输出形状正确、index 与输入同形也无报错"}}]}
+{"job": "baseF|INF-1368|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1370|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "batched 2.55e-2", "evidence": "batched DRAM-sharded（B=8, 32x2048x64）1.26e-2–8.5e-4；带 fused bias 同样 1.3e-2–2.55e-2"}}]}
+{"job": "baseF|INF-1370|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "batched 2.55e-2", "evidence": "batched DRAM-sharded（B=8, 32x2048x64）1.26e-2–8.5e-4；带 fused bias 同样 1.3e-2–2.55e-2"}}]}
+{"job": "baseF|INF-1369|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1365|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1367|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "Cohere /v2/embed truncate=START 同路径", "evidence": "Cohere /v2/embed 的 truncate=START 映射为显式 \"left\" 走同一错误路径（属机制/触发面：vLLM + truncate_prompt_tokens + 显式 truncation_side（含 Cohere /v2/embed truncate 参数）），非行为效应内容"}}]}
+{"job": "baseF|INF-1366|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1363|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1363|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1364|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1364|MiniMax-M3", "model": "MiniMax-M3", "result": null}
+{"job": "panelC|INF-1363|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1364|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1365|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1366|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "不可复现"}}
+{"job": "panelC|INF-1367|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelC|INF-1367|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelC|INF-1367|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelC|INF-1366|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|INF-1369|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1366|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出分布", "visibility": "不可复现"}}
+{"job": "panelC|INF-1363|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1369|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1369|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1367|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输入编码", "visibility": "静默错误"}}
+{"job": "panelC|INF-1369|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1365|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "模型定义", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "panelC|INF-1364|glm-5.3", "model": "glm-5.3", "result": null}
+{"job": "panelF|INF-1364|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1363|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1365|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "不可复现"}}
+{"job": "panelF|INF-1365|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1365|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelF|INF-1364|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1366|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "时间/调度顺序变化使 logits 微扰", "evidence": "原文仅写「非确定归约顺序（atomicAdd/split-K 累加）扰动 logits 使 argmax 翻转的典型形态」，未将原因归结为「时间/调度顺序变化」"}}]}
+{"job": "panelC|INF-1366|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "不可复现"}}
+{"job": "panelF|INF-1363|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "答案流畅但事实错误", "evidence": "原文：'错答形态为流畅但事实替换（vault 247→234、sector 57→117），10/20 的 host restore 里模型用尽 900-token 预算推理却始终给不出最终答案'（部分请求无最终答案，并非全部流畅事实错误）"}}]}
+{"job": "panelF|INF-1366|hy3", "model": "hy3", "result": [{"title": false, "component": true, "behavior": true, "detail": false}, {"component": {"problem": "overstated", "quote": "hybrid mamba 前向非确定归约", "evidence": "根因内核未定位（报告者明确为非确定归约假设，未给出 SASS/源码级证据）"}, "behavior": {"problem": "unsupported", "quote": "时间/调度顺序变化使 logits 微扰", "evidence": "非确定归约顺序（atomicAdd/split-K 累加）扰动 logits 使 argmax 翻转的典型形态（报告者明确为非确定归约假设，未给出 SASS/源码级证据）"}}]}
+{"job": "panelC|INF-1363|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelF|INF-1364|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1363|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1363|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1367|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "嵌入/池化模型的 prompt token 序列静默缺结构性特殊 token", "evidence": "嵌入/池化与渲染路径的输入 token 序列静默缺少结构性特殊 token；影响 embedding/token_classify 与 completion render（且 LlamaForCausalLM 复现位于 /v1/completions/render 渲染路径）"}}]}
+{"job": "panelF|INF-1365|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1365|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "真实 token 被按陈旧行分配错误 n-gram ID", "evidence": "当陈旧尾部非单调或低于本步 token 数时，真实 token 被分配到陈旧请求行、得到错误 n-gram ID"}}]}
+{"job": "panelF|INF-1369|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1367|hy3", "model": "hy3", "result": [{"title": true, "component": false, "behavior": true, "detail": true}, {"title": {"problem": "missing_condition", "quote": "vLLM 显式 truncation_side 截掉特殊 token", "evidence": "vLLM 请求同时设置 truncate_prompt_tokens 与显式 truncation_side 时，tokenizer 围绕 prompt 添加的特殊 token（BERT 类 [CLS]/[SEP]、Llama 类 BOS、Qwen3-Embedding 为 last-token pooling 追加的 EOS）在截断端被切掉"}, "behavior": {"problem": "missing_condition", "quote": "带显式 truncation_side（即使与默认同值）时截断作用于加特殊 token 后的序列而非 prompt，截断端特殊 token（BOS/[CLS]/[SEP]/EOS）被切掉；不设该字段则保留特殊 token", "evidence": "vLLM 请求同时设置 truncate_prompt_tokens 与显式 truncation_side 时，tokenizer 围绕 prompt 添加的特殊 token（BERT 类 [CLS]/[SEP]、Llama 类 BOS、Qwen3-Embedding 为 last-token pooling 追加的 EOS）在截断端被切掉；truncation_side 未设置时截断作用于 prompt 本身、特殊 token 保留。触发不要求 side 与默认不同——把默认值显式写出即触发。"}, "detail": {"problem": "mixed", "quote": "Cohere /v2/embed truncate=START 同路径", "evidence": "Cohere /v2/embed 的 truncate=START 映射为显式 \"left\" 走同一错误路径。"}}]}
+{"job": "panelF|INF-1366|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": true, "behavior": true, "detail": false}, {"component": {"problem": "overstated", "quote": "非确定归约", "evidence": "根因内核未定位（报告者明确为非确定归约假设，未给出 SASS/源码级证据）"}, "behavior": {"problem": "unsupported", "quote": "时间/调度顺序变化使 logits 微扰", "evidence": "非确定归约顺序（atomicAdd/split-K 累加）扰动 logits 使 argmax 翻转的典型形态"}}]}
+{"job": "panelF|INF-1369|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "输出形状正确但内容按错误排列返回，无任何报错", "evidence": "【机制】'返回乱序值——输出形状正确、index 与输入同形也无报错'；【行为效应】'无 raise 无 assert；输出形状正确但内容乱序（scrambled）'"}}]}
+{"job": "panelF|INF-1367|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": true, "component": false, "behavior": false, "detail": true}, {"title": {"problem": "missing_condition", "quote": "vLLM 显式 truncation_side 截掉特殊 token", "evidence": "同时设置 truncate_prompt_tokens 与显式 truncation_side 时"}, "detail": {"problem": "mixed", "quote": "Cohere /v2/embed truncate=START 同路径", "evidence": "Cohere /v2/embed 的 truncate=START 映射为显式 'left' 走同一错误路径"}}]}
+{"job": "panelF|INF-1366|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1369|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "输出形状正确但内容按错误排列返回，无任何报错", "evidence": "【行为效应】无 raise 无 assert；输出形状正确但内容乱序（scrambled）"}}]}
+{"job": "panelF|INF-1365|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1367|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1369|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "输出形状正确但内容按错误排列返回，无任何报错", "evidence": "无 raise 无 assert；输出形状正确但内容乱序（scrambled）"}}]}
+{"job": "panelF|INF-1364|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "早发路径把同批第二个请求重匹配到这些页", "evidence": "同 prefill 批内第二个请求被重匹配到这些页为 device 前缀（host_hit_length=0）；maybe_send_cached_prefix_chunk 在 forward 之前把这些页发往 decode 侧"}}]}
+{"job": "fix|INF-1369", "model": "qwen3.8-max", "result": {"behavior": "gather 对 rank>4 张量，归一化负 dim 后 dim<rank-3 时，准备层把低维合并进带 batch 的 4D 视图再转置，逆转置与合并方式不匹配"}}
+{"job": "fix|INF-1366", "model": "qwen3.8-max", "result": {"behavior": "LFM2混合模型贪心解码相同请求产生不同输出序列；根因内核未定位，疑似非确定归约顺序扰动logits使argmax翻转。"}}
+{"job": "fix|INF-1370", "model": "qwen3.8-max", "result": {"detail": "fp32_dest_acc_en=True 多 K block累加时输出系统性负偏置；reuse 2.47e-2、DRAM-sharded decode 2.44e-2、batched DRAM-sharded 1.26e-2–8.5e-4、带fused bias 1.3e-2–2.55e-2。"}}
+{"job": "verify|INF-1369|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1366|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "overstated", "quote": "hybrid mamba 前向非确定归约", "evidence": "根因内核未定位（报告者明确为非确定归约假设，未给出 SASS/源码级证据）"}}]}
+{"job": "verify|INF-1370|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1369|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1370|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1366|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

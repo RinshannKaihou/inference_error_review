@@ -4,13 +4,13 @@ slug: ttmetal_gather_rank5_dim_lt_rank_minus_3_scrambled_inverse_transpose
 aliases: []
 title: ttnn.gather rank>4 且 dim<rank-3 时输出错乱
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: tt-metal
     component: gather 低维合并逆转置
-  behavior: gather 对 rank>4 张量把低维合并进带 batch 的 4D 视图再转置送入内核，dim<rank-3 时所用逆转置与合并方式不匹配，输出形状正确但内容按错误排列返回，无任何报错
+  behavior: gather 对 rank>4 张量，归一化负 dim 后 dim<rank-3 时，准备层把低维合并进带 batch 的 4D 视图再转置，逆转置与合并方式不匹配
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-13'
+  audit:
+    round: daily-audit-2026-10-14
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

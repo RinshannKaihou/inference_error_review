@@ -4,10 +4,10 @@ slug: vllm_explicit_truncation_side_drops_tokenizer_special_tokens
 aliases: []
 title: vLLM 显式 truncation_side 截掉特殊 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: 分词/模板
     stack: vllm
     component: truncate_prompt_tokens 截断
   behavior: 带显式 truncation_side（即使与默认同值）时截断作用于加特殊 token 后的序列而非 prompt，截断端特殊 token（BOS/[CLS]/[SEP]/EOS）被切掉；不设该字段则保留特殊 token
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-13'
+  audit:
+    round: daily-audit-2026-10-14
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: 分词/模板
+    uncertain:
+    - detail

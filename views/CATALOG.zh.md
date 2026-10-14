@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1370 条；状态：active 1362、pending_audit 8
+共 1370 条；状态：active 1370
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -14,12 +14,12 @@
 | 集合通信 | 13 |
 | 并行切分 | 9 |
 | KV缓存 | 285 |
-| 调度/服务 | 69 |
+| 调度/服务 | 68 |
 | 输出解析 | 53 |
 | 解码/采样 | 116 |
 | 量化 | 144 |
 | 位置编码 | 33 |
-| 分词/模板 | 28 |
+| 分词/模板 | 29 |
 | 模型定义 | 42 |
 | 权重/检查点 | 33 |
 | 数据管线 | 1 |
@@ -3765,10 +3765,10 @@
 
 ### INF-1366 `vllm_lfm2_hybrid_mamba_greedy_nondeterministic_warm_rounds` vLLM LFM2 hybrid mamba 贪心解码暖轮间不可复现
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-10-13
+`故障` · `active` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-10-13
 
 - **原因对象**：算子/内核 / vllm / hybrid mamba 前向非确定归约
-- **原因行为**：LFM2（conv+SSM+full-attention 混合）前向存在非确定性归约（疑似 atomicAdd/split-K 累加顺序），时间/调度顺序变化使 logits 微扰并在贪心 argmax 边界翻转 token；具体内核未定位
+- **原因行为**：LFM2混合模型贪心解码相同请求产生不同输出序列；根因内核未定位，疑似非确定归约顺序扰动logits使argmax翻转。
 - **影响对象**：输出内容；输出分布（不可复现）
 - **影响详情**：同引擎同 seed 同 prompt 的 temperature=0 两次 generate() 输出序列不同：长公共前缀+单 token 分岔+再对齐的归约序签名；评测/A-B 跨轮比较出现幻影差异
 - **改进措施**：检测 待定；修复 待定（报告者已排除 CUDA graph 重放（NONE 模式仍发散）、采样 RNG（temperature=0）、缓存冷热（暖对暖发散）；同机 Qwen1.5-MoE 稠密注意力对照稳定，归因收窄到 LFM2/hybrid-mamba 特有路径但未定位内核）
@@ -3777,7 +3777,7 @@
 
 ### INF-1368 `ttmetal_chunk_gated_delta_rule_chunk64_dl_tile_wrong_slot` ttnn chunk_gated_delta_rule chunk64 装错槽
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-13
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-13
 
 - **原因对象**：算子/内核 / tt-metal / decay_all pack_tile 调用序
 - **原因行为**：pack_tile 按调用顺序而非给定索引写；i==0 时 dl 被插入 decayfac 循环，Ct==2 时 CB 实际序 decayfac_0,dl,decayfac_1，读者按 slot 取值时 dl 与 decayfac_1 错位
@@ -3788,10 +3788,10 @@
 
 ### INF-1369 `ttmetal_gather_rank5_dim_lt_rank_minus_3_scrambled_inverse_transpose` ttnn.gather rank>4 且 dim<rank-3 时输出错乱
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-13
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-13
 
 - **原因对象**：算子/内核 / tt-metal / gather 低维合并逆转置
-- **原因行为**：gather 对 rank>4 张量把低维合并进带 batch 的 4D 视图再转置送入内核，dim<rank-3 时所用逆转置与合并方式不匹配，输出形状正确但内容按错误排列返回，无任何报错
+- **原因行为**：gather 对 rank>4 张量，归一化负 dim 后 dim<rank-3 时，准备层把低维合并进带 batch 的 4D 视图再转置，逆转置与合并方式不匹配
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：rank5 dim∈{0,1}、rank6 dim∈{0,1,2} 全错（唯一例外 dim==rank-4 且其前全 1 时正确）；TILE codegen、ROW_MAJOR native、TILE forced native 三路同错
 - **改进措施**：检测 待定；修复 待定（#58402 条目 18 拆出独立跟踪；同缺陷亦在 #56880 评论报告；Wormhole main @337e303cd55 复现）
@@ -3799,12 +3799,12 @@
 
 ### INF-1370 `ttmetal_matmul_reuse_dram_sharded_srca_reload_tf32_truncation` ttnn matmul 三工厂 SrcA 重载 fp32 部分和 TF32 截断
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-13
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-13
 
 - **原因对象**：算子/内核 / tt-metal / reuse/DRAM-sharded 部分和重载
 - **原因行为**：reuse、DRAM-sharded、batched 三个 matmul 工厂把 fp32 部分和经 SrcA 重载，SrcA 截断为 TF32，损失随 K block 数增长；mcast_1d/2d 已在 #50250 改无损，这三个未改
-- **影响对象**：数值结果（质量退化）
-- **影响详情**：fp32_dest_acc_en=True 时相对最大误差随 K 增长：reuse 2.47e-2、DRAM-sharded decode 路径 2.44e-2、batched 2.55e-2（对照 mcast 工厂 8.3e-5）；系统性负偏置（截断），LLM decode 形状实测
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：fp32_dest_acc_en=True 多 K block累加时输出系统性负偏置；reuse 2.47e-2、DRAM-sharded decode 2.44e-2、batched DRAM-sharded 1.26e-2–8.5e-4、带fused bias 1.3e-2–2.55e-2。
 - **改进措施**：检测 待定；修复 待定（#50250 已为 mcast_1d/2d 工厂实现无损重载，三个受影响工厂可参照；issue 2026-10-08 创建、2026-10-09 closed/completed，修复 PR 未在扫描窗口内核实——closed 不自动证明修复已发布）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/59828（2026-10-08；https://github.com/tenstorrent/tt-metal/issues/59828#issuecomment（jberkowitzTT
 
@@ -5071,7 +5071,7 @@
 
 ### INF-1365 `vllm_qwen4exp_amd_ple_ngram_stale_query_start_loc_tail_piecewise` vLLM Qwen4Exp AMD PLE n-gram 陈旧行映射
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `verified` · `var` · 发现 2026-10-13
+`故障` · `active` · `infra_off` · `partial` · `verified` · `var` · 发现 2026-10-13
 
 - **原因对象**：运行时/执行 / vllm / PIECEWISE 图内 PLE 缓冲刷新
 - **原因行为**：AMD 路径把 PLE n-gram ID 生成留在 PIECEWISE 图 piece 内，捕获时按 dummy 请求数固化读取长度，重放时读到未刷新的 query_start_loc/ngram_context 陈旧尾部并按其分配请求行
@@ -8527,7 +8527,7 @@
 
 ### INF-1363 `sglang_hicache_host_restore_missing_dsa_indexer_keys_wrong_answer` SGLang HiCache host 回载缺 indexer 键致静默错答
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `verified` · `NEW` · 发现 2026-10-13
+`故障` · `active` · `infra_off` · `partial` · `verified` · `NEW` · 发现 2026-10-13
 
 - **原因对象**：KV缓存 / sglang / HiCache host 层池声明
 - **原因行为**：hybrid KDA+DSA 的 host 层策略只声明 KV+MAMBA 池、不备份 DSA indexer 键，L2→L1 回载只还原 KV，稀疏注意力索引器键缺失，恢复的前缀对 DSA 不完整
@@ -8538,7 +8538,7 @@
 
 ### INF-1364 `sglang_pd_prefill_early_send_cached_prefix_stale_h2d_kv` SGLang PD prefill 早发前缀在 H2D 回载完成前送出陈旧 KV
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `verified` · `NEW` · 发现 2026-10-13
+`故障` · `active` · `infra_off` · `partial` · `verified` · `NEW` · 发现 2026-10-13
 
 - **原因对象**：KV缓存 / sglang / 早发前缀×load-back 竞态
 - **原因行为**：commit_load_back 在 H2D 拷贝仅入队时就把新 device 页挂上 radix 节点，早发路径把同批第二个请求重匹配到这些页并在拷贝仍在写时先行发送该区间且不再重发
@@ -9312,17 +9312,6 @@
 - **影响详情**：含图像等非文本系统块的请求返回 200 成功，但该块从未进入 prompt，模型行为与用户意图偏离；count_tokens 的 token 计数与计费/上下文估计同步低估。无错误无警告。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/61172
-
-### INF-1367 `vllm_explicit_truncation_side_drops_tokenizer_special_tokens` vLLM 显式 truncation_side 截掉特殊 token
-
-`故障` · `pending_audit` · `infra_off` · `config` · `verified` · `NEW` · 发现 2026-10-13
-
-- **原因对象**：调度/服务 / vllm / truncate_prompt_tokens 截断
-- **原因行为**：带显式 truncation_side（即使与默认同值）时截断作用于加特殊 token 后的序列而非 prompt，截断端特殊 token（BOS/[CLS]/[SEP]/EOS）被切掉；不设该字段则保留特殊 token
-- **影响对象**：输入编码（静默错误）
-- **影响详情**：嵌入/池化模型的 prompt token 序列静默缺结构性特殊 token：BERT 类丢 [CLS]/[SEP]、Llama 丢 BOS、Qwen3-Embedding 丢 pooling 用 EOS；Cohere /v2/embed truncate=START 同路径
-- **改进措施**：检测 待定；修复 待定（issue 提供可复现 CPU 级最小复现：render server + tiny-random-LlamaForCausalLM 的 /v1/completions/render，unset vs "left" 输出 [1,17366,11203,29889] vs [278,17366,11203,29889]；与 AutoTokenizer 行为对照）
-- **来源**：https://github.com/vllm-project/vllm/issues/61359（2026-10-13
 
 ## 输出解析
 
@@ -13564,6 +13553,17 @@
 - **影响详情**：vLLM 0.27.1 + MTP（num_speculative_tokens=2）流式输出间歇丢词，呈约 15 分钟的时间簇；同请求非流式正确、关闭推测解码正确，raw /v1/completions 同样损坏，排除 parser 归因。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/52469
+
+### INF-1367 `vllm_explicit_truncation_side_drops_tokenizer_special_tokens` vLLM 显式 truncation_side 截掉特殊 token
+
+`故障` · `active` · `infra_off` · `config` · `verified` · `NEW` · 发现 2026-10-13
+
+- **原因对象**：分词/模板 / vllm / truncate_prompt_tokens 截断
+- **原因行为**：带显式 truncation_side（即使与默认同值）时截断作用于加特殊 token 后的序列而非 prompt，截断端特殊 token（BOS/[CLS]/[SEP]/EOS）被切掉；不设该字段则保留特殊 token
+- **影响对象**：输入编码（静默错误）
+- **影响详情**：嵌入/池化模型的 prompt token 序列静默缺结构性特殊 token：BERT 类丢 [CLS]/[SEP]、Llama 丢 BOS、Qwen3-Embedding 丢 pooling 用 EOS；Cohere /v2/embed truncate=START 同路径
+- **改进措施**：检测 待定；修复 待定（issue 提供可复现 CPU 级最小复现：render server + tiny-random-LlamaForCausalLM 的 /v1/completions/render，unset vs "left" 输出 [1,17366,11203,29889] vs [278,17366,11203,29889]；与 AutoTokenizer 行为对照）
+- **来源**：https://github.com/vllm-project/vllm/issues/61359（2026-10-13
 
 ## 模型定义
 

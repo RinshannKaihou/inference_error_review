@@ -4,7 +4,7 @@ slug: sglang_hicache_host_restore_missing_dsa_indexer_keys_wrong_answer
 aliases: []
 title: SGLang HiCache host 回载缺 indexer 键致静默错答
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -45,3 +45,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-13'
+  audit:
+    round: daily-audit-2026-10-14
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - effect

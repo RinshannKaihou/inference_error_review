@@ -4,13 +4,13 @@ slug: vllm_lfm2_hybrid_mamba_greedy_nondeterministic_warm_rounds
 aliases: []
 title: vLLM LFM2 hybrid mamba 贪心解码暖轮间不可复现
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: vllm
     component: hybrid mamba 前向非确定归约
-  behavior: LFM2（conv+SSM+full-attention 混合）前向存在非确定性归约（疑似 atomicAdd/split-K 累加顺序），时间/调度顺序变化使 logits 微扰并在贪心 argmax 边界翻转 token；具体内核未定位
+  behavior: LFM2混合模型贪心解码相同请求产生不同输出序列；根因内核未定位，疑似非确定归约顺序扰动logits使argmax翻转。
 effect:
   objects:
   - 输出内容
@@ -45,3 +45,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-13'
+  audit:
+    round: daily-audit-2026-10-14
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - component
