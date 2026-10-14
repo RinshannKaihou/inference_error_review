@@ -25,7 +25,7 @@
 | `mitigation.detect` / `mitigation.fix` | 改进措施。**扫描时看到修复 PR / 规避方法就写进 `fix`**（写明 PR 链接、状态与是否已发布，未核实就说未核实）；没有就写 `待定` |
 | `labels` | `family`、`trigger`、`trigger_review`、`trigger_note`（推理编目）；`stage`（训练编目）；`confidence`、`coverage`、`discovered` |
 | `evidence[]` | **必填**，由工具从 `original.source` 中的链接提取：`url` + `kind`；无链接的历史条目为 `{kind: citation, text}` |
-| `relations[]` | `{kind: var, target: <已有条目编号>}`；`coverage=var` 时必填。target 可写新编号或旧编号（如 `4.28`），工具换算成新编号并回显目标标题 |
+| `relations[]` | `{kind: var, target: <已有条目编号>}`；`coverage=var` 时必填。target 可写新编号或旧编号（如 `4.28`、`HW.01`），工具换算成新编号并回显目标标题 |
 | `original` | 扫描写的原始说明：`mechanism`（机制）、`source`（来源，含可点击链接）、`behavior`（行为效应）、`trigger_surface`（触发面，推理编目）、可选 `signature` / `repro`，`discovery`（发现来源）、`notes`（回访记录，由 update 追加） |
 | `migration` | 来历：`scan`（扫描写入）/ 迁移时的抽取与审计记录 / `updates`（修改历史） |
 
