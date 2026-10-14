@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "window_days": 7,
+  "cache_hours": 3,
+  "sources": [
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/pytorch",
+      "web_url": "https://gitcode.com/Ascend/pytorch",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": [
+        "https://gitee.com/ascend/pytorch"
+      ]
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/op-plugin",
+      "web_url": "https://gitcode.com/Ascend/op-plugin",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/torchair",
+      "web_url": "https://gitcode.com/Ascend/torchair",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "cann/ops-transformer",
+      "web_url": "https://gitcode.com/cann/ops-transformer",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "cann/ops-nn",
+      "web_url": "https://gitcode.com/cann/ops-nn",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "cann/ops-math",
+      "web_url": "https://gitcode.com/cann/ops-math",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "cann/ge",
+      "web_url": "https://gitcode.com/cann/ge",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "cann/runtime",
+      "web_url": "https://gitcode.com/cann/runtime",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "cann/hccl",
+      "web_url": "https://gitcode.com/cann/hccl",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "cann/hcomm",
+      "web_url": "https://gitcode.com/cann/hcomm",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "mindspore/mindspore",
+      "web_url": "https://atomgit.com/mindspore/mindspore",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": [
+        "https://gitee.com/mindspore/mindspore"
+      ]
+    },
+    {
+      "platform": "gitcode",
+      "repo": "mindspore/mindformers",
+      "web_url": "https://atomgit.com/mindspore/mindformers",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": [
+        "https://gitee.com/mindspore/mindformers"
+      ]
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/msprobe",
+      "web_url": "https://gitcode.com/Ascend/msprobe",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/mssanitizer",
+      "web_url": "https://gitcode.com/Ascend/mssanitizer",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/MindSpeed",
+      "web_url": "https://gitcode.com/Ascend/MindSpeed",
+      "scopes": [
+        "training"
+      ],
+      "legacy_web_urls": [
+        "https://gitee.com/ascend/MindSpeed"
+      ]
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/MindSpeed-LLM",
+      "web_url": "https://gitcode.com/Ascend/MindSpeed-LLM",
+      "scopes": [
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/MindSpeed-RL",
+      "web_url": "https://gitcode.com/Ascend/MindSpeed-RL",
+      "scopes": [
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/MindIE-LLM",
+      "web_url": "https://gitcode.com/Ascend/MindIE-LLM",
+      "scopes": [
+        "inference"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "gitcode",
+      "repo": "Ascend/msmodelslim",
+      "web_url": "https://gitcode.com/Ascend/msmodelslim",
+      "scopes": [
+        "inference"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "github",
+      "repo": "vllm-project/vllm-ascend",
+      "web_url": "https://github.com/vllm-project/vllm-ascend",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "github",
+      "repo": "sgl-project/sgl-kernel-npu",
+      "web_url": "https://github.com/sgl-project/sgl-kernel-npu",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    },
+    {
+      "platform": "github",
+      "repo": "triton-lang/triton-ascend",
+      "web_url": "https://github.com/triton-lang/triton-ascend",
+      "scopes": [
+        "inference",
+        "training"
+      ],
+      "legacy_web_urls": []
+    }
+  ]
+}
