@@ -52,4 +52,19 @@
 
 4. 独立审查发现 GitHub `/issues/{n}` 可能返回 PR 对象。增加真实网络 RED→GREEN 回归：归一化前拒绝该别名并要求规范 `/pull/{n}`，不再漏读 review 后误报 issue 完整；真正的 PR 链路仍完整采集普通/行内评论与 reviews。
 
-最终 Cron 读回、入口执行与 Git 远端 SHA 核验在部署交付时另行记录；不要把本文件的采集测试等同于未来定时 tick 已运行。
+## 正式 Cron 接入核验（2026-10-14）
+
+两条现有任务已通过 `hermes -p third cron edit` 更新，只修改各自的 `prompt` 和 `script`；保存更新前后定义逐字段核对，其他任务未改动。
+
+| 任务 | 原任务 ID | 时间（UTC） | 前置脚本 |
+|---|---|---|---|
+| 推理 | `8645356b40ae` | 每天 23:00 | `fault_scan_npu_inference.sh` |
+| 训练 | `1b8481fa4e2f` | 每天 00:30 | `fault_scan_npu_training.sh` |
+
+- 两任务仍启用；`zai / glm-5.3`、模型 pin、`reasoning_effort=max`、投递、workdir、工具集、下一次运行时间和历史记录均保持。脚本字段使用当前 profile 的 `scripts/` 内相对文件名，不是绝对路径；仍为 LLM 任务，未切为 `no_agent`。
+- 已使用 Hermes venv 和 `HERMES_HOME=/root/.hermes/profiles/third` 调用实际 `cron.scheduler_script._run_job_script_with_claim_heartbeat`，两条实际 job 的脚本与 workdir 均成功，返回完整 22 来源、同一缓存批次。
+- 实际 `cron.scheduler_prompt._build_job_prompt` 通过提示安全扫描；两任务均注入 `Script Output`、真实 batch 与 NPU 扫描规则，wake gate 为 true。验证时现有脚本超时值为 3600 秒，未改该设置。
+- 再次 `catalog_tool.py validate`：推理 1370 条、训练 269 条，均 `ok=true`、0 errors；存量 warnings 分别为 43 和 4。本次未写入新编目条目。
+- 实现提交已推送，并以 `git ls-remote origin refs/heads/main` 核对：推理 `a3726252337bbb69e919bf99335a82552d1e332e`，训练 `fcd71adc861afeaef063fc902250ee29d57b0c8b`。本文件随后可有文档补充提交，不改变实现提交身份。
+
+这里验证的是正式配置、实际前置脚本执行和提示组装，**没有提前触发完整 LLM 扫描、深读全部候选或自动编目**；后续按原定时执行，不能把采集/接入验证说成未来定时 tick 已运行。
