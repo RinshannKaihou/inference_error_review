@@ -31,8 +31,10 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5296
-  kind: other
-relations: []
+  kind: gitcode_issue
+relations:
+- kind: cross
+  target: TRN-0279
 original:
   mechanism: 'A3（Ascend910）真机上 torch_npu 的 gather/scatter/index_put/cross_entropy/nll_loss 一批算子缺失 host 端越界校验：越界输入不抛异常而是静默产出错误结果。最小复现四例（确定性多次一致，已 synchronize 排除异步报错假象）：F.cross_entropy 越界 target=7（num_classes=4）NPU 返回数值（CPU: IndexError）；F.nll_loss 越界 target=5 不报错；torch.gather dim=1 越界索引静默返回垃圾；Tensor.scatter_ 行 3 越界（size=3）的写被静默丢弃（x.sum=5 而非 10）。对照 F.embedding/Tensor.select 越界在 NPU 仍 raise——说明并非全局无检查，问题在这批算子。A3 硬件对越界访存本身静默容忍故内核不崩。发现途径：A3 真机算子巡检。环境：Ascend910 (A3) 2 卡、torch_npu 2.7.1.post4、CANN 9.0.0。'
   source: 'Ascend/pytorch #5296（2026-10-08 open，含四例最小复现与对照）。https://gitcode.com/Ascend/pytorch/issues/5296'
@@ -51,3 +53,10 @@ migration:
     panel: []
     rewritten:
     - behavior
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence
+  - date: '2026-10-15'
+    fields:
+    - relations

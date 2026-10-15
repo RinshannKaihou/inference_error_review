@@ -31,7 +31,7 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/6516
-  kind: other
+  kind: gitcode_issue
 relations: []
 original:
   mechanism: experimental/activation/hard_swish_v2/op_kernel/hard_swish_v2.h 的 BF16 分支：原输入先转 tmp0，Duplicate(tmp0, 6.0f, ...) 覆盖 tmp0，随后仍以 tmp0 作原输入参与相乘——输出退化为 clamp(x+3,0,6)；另读取刚分配未写入的 zLocal。真机复现（CANNLab 单卡 A3/CANN 9.1.0，直接 ASC 编译运行生产头文件，非 Python 推导）：边界值 48/64 失败（x=-2 got=1 expected=-0.334；x=0 got=3；x=8 got=6），FP32 控制组 0 失败。修复方案同环境验证：CPU 21/21（CANN tikicpulib+GoogleTest 三精度）、A3 21/21、大 tile 与 host tile 6/6，覆盖 -3/3 边界/多 tile/未对齐长度。备注：尚未验证完整 ACLNN/C API 链或证明 experimental OpDef 已提供 A3 dispatch。原始代码 ae873b11，复核 master 2e78df1a 逐字一致。
@@ -56,3 +56,7 @@ migration:
     uncertain:
     - behavior
     - detail
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

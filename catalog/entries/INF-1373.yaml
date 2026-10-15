@@ -31,7 +31,7 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6133
-  kind: other
+  kind: gitcode_issue
 relations: []
 original:
   mechanism: gather_pa_kv_cache_nd.h:177/198（master 4bbfb3b2，SHA-256 逐字节核对）中 ND Kernel 把真实搬运字节数 realUbBaseK_*sizeof(T) 除以 32 作为 uint16_t copyLen 写入 DataCopyParams.blockLen，不做余数处理：余数字节不搬。INT8、Norm 布局、blockSize=1、num_heads=1 时 head_size=17 → copyLen=0 整 token 未写；head_size=33 → 只写 32B 尾 1B 丢失；K/V 两路同病。这些输入满足 README 当前约束（A2/A3 数据类型、Norm 布局、单 token 不超 148KiB），文档与 Host 检查均未要求 32B 对齐；README:71 承诺合法输入逐元素按位一致，实际行为与契约冲突。环境：Atlas-800T-A3（Ascend910_9382）、CANN Runtime 8.3.0.1.200/Toolkit 8.3.RC1。
@@ -53,3 +53,7 @@ migration:
       subsystem:
         from: 算子/内核
         to: KV缓存
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

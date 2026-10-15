@@ -104,6 +104,7 @@
 - **影响详情**：扰动存活进发布的 checkpoint，部署时 forward 本身干净却带着偏离的权重运行：perplexity 略差、偶尔给出更糟的答案。没有干净参考 checkpoint 时，单模型自参照的隐藏态检测全部漏检。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://aclanthology.org/2025.acl-long.996/；https://arxiv.org/abs/2502.12340；https://arxiv.org/abs/2604.00726；https://arxiv.org/abs/2608.11034；https://arxiv.org/abs/2604.10390；https://arxiv.org/abs/2608.30769；https://arxiv.org/abs/2609.19743
+- **关联**：cross:TRN-0005
 
 ### INF-0007 `finite_value_sdc_dominance` SDC 约 99% 为有限合法值，值域守卫无法检出
 
@@ -3829,6 +3830,7 @@
 - **影响详情**：cross_entropy 越界 target 返回数值不报错；gather 越界静默返回垃圾；scatter_ 越界写被静默丢弃。CPU 上靠越界异常暴露的逻辑错误搬到 NPU 被无声吞掉。对照 embedding/select 越界仍 raise，属可实现的不一致。
 - **改进措施**：检测 与 CPU 参照对照越界行为（报告含确定性最小复现四例）；修复 待定（open；期望补齐 host 端边界校验对齐 CPU/CUDA 语义）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5296
+- **关联**：cross:TRN-0279
 
 ### INF-1382 `cann_ops_nn_add_rms_norm_950_prepost_mode_silent` AddRmsNorm 950 tiling 不拦 Pre/Post 模式静默算错
 
@@ -3840,6 +3842,7 @@
 - **影响详情**：Ascend 950 上绕过 aclnn 的 GE 直构/TTK 直调传 AddRmsNorm PRE/POST 形态时，输出大半未初始化；kernel 对 0 元素 dummy tensor 越界写 rstd/xOut，无报错。
 - **改进措施**：检测 PR #11564 新增反例 UT add_rms_norm_regbase_pre_mode_rejected/post_mode_rejected（修复前 tiling SUCCESS 复现缺陷）；修复 PR #11564（修复 tiling 层拒绝 PRE/POST 返回 GRAPH_FAILED；修复后 ophost UT 30/30、opapi UT 18/18、950+910b 定向 CI 全过；issue closed，合并状态以仓库为准）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6482
+- **关联**：cross:TRN-0282
 
 ### INF-1383 `cann_ops_nn_hard_swish_v2_bf16_tmp0_clobber` HardSwishV2 BF16 分支覆盖原输入致输出错
 
@@ -4383,6 +4386,7 @@
 - **影响详情**：triton_experimental 后端 torch.compile 下带 attn_mask 的 fp16 SDPA 约97%元素错、maxdiff 0.0908，确定性复现无报错；eager 正确。静态 r-numel 特化且 R0_BLOCK==rnumel 的线性化归约触发。
 - **改进措施**：检测 torch.compile(fn) vs eager 逐元素比对（报告含 6 行最小复现）；修复 临时规避：torch_npu 侧去掉静态 r-tree numel 常量注入（令 r0_numel 回运行时 i32 传参；实验补丁实测 causal 11919/12288→0、alibi→1/12288，未回写安装树）；编译器侧修复 open 未定位到具体 pass
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/2531
+- **关联**：cross:TRN-0280
 
 ### INF-1376 `triton_ascend_3d_leading_axis_reduction_stride_swap` triton-ascend 3-D 首轴 tl.sum 归约换轴错值
 
@@ -14314,6 +14318,7 @@
 - **影响详情**：线上服务的模型本质未训练，输出完全或近乎完全失效，加载时不报任何 error 或 warning；受影响模块从第一层起激活即远离健康流形。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：引用：HF transformers #46620。
+- **关联**：cross:TRN-0052
 
 ### INF-1119 `tied_embedding_random_lm_head` tie_word_embeddings 配置不符致 lm_head 随机初始化
 

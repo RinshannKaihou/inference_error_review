@@ -32,7 +32,7 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/op-plugin/issues/372
-  kind: other
+  kind: gitcode_issue
 relations: []
 original:
   mechanism: op-plugin 的 npu_flash_attention 算子在变长序列注意力 + causal mask 下，batch 内不同样本 seq_len 差异大（最大 ≥4 倍最小）时 mask 定位逻辑错位：长序列样本前 1/4 注意力正确、后续部分未来 token 权重非 0（causal 失效）；最小 seq_len 样本完全正确；倍率差 <3 不触发、倍率越大错误越明显；关闭 causal mask 后与 ground truth 完全一致（定位到 mask 定位逻辑）。复现：batch [128,512,1024,2048]、cu_seqlens 偏移、MLA head_dim=128，与手工标准 causal attention 逐位对比。环境：Ascend 910B×1、op-plugin master、TorchNPU v2.7.1-26.1.0、PyTorch 2.7.1。
@@ -50,3 +50,7 @@ migration:
     - kimi-k3
     - doubao-seed-2.1-pro
     panel: []
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence

@@ -31,8 +31,10 @@ labels:
 remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/6482
-  kind: other
-relations: []
+  kind: gitcode_issue
+relations:
+- kind: cross
+  target: TRN-0282
 original:
   mechanism: 'AddRmsNorm 三模式（普通 3 输出/PreRmsNorm 2 输出/PostRmsNorm 1 输出）中 950（regbase）仅支持普通模式：aclnn 层已拦截（aclnn_add_rms_norm.cpp:207-211 regbase 上 rstdOut/xOut 空指针报 161101），但 Tiling4AddRmsNorm（add_rms_norm_tiling.cpp:524-525）分派 regbase 路径不校验 norm_key。绕过 aclnn 的调用（GE 直构、TTK 直调）传 PRE/POST 形态时：1) regbase tiling 未剥离前导 1（对照非 regbase 路径 :363-367 有剥离），numRow 少算（如 x=(B,S,H) 只算 B 行）输出大半未初始化；2) kernel（add_rms_norm_regbase.h:75-76,116,129）无条件写 rstd/xOut 对 0 元素 dummy tensor 越界写。修复 PR #11564 在 tiling 层拒绝并补两条反例 UT（修复前 FAILED 复现）。环境：Ascend 950PR、CANN 9.2.0。'
   source: 'cann/ops-nn #6482（2026-10-10 closed，由 PR #11564 修复；含源码行号与 UT 复现链）。https://gitcode.com/cann/ops-nn/issues/6482'
@@ -55,3 +57,10 @@ migration:
     - glm-5.3
     rewritten:
     - detail
+  updates:
+  - date: '2026-10-15'
+    fields:
+    - evidence
+  - date: '2026-10-15'
+    fields:
+    - relations
