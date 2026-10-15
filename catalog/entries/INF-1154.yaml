@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0971
-pattern: PAT-0002
+pattern: PAT-INF-0002
 original:
   category: cat12
   section: 第 12 类 · 权重 / 适配器 / 检查点加载故障

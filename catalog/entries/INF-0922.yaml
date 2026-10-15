@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/NVIDIA/TensorRT-LLM/issues/17020
   kind: github_issue
 relations: []
-pattern: PAT-0130
+pattern: PAT-INF-0130
 original:
   category: cat10
   section: 第 10 类 · 分词器 / 对话模板故障

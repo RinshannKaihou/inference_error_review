@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0958
-pattern: PAT-0002
+pattern: PAT-INF-0002
 original:
   category: cat10
   section: 第 10 类 · 分词器 / 对话模板故障

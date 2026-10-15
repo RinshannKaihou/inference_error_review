@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1228
-pattern: PAT-0019
+pattern: PAT-INF-0019
 original:
   category: cat14
   section: 第 14 类 · 长上下文能力失效（model_on — 健康模型的盲点）

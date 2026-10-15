@@ -34,7 +34,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/issues/55581
   kind: github_issue
 relations: []
-pattern: PAT-0125
+pattern: PAT-INF-0125
 original:
   category: cat8
   section: 第 8 类 · KV 缓存 / 注意力机制故障

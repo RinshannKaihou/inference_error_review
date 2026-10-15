@@ -37,7 +37,7 @@ evidence:
 - url: https://arxiv.org/abs/2504.02732
   kind: arxiv
 relations: []
-pattern: PAT-0120
+pattern: PAT-INF-0120
 original:
   category: cat8
   section: 第 8 类 · KV 缓存 / 注意力机制故障

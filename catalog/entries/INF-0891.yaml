@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/pull/50903
   kind: github_pr
 relations: []
-pattern: PAT-0066
+pattern: PAT-INF-0066
 original:
   category: cat9
   section: 第 9 类 · 位置编码 / RoPE 配置故障

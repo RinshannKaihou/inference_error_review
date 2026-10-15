@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/huggingface/transformers/issues/48371
   kind: github_issue
 relations: []
-pattern: PAT-0116
+pattern: PAT-INF-0116
 original:
   category: cat12
   section: 第 12 类 · 权重 / 适配器 / 检查点加载故障

@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/sgl-project/sglang/issues/32968
   kind: github_issue
 relations: []
-pattern: PAT-0140
+pattern: PAT-INF-0140
 original:
   category: KV8
   section: KV §8 control-flow（推测解码 / beam-search / CUDA-graph × KV）

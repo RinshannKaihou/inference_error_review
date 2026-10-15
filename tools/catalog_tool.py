@@ -10,7 +10,7 @@
   python3 tools/catalog_tool.py stats
   python3 tools/catalog_tool.py cross-sync [--dry-run]   # add reverse links for the other catalog's cross links
   python3 tools/catalog_tool.py pattern-sync [--dry-run] # derive catalog/patterns/ + entry `pattern` from the var forest
-  python3 tools/catalog_tool.py pattern-set PAT-0042 --title ... --shared-mechanism ...
+  python3 tools/catalog_tool.py pattern-set PAT-INF-0042 --title ... --shared-mechanism ...
 
 `new` reads ONE JSON object (stdin or --file): the structured fields plus the scan's narrative under
 "original". On a problem it prints {"ok": false, "errors": [...]} and exits 2 — fix the JSON and resubmit.
@@ -66,7 +66,9 @@ TOP_KEYS = ("id", "legacy_ids", "slug", "title", "kind", "status", "cause", "eff
 # `pattern` 是可选字段，不入 TOP_KEYS：check_entry 要求 TOP_KEYS 全部存在，
 # 而只有属于某个模式的条目才有它。
 PATTERNS = os.path.join(ROOT, "catalog", "patterns")
-PAT_RE = re.compile(r"^PAT-\d{4}$")
+# 模式编号带编目命名空间：RAG 把两个编目合并索引，纯 PAT-0035 在那里不唯一
+# （两库各有一个，--pattern 会同时命中两边）。
+PAT_RE = re.compile(r"^PAT-(INF|TRN)-\d{4}$")
 LABEL_ENUMS = {
     "family": ("infra_off", "model_on", "ambiguous"),
     "trigger": ("config", "yes", "partial", "other_stack", "hw_specific", "no", "not_target"),
@@ -912,8 +914,9 @@ def cmd_pattern_sync(a):
                 absorbed.append((other, pid))
                 used.add(other)
         else:
-            nums = [int(i.split("-")[1]) for i in pats] or [0]
-            pid = f"PAT-{max(nums) + 1:04d}"
+            ns = config()["namespace"]
+            nums = [int(i.rsplit("-", 1)[1]) for i in pats if PAT_RE.match(i)] or [0]
+            pid = f"PAT-{ns}-{max(nums) + 1:04d}"
             pats[pid] = {"id": pid, "title": "待定", "shared_mechanism": "待定",
                          "representative": tree["representative"], "members": tree["members"]}
             created.append(pid)

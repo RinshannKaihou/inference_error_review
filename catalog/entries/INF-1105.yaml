@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1100
-pattern: PAT-0142
+pattern: PAT-INF-0142
 original:
   category: cat11
   section: 第 11 类 · 解码 / 采样故障（多为 post-forward — 结构性盲点）

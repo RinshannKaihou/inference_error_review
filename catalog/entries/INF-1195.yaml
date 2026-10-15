@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/huggingface/transformers/pull/47946
   kind: github_pr
 relations: []
-pattern: PAT-0148
+pattern: PAT-INF-0148
 original:
   category: cat13
   section: 第 13 类 · 模型图 / 架构配置故障

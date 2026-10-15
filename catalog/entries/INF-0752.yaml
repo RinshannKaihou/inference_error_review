@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0837
-pattern: PAT-0028
+pattern: PAT-INF-0028
 original:
   category: cat7
   section: 第 7 类 · 量化（PTQ / 低位 / FP8 / 微缩度）

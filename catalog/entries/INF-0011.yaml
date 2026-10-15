@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/tenstorrent/tt-metal/issues/51543
   kind: github_issue
 relations: []
-pattern: PAT-0071
+pattern: PAT-INF-0071
 original:
   category: cat1
   section: 第 1 类 · 硬件 / 静默数据损坏（SDC）

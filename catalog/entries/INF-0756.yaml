@@ -34,7 +34,7 @@ evidence:
 - url: https://github.com/flashinfer-ai/flashinfer/issues/5128
   kind: github_issue
 relations: []
-pattern: PAT-0090
+pattern: PAT-INF-0090
 original:
   category: cat7
   section: 第 7 类 · 量化（PTQ / 低位 / FP8 / 微缩度）

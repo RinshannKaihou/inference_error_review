@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/issues/53868
   kind: github_issue
 relations: []
-pattern: PAT-0106
+pattern: PAT-INF-0106
 original:
   category: cat6
   section: 第 6 类 · 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM）

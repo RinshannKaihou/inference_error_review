@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0748
-pattern: PAT-0063
+pattern: PAT-INF-0063
 original:
   category: cat8
   section: 第 8 类 · KV 缓存 / 注意力机制故障

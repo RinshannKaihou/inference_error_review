@@ -34,7 +34,7 @@ evidence:
 - kind: citation
   text: 本项目早期实测条目（原型阶段实测，量值不跨栈继承；
 relations: []
-pattern: PAT-0046
+pattern: PAT-INF-0046
 original:
   category: cat1
   section: 第 1 类 · 硬件 / 静默数据损坏（SDC）

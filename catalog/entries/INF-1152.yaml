@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/pull/56472
   kind: github_pr
 relations: []
-pattern: PAT-0118
+pattern: PAT-INF-0118
 original:
   category: cat12
   section: 第 12 类 · 权重 / 适配器 / 检查点加载故障

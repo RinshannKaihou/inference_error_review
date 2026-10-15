@@ -35,7 +35,7 @@ evidence:
 - url: https://github.com/tenstorrent/tt-metal/issues/55102
   kind: github_issue
 relations: []
-pattern: PAT-0124
+pattern: PAT-INF-0124
 original:
   category: cat8
   section: 第 8 类 · KV 缓存 / 注意力机制故障

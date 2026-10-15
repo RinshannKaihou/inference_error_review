@@ -42,7 +42,7 @@ evidence:
   kind: github_issue
   resolved_from: 'gpustack #4268'
 relations: []
-pattern: PAT-0143
+pattern: PAT-INF-0143
 original:
   category: cat12
   section: 第 12 类 · 权重 / 适配器 / 检查点加载故障

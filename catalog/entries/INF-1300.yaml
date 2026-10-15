@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1241
-pattern: PAT-0150
+pattern: PAT-INF-0150
 original:
   category: KV9
   section: KV §9 跨 LLM 来源补充（GLM + Kimi 社区文档）——全部经 `gh` 核实

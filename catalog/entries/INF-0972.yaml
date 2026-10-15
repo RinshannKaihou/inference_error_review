@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target_raw: ttmetal_unary_chain_specialized_header_drops_chain_tail_op
-pattern: PAT-0132
+pattern: PAT-INF-0132
 original:
   category: cat10
   section: 第 10 类 · 分词器 / 对话模板故障

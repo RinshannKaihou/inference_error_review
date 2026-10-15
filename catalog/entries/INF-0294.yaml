@@ -41,7 +41,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0315
-pattern: PAT-0010
+pattern: PAT-INF-0010
 original:
   category: cat2
   section: 第 2 类 · GPU 显存故障（HBM/GDDR ECC、rowhammer、磨损老化）

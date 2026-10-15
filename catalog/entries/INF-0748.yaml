@@ -34,7 +34,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/issues/55534
   kind: github_issue
 relations: []
-pattern: PAT-0063
+pattern: PAT-INF-0063
 original:
   category: cat7
   section: 第 7 类 · 量化（PTQ / 低位 / FP8 / 微缩度）

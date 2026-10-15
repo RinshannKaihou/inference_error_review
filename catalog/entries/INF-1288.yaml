@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1027
-pattern: PAT-0135
+pattern: PAT-INF-0135
 original:
   category: KV8
   section: KV §8 control-flow（推测解码 / beam-search / CUDA-graph × KV）

@@ -35,7 +35,7 @@ evidence:
 - url: https://arxiv.org/abs/2404.02258
   kind: arxiv
 relations: []
-pattern: PAT-0101
+pattern: PAT-INF-0101
 original:
   category: cat13
   section: 第 13 类 · 模型图 / 架构配置故障

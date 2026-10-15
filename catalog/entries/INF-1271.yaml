@@ -35,7 +35,7 @@ evidence:
 - url: https://arxiv.org/abs/2406.10774
   kind: arxiv
 relations: []
-pattern: PAT-0151
+pattern: PAT-INF-0151
 original:
   category: KV6
   section: KV §6 eviction-compression（驱逐/压缩）

@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0901
-pattern: PAT-0031
+pattern: PAT-INF-0031
 original:
   category: cat9
   section: 第 9 类 · 位置编码 / RoPE 配置故障

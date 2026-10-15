@@ -37,7 +37,7 @@ evidence:
   kind: github_pr
   resolved_from: 'SGLang PR #32564'
 relations: []
-pattern: PAT-0103
+pattern: PAT-INF-0103
 original:
   category: KV5
   section: KV §5 cross-node-transfer（跨节点传输：分离式 / 卸载 / RDMA）

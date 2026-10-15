@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0399
-pattern: PAT-0001
+pattern: PAT-INF-0001
 original:
   category: KV4
   section: KV §4 cross-request（跨请求，缓存键 / 汏染）

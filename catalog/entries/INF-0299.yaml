@@ -35,7 +35,7 @@ evidence:
 - url: https://openaccess.thecvf.com/content/ICCV2021/papers/Chen_ProFlip_Targeted_Trojan_Attack_With_Progressive_Bit_Flips_ICCV_2021_paper.pdf
   kind: other
 relations: []
-pattern: PAT-0092
+pattern: PAT-INF-0092
 original:
   category: cat3
   section: 第 3 类 · 比特翻转攻击与定向权重篡改（BFA 家族 + LLM 时代变体）

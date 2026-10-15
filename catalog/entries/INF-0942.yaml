@@ -34,7 +34,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/issues/52410
   kind: github_issue
 relations: []
-pattern: PAT-0131
+pattern: PAT-INF-0131
 original:
   category: cat10
   section: 第 10 类 · 分词器 / 对话模板故障

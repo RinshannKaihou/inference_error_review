@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0869
-pattern: PAT-0064
+pattern: PAT-INF-0064
 original:
   category: cat13
   section: 第 13 类 · 模型图 / 架构配置故障

@@ -39,7 +39,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0395
-pattern: PAT-0051
+pattern: PAT-INF-0051
 original:
   category: KV5
   section: KV §5 cross-node-transfer（跨节点传输：分离式 / 卸载 / RDMA）

@@ -38,7 +38,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1284
-pattern: PAT-0153
+pattern: PAT-INF-0153
 original:
   category: KV7
   section: KV §7 arch-specific-cache（架构特定缓存）

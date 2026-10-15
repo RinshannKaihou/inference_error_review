@@ -36,7 +36,7 @@ evidence:
 - url: https://github.com/sgl-project/sglang/pull/35434
   kind: github_pr
 relations: []
-pattern: PAT-0064
+pattern: PAT-INF-0064
 original:
   category: cat8
   section: 第 8 类 · KV 缓存 / 注意力机制故障

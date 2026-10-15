@@ -36,7 +36,7 @@ evidence:
   kind: github_issue
   resolved_from: 'ChatGLM2-6B #414'
 relations: []
-pattern: PAT-0127
+pattern: PAT-INF-0127
 original:
   category: cat9
   section: 第 9 类 · 位置编码 / RoPE 配置故障

@@ -36,7 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1144
-pattern: PAT-0069
+pattern: PAT-INF-0069
 original:
   category: cat12
   section: 第 12 类 · 权重 / 适配器 / 检查点加载故障

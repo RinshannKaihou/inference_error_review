@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0385
-pattern: PAT-0049
+pattern: PAT-INF-0049
 original:
   category: cat5
   section: 第 5 类 · 分布式 / 多 GPU / 并行推理

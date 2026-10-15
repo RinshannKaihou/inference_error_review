@@ -36,7 +36,7 @@ evidence:
   kind: github_issue
   resolved_from: 'vLLM #33123'
 relations: []
-pattern: PAT-0152
+pattern: PAT-INF-0152
 original:
   category: KV7
   section: KV §7 arch-specific-cache（架构特定缓存）

@@ -34,7 +34,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/pull/55483
   kind: github_pr
 relations: []
-pattern: PAT-0032
+pattern: PAT-INF-0032
 original:
   category: cat10
   section: 第 10 类 · 分词器 / 对话模板故障

@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0633
-pattern: PAT-0016
+pattern: PAT-INF-0016
 original:
   category: cat6
   section: 第 6 类 · 服务栈 / 缓存正确性（vLLM/TGI/SGLang/TRT-LLM）

@@ -34,7 +34,7 @@ evidence:
 - url: https://github.com/sgl-project/sglang/issues/36569
   kind: github_issue
 relations: []
-pattern: PAT-0062
+pattern: PAT-INF-0062
 original:
   category: cat7
   section: 第 7 类 · 量化（PTQ / 低位 / FP8 / 微缩度）

@@ -37,7 +37,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0302
-pattern: PAT-0010
+pattern: PAT-INF-0010
 original:
   category: cat3
   section: 第 3 类 · 比特翻转攻击与定向权重篡改（BFA 家族 + LLM 时代变体）

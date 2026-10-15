@@ -36,7 +36,7 @@ evidence:
   kind: github_issue
   resolved_from: 'vLLM #37703'
 relations: []
-pattern: PAT-0058
+pattern: PAT-INF-0058
 original:
   category: KV10
   section: KV §10 第二轮补充（其他框架 / 卸载 / 共享 KV / 布局 / API 缓存）
