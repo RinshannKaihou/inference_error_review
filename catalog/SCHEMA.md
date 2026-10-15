@@ -70,3 +70,30 @@ python3 tools/catalog_tool.py update INF-0044 --set labels.confidence=verified -
 python3 tools/catalog_tool.py build      # views/CATALOG.zh.md、fault_catalog.csv、fault_catalog.xlsx
 python3 tools/catalog_tool.py validate   # 失败（exit 1）就不要提交
 ```
+
+## 模式层（`catalog/patterns/`）
+
+每个条目最多一条 `var` 出边，所以已解析的 var 关系构成一座**森林**；每棵树就是一个
+**故障模式**。模式层由 `catalog_tool.py pattern-sync` 从这些关系**派生**，不手工编辑：
+
+```yaml
+# catalog/patterns/PAT-INF-0035.yaml
+id: PAT-INF-0035          # 带编目命名空间——RAG 合并索引两个编目，裸 PAT-0035 在那里不唯一
+title: 硬件瞬态位扰动污染中间张量致静默错误   # ≤40 字，写机制不写某个实例
+shared_mechanism: ...      # 1–3 句，只写所有成员都成立的内容
+representative: INF-0211   # 树内入度最高者，并列取编号最小
+members: [INF-0001, INF-0005, INF-0211]
+```
+
+条目一侧加可选字段 `pattern: PAT-INF-0035`（紧跟 `relations`）。它是**派生值**：
+`pattern-sync` 写入，`validate` 校验与 `members` 双向一致，每日审计（`daily_audit.sh`）
+在审计前调用它，所以扫描新写的一条 var 关系会在次日自动把该条目归入对应模式——
+**扫描时不需要、也不应该手填 `pattern`**。
+
+`title` / `shared_mechanism` 是生成内容，`pattern-sync` 只保留不覆盖；要改用
+`pattern-set PAT-INF-0035 --title ... --shared-mechanism ...`。仍为 `待定` 的模式会在
+`validate` 里报 warning。
+
+**注意树深**：深度 >1 的树隐含「var 可传递」这一假设（A 是 B 的变体、B 是 C 的变体，
+不保证 A 与 C 同族），这些模式的共享机制需人工复核——证据与分档见 RAG 仓库的
+`normalize/pattern/PLAN.md`。
