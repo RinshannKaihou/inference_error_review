@@ -518,9 +518,23 @@ def cmd_update(a):
         for spec in a.drop_relation or []:
             kind, _, ref = spec.partition(":")
             tid, _ = resolve_ref(ref, entries, registry)
-            keep = [r for r in rels if not (r.get("kind") == kind and r.get("target") in (ref, tid))]
+
+            def matches(r, kind=kind, ref=ref, tid=tid):
+                if r.get("kind") != kind:
+                    return False
+                target = r.get("target")
+                if target:
+                    return target in (ref, tid)
+                # Migration leftovers carry only target_raw -- the slug the extractor meant to
+                # point at, which for all 45 of them never existed as any entry. Drop those by
+                # that raw value. Guard the falsy case: an unresolvable ref (tid None) used to
+                # match every target-less relation on the entry and drop it silently.
+                return r.get("target_raw") == ref
+            keep = [r for r in rels if not matches(r)]
             if len(keep) == len(rels):
-                errors.append(f"没有关系 {spec} 可删除（现有：{', '.join(r.get('kind', '') + ':' + str(r.get('target')) for r in rels) or '无'}）")
+                shown_rels = ", ".join(r.get("kind", "") + ":" + str(r.get("target") or r.get("target_raw"))
+                                       for r in rels) or "无"
+                errors.append(f"没有关系 {spec} 可删除（现有：{shown_rels}）")
             rels = keep
         for spec in a.relation or []:
             kind, _, ref = spec.partition(":")
