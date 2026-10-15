@@ -9,6 +9,8 @@
   python3 tools/catalog_tool.py validate        # all entries + registry + views up to date; exit 1 on error
   python3 tools/catalog_tool.py stats
   python3 tools/catalog_tool.py cross-sync [--dry-run]   # add reverse links for the other catalog's cross links
+  python3 tools/catalog_tool.py pattern-sync [--dry-run] # derive catalog/patterns/ + entry `pattern` from the var forest
+  python3 tools/catalog_tool.py pattern-set PAT-0042 --title ... --shared-mechanism ...
 
 `new` reads ONE JSON object (stdin or --file): the structured fields plus the scan's narrative under
 "original". On a problem it prints {"ok": false, "errors": [...]} and exits 2 — fix the JSON and resubmit.
@@ -61,6 +63,10 @@ URL_RE = re.compile(r"https?://[^\s）)，。；、`>\]\"']+")
 ARXIV_ID_RE = re.compile(r"arXiv[:：]\s*(\d{4}\.\d{4,5})", re.I)
 TOP_KEYS = ("id", "legacy_ids", "slug", "title", "kind", "status", "cause", "effect",
             "mitigation", "labels", "remarks", "evidence", "relations", "original")
+# `pattern` 是可选字段，不入 TOP_KEYS：check_entry 要求 TOP_KEYS 全部存在，
+# 而只有属于某个模式的条目才有它。
+PATTERNS = os.path.join(ROOT, "catalog", "patterns")
+PAT_RE = re.compile(r"^PAT-\d{4}$")
 LABEL_ENUMS = {
     "family": ("infra_off", "model_on", "ambiguous"),
     "trigger": ("config", "yes", "partial", "other_stack", "hw_specific", "no", "not_target"),
@@ -735,6 +741,39 @@ def cmd_validate(a):
                 warnings.append(f"{eid}: cross 目标 {t} 在另一编目中不存在")
             if "target_raw" in r:
                 warnings.append(f"{eid}: {r['kind']} 目标无法解析 {r['target_raw']}")
+    pats = load_patterns()
+    for name in (sorted(os.listdir(PATTERNS)) if os.path.isdir(PATTERNS) else []):
+        if name.endswith(".yaml") and name[:-5] not in pats:
+            errors.append(f"patterns/{name}: 文件名与 id 不一致")
+    want = {}
+    for pid, p in sorted(pats.items()):
+        if not PAT_RE.match(pid):
+            errors.append(f"{pid}: 模式编号格式应为 PAT-0001")
+        if p.get("status") == "merged":
+            if not p.get("merged_into"):
+                errors.append(f"{pid}: status=merged 但缺 merged_into")
+            continue
+        ms = p.get("members") or []
+        if len(ms) < 2:
+            errors.append(f"{pid}: 模式至少要有 2 个成员，现有 {len(ms)}")
+        for m in ms:
+            if m not in entries:
+                errors.append(f"{pid}: 成员不存在 {m}")
+            elif want.setdefault(m, pid) != pid:
+                errors.append(f"{m}: 同时属于 {want[m]} 与 {pid}")
+        if p.get("representative") not in ms:
+            errors.append(f"{pid}: representative {p.get('representative')} 不在成员里")
+        if p.get("title") == TBD or p.get("shared_mechanism") == TBD:
+            warnings.append(f"{pid}: title/shared_mechanism 仍是占位符，待生成")
+    for eid, e in entries.items():
+        pid = e.get("pattern")
+        if pid is None:
+            if eid in want:
+                errors.append(f"{eid}: 属于 {want[eid]} 但缺 pattern 字段：先运行 pattern-sync")
+        elif pid not in pats:
+            errors.append(f"{eid}: pattern 指向不存在的模式 {pid}")
+        elif want.get(eid) != pid:
+            errors.append(f"{eid}: pattern={pid} 与模式成员表不一致：先运行 pattern-sync")
     registry = load_registry()
     reg_ids = Counter(r[0] for r in registry)
     errors += [f"{i}: 编号表重复登记" for i, n in reg_ids.items() if n > 1]
@@ -752,7 +791,8 @@ def cmd_validate(a):
         fresh, mine = os.path.join(tmp, "fault_catalog.xlsx"), os.path.join(VIEWS, "fault_catalog.xlsx")
         if os.path.exists(fresh) and (not os.path.exists(mine) or xlsx_rows(mine) != xlsx_rows(fresh)):
             errors.append("views/fault_catalog.xlsx 与条目不一致：先运行 python3 tools/catalog_tool.py build")
-    res = {"ok": not errors, "entries": len(entries), "errors": errors[:200], "n_errors": len(errors),
+    res = {"ok": not errors, "entries": len(entries), "patterns": len([p for p in pats.values() if p.get("status") != "merged"]),
+           "errors": errors[:200], "n_errors": len(errors),
            "n_warnings": len(warnings), "pending_audit": sum(e["status"] == "pending_audit" for e in entries.values())}
     if a.verbose:
         res["warnings"] = warnings
@@ -788,6 +828,160 @@ def cmd_cross_sync(a):
          "added": [{"id": t, "cross": s, "title": sib["entries"][s].get("title")} for t, sids in sorted(add.items()) for s in sids]})
 
 
+def load_patterns():
+    if not os.path.isdir(PATTERNS):
+        return {}
+    out_ = {}
+    for name in sorted(os.listdir(PATTERNS)):
+        if name.endswith(".yaml"):
+            d = load_yaml(os.path.join(PATTERNS, name))
+            if isinstance(d, dict) and d.get("id"):
+                out_[d["id"]] = d
+    return out_
+
+
+def pattern_trees(entries):
+    """var 关系构成的森林：每棵树一个模式。
+
+    每个条目最多一条 var 出边，所以这是森林而非一般图。注意树是连通分量，
+    因此深度 >1 的树隐含了「var 可传递」这个假设——它并不总成立，深链的模式
+    要人工复核（见 RAG normalize/pattern/PLAN.md）。
+    """
+    live = {i: e for i, e in entries.items() if e.get("status") not in ("merged", "retired")}
+    edges = []
+    for i, e in sorted(live.items()):
+        for r in e.get("relations") or []:
+            t = r.get("target")
+            if r.get("kind") == "var" and t in live:
+                edges.append((i, t))
+    parent = {}
+
+    def find(x):
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a_, b_ in edges:
+        ra, rb = find(a_), find(b_)
+        if ra != rb:
+            parent[ra] = rb
+    indeg = Counter(b for _, b in edges)
+    trees = {}
+    for n in list(parent):
+        trees.setdefault(find(n), []).append(n)
+    return [{"members": sorted(ms),
+             "representative": min(sorted(ms), key=lambda i: (-indeg[i], i))}
+            for ms in trees.values()], indeg
+
+
+def place_pattern_key(e, pid):
+    """把 pattern 插在 relations 之后，其余键的相对顺序不变（diff 最小）。"""
+    new = {}
+    for k, v in e.items():
+        if k == "pattern":
+            continue
+        new[k] = v
+        if k == "relations" and pid is not None:
+            new["pattern"] = pid
+    if pid is not None and "pattern" not in new:
+        new["pattern"] = pid
+    return new
+
+
+def cmd_pattern_sync(a):
+    """按 var 森林同步 catalog/patterns/ 与条目的 pattern 字段。
+
+    成员关系**派生自 var 关系**，不手工编辑——这样成员不会和关系漂移，而且每日扫描
+    新增一条 var 关系后，这条命令就把新条目归入它的族（由 daily_audit.sh 调用，
+    与 cross-sync 同理，不花网关调用）。title / shared_mechanism 是生成内容，这里只保留。
+    """
+    entries, pats = load_entries(), load_patterns()
+    trees, _ = pattern_trees(entries)
+    live_pats = {i: p for i, p in pats.items() if p.get("status") != "merged"}
+    used, assign, created, absorbed, changed = set(), {}, [], [], []
+    # 按与既有模式的成员重叠度匹配，保证编号稳定
+    for tree in sorted(trees, key=lambda t: (-len(t["members"]), t["members"][0])):
+        ms = set(tree["members"])
+        cands = sorted(((len(ms & set(p.get("members") or [])), i) for i, p in live_pats.items()
+                        if i not in used and ms & set(p.get("members") or [])), reverse=True)
+        if cands:
+            pid = cands[0][1]
+            for _, other in cands[1:]:
+                absorbed.append((other, pid))
+                used.add(other)
+        else:
+            nums = [int(i.split("-")[1]) for i in pats] or [0]
+            pid = f"PAT-{max(nums) + 1:04d}"
+            pats[pid] = {"id": pid, "title": "待定", "shared_mechanism": "待定",
+                         "representative": tree["representative"], "members": tree["members"]}
+            created.append(pid)
+        used.add(pid)
+        assign[pid] = tree
+    # 写模式文件
+    if not a.dry_run:
+        os.makedirs(PATTERNS, exist_ok=True)
+    for pid, tree in assign.items():
+        doc = pats.get(pid) or {"id": pid, "title": "待定", "shared_mechanism": "待定"}
+        before = (doc.get("members"), doc.get("representative"))
+        doc = {"id": pid, "title": doc.get("title", "待定"),
+               "shared_mechanism": doc.get("shared_mechanism", "待定"),
+               "representative": tree["representative"], "members": tree["members"]}
+        if before != (doc["members"], doc["representative"]):
+            changed.append(pid)
+        if not a.dry_run:
+            with open(os.path.join(PATTERNS, f"{pid}.yaml"), "w", encoding="utf-8") as fh:
+                fh.write(dump_yaml(doc))
+    for old, into in absorbed:
+        if not a.dry_run:
+            doc = dict(pats[old], status="merged", merged_into=into, members=[], representative=None)
+            with open(os.path.join(PATTERNS, f"{old}.yaml"), "w", encoding="utf-8") as fh:
+                fh.write(dump_yaml(doc))
+    # 写条目的 pattern 字段
+    want = {m: pid for pid, tree in assign.items() for m in tree["members"]}
+    touched = []
+    for eid, e in sorted(entries.items()):
+        now, should = e.get("pattern"), want.get(eid)
+        if now == should:
+            continue
+        touched.append({"id": eid, "from": now, "to": should})
+        if not a.dry_run:
+            doc = place_pattern_key(e, should)
+            doc.setdefault("migration", {}).setdefault("updates", []).append(
+                {"date": today(), "fields": ["pattern"]})
+            with open(os.path.join(ENTRIES, f"{eid}.yaml"), "w", encoding="utf-8") as fh:
+                fh.write(dump_yaml(doc))
+    out({"ok": True, "dry_run": a.dry_run, "patterns": len(assign), "covered": len(want),
+         "created": created, "membership_changed": changed,
+         "absorbed": [{"pattern": o, "into": i} for o, i in absorbed],
+         "entries_touched": len(touched), "touched": touched[:50]})
+
+
+def cmd_pattern_set(a):
+    """写模式的 title / shared_mechanism。成员与代表由 pattern-sync 派生，这里不改。"""
+    pats = load_patterns()
+    if a.id not in pats:
+        out({"ok": False, "errors": [f"没有模式 {a.id}"]}, 2)
+    doc, errs = pats[a.id], []
+    if a.title is not None:
+        if len(a.title) > LIMITS["title"]:
+            errs.append(f"title 长 {len(a.title)} 字，上限 {LIMITS['title']} 字")
+        doc["title"] = a.title
+    if a.shared_mechanism is not None:
+        doc["shared_mechanism"] = a.shared_mechanism
+    if errs:
+        out({"ok": False, "errors": errs}, 2)
+    doc = {k: doc[k] for k in ("id", "title", "shared_mechanism", "representative", "members")
+           if k in doc} | {k: v for k, v in doc.items()
+                           if k not in ("id", "title", "shared_mechanism", "representative", "members")}
+    if not a.dry_run:
+        with open(os.path.join(PATTERNS, f"{a.id}.yaml"), "w", encoding="utf-8") as fh:
+            fh.write(dump_yaml(doc))
+    out({"ok": True, "dry_run": a.dry_run, "id": a.id, "title": doc.get("title"),
+         "members": len(doc.get("members") or [])})
+
+
 def cmd_stats(a):
     entries = load_entries()
     sub = Counter((e["cause"]["objects"][0] or {}).get("subsystem") for e in entries.values() if isinstance(e["cause"]["objects"], list))
@@ -817,11 +1011,19 @@ def main():
     p = sp.add_parser("validate")
     p.add_argument("--verbose", action="store_true")
     sp.add_parser("stats")
+    p = sp.add_parser("pattern-sync")
+    p.add_argument("--dry-run", action="store_true")
+    p = sp.add_parser("pattern-set")
+    p.add_argument("id")
+    p.add_argument("--title")
+    p.add_argument("--shared-mechanism", dest="shared_mechanism")
+    p.add_argument("--dry-run", action="store_true")
     p = sp.add_parser("cross-sync")
     p.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     {"new": cmd_new, "update": cmd_update, "find": cmd_find, "build": cmd_build,
-     "validate": cmd_validate, "stats": cmd_stats, "cross-sync": cmd_cross_sync}[a.cmd](a)
+     "validate": cmd_validate, "stats": cmd_stats, "cross-sync": cmd_cross_sync,
+     "pattern-sync": cmd_pattern_sync, "pattern-set": cmd_pattern_set}[a.cmd](a)
 
 
 if __name__ == "__main__":
