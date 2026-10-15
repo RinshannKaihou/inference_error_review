@@ -61,8 +61,8 @@ bash /root/.hermes/profiles/third/scripts/fault_scan_npu_training.sh
 5. **监测与计算故障分开。** msprobe 等工具的误报、漏报、dump/基准错位、sanitizer 骗过进观测/评测或相应盲区记录，不转述为模型计算已损坏；量化工具只有实际错误机制/影响证据才入故障编目。广告中的检测能力不等于监控覆盖实测。
 6. **跨平台来源身份。** 使用 `platform + 完整仓库 + issue/PR类型 + 字符串编号` 与规范 URL；保留 Gitee 字母编号，GitCode `merge_requests` 与 issue 不混号。只在有明确迁移映射时建立旧 URL/ID 别名，不自行猜测编号映射。
 7. **查重必须完整 URL。** 对新平台来源执行 `python3 tools/catalog_tool.py find '<规范URL>'`，近 14 天日报也查完整 URL/有证据的旧别名，不使用裸 `#数字` 或 GitHub 专用快捷展开。URL 查重之外仍比对具体失效机制；同一来源可能有不同机制、不同平台/来源可能是同机制。
-8. **沿用现有编目。** 仍按算子/内核、编译器、运行时、通信、KV、损失/优化器、观测等分类；NPU 型号、CANN/torch_npu版本、dtype、格式、图模式与并行配置写实际触发信息；未知就写未知。不新造 NPU 专用分类，不写未经实测的监测预测。普通 URL 当前以 evidence.kind=other 保存，禁止伪标 github_issue。
-9. **训练与推理归属。** 公共底层问题须分别证实影响，不能把一个推理故障全文复制成训练条目。rollout→train 权重/logprob 一致性可属训练。跨库同机制用明确关联/指针，不制造“两条独立发现”。
+8. **沿用现有编目。** 仍按算子/内核、编译器、运行时、通信、KV、损失/优化器、观测等分类；NPU 型号、CANN/torch_npu版本、dtype、格式、图模式与并行配置写实际触发信息；未知就写未知。不新造 NPU 专用分类，不写未经实测的监测预测。GitCode/AtomGit 的 issue 与 MR/PR 链接由工具自动记为 `gitcode_issue` / `gitcode_pr`；其他平台的普通 URL 仍为 `other`，禁止伪标 github_issue。
+9. **训练与推理归属。** 公共底层问题须分别证实影响，不能把一个推理故障全文复制成训练条目。rollout→train 权重/logprob 一致性可属训练。跨库同机制用明确关联：在本库条目的 `relations` 写 `{"kind": "cross", "target": "<另一库编号>"}`（先用另一库的 `catalog_tool.py find '<规范URL>'` 查编号并核对回显标题），反向关联由每日审计自动补上；不制造“两条独立发现”。
 10. **写入流程不变。** 真源仅 catalog/entries，经 catalog_tool.new/update；新机制 pending_audit，由现有审计任务复核。作者自述、源码机制证明、本地复现、端到端任务实测分开。版本未知不补猜，closed/merge/已发布修复分开。
 
 ## 日报与飞书摘要

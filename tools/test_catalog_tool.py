@@ -29,7 +29,8 @@ def good_entry(**over):
         "relations": [], "remarks": "",
         "original": {"mechanism": "ttnn.topk 的单核 topk_single_core_program_factory 把 GENERATE_INDICES 硬编码为 1 # 注意这里有井号，忽略调用方传入的 indices_tensor payload，只有多核 factory 才读取该张量；单核形状包括 W<8192、非 2 的幂等。",
                      "source": "tt-metal #59639 https://github.com/tenstorrent/tt-metal/issues/59639",
-                     "behavior": "单核形状下静默返回 generated iota [0,1,2,...] 而非调用方提供的索引，无 crash、无 NaN。", "trigger_surface": "tt-metal 单核", "discovery": "2026-10-13 每日扫描"},
+                     "behavior": "单核形状下静默返回 generated iota [0,1,2,...] 而非调用方提供的索引，无 crash、无 NaN；下游按这些索引 gather 时取到错误的行，"
+                                 "生成结果悄悄错乱，只有把同一输入换成多核形状或 CPU 参考实现对比时才看得出差异。", "trigger_surface": "tt-metal 单核", "discovery": "2026-10-13 每日扫描"},
     }
     e.update(over)
     return e
@@ -41,8 +42,11 @@ class CatalogToolTest(unittest.TestCase):
         os.makedirs(os.path.join(self.tmp, "tools"))
         os.makedirs(os.path.join(self.tmp, "catalog", "entries"))
         shutil.copy(os.path.join(HERE, "catalog_tool.py"), os.path.join(self.tmp, "tools"))
-        for name in ("config.yaml", "vocab.yaml"):
-            shutil.copy(os.path.join(REPO, "catalog", name), os.path.join(self.tmp, "catalog"))
+        shutil.copy(os.path.join(REPO, "catalog", "vocab.yaml"), os.path.join(self.tmp, "catalog"))
+        cfg = yaml.safe_load(open(os.path.join(REPO, "catalog", "config.yaml")))
+        cfg.pop("sibling", None)                                       # tests never read the real other repo
+        with open(os.path.join(self.tmp, "catalog", "config.yaml"), "w") as fh:
+            yaml.safe_dump(cfg, fh, allow_unicode=True)
         with open(os.path.join(self.tmp, "catalog", "id_registry.tsv"), "w") as fh:
             ns0 = yaml.safe_load(open(os.path.join(self.tmp, "catalog", "config.yaml")))["namespace"]
             fh.write(f"new_id\tlegacy_id\n{ns0}-0007\t1.7\n")
@@ -137,6 +141,64 @@ class CatalogToolTest(unittest.TestCase):
         self.assertEqual(self.entry(vid)["relations"], [{"kind": "var", "target": seed}])
         code, res = self.run_tool("update", vid, "--set", 'relations=[{"kind": "var", "target": "ZZZ-1"}]')
         self.assertEqual(code, 2)                                                   # --set goes through the same check
+
+    def test_behavior_needs_80_chars_of_observed_symptom(self):
+        short = good_entry(slug="short_behavior", original=dict(good_entry()["original"], behavior="单核形状下静默返回 iota 而非传入索引，无报错，下游取到错误的行。",
+                                                               source="https://github.com/o/r/issues/78"))
+        code, res = self.run_tool("new", stdin=json.dumps(short))
+        self.assertEqual(code, 2)
+        self.assertTrue(any(m.startswith("original.behavior 只有") and "使用者能直接观察到的现象" in m for m in res["errors"]))
+
+    def test_gitcode_evidence_kinds(self):
+        src = ("https://gitcode.com/cann/ops-nn/issues/6482 修复 https://gitcode.com/cann/ops-nn/merge_requests/11564 "
+               "https://atomgit.com/mindspore/mindformers/merge_requests/8868 https://gitcode.com/cann/ops-nn/pull/12")
+        code, res = self.run_tool("new", stdin=json.dumps(good_entry(slug="npu", original=dict(good_entry()["original"], source=src))))
+        self.assertEqual(code, 0, res)
+        self.assertEqual([x["kind"] for x in self.entry(res["id"])["evidence"]],
+                         ["gitcode_issue", "gitcode_pr", "gitcode_pr", "gitcode_pr"])
+
+    def test_cross_links_check_the_other_catalog_and_sync_back(self):
+        other_ns = "TRN" if self.ns == "INF" else "INF"
+        parent = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, parent)
+        roots = {}
+        for name, ns, sib in (("a", self.ns, "../b"), ("b", other_ns, "../a")):
+            root = roots[name] = os.path.join(parent, name)
+            os.makedirs(os.path.join(root, "tools"))
+            os.makedirs(os.path.join(root, "catalog", "entries"))
+            shutil.copy(os.path.join(HERE, "catalog_tool.py"), os.path.join(root, "tools"))
+            shutil.copy(os.path.join(REPO, "catalog", "vocab.yaml"), os.path.join(root, "catalog"))
+            cfg = dict(yaml.safe_load(open(os.path.join(REPO, "catalog", "config.yaml"))), namespace=ns, sibling=sib)
+            with open(os.path.join(root, "catalog", "config.yaml"), "w") as fh:
+                yaml.safe_dump(cfg, fh, allow_unicode=True)
+            with open(os.path.join(root, "catalog", "id_registry.tsv"), "w") as fh:
+                fh.write("new_id\tlegacy_id\n")
+
+        def tool(name, *args, stdin=None):
+            p = subprocess.run([sys.executable, os.path.join(roots[name], "tools", "catalog_tool.py"), *args],
+                               input=stdin, capture_output=True, text=True)
+            return p.returncode, json.loads(p.stdout)
+
+        code, res = tool("b", "new", stdin=json.dumps(good_entry(slug="b_side")))
+        self.assertEqual(code, 0, res)
+        bid = res["id"]
+        code, res = tool("a", "new", stdin=json.dumps(good_entry(slug="a_side", relations=[{"kind": "cross", "target": f"{other_ns}-0999"}])))
+        self.assertEqual(code, 2)                                                    # unknown in the other catalog
+        self.assertTrue(any("在另一编目" in m for m in res["errors"]))
+        code, res = tool("a", "new", stdin=json.dumps(good_entry(slug="a_side", relations=[{"kind": "cross", "target": bid}])))
+        self.assertEqual(code, 0, res)
+        aid = res["id"]
+        self.assertEqual(res["relations"], [{"kind": "cross", "target": bid, "catalog": other_ns,
+                                             "title": "topk 单核路径忽略传入索引", "status": "pending_audit"}])
+        code, res = tool("b", "cross-sync", "--dry-run")
+        self.assertEqual([x["id"] for x in res["added"]], [bid])
+        self.assertEqual(yaml.safe_load(open(os.path.join(roots["b"], "catalog", "entries", f"{bid}.yaml")))["relations"], [])
+        code, res = tool("b", "cross-sync")
+        self.assertEqual((code, res["added"][0]["cross"]), (0, aid))
+        self.assertEqual(yaml.safe_load(open(os.path.join(roots["b"], "catalog", "entries", f"{bid}.yaml")))["relations"],
+                         [{"kind": "cross", "target": aid}])
+        _, res = tool("b", "cross-sync")
+        self.assertEqual(res["added"], [])                                            # idempotent
 
     def test_duplicate_detected_from_unlinked_mention(self):
         # an existing entry cites "vLLM #60342/#60421" in its narrative without links

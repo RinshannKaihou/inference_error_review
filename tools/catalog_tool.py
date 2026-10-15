@@ -8,6 +8,7 @@
   python3 tools/catalog_tool.py build           # regenerate views/ from catalog/entries
   python3 tools/catalog_tool.py validate        # all entries + registry + views up to date; exit 1 on error
   python3 tools/catalog_tool.py stats
+  python3 tools/catalog_tool.py cross-sync [--dry-run]   # add reverse links for the other catalog's cross links
 
 `new` reads ONE JSON object (stdin or --file): the structured fields plus the scan's narrative under
 "original". On a problem it prints {"ok": false, "errors": [...]} and exits 2 — fix the JSON and resubmit.
@@ -17,7 +18,8 @@ per-repo settings: catalog/config.yaml.
 
 Relation targets (`relations` in the `new` JSON, `update --relation`) may be current ids or old Markdown
 numbers; old numbers are converted, and the result echoes every target with its title — check that it
-is the entry you meant before going on.
+is the entry you meant before going on. `cross` targets in the other catalog (config `sibling`) are
+looked up there; `cross-sync` (run by the daily audit) adds the reverse link on this side.
 """
 
 import os
@@ -67,7 +69,7 @@ LABEL_ENUMS = {
 }
 STAGES = ("pretrain", "sft", "rl", "shared")
 STATUSES = ("active", "pending_audit", "merged", "retired")
-EVIDENCE_KINDS = ("github_issue", "github_pr", "arxiv", "paper", "other")
+EVIDENCE_KINDS = ("github_issue", "github_pr", "gitcode_issue", "gitcode_pr", "arxiv", "paper", "other")
 LIMITS = {"title": 40, "component": 25, "behavior": 120, "detail": 150}
 NARRATIVE_ORDER = ("mechanism", "source", "behavior", "trigger_surface", "signature", "repro", "discovery", "notes")
 
@@ -98,22 +100,41 @@ def vocab():
     return load_yaml(os.path.join(CAT, "vocab.yaml"))
 
 
-def load_entries():
+def load_entries(entries_dir=ENTRIES):
     out = {}
-    for name in sorted(os.listdir(ENTRIES)):
+    for name in sorted(os.listdir(entries_dir)):
         if name.endswith(".yaml"):
-            e = load_yaml(os.path.join(ENTRIES, name))
+            e = load_yaml(os.path.join(entries_dir, name))
             out[e["id"]] = e
     return out
 
 
-def load_registry():
+def load_registry(path=REGISTRY):
     rows = []
-    if os.path.exists(REGISTRY):
-        with open(REGISTRY, encoding="utf-8") as fh:
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
             next(fh)
             rows = [tuple(line.rstrip("\n").split("\t")) for line in fh if line.strip()]
     return rows
+
+
+_SIBLING = []
+
+
+def sibling():
+    """The other catalog repo (config `sibling`, relative to this repo) as {ns, root, entries, registry};
+    None when it is not configured or not checked out next to this one."""
+    if not _SIBLING:
+        rel = (config() or {}).get("sibling")
+        root = os.path.normpath(os.path.join(ROOT, rel)) if rel else None
+        cat = os.path.join(root, "catalog") if root else None
+        if cat and os.path.isdir(os.path.join(cat, "entries")) and os.path.exists(os.path.join(cat, "config.yaml")):
+            _SIBLING.append({"ns": load_yaml(os.path.join(cat, "config.yaml"))["namespace"], "root": root,
+                             "entries": load_entries(os.path.join(cat, "entries")),
+                             "registry": load_registry(os.path.join(cat, "id_registry.tsv"))})
+        else:
+            _SIBLING.append(None)
+    return _SIBLING[0]
 
 
 def today():
@@ -164,20 +185,24 @@ def evidence_of(source_text):
     for aid in ARXIV_ID_RE.findall(source_text or ""):
         if not any(aid in u for u in urls):
             urls.append(f"https://arxiv.org/abs/{aid}")
-    items = []
-    for u in urls:
-        if re.search(r"github\.com/[^/]+/[^/]+/pull/\d+", u):
-            kind = "github_pr"
-        elif re.search(r"github\.com/[^/]+/[^/]+/issues/\d+", u):
-            kind = "github_issue"
-        elif "arxiv.org" in u:
-            kind = "arxiv"
-        elif re.search(r"aclanthology|doi\.org|usenix|acm\.org|ieee|openreview", u, re.I):
-            kind = "paper"
-        else:
-            kind = "other"
-        items.append({"url": u, "kind": kind})
-    return items
+    return [{"url": u, "kind": url_kind(u)} for u in urls]
+
+
+def url_kind(u):
+    if re.search(r"github\.com/[^/]+/[^/]+/pull/\d+", u):
+        return "github_pr"
+    if re.search(r"github\.com/[^/]+/[^/]+/issues/\d+", u):
+        return "github_issue"
+    # GitCode (atomgit.com is the same site); merge requests are also linked as /pull/ or /pulls/
+    if re.search(r"(?:gitcode|atomgit)\.com/[^/]+/[^/]+/(?:merge_requests|pulls?)/\d+", u, re.I):
+        return "gitcode_pr"
+    if re.search(r"(?:gitcode|atomgit)\.com/[^/]+/[^/]+/issues/\w+", u, re.I):
+        return "gitcode_issue"
+    if "arxiv.org" in u:
+        return "arxiv"
+    if re.search(r"aclanthology|doi\.org|usenix|acm\.org|ieee|openreview", u, re.I):
+        return "paper"
+    return "other"
 
 
 # ---------------------------------------------------------------- validation
@@ -280,12 +305,13 @@ def resolve_ref(ref, entries, registry):
     return (next(iter(pick)) if len(pick) == 1 else None), sorted(hits)
 
 
-def resolve_relations(relations, entries, registry, ns, self_id=None):
+def resolve_relations(relations, entries, registry, ns, self_id=None, sib=None):
     """Map relation targets written as old numbers to current ids.
 
     Returns (relations, echo, errors); echo lists each target's title so the caller can check
     it is the intended entry (the 2026-10-13 scan meant 4.28 but wrote INF-0328, which is 4.12).
-    Targets in the other catalog (cross links) are kept as written.
+    `cross` targets outside this catalog are looked up in the sibling catalog (`sib`, see sibling());
+    without one they are kept as written.
     """
     out_rel, echo, errors = [], [], []
     for r in relations or []:
@@ -293,6 +319,22 @@ def resolve_relations(relations, entries, registry, ns, self_id=None):
             errors.append(f"relation 必须是对象: {r}")
             continue
         given = r.get("target")
+        if r.get("kind") == "cross" and sib and not str(given).startswith(ns + "-"):
+            tid, cands = resolve_ref(given, sib["entries"], sib["registry"])
+            if tid is None:
+                why = f"对应多个条目 {', '.join(cands)}，请写新编号" if len(cands) > 1 else "不存在"
+                errors.append(f"cross 目标 {given} 在另一编目（{sib['ns']}）中{why}"
+                              f"（用 python3 {os.path.join(sib['root'], 'tools', 'catalog_tool.py')} find 查）")
+                out_rel.append(r)
+                continue
+            out_rel.append({**r, "target": tid})
+            item = {"kind": "cross", "target": tid, "catalog": sib["ns"], "title": sib["entries"][tid].get("title")}
+            if sib["entries"][tid].get("status") != "active":
+                item["status"] = sib["entries"][tid].get("status")
+            if tid != given:
+                item["from"] = given
+            echo.append(item)
+            continue
         tid, cands = resolve_ref(given, entries, registry)
         local = r.get("kind") == "var" or str(given).startswith(ns + "-") or bool(cands)
         if tid is None and local:
@@ -344,10 +386,14 @@ def cmd_new(a):
     cause = data.get("cause") if isinstance(data.get("cause"), dict) else {}
     effect = data.get("effect") if isinstance(data.get("effect"), dict) else {}
     hint = "原始说明要写全（代码/配置层面的原因、版本、证据、触发条件），结构化字段只是它的压缩，其中每个事实都必须能在原始说明里找到"
-    for k, floor in (("mechanism", 80), ("behavior", 40)):
+    # behavior is what users search by (retrieval embeds the narrative), so it needs the observed
+    # symptom in their words, not a one-line restatement of the mechanism
+    symptom = ("behavior 写使用者能直接观察到的现象：输出/指标/日志里看到什么、在什么条件下出现、影响多大，"
+               "用使用者描述问题时会用的说法；原因与代码细节写在 mechanism")
+    for k, floor in (("mechanism", 80), ("behavior", 80)):
         n = len(str(original.get(k, "") or ""))
         if 0 < n < floor:
-            errors.append(f"original.{k} 只有 {n} 字，至少 {floor} 字：{hint}")
+            errors.append(f"original.{k} 只有 {n} 字，至少 {floor} 字：{hint if k == 'mechanism' else symptom}")
     told = sum(len(str(original.get(k, "") or "")) for k in ("mechanism", "behavior", "trigger_surface"))
     summary = len(str(cause.get("behavior") or "")) + len(str(effect.get("detail") or ""))
     if told and told < summary:
@@ -369,7 +415,8 @@ def cmd_new(a):
             errors.append(f"来源已被已有条目引用：{', '.join(dup)}。同一机制请用 update 补充证据；"
                           "确属不同机制时加 --allow-duplicate-source 重新提交")
     labels = data.get("labels") if isinstance(data.get("labels"), dict) else {}
-    relations, rel_echo, rel_errors = resolve_relations(data.get("relations"), entries, registry, cfg["namespace"])
+    relations, rel_echo, rel_errors = resolve_relations(data.get("relations"), entries, registry, cfg["namespace"],
+                                                       sib=sibling())
     errors += rel_errors
     if labels.get("coverage") == "var" and not any(r.get("kind") == "var" for r in relations):
         errors.append("coverage=var 时 relations 必须写 [{\"kind\": \"var\", \"target\": \"<已有条目的新编号或旧编号>\"}]")
@@ -481,7 +528,8 @@ def cmd_update(a):
                 errors.append(f"--relation 写成 var:<编号> 或 cross:<编号>: {spec}")
                 continue
             rels.append({"kind": kind, "target": ref})
-        rels, echo, rel_errors = resolve_relations(rels, entries, registry, config()["namespace"], self_id=a.id)
+        rels, echo, rel_errors = resolve_relations(rels, entries, registry, config()["namespace"], self_id=a.id,
+                                                   sib=sibling())
         errors += rel_errors
         seen = [(r.get("kind"), r.get("target")) for r in rels]
         errors += [f"重复的关系 {k}:{t}" for (k, t), n in Counter(seen).items() if n > 1]
@@ -654,7 +702,7 @@ def cmd_build(a):
 # ---------------------------------------------------------------- validate / stats
 
 def cmd_validate(a):
-    cfg, voc, entries = config(), vocab(), load_entries()
+    cfg, voc, entries, sib = config(), vocab(), load_entries(), sibling()
     errors, warnings = [], []
     for name in sorted(os.listdir(ENTRIES)):
         if name.endswith(".yaml") and name[:-5] not in entries:
@@ -669,6 +717,8 @@ def cmd_validate(a):
             t = r.get("target")
             if t and t.startswith(cfg["namespace"] + "-") and t not in entries:
                 errors.append(f"{eid}: relation 目标不存在 {t}")
+            elif t and sib and t.startswith(sib["ns"] + "-") and t not in sib["entries"]:
+                warnings.append(f"{eid}: cross 目标 {t} 在另一编目中不存在")
             if "target_raw" in r:
                 warnings.append(f"{eid}: {r['kind']} 目标无法解析 {r['target_raw']}")
     registry = load_registry()
@@ -693,6 +743,35 @@ def cmd_validate(a):
     if a.verbose:
         res["warnings"] = warnings
     out(res, 0 if not errors else 1)
+
+
+def cmd_cross_sync(a):
+    """Give every entry here the reverse `cross` link of each sibling entry that points at it.
+
+    The daily scan only writes its own repo, so a link made by one scan has no way back; the daily
+    audit runs this in both repos (deterministic, no gateway calls).
+    """
+    sib = sibling()
+    if sib is None:
+        out({"ok": True, "added": [], "skipped": "没有配置或找不到另一编目（config.yaml 的 sibling）"})
+    entries, add = load_entries(), {}
+    for sid, se in sorted(sib["entries"].items()):
+        if se.get("status") in ("merged", "retired"):
+            continue
+        for r in se.get("relations") or []:
+            t = r.get("target")
+            if r.get("kind") == "cross" and t in entries and entries[t].get("status") not in ("merged", "retired") \
+                    and not any(x.get("kind") == "cross" and x.get("target") == sid for x in entries[t].get("relations") or []):
+                add.setdefault(t, []).append(sid)
+    if not a.dry_run:
+        for t, sids in add.items():
+            e = entries[t]
+            e["relations"] = list(e.get("relations") or []) + [{"kind": "cross", "target": s} for s in sids]
+            e.setdefault("migration", {}).setdefault("updates", []).append({"date": today(), "fields": ["relations"]})
+            with open(os.path.join(ENTRIES, f"{t}.yaml"), "w", encoding="utf-8") as fh:
+                fh.write(dump_yaml(e))
+    out({"ok": True, "dry_run": a.dry_run,
+         "added": [{"id": t, "cross": s, "title": sib["entries"][s].get("title")} for t, sids in sorted(add.items()) for s in sids]})
 
 
 def cmd_stats(a):
@@ -724,9 +803,11 @@ def main():
     p = sp.add_parser("validate")
     p.add_argument("--verbose", action="store_true")
     sp.add_parser("stats")
+    p = sp.add_parser("cross-sync")
+    p.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     {"new": cmd_new, "update": cmd_update, "find": cmd_find, "build": cmd_build,
-     "validate": cmd_validate, "stats": cmd_stats}[a.cmd](a)
+     "validate": cmd_validate, "stats": cmd_stats, "cross-sync": cmd_cross_sync}[a.cmd](a)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Daily audit of entries the scan wrote (status pending_audit). Identical in both catalog repos.
 # Meant for a script-only cron job after both daily scans:  bash tools/daily_audit.sh
-# Steps: git precheck (same rules as the daily scan) -> tools/catalog_audit.py run -> build views ->
-# validate -> stage only catalog/ + views/ -> commit "daily audit YYYY-MM-DD: <repo>" -> push -> verify remote.
-# Exits 0 without committing when nothing is pending. Needs JUDGE_API_KEY.
+# Steps: git precheck (same rules as the daily scan) -> catalog_tool.py cross-sync (reverse links for the other
+# catalog's cross relations) -> tools/catalog_audit.py run -> build views -> validate -> stage only catalog/ +
+# views/ -> commit "daily audit YYYY-MM-DD: <repo>" -> push -> verify remote.
+# Exits 0 without committing when nothing is pending and no link was added. Needs JUDGE_API_KEY.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 REPO=$(basename "$PWD" | sed 's/_error_review$//')
@@ -16,17 +17,24 @@ say() { echo "$(date -u +%FT%TZ) $*"; }
 git fetch -q origin main || { say "BLOCKED: fetch failed"; exit 1; }
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { say "BLOCKED: HEAD differs from origin/main"; exit 1; }
 
-PENDING=$(python3 tools/catalog_tool.py stats | python3 -c "import json,sys; print(json.load(sys.stdin)['status'].get('pending_audit', 0))")
-if [ "$PENDING" = 0 ]; then say "nothing pending; no commit"; exit 0; fi
-say "auditing $PENDING pending entries"
+# 2. reverse links for cross relations the other catalog made (deterministic, no gateway calls)
+python3 tools/catalog_tool.py cross-sync > /tmp/daily_audit_cross_$REPO.json || { say "FAILED: cross-sync"; exit 1; }
+CROSS=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1]))['added']))" /tmp/daily_audit_cross_$REPO.json)
+[ "$CROSS" = 0 ] || say "cross-sync: added $CROSS reverse cross link(s)"
 
-# 2-4. audit, rebuild views, validate
-python3 tools/catalog_audit.py run || { say "FAILED: audit run"; exit 1; }
+PENDING=$(python3 tools/catalog_tool.py stats | python3 -c "import json,sys; print(json.load(sys.stdin)['status'].get('pending_audit', 0))")
+if [ "$PENDING" = 0 ] && [ "$CROSS" = 0 ]; then say "nothing pending; no commit"; exit 0; fi
+
+# 3-5. audit, rebuild views, validate
+if [ "$PENDING" != 0 ]; then
+  say "auditing $PENDING pending entries"
+  python3 tools/catalog_audit.py run || { say "FAILED: audit run"; exit 1; }
+fi
 python3 tools/catalog_tool.py build > /dev/null || { say "FAILED: build"; exit 1; }
 python3 tools/catalog_tool.py validate > /tmp/daily_audit_validate_$REPO.json || {
   say "FAILED: validate"; head -c 2000 /tmp/daily_audit_validate_$REPO.json; exit 1; }
 
-# 5. commit only the catalog deliverables, push, verify
+# 6. commit only the catalog deliverables, push, verify
 git add catalog/entries catalog/audit views
 git diff --cached --quiet && { say "no changes after audit; no commit"; exit 0; }
 git -c core.whitespace=-blank-at-eol diff --cached --check -- . ':!*.csv' ':!*.jsonl' || { say "FAILED: whitespace check"; exit 1; }
