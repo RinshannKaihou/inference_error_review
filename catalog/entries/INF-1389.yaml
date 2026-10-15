@@ -4,7 +4,7 @@ slug: vllm_ascend_fused_mc2_capacity_silent_truncation
 aliases: []
 title: vllm-ascend fused MC2 容量截断静默损坏 MoE 输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -13,8 +13,9 @@ cause:
   behavior: dispatch_ffn_combine 按 max_output_size 分配每 rank 缓冲，计数达容量即静默截断不报错；mega_moe_max_tokens 只守护 op 侧，默认 65536 覆盖不了长 prefill 负载。
 effect:
   objects:
+  - 数值结果
   - 输出内容
-  detail: 受影响 token 收到损坏 MoE 输出：重复/乱码 token。GLM-5.2-w4a8/A3/EP16：容量 65536 时 67531-token 请求 9/58800 调用截断、0/6 干净；131072 全干净；8192 复现 273/288 截断、28/288 NaN。
+  detail: enable_fused_mc2=1，长prefill超容量时，受影响token的MoE输出损坏，表现重复/乱码；mega_moe_max_tokens=8192+67531-token prompt复现273/288调用截断、28/288 NaN行；65536同请求正确。
   visibility: 静默错误
 mitigation:
   detect: 对比 op 容量与每 rank post-dispatch 负载分布（PR 含实测统计表）；修复 PR 自带一次性 warning（命名两个缓冲与 --max-num-batched-tokens 替代）
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出内容
+        to: 数值结果
+    rewritten:
+    - detail

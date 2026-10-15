@@ -4,7 +4,7 @@ slug: triton_ascend_int_rem_zero_compiles_to_minus1
 aliases: []
 title: triton-ascend 整型除零取余编译态恒返 −1
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

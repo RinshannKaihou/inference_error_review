@@ -4,13 +4,13 @@ slug: torch_npu_gather_scatter_loss_missing_oob_validation
 aliases: []
 title: torch_npu gather/scatter/损失算子缺越界校验静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: gather/scatter/损失 host 校验
-  behavior: torch_npu 对 gather/scatter/cross_entropy/nll_loss 缺 host 端越界校验：越界 index/target 在 CPU/CUDA 抛异常，NPU 静默返回错误结果（越界读垃圾、越界写丢弃）。
+  behavior: torch_npu 对 gather/scatter/index_put/cross_entropy/nll_loss 缺 host 端越界校验，越界 index/target 不抛异常而静默产出错误结果或丢弃写入。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

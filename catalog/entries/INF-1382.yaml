@@ -4,7 +4,7 @@ slug: cann_ops_nn_add_rms_norm_950_prepost_mode_silent
 aliases: []
 title: AddRmsNorm 950 tiling 不拦 Pre/Post 模式静默算错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: regbase tiling 未剥离 PRE/POST 的 gamma 前导 1 → numRow 少算（x=(B,S,H) 只算 B 行），输出大半未初始化；kernel 无条件写 rstd/xOut 对 0 元素 tensor 越界写。全程不报错。aclnn 公开接口与 A2/A3 不受影响。
+  detail: Ascend 950 上绕过 aclnn 的 GE 直构/TTK 直调传 AddRmsNorm PRE/POST 形态时，输出大半未初始化；kernel 对 0 元素 dummy tensor 越界写 rstd/xOut，无报错。
   visibility: 静默错误
 mitigation:
   detect: 'PR #11564 新增反例 UT add_rms_norm_regbase_pre_mode_rejected/post_mode_rejected（修复前 tiling SUCCESS 复现缺陷）'
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

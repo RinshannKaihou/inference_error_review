@@ -4,13 +4,13 @@ slug: triton_ascend_3d_leading_axis_reduction_stride_swap
 aliases: []
 title: triton-ascend 3-D 首轴 tl.sum 归约换轴错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: triton
     component: 3-D 首轴归约 lowering
-  behavior: tl.sum(acc, 0) 在 3-D tile 上把归约轴与内层 x 轴的 stride 映射交换/展平——等于对错误内存轴归约；op 与 dtype 无关。同 offset 数学写 2-D tile 逐位正确。
+  behavior: tl.sum(acc, 0) 对 3-D tile 首轴归约时，triton-ascend lowering 把归约轴与内层 x 轴的 stride 映射交换/展平，确定性产出错误数值。
 effect:
   objects:
   - 数值结果
@@ -43,3 +43,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

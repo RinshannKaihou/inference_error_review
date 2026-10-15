@@ -4,13 +4,13 @@ slug: torch_npu_npugraph_ex_replay_overwrites_prior_input
 aliases: []
 title: torch_npu npugraph_ex 回放覆写前次输入存储
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: pytorch
     component: npugraph_ex 静态输入槽
-  behavior: 同一已捕获 ACL graph 被不同输入张量（同形状）回放时，copy-in 把新输入写进上一次输入仍存活的那块存储——前一次调用的输入数据被静默覆写；初步推测与 graph pool 把首次输入存储当静态槽复用有关。
+  behavior: 同一已捕获 ACL graph 被同形状不同输入张量回放时，前一次调用的输入存储被后续回放覆写，旧输入张量数据被静默改写。
 effect:
   objects:
   - 跨请求/跨样本数据
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior
+    issue_unfixed:
+    - detail

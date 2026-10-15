@@ -4,7 +4,7 @@ slug: tt_metal_sort_nan_sorts_past_inf_padding
 aliases: []
 title: ttnn.sort fp32 NaN 越过 padding 索引泄漏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: fp32 输入含 NaN 时返回越界索引（≥n）且 NaN 从返回值消失；全部三个 sort 工厂命中，stable 两态均中。torch.sort 语义为 NaN 升序排最后、索引恒在 [0,n)。
+  detail: fp32 输入含 NaN 时，返回越界索引（≥n，max index=1003），输出 NaN 计数 0（期望 4）；三工厂、升降序、stable 两态均复现，无报错。torch.sort 语义：NaN 升序排最后。
   visibility: 静默错误
 mitigation:
   detect: 含 NaN 输入 sort 后检查 idx<n 与 NaN 计数（报告含三工厂×升降序×三规模复现）
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

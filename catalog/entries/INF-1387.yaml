@@ -4,10 +4,10 @@ slug: cann_scatter_pa_kv_cache_slotmapping_unchecked
 aliases: []
 title: ScatterPaKvCache 空/不足 slotMapping 静默错写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: KV缓存
     stack: 通用
     component: ScatterPaKvCache host 检查
   behavior: 空态早退分支未覆盖 slotMapping：空/不足的 slotMapping 不早退不报错直接透传 kernel；tiling 以 key.dim0 推导 numTokens 去索引 slotMapping，越界读后写出错误结果。
@@ -42,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: KV缓存
+    issue_unfixed:
+    - detail
+    uncertain:
+    - behavior

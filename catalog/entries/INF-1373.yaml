@@ -4,10 +4,10 @@ slug: cann_gather_pa_kv_cache_32b_floor_tail_drop
 aliases: []
 title: GatherPaKvCache 32B 取整搬运丢尾数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: KV缓存
     stack: 通用
     component: GatherPaKvCache ND kernel
   behavior: ND kernel 把真实搬运字节数除以 32 写入 DataCopyParams.blockLen 但不处理余数：非 32 倍数的 token 搬运量向下取整，余数字节不搬。
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: KV缓存

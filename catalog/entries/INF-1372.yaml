@@ -4,7 +4,7 @@ slug: triton_ascend_vec_bool_ne_scalar_true_folds_all_true
 aliases: []
 title: triton-ascend 向量bool!=真值标量折叠全真
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: b=-4：两种谓词来源同错（各 1536/4096 lanes），错值一律=正确结果+b；b=+4 全对；随机输入错误率约 50% 恰为负数占比；int32/int64/f16/f32 同型。隔离对照：改向量 splat/改 xor 展开式/标量侧假均正确。
+  detail: 含向量bool!=真值标量bool的内核，负除数floor-mod结果系统性偏移一个除数，正除数正确；随机输入错误率约50%，int32/int64/f16/f32计数一致；改向量splat、xor展开或标量侧假均正确。
   visibility: 静默错误
 mitigation:
   detect: 负除数 floor-mod 修正链与 eager torch.remainder 对照（报告含确定性计数复现）
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

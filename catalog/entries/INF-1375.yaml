@@ -4,7 +4,7 @@ slug: triton_ascend_static_rnumel_softmax_miscompile
 aliases: []
 title: triton-ascend 静态 r-numel 致 softmax 误编译
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 带 attn_mask 的 fp16 SDPA 编译结果约 97% 元素错（causal 11919/12288、maxdiff 0.0908；alibi 约 98.1%），确定性 5/5 复现；eager 正确。波及静态 r-numel 的 linearized reduction 内核。
+  detail: triton_experimental 后端 torch.compile 下带 attn_mask 的 fp16 SDPA 约97%元素错、maxdiff 0.0908，确定性复现无报错；eager 正确。静态 r-numel 特化且 R0_BLOCK==rnumel 的线性化归约触发。
   visibility: 静默错误
 mitigation:
   detect: torch.compile(fn) vs eager 逐元素比对（报告含 6 行最小复现）
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

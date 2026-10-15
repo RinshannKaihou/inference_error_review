@@ -4,7 +4,7 @@ slug: csnb_sdc_detection_dense_vs_moe_router
 aliases: []
 title: CSNB 检测 SDC：MoE 路由门仅保留 ABFT 55% 检出率
 kind: 方法
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 硬件
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 多模型规模/批大小/生成长度的受控注入评测：稠密线性层 CSNB≈ABFT；MoE router gate CSNB 检出 55% vs ABFT——router 类小 GEMM 场景 checksum 校验仍必要。检测能力为论文受控实验值，非生产实测。
-  visibility: N/A
+  detail: 多模型规模/批大小/生成长度的受控注入评测：稠密线性层 CSNB≈ABFT；MoE router gate CSNB 检出 55% vs ABFT——router 类小 GEMM 场景 checksum 类校验仍为优选。检测率为论文受控注入实验值。
+  visibility: 静默错误
 mitigation:
   detect: CSNB 校验稠密线性层 + 保留 checksum 校验 MoE router gate（论文建议组合）
   fix: N/A
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-14'
+  audit:
+    round: daily-audit-2026-10-15
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: N/A
+        to: 静默错误
+    rewritten:
+    - detail
