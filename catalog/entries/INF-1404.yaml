@@ -4,13 +4,13 @@ slug: trtllm_grouped_mla_gen_missing_cumseqlens
 aliases: []
 title: TRT-LLM grouped MLA 核缺 cumSeqLens 批>1 错读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 算子/内核
     stack: tensorrt-llm
     component: AttentionOp MLA 生成参数
-  behavior: AttentionOp 填 runner 参数从不设 cumSeqLensQ/Kv 指针；grouped 核读它们并越界读 offsets；当前默认核不读故 main 无症状
+  behavior: AttentionOp 填 runner 参数从不设 cumSeqLensQ/Kv 指针；mSelectsGroupedMla=true 选中 grouped MLA 生成核时读取它们；默认核不读，main 无症状
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 算子/内核
+    rewritten:
+    - behavior

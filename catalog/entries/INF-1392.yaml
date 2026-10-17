@@ -4,13 +4,13 @@ slug: sglang_hybrid_gdn_hicache_host_restore_wrong_output
 aliases: []
 title: SGLang 混合 GDN 模型 HiCache host 恢复后输出静默错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: sglang
     component: HiCache host 层恢复
-  behavior: host 层命中并计满前缀 token、延迟下降，但恢复到 device 的 GDN/KV 状态被当作垃圾上下文消费，输出错误且无任何报错
+  behavior: 混合 GDN 模型在 host 层命中并恢复前缀后，模型输出如同恢复的上下文是垃圾，结果静默错误。
 effect:
   objects:
   - 输出内容
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - effect

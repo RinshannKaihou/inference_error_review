@@ -4,18 +4,18 @@ slug: ttml_acosh_bw_wrong_domain_guard
 aliases: []
 title: ttnn.acosh_bw 域保护检查平方值负射线返回有限错误梯度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: tt-metal
     component: acosh_bw 域保护
-  behavior: 域保护用 ttnn::lt(in_sq,1.0f)（x²<1）而非 lt(input,1.0f)（x<1）：x<-1 整条负射线 in_sq>1 通过保护算出有限梯度；x=-1 落入 [-1,1] 分支返回 ±inf（含 grad=0 时）
+  behavior: acosh_bw反向域保护误用ttnn::lt(in_sq,1.0f)代替ttnn::lt(input,1.0f)，x<-1因x²>1通过保护，x=-1落入[-1,1]内层分支。
 effect:
   objects:
-  - 数值结果
   - 梯度
-  detail: input=-2/grad=1 返回 +0.57735026（PyTorch 为 NaN）；x=-1 且 grad=0 返回 +inf（PyTorch NaN）；(−1,0) 区间本应 NaN 的也返回 inf/有限值
+  - 数值结果
+  detail: 含acosh反向且输入含x<1元素：input=-2/grad=1返回+0.57735026（PyTorch为NaN）；x=-1且grad>=0（含0.0）返回+inf（PyTorch为NaN）；(-1,0)返回inf类结果而非NaN。
   visibility: 静默错误
 mitigation:
   detect: 对含 x<1 输入的 acosh 反向与 PyTorch aten.acosh_backward 对照；未评估
@@ -43,3 +43,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度
+    rewritten:
+    - behavior
+    - detail
+    uncertain:
+    - title

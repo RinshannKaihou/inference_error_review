@@ -4,13 +4,13 @@ slug: op_plugin_index_put_trailing_undefined_indices_fp32
 aliases: []
 title: op-plugin index_put 尾部 undefined 静默错写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: IndexPutKernelNpuOpApi 适配
-  behavior: 实数分支把 undefined 位置填 shape [0] 占位后调 aclnnIndexPutImpl，尾部 None 与 value 广播交互污染写入；fp32 全错、fp64/CPU 正确（根因为报告者假说）
+  behavior: 实数分支对 indices 列表中 undefined 位置填 shape[0] 占位后调用 aclnnIndexPutImpl，float32 且 indices 含尾部 undefined 时静默错写。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

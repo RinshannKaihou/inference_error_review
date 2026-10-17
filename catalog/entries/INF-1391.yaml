@@ -4,15 +4,16 @@ slug: vllm_lightning_attn_prefix_state_decay_off_by_one
 aliases: []
 title: vLLM lightning_attention 前缀历史状态少乘一次衰减
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: vllm
     component: lightning_attn 前缀核
-  behavior: kv 历史项按 c 而非 c+1 步衰减（差 exp(s) 因子），stored-state 贡献系统性偏大，无日志无 NaN
+  behavior: kv 历史项按 c 而非 c+1 步衰减（差 exp(s) 因子），stored-state 贡献偏差
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 输出内容
   detail: MiniMax-Text01/M1、BailingMoeV2.5 线性注意力层 prefill：无 kv_history 时位置 256 起全部 token 输出错；chunked prefill 续存量态时首块即错；HTTP 200 正常返回
@@ -43,3 +44,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果
+    rewritten:
+    - behavior
+    uncertain:
+    - subsystem

@@ -4,13 +4,13 @@ slug: ops_nn_matmulv3_mode4_nan_fill_history_a_tail_uninit
 aliases: []
 title: MatMulV3 mode4 前序 NaN fill 历史污染输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: 通用
     component: MatMulV3 TO_MUL A 尾部
-  behavior: TO_MUL 路径 A 的 K 尾部未初始化，残留前序 NaN fill 写入的值；NaN×0 污染整块归约，FP32 [1,389]@[389,16] 全有限输入输出 16 个 NaN
+  behavior: MatMulV3 mode4 下疑似 TO_MUL 路径 A 的 K 尾部未初始化，NaN×0 污染整块归约。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

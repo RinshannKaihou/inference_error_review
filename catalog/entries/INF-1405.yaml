@@ -4,7 +4,7 @@ slug: ttml_sigmoid_appx_lut_nan_inf
 aliases: []
 title: ttnn 近似 sigmoid LUT 对 ±inf 返回 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

@@ -4,7 +4,7 @@ slug: vllm_ascend_ascendstore_multi_group_load_error_swallowed
 aliases: []
 title: vllm-ascend AscendStore 多 KV 组加载失败不上报
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,8 +13,8 @@ cause:
   behavior: lookup 命中但部分块 batch_get 返回 -704，connector 仅记日志；多组请求不经 get_block_ids_with_load_errors() 上报，scheduler 不知前缀不完整
 effect:
   objects:
-  - 输出内容
   - KV状态
+  - 输出内容
   detail: 多 KV cache 组模型（Kimi-K3 W4A8 内部 checkpoint）decode 继续用无效/未初始化 KV 生成损坏输出；重复同 prompt 可复现，换前缀绕过
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出内容
+        to: KV状态

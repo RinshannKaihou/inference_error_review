@@ -4,10 +4,10 @@ slug: vllm_ascend_fa3_interleaved_kv_page_addressing
 aliases: []
 title: vllm-ascend FA3 按紧密页寻址真实 K/V 交错布局致输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 算子/内核
     stack: vllm
     component: fa3_v1 页寻址
   behavior: FA3 路径按一页间距（131072 元素）寻址，而真实缓存物理布局为 [K0][V0][K1][V1] 交错（stride(0)=262144），K 页号 1 实际读到 V0 区域
@@ -51,3 +51,14 @@ migration:
   - date: '2026-10-16'
     fields:
     - original.notes
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 算子/内核

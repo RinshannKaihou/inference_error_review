@@ -4,17 +4,17 @@ slug: vllm_ascend_mrv2_mamba_kvpool_restore_ordering
 aliases: []
 title: vllm-ascend Mamba KVPool 恢复前缀后输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: vllm
     component: Mamba 状态恢复时序
-  behavior: 非 layerwise 同步路径 preprocess_state() 先复制源状态到运行状态，start_load_kv() 之后才把远端状态恢复到源块，FULL graph 回放消费旧源块内容
+  behavior: 非layerwise同步路径中preprocess_state()先复制源状态到运行状态，start_load_kv()后才恢复远端状态到源块，FULL graph回放可能消费旧源块内容。
 effect:
   objects:
-  - 输出内容
   - KV状态
+  - 输出内容
   detail: 同一 20K token 长请求第二次发送（L2 命中 20,736 token）返回 200 但正文为空、reasoning 重复标点与异常片段，finish_reason=length；冷请求正常
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 输出内容
+        to: KV状态
+    rewritten:
+    - behavior

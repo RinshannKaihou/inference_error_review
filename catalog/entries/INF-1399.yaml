@@ -4,17 +4,17 @@ slug: torchair_autotune_dlclose_icache_hbm_inconsistency
 aliases: []
 title: torchair autotune dlclose 致 icache 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 编译器
     stack: pytorch
     component: autotune 落选 kernel 卸载
-  behavior: autotune 选优后 release(best_key) 立即 dlclose 落选 kernel .so，释放 HBM 代码段可被复用，芯片无 icache 一致性校验，回放执行到旧 icache 内容与新 HBM 代码不一致
+  behavior: autotune选优后，codegen_cpp_wrapper生成的release()立即dlclose落选kernel的.so；HBM代码段释放可复用，芯片无icache一致性校验，HBM与icache不一致时执行行为未定义。
 effect:
   objects:
   - 数值结果
-  detail: autotune 完成后偶发精度异常或 aic error；属概率性静默/延迟可见损坏
+  detail: 使用torchair编译加速的训练或推理任务，autotune选优完成后偶发输出精度异常或aic error；同一代码重跑结果可能不同，取决于dlclose后HBM代码段是否被复用，难以稳定复现；精度异常时无其它告警。
   visibility: 不可复现
 mitigation:
   detect: 复跑观察是否仅在 autotune 后出现；对比关闭 autotune 输出；未评估
@@ -44,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 编译器
+    rewritten:
+    - behavior
+    - detail

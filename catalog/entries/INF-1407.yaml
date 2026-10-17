@@ -4,17 +4,17 @@ slug: flashinfer_plan_pinned_workspace_h2d_race
 aliases: []
 title: flashinfer plan() pinned 缓冲 H2D 竞态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 算子/内核
     stack: flashinfer
     component: plan() pinned workspace
   behavior: plan() 填复用的 pinned int workspace 后 cudaMemcpyAsync 拷出、事后无同步；下一次 plan() 在拷贝执行前覆写 buffer，前次 plan 的 kernel 读撕裂 plan info
 effect:
   objects:
-  - 输出内容
   - 数值结果
+  - 输出内容
   detail: FA2 paged prefill fp16：plan(A)/run(A)/立即 plan(B) 时 run(A) 读到 B 的 plan info，5/5 MISMATCH（max_abs_err 0.10~2.05），偶发 kernel 跑数分钟；--guard（等前次拷贝）5/5 OK
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,24 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 算子/内核
+      effect:
+        from: 输出内容
+        to: 数值结果
+    uncertain:
+    - behavior
+    - detail

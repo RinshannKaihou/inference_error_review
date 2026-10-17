@@ -4,7 +4,7 @@ slug: ops_transformer_li_paged_addr_uint32_overflow
 aliases: []
 title: LI 同族算子分页地址 uint32 回绕大块号读错 K
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -44,3 +44,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-16'
+  audit:
+    round: daily-audit-2026-10-17
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
