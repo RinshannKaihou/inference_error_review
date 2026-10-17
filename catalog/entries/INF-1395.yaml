@@ -39,6 +39,8 @@ original:
   behavior: 在 Ascend950 上对长度 ≥4095 的 fp16 一维张量做 cumsum，结果从进入多核分支（56 核）起就是错的——前缀和数值不满足容差、与 numpy fp32 累加口径比对失败；fp32 输入时结果碰巧正确但同时发生越界写（可破坏同址其它数据）。短输入（≤2048，单核分支）正常。无任何报错，需 mssanitizer memcheck 才能看到越界证据。
   trigger_surface: ops-math cumsum（ascend950 分支）；fp16 最后一维 N≥4095 或 fp32 N≥4097（进入 blockDim=56 多核分支）；axis=0 一维实测；TTK 3.0.0 + mssanitizer 26.2.0 检出
   discovery: 2026-10-16 每日扫描
+  notes:
+  - 2026-10-17 回访 2026-10-17：ops-math#3616 open（10-16 更新），修复 PR 未见；mssanitizer 3324 条越界证据维持。
 migration:
   method: scan
   scanned: '2026-10-16'
@@ -51,3 +53,7 @@ migration:
     panel: []
     rewritten:
     - behavior
+  updates:
+  - date: '2026-10-17'
+    fields:
+    - original.notes

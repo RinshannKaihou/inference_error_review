@@ -41,6 +41,8 @@ original:
   behavior: 使用 torchair 编译加速（inductor autotune，AscendC TopN 选优）的训练或推理任务，在 autotune 选优完成后偶发出现输出精度异常或 aic error 报错；同一代码重跑结果可能不同，问题是否出现取决于 dlclose 后 HBM 代码段是否被复用，难以稳定复现。精度异常时无其它告警。
   trigger_surface: torchair（26.x 线）inductor autotune 路径；落选候选 kernel 的 .so 被立即 dlclose 且其 HBM 代码段随后被复用；Ascend 芯片（无 icache 一致性校验）；训练与推理共有（本库收推理侧影响）
   discovery: 2026-10-16 每日扫描
+  notes:
+  - '2026-10-17 回访 2026-10-17：issue #868 closed（10-15）、修复 PR #3844/#3845 均 merged（10-15T12:13Z）；dlclose 延迟到进程退出的修复已合入 torchair master，发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-10-16'
@@ -58,3 +60,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-10-17'
+    fields:
+    - original.notes

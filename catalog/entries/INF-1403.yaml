@@ -41,6 +41,8 @@ original:
   behavior: GE 图中使用 PadV3(mode='constant', constant_values=0.5) 后接 Conv2D 的模型，编译融合后卷积结果与未融合时不同：填充值被静默换成 0。最小例中输出从 4 变成 0。无报错无警告，仅最终数值错。
   trigger_surface: cann/ops-nn PadConv2dFusionPass；PadV3 constant 模式 FP32 填充值 0<v<1；H/W 维正 padding 且连接 Conv2D；GE 编译期触发（运行期无感知）
   discovery: 2026-10-16 每日扫描
+  notes:
+  - '2026-10-17 回访 2026-10-17：ops-nn#6783 open、修复 PR #12124 open（10-17 更新）；未合入。'
 migration:
   method: scan
   scanned: '2026-10-16'
@@ -57,3 +59,7 @@ migration:
     - glm-5.3
     uncertain:
     - detail
+  updates:
+  - date: '2026-10-17'
+    fields:
+    - original.notes

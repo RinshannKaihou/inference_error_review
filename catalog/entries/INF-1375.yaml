@@ -43,6 +43,7 @@ original:
   discovery: 2026-10-14 每日扫描（NPU 新来源首轮）
   notes:
   - 2026-10-16 回访 2026-10-16：triton-ascend#2531（r-numel 常量特化）仍 open，10-15 08:44Z 有更新（内容未读，gitcode 无评论端点数据）；维持 active
+  - 2026-10-17 回访 2026-10-17：triton-ascend#2531 open（10-15T08:44Z 更新，批次无评论内容可读）；状态无实质变化。
 migration:
   method: scan
   scanned: '2026-10-14'
@@ -64,5 +65,8 @@ migration:
     fields:
     - relations
   - date: '2026-10-16'
+    fields:
+    - original.notes
+  - date: '2026-10-17'
     fields:
     - original.notes
