@@ -4,7 +4,7 @@ slug: vllm_ascend_qwen397b_vscale_partial_import
 aliases: []
 title: vllm-ascend Qwen3.5-397B V-scale 部分导入后损坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -36,6 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1398
+pattern: PAT-INF-0156
 original:
   mechanism: vllm-ascend Qwen3.5-397B-A17B（W8A8C8 / MXFP8 KV，混合 Full Attention + Mamba cache 组）在部分异步 PD 导入后静态 V-scale 损坏：短回复正常，长 GPQA 生成在总上下文 ~1536 token 附近开始连续输出 '!'，MTP 接受率归零（drafted>0 仍生成），HTTP 仍成功。环境：两节点各 8×Ascend 950DT、CANN 9.2.0、torch_npu 2.10.0.post7、vLLM 0.30.0、prefill TP8 eager / decode TP4 DP2 MRv1 FULL_DECODE_ONLY、MTP3、异步调度、前缀缓存、MooncakeConnectorV2。缓存几何：prefill 管理页 1536 token、decode 2560 token，kernel 块 512，每管理页 3/5 个 kernel 块——与 35B 调查（两侧均 2560）不同，几何不可互相替代。K-scale scatter 修复（#19017 已装/#19064 单独跟踪）不解决本 397B 案例；#19016 在本 issue review 期间暂缓合并。候选恢复修复在受测配置消除了损坏（main ced152224a、release f928eec5），最终集成与端到端性能影响未验证。
   source: 2026-10-17 GitHub vllm-project/vllm-ascend issue https://github.com/vllm-project/vllm-ascend/issues/19065 （open；受控诊断环境完整记录+缓存几何表）
@@ -45,3 +46,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  updates:
+  - date: '2026-10-18'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - component

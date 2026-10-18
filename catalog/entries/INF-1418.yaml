@@ -4,7 +4,7 @@ slug: cann_ring_attention_update_dim_check_no_return
 aliases: []
 title: CANN RingAttentionUpdate 维数校验漏 return 放行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - behavior

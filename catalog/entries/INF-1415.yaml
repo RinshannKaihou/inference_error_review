@@ -4,7 +4,7 @@ slug: ttmetal_vllm_gemma4_topk_clamp32
 aliases: []
 title: tt-metal Gemma4 设备采样静默把 top_k 钳到 32
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

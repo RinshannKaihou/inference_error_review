@@ -1,0 +1,316 @@
+{"job": "baseC|INF-1411|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1410|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1411|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1410|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1408|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1412|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1408|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1413|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|INF-1413|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|INF-1409|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1414|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1410|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1411|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1409|kimi-k3", "model": "kimi-k3", "result": null}
+{"job": "baseC|INF-1415|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "baseC|INF-1412|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|INF-1414|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1415|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "baseC|INF-1416|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1416|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1417|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1418|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1417|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1418|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1419|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1412|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|INF-1419|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1416|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1413|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|INF-1418|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1420|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|INF-1421|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1421|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1419|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1422|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1422|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1420|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|INF-1423|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1424|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1423|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1421|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1414|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1417|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "报错"}}
+{"job": "baseC|INF-1422|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1425|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1425|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1426|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1409|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "baseC|INF-1426|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1427|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1424|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseC|INF-1428|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1427|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1428|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1423|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1426|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1425|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1429|kimi-k3", "model": "kimi-k3", "result": null}
+{"job": "baseC|INF-1427|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1428|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1430|kimi-k3", "model": "kimi-k3", "result": null}
+{"job": "baseC|INF-1408|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-1431|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1432|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1415|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "baseC|INF-1431|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1430|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "数值异常"}}
+{"job": "baseC|INF-1420|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "数值异常"}}
+{"job": "baseC|INF-1429|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-1433|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "baseC|INF-1432|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1408|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1431|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1408|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1433|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": null}
+{"job": "baseF|INF-1409|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1430|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "数值异常"}}
+{"job": "baseF|INF-1410|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "上游 NaN 不再向上游传播", "evidence": "排查时 NaN 传播链在这层断掉（原文说的是上游 NaN 向下游的输出被洗成有限值、传播链在此断开，方向与字段相反）"}}]}
+{"job": "baseC|INF-1432|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1409|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "V2 继续输出错误 prompt logprob，V1 命中断言崩溃", "evidence": "V2 model runner（CUDA 默认）HTTP 200 且每个 prompt logprob 错误……；V1 runner……命中 gpu_model_runner.py 的兜底 `assert not self.num_prompt_logprobs`，EngineCore 死亡"}, "detail": {"problem": "mixed", "quote": "echo=true 路由隐式继承同样绕过", "evidence": "隐式设置该值的三条路由同样绕过：/v1/completions echo=true+logprobs=0；/v1/chat/completions echo=true……"}}]}
+{"job": "baseF|INF-1410|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "上游 NaN 不再向上游传播", "evidence": "下游拿到的全是有限值……排查时 NaN 传播链在这层断掉"}}]}
+{"job": "baseF|INF-1412|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1433|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "baseF|INF-1411|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1429|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "质量退化"}}
+{"job": "baseC|INF-1424|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseF|INF-1413|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1414|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1412|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": true, "component": false, "behavior": false, "detail": true}, {"title": {"problem": "missing_condition", "quote": "BFP 输入", "evidence": "谓词只认 Bfp8_b/Bfp4_b；unpacker 接受的其他块浮点输入（Bfp2_b 及 A-exponent 的 Bfp8/Bfp4/Bfp2……）被送进……稠密 MOP"}, "detail": {"problem": "mixed", "quote": "LLK 头文件自己写明 BFP 输入必须走逐 tile 路径", "evidence": "LLK 自己的头注释写明 BFP 输入必须走逐 tile 路径正是为此。"}}]}
+{"job": "baseF|INF-1414|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1413|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "weight_updater 无条件返回 success", "evidence": "load_weights 不汇报跳过名或未加载参数，weight_updater 随后返回 True,'Succeeded to update model weights.'"}}]}
+{"job": "baseF|INF-1415|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1416|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "CPU/NPU 双向拷贝均受影响", "evidence": "测试：新增 test/test_copy_conjugate.py 100 组子用例（complex64/128、conj/mH、共轭源、广播、CPU/NPU 双向、同步/异步、实数源、空张量、内存重叠），基线 wheel 56 组数值断言失败；触发面：torch_npu copy_ + complex64/complex128 + conj()/mH 视图目标；机制在 OpAPI 层"}}]}
+{"job": "baseF|INF-1415|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1411|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "H>32 时每 tile 列裁剪成 H%32", "evidence": "(3) H 超 1 tile 且非倍数：每 tile 列按 H%32 打包，输出行变 ht*(H%32) datum"}}]}
+{"job": "baseF|INF-1417|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1408|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "base 输出被替换为 adapter 输出", "evidence": "base 请求返回的是 adapter 的输出而不是基座模型的输出"}}]}
+{"job": "baseF|INF-1416|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "complex64/128、conj/mH、广播、CPU/NPU 双向拷贝均受影响", "evidence": "测试覆盖 complex64/128、conj/mH、广播、CPU/NPU 双向等场景；基线 wheel 56 组数值断言失败、修复 wheel 全过。触发面为 torch_npu copy_ + complex64/complex128 + conj()/mH 视图目标，910B3 实测，机制在 OpAPI 层。"}}]}
+{"job": "baseF|INF-1414|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1418|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1417|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1418|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1409|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "V2 继续输出错误 prompt logprob，V1 命中断言崩溃", "evidence": "后果按 runner 分裂：V2 model runner（CUDA 默认）HTTP 200 且每个 prompt logprob 错误（偏离数十 nat，响应无任何标记）；V1 runner（VLLM_USE_V2_MODEL_RUNNER=0）命中 gpu_model_runner.py 的兜底 `assert not self.num_prompt_logprobs`，EngineCore 死亡、/health 503 全体客户端受害。"}, "detail": {"problem": "mixed", "quote": "echo=true 路由隐式继承同样绕过", "evidence": "隐式设置该值的三条路由同样绕过：/v1/completions echo=true+logprobs=0；/v1/chat/completions echo=true（top_logprobs 默认 0 被继承为 prompt_logprobs）；/v1/chat/completions 显式 prompt_logprobs=0。"}}]}
+{"job": "baseF|INF-1413|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "weight_updater 无条件返回 success", "evidence": "load_weights 不汇报跳过名或未加载参数，weight_updater 随后返回 True,'Succeeded to update model weights.'"}}]}
+{"job": "baseF|INF-1412|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1420|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "unsupported", "quote": "再与 0/小标量相乘得 NaN", "evidence": "商溢出 ±inf 但 lr_adj·商有限可表示（L1_675 真实 update=-2.36e37 有限，kernel 得 -inf 假溢出）"}, "detail": {"problem": "contradicts", "quote": "真实 update 有限可表示时仍错", "evidence": "var=±inf 且 update 同号真实溢出：±inf-±inf=NaN（L1_295 var=-inf、真实 update=-2.24e43，golden=-inf)"}}]}
+{"job": "baseF|INF-1415|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1421|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1419|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1420|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "contradicts", "quote": "再与 0/小标量相乘得 NaN", "evidence": "lr=0 冻结更新：inf·0=NaN；|lr_adj|<1 收缩商：商溢出 ±inf 但 lr_adj·商有限可表示……kernel 得 -inf 假溢出"}, "detail": {"problem": "missing_condition", "quote": "真实 update 有限可表示时仍错：", "evidence": "(2) |lr_adj|<1 收缩商：商溢出 ±inf 但 lr_adj·商有限可表示……(3) var=±inf 且 update 同号真实溢出：±inf-±inf=NaN……真实 update=-2.24e43，golden=-inf"}}]}
+{"job": "baseF|INF-1421|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1422|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1422|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1423|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1411|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1410|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "NaN 被洗白而非传播", "evidence": "结果：上游 NaN 被洗成貌似合法的有限输出，掩盖上游故障且无法靠 NaN 传播定位。"}}]}
+{"job": "baseF|INF-1423|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1424|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "迟到上报误杀复用块新请求", "evidence": "到期上报按块 ID 命中 C：fail 策略 C 被误杀 FINISHED_ERROR，recompute 策略 C 从 128 回退 64 token 重算（C 从未用过外部 KV）"}}]}
+{"job": "baseF|INF-1416|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "complex64/128、conj/mH、广播、CPU/NPU 双向拷贝均受影响", "evidence": "新增 test/test_copy_conjugate.py 100 组子用例（complex64/128、conj/mH、共轭源、广播、CPU/NPU 双向、同步/异步、实数源、空张量、内存重叠），基线 wheel 56 组数值断言失败、修复 wheel 全过"}}]}
+{"job": "baseF|INF-1425|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1425|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1421|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "合法 shape 下 xPost=2^32 回绕为 0", "evidence": "【行为效应】……乘积回绕为 0，部分输出元素从错误位置读取、数值静默错误"}}]}
+{"job": "baseF|INF-1419|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1422|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "指向向量数学 lowering 路径", "evidence": "提示 simd 向量数学 lowering 路径特定缺陷"}, "detail": {"problem": "overstated", "quote": "block size 2 特有", "evidence": "BLOCK=1 同环境不复现"}}]}
+{"job": "baseF|INF-1418|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "漏写 return ACLNN_ERR_PARAM_INVALID", "evidence": "漏写 return：if (paShape.GetDimNum()!=3 || caShape.GetDimNum()!=3) { OP_LOGE(...); } 打日志后继续执行"}}]}
+{"job": "baseF|INF-1427|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1426|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "无 dim 场景返回标量 0.0", "evidence": "场景 A（无 dim + numel==0）NPU 8.5 静默返回标量 0.0，CPU/CUDA 抛 RuntimeError（NPU 9.1 经 PR !4922 已修复为报错）"}}]}
+{"job": "baseF|INF-1424|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "坏块经前缀缓存复用；迟到上报误杀复用块新请求", "evidence": "【行为效应】后续相同前缀的请求会命中这些从未成功加载的块，直接 decode 出损坏输出，无报错；另一种形态是失败报告迟到时块已被重新分配给别的无关请求，那个无辜请求会被误判失败"}}]}
+{"job": "baseF|INF-1428|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1427|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1426|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "空 tensor（numel==0）或带 dim 归约遇 size=0 维度时不报错", "evidence": "场景 A（无 dim + numel==0）NPU 8.5 静默返回标量 0.0……NPU 9.1 经 PR !4922 已修复为报错；场景 C……NPU 8.5 与 9.1 均静默返回 values 全 0 + indices 全 0"}}]}
+{"job": "baseF|INF-1429|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1428|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1429|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1419|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "需全端同升+新 cache_salt", "evidence": "需全端一起升级并用新 cache 命名空间/cache_salt 或使受影响条目失效"}}]}
+{"job": "baseF|INF-1430|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1425|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "单 rank 通信下数据写到错误下标（如应写下标 3、4 实写 0、1）或读错片段", "evidence": "在单卡（单 rank）进程里调用 AllGatherV/ReduceScatterV/AlltoAllV 且 displacement 非零时，数据被拷到错误的缓冲区位置：该出现在下标 3、4 的元素出现在 0、1，或读取了错误的数据片段"}}]}
+{"job": "baseF|INF-1431|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1430|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "unsupported", "quote": "相邻缓存", "evidence": "模型中表现为无关缓存权重变 NaN"}}]}
+{"job": "baseF|INF-1417|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1432|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1431|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1432|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "unsupported", "quote": "masked store lowering", "evidence": "triton-ascend + masked vector store（每请求标量映射形态）"}}]}
+{"job": "baseF|INF-1433|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1420|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "contradicts", "quote": "再与 0/小标量相乘得 NaN", "evidence": "|lr_adj|<1 收缩商：商溢出 ±inf 但 lr_adj·商有限可表示（L1_675 真实 update=-2.36e37 有限，kernel 得 -inf 假溢出）"}, "detail": {"problem": "contradicts", "quote": "真实 update 有限可表示时仍错", "evidence": "var=±inf 且 update 同号真实溢出：±inf-±inf=NaN（L1_295 var=-inf、真实 update=-2.24e43，golden=-inf，kernel=NaN）"}}]}
+{"job": "baseF|INF-1426|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "空 tensor（numel==0）或带 dim 归约遇 size=0 维度时不报错：无 dim 场景返回标量 0.0", "evidence": "场景 A（无 dim + numel==0）NPU 8.5 静默返回标量 0.0，CPU/CUDA 抛 RuntimeError（NPU 9.1 经 PR !4922 已修复为报错）"}}]}
+{"job": "baseF|INF-1428|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1433|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1427|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1432|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1431|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1430|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "DSA-CP 使", "evidence": "A3 上跑 GLM-5.3-Flash 类带 KPool 索引器 + DSA-CP + MTP + graph 的配置时，一旦某 DP 分片出现非空 query 但空 pooled history"}}]}
+{"job": "baseF|INF-1423|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "accurate bf16 exp 的 replay 体（20-22 条）", "evidence": "Wormhole accurate bf16 exp（ckernel_sfpu_exp.h _sfpu_exp_21f_bf16_tti_）整个循环体 20-22 条录在槽 0 起且到 16..19（SFPSETEXP/SFP_STOCH_RND/SFPSTORE/INCRWC 替换前 4 条 MVMUL），此后每个 matmul/reduce tile 重放被污染程序、静默错（Blackhole 副本录 16 条恰好放下）"}}]}
+{"job": "baseF|INF-1433|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1429|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": true, "behavior": true, "detail": false}, {"component": {"problem": "unsupported", "quote": "C8 静态 V-scale 生命周期", "evidence": "静态 V-scale 损坏"}, "behavior": {"problem": "unsupported", "quote": "静态 V-scale 恢复不完整", "evidence": "在部分异步 PD 导入后静态 V-scale 损坏"}}]}
+{"job": "baseF|INF-1424|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "坏块经前缀缓存复用", "evidence": "从未加载成功的块留在前缀缓存，后续同前缀请求命中并从坏 KV decode"}}]}
+{"job": "panelC|INF-1408|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1410|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1410|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1411|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1410|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1411|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1411|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1408|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1410|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1411|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1412|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1409|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "解码/采样", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "panelC|INF-1409|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": null}
+{"job": "panelC|INF-1412|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1408|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1413|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|INF-1408|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1417|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1409|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "panelC|INF-1412|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|INF-1413|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|INF-1417|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1413|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|INF-1412|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1413|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "权重/检查点", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "panelC|INF-1419|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1418|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1420|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1417|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1419|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1418|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1421|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1419|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1421|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1421|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1418|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1422|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1422|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1422|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1421|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1418|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1420|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "优化器", "effect": "模型权重", "visibility": "数值异常"}}
+{"job": "panelC|INF-1419|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1423|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1425|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1423|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1423|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1425|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1422|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1425|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1429|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1423|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1420|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|INF-1425|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "集合通信", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1429|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "量化", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-1432|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1432|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1432|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1433|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "隐状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1430|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|INF-1430|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "数值异常"}}
+{"job": "panelC|INF-1432|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1430|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "数值异常"}}
+{"job": "panelC|INF-1420|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "panelC|INF-1417|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "运行时/执行", "effect": "数值结果", "visibility": "报错"}}
+{"job": "panelC|INF-1429|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-1433|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "panelC|INF-1429|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "量化", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelF|INF-1408|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "base 输出被替换为 adapter 输出", "evidence": "base 被服务成随机 adapter 的乱码输出"}}]}
+{"job": "panelF|INF-1409|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "echo=true 路由隐式继承同样绕过", "evidence": "隐式设置该值的三条路由同样绕过：/v1/completions echo=true+logprobs=0；/v1/chat/completions echo=true（top_logprobs 默认 0 被继承为 prompt_logprobs）；/v1/chat/completions 显式 prompt_logprobs=0"}}]}
+{"job": "panelC|INF-1433|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "并行切分", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-1433|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": {"kind": "故障", "subsystem": "MoE路由", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "panelF|INF-1410|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1408|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "base 输出被替换为 adapter 输出", "evidence": "【行为效应】启动 vLLM CPU 后端 --enable-lora 并在同一时刻混合发送 base 请求与 LoRA 请求时，base 请求返回的是 adapter 的输出而不是基座模型的输出"}}]}
+{"job": "panelF|INF-1409|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "V2 继续输出错误 prompt logprob，V1 命中断言崩溃", "evidence": "后果按 runner 分裂：V2 model runner（CUDA 默认）HTTP 200 且每个 prompt logprob 错误（偏离数十 nat，响应无任何标记）；V1 runner（VLLM_USE_V2_MODEL_RUNNER=0）命中 gpu_model_runner.py 的兜底 `assert not self.num_prompt_logprobs`，EngineCore 死亡、/health 503 全体客户端受害。"}, "detail": {"problem": "mixed", "quote": "echo=true 路由隐式继承同样绕过", "evidence": "隐式设置该值的三条路由同样绕过：/v1/completions echo=true+logprobs=0；/v1/chat/completions echo=true（top_logprobs 默认 0 被继承为 prompt_logprobs）；/v1/chat/completions 显式 prompt_logprobs=0。"}}]}
+{"job": "panelF|INF-1408|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1410|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "上游 NaN 不再向上游传播", "evidence": "任何 NaN 输入都不会以 NaN 形式出现在输出里；下游拿到的全是有限值；排查时 NaN 传播链在这层断掉"}}]}
+{"job": "panelF|INF-1410|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "NaN 被洗白而非传播", "evidence": "上游 NaN 被洗成貌似合法的有限输出，掩盖上游故障且无法靠 NaN 传播定位"}, "detail": {"problem": "mixed", "quote": "softcap/situ_glu/logit_softcap 同路径", "evidence": "同路径的 softcap、situ_glu、logit_softcap 一并受影响"}}]}
+{"job": "panelF|INF-1409|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "V2 继续输出错误 prompt logprob，V1 命中断言崩溃", "evidence": "后果按 runner 分裂：V2 model runner（CUDA 默认）HTTP 200 且每个 prompt logprob 错误（偏离数十 nat，响应无任何标记）；V1 runner（VLLM_USE_V2_MODEL_RUNNER=0）命中 gpu_model_runner.py 的兜底 `assert not self.num_prompt_logprobs`，EngineCore 死亡、/health 503 全体客户端受害。"}}]}
+{"job": "panelF|INF-1411|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1409|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "调度/服务", "effect": "输出分布", "visibility": "静默错误"}}
+{"job": "panelF|INF-1412|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1411|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1413|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1430|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "模型权重", "visibility": "数值异常"}}
+{"job": "panelF|INF-1409|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "V2 继续输出错误 prompt logprob，V1 命中断言崩溃", "evidence": "原文将这部分明确归为后果而非原因：“后果按 runner 分裂：V2 model runner（CUDA 默认）HTTP 200 且每个 prompt logprob 错误（偏离数十 nat，响应无任何标记）；V1 runner（VLLM_USE_V2_MODEL_RUNNER=0）命中 gpu_model_runner.py 的兜底 `assert not self.num_prompt_logprobs`，EngineCore 死亡、/health 503 全体客户端受害”（【行为效应】同此），该后果内容已在 detail 中展开，behavior 应只保留原因行为（守卫仅检查 truth"}}]}
+{"job": "panelF|INF-1417|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1412|hy3", "model": "hy3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "tt-metal fast_untilize BFP 输入错走稠密路径", "evidence": "用只认 Bfp8_b/Bfp4_b 的谓词分流；unpacker 接受的其他块浮点输入（Bfp2_b 及 A-exponent 的 Bfp8/Bfp4/Bfp2，均为合法 CB 格式）被送进从单一基址步进 face、无法跳过每 tile 64 字节指数段的稠密 MOP"}}]}
+{"job": "panelF|INF-1413|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1408|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "base 输出被替换为 adapter 输出", "evidence": "base 请求返回的是 adapter 的输出而不是基座模型的输出"}}]}
+{"job": "panelF|INF-1412|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "tt-metal fast_untilize BFP 输入错走稠密路径", "evidence": "原文机制：'用只认 Bfp8_b/Bfp4_b 的谓词分流；unpacker 接受的其他块浮点输入（Bfp2_b 及 A-exponent 的 Bfp8/Bfp4/Bfp2，均为合法 CB 格式）被送进...稠密 MOP'；触发面：'Blackhole fast_untilize + Bfp2_b/A-exponent BFP 格式 + ≥2 tile'。标题未限定 Blackhole 及仅限部分 BFP 格式，范围变宽。"}}]}
+{"job": "panelF|INF-1413|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "missing_condition", "quote": "load_weights 未知名回退分支", "evidence": "Qwen3_5ForConditionalGeneration.load_weights（python/sglang/srt/models/qwen3_5.py:2391，main a50c17e979）回退分支（:2463-2474）"}}]}
+{"job": "panelF|INF-1410|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1418|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1419|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1417|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1411|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1418|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "ACLNN_ERR_PARAM_INVALID", "evidence": "原文：'漏写 return：if (paShape.GetDimNum()!=3 || caShape.GetDimNum()!=3) { OP_LOGE(...); } 打日志后继续执行' 及 '同函数其余检查（layout/softmax 尾维/dtype/headNum/headDim）均正确返回 161002'，未提及 ACLNN_ERR_PARAM_INVALID"}}]}
+{"job": "panelF|INF-1413|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1417|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1420|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "0/小标量相乘得 NaN", "evidence": "(2) |lr_adj|<1 收缩商：商溢出 ±inf 但 lr_adj·商有限可表示（L1_675 真实 update=-2.36e37 有限，kernel 得 -inf 假溢出）——此处 kernel 得 -inf 假溢出而非 NaN"}}]}
+{"job": "panelF|INF-1418|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "ACLNN_ERR_PARAM_INVALID", "evidence": "同函数其余检查（layout/softmax 尾维/dtype/headNum/headDim）均正确返回 161002"}}]}
+{"job": "panelF|INF-1419|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1421|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1421|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1419|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1421|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1420|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "再与 0/小标量相乘得 NaN", "evidence": "(2) |lr_adj|<1 收缩商：商溢出 ±inf 但 lr_adj·商有限可表示（L1_675 真实 update=-2.36e37 有限，kernel 得 -inf 假溢出）"}}]}
+{"job": "panelF|INF-1418|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1422|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "Ascend 得 1", "evidence": "返回 1.0"}}]}
+{"job": "panelF|INF-1419|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "块跨步传输丢尾部物理槽", "evidence": "原文触发面：AscendStore 非 layerwise 传输 + 块跨步缩放 MLA 缓存 + kernel 块比>1；机制：vllm-ascend 非 layerwise AscendStore KVPool 传输可损坏缩放块跨步 MLA 缓存...漏掉每逻辑块最后 5 个物理槽（640 token）"}}]}
+{"job": "panelF|INF-1423|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1422|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1421|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1425|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1422|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1420|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "contradicts", "quote": "再与 0/小标量相乘得 NaN", "evidence": "原文：(1) lr=0 冻结更新：inf·0=NaN；(2) |lr_adj|<1 收缩商：商溢出 ±inf 但 lr_adj·商有限可表示（L1_675 真实 update=-2.36e37 有限，kernel 得 -inf 假溢出）"}}]}
+{"job": "panelF|INF-1412|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1423|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "accurate bf16 exp 的 replay 体（20-22 条）", "evidence": "(1) Wormhole accurate bf16 exp（ckernel_sfpu_exp.h _sfpu_exp_21f_bf16_tti_）整个循环体 20-22 条录在槽 0 起且到 16..19（SFPSETEXP/SFP_STOCH_RND/SFPSTORE/INCRWC 替换前 4 条 MVMUL），此后每个 matmul/reduce tile 重放被污染程序、静默错（Blackhole 副本录 16 条恰好放下）。"}}]}
+{"job": "panelF|INF-1423|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "accurate bf16 exp 的 replay 体（20-22 条）", "evidence": "（1）Wormhole accurate bf16 exp（ckernel_sfpu_exp.h _sfpu_exp_21f_bf16_tti_）整个循环体 20-22 条录在槽 0 起且到 16..19……（Blackhole 副本录 16 条恰好放下）"}}]}
+{"job": "panelF|INF-1425|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1425|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "单 rank 通信下数据写到错误下标（如应写下标 3、4 实写 0、1）或读错片段", "evidence": "在单卡（单 rank）进程里调用 AllGatherV/ReduceScatterV/AlltoAllV 且 displacement 非零时，数据被拷到错误的缓冲区位置：该出现在下标 3、4 的元素出现在 0、1，或读取了错误的数据片段"}}]}
+{"job": "panelF|INF-1425|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "单 rank 通信下数据写到错误下标（如应写下标 3、4 实写 0、1）或读错片段；缓冲区容量足够时拷贝成功不报错，结果不符算子语义", "evidence": "在单卡（单 rank）进程里调用 AllGatherV/ReduceScatterV/AlltoAllV 且 displacement 非零时，数据被拷到错误的缓冲区位置：该出现在下标 3、4 的元素出现在 0、1，或读取了错误的数据片段。调用正常返回、无报错，缓冲区不越界（容量足够时），但接收缓冲内容不符合算子语义"}}]}
+{"job": "panelF|INF-1429|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": true, "behavior": false, "detail": true}, {"component": {"problem": "unsupported", "quote": "生命周期", "evidence": "原文未出现'生命周期'一词，仅描述'静态 V-scale 损坏'，新增了'生命周期'概念"}, "detail": {"problem": "overstated", "quote": "看似正常", "evidence": "原文为'短回复正常'，结构化字段加入'看似'将确定性陈述变为不确定表述"}}]}
+{"job": "panelF|INF-1429|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1423|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1422|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "block size 2 特有", "evidence": "BLOCK=1 同环境不复现；block 大小 1 时正确"}}]}
+{"job": "panelF|INF-1432|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "unsupported", "quote": "masked store lowering", "evidence": "原文未指明是 lowering 阶段问题，仅描述为 triton-ascend 上带 mask 的向量 store 的行为异常"}}]}
+{"job": "panelF|INF-1430|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1430|hy3", "model": "hy3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "DSA-CP 使本地分片有 query 但无已完成 pooled key 时", "evidence": "GLM KPool（DSA context parallel）本地分片有 query 但无已完成 pooled key 时"}}]}
+{"job": "panelF|INF-1430|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "unsupported", "quote": "DSA-CP 使本地分片有 query 但无已完成 pooled key 时", "evidence": "GLM KPool（DSA context parallel）本地分片有 query 但无已完成 pooled key 时"}}]}
+{"job": "panelF|INF-1417|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1433|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1429|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": true, "behavior": true, "detail": false}, {"component": {"problem": "unsupported", "quote": "生命周期", "evidence": "静态 V-scale 损坏"}, "behavior": {"problem": "unsupported", "quote": "静态 V-scale 恢复不完整", "evidence": "在部分异步 PD 导入后静态 V-scale 损坏"}}]}
+{"job": "panelF|INF-1430|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1432|hy3", "model": "hy3", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "unsupported", "quote": "lowering", "evidence": "原文：triton-ascend上带 mask 的向量 store 写每请求标量时，部分合法输出槽位未被写入（未提及 lowering）"}}]}
+{"job": "panelF|INF-1432|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "unsupported", "quote": "masked store lowering", "evidence": "triton-ascend + masked vector store（每请求标量映射形态）；vLLM DFlash speculator 实际路径"}}]}
+{"job": "panelF|INF-1433|hy3", "model": "hy3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "DP>1 MoE-LoRA", "evidence": "DP>1 无 EP 时 MoE 层按 dp·tp 展平张量并行：...每个副本的专家分片把本副本 slot 的 LoRA delta...施加到全部 gathered token"}}]}
+{"job": "panelF|INF-1432|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": false, "component": true, "behavior": false, "detail": false}, {"component": {"problem": "unsupported", "quote": "masked store lowering", "evidence": "带 mask 的向量 store 写每请求标量时，部分合法输出槽位未被写入：输出保留初始化哨兵 -777 而非期望的请求状态索引；把该 mapping store 换成标量循环后同一测试全部通过"}}]}
+{"job": "panelF|INF-1433|glm-5.3", "model": "glm-5.3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "vLLM DP>1 MoE-LoRA 以本机 LoRA 态算全部 token", "evidence": "【触发面】DP>1 + 无 EP + MoE expert-LoRA（FusedMoEWithLoRA）+ 副本间 LoRA 态不同步；v0.28.0 起（原文机制亦明确\"DP>1 无 EP 时\"，标题漏掉\"无 EP\"使触发条件变宽到所有 DP>1 场景）"}}]}
+{"job": "panelF|INF-1429|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-1433|deepseek-v4-pro", "model": "deepseek-v4-pro", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "vLLM DP>1 MoE-LoRA", "evidence": "DP>1 无 EP 时 MoE 层按 dp·tp 展平张量并行"}}]}
+{"job": "panelF|INF-1420|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "contradicts", "quote": "再与 0/小标量相乘得 NaN", "evidence": "|lr_adj|<1 收缩商：商溢出 ±inf 但 lr_adj·商有限可表示（L1_675 真实 update=-2.36e37 有限，kernel 得 -inf 假溢出）；行为效应亦载'学习率小于 1 时真实更新量有限却算出 ±inf 假溢出'——小标量相乘结果是 ±inf 假溢出而非 NaN"}, "detail": {"problem": "contradicts", "quote": "真实 update 有限可表示时仍错", "evidence": "var=±inf 且 update 同号真实溢出：±inf-±inf=NaN（L1_295 var=-inf、真实 update=-2.24e43，golden=-inf，kernel=NaN）——情形(3)原文明确为'真实溢出'（-2.24e43 远超 FLT_MAX，并非有限可表示），该总起句将其与(1)(2)假溢出情形混同"}}]}
+{"job": "panelF|INF-1411|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "mixed", "quote": "WH 按字节宽打包、BH 16B 向下取整（4 bf16 datum 每行步进 0，32 行全叠同 16 字节；12 datum 步进 16 覆盖前行尾部）", "evidence": "【机制】段：WH 按字节宽打包、BH 按 16 字节向下取整（per-row L1 advance 以 16B 为单位且每行从目的地址重启：4 bf16 datum advance 0，32 行全落同 16 字节；12 datum advance 16，每行覆盖前行尾部）——此为原因/机制内容，behavior 已概括为“打包步进/读取错”，detail（影响详情）中重复展开原因而非影响"}}]}
+{"job": "fix|INF-1416", "model": "qwen3.8-max", "result": {"detail": "把 9+3j 写入 base.conj() 后底层存 9+3j（应存 9-3j），视图逻辑值与源不一致；触发于 torch_npu copy_ 以 complex64/complex128 的 conj()/mH 视图为目标，910B3 实测。"}}
+{"job": "fix|INF-1409", "model": "qwen3.8-max", "result": null}
+{"job": "fix|INF-1432", "model": "qwen3.8-max", "result": {"component": "masked vector store"}}
+{"job": "fix|INF-1424", "model": "qwen3.8-max", "result": {"behavior": "KV 加载失效上报迟到处理；_handle_invalid_blocks 只扫 running 与 kv_holding_waiting；abort/抢占释放块且 hash 保留时不执行 evict，迟到失效上报按物理块 ID 找请求。"}}
+{"job": "fix|INF-1426", "model": "qwen3.8-max", "result": {"behavior": "max/min空输入不校验：无dim且numel==0时8.5静默返回0.0（9.1报错）；带dim且size(dim)==0时8.5/9.1均静默返回values、indices全0；CPU/CUDA报错。"}}
+{"job": "fix|INF-1420", "model": "qwen3.8-max", "result": {"behavior": "固定先除后乘：m 达 ±FLT_MAX、v+ε 低至 ε 时商在 FP32 溢出为 ±inf；lr=0 时 inf·0 得 NaN，|lr_adj|<1 时得 ±inf 假溢出，与同号 ±inf var 相减得 NaN。"}}
+{"job": "verify|INF-1416|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1432|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "eager 与 graph capture 均失败（非 replay 特有）", "evidence": "eager 执行即失败（先测 eager 再捕获 graph，非 graph replay 特有；graph 用 relaxed 模式仅作诊断条件）"}}]}
+{"job": "verify|INF-1426|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1432|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1420|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1424|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1426|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1416|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1424|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-1420|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "missing_condition", "quote": "真实 update 有限可表示时仍错", "evidence": "（3）var=±inf 且 update 同号真实溢出：±inf-±inf=NaN（L1_295 var=-inf、真实 update=-2.24e43，golden=-inf，kernel=NaN）"}}]}

@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1433 条；状态：active 1407、pending_audit 26
+共 1433 条；状态：active 1433
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -4011,7 +4011,7 @@
 
 ### INF-1410 `ttmetal_bf16_tanh_nan_laundering` tt-metal bf16 tanh 把 NaN 输入洗成 ±1.0
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / tt-metal / 多项式 bf16 tanh clamp 路径
 - **原因行为**：多项式 tanh 的 clamp 把非有限输入（NaN/±Inf）映射到 ±1.0：正 NaN→1.0、负 NaN→-1.0、±Inf→±1，NaN 被洗白而非传播
@@ -4022,7 +4022,7 @@
 
 ### INF-1411 `ttmetal_transpose_narrow_row_wrong_data` tt-metal 分片行主序 transpose 窄行形状静默错
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / tt-metal / narrow-row pack_untilize
 - **原因行为**：输入高度非 tile 整数倍时用窄行 pack_untilize 打包 H%32 个 datum/行，但行字节宽非 16B 对齐、行宽 17-31、H 超 1 tile、W%32 残余四类形状下打包步进/读取错
@@ -4033,7 +4033,7 @@
 
 ### INF-1412 `ttmetal_fast_untilize_bfp_dense_route` tt-metal fast_untilize BFP 输入错走稠密路径
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / tt-metal / fast_untilize unpack 路径判定
 - **原因行为**：稠密/逐 tile BFP MOP 分流谓词只识别 Bfp8_b 与 Bfp4_b，Bfp2_b 及 A-exponent Bfp8/4/2 全部被路由到不能跳过 64B 指数段的稠密 MOP
@@ -4044,7 +4044,7 @@
 
 ### INF-1414 `flashinfer_ragged_attention_q_stride_dropped` FlashInfer ragged attention 忽略 query 步长
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / flashinfer / launcher Q 步长传递
 - **原因行为**：launcher 从张量取 kStride/vStride 但从不设置 qStrideTokens/qStrideHeads，kernel 把非连续 Q 当 packed [tokens,heads,dim] 读取
@@ -4055,18 +4055,18 @@
 
 ### INF-1416 `torchnpu_copy_conj_view_unconjugated` TorchNPU copy_ 写共轭视图不取共轭
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / pytorch / OpAPI copy_ 共轭目标处理
 - **原因行为**：对 complex 张量的 conj()/mH 视图调用 copy_ 时目标共轭位未处理：源逻辑值被原样写入底层存储，而读取该视图应得到共轭值
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：把 9+3j 写入 base.conj() 后底层存 9+3j（应存 9-3j），视图逻辑值与源不一致；complex64/128、conj/mH、广播、CPU/NPU 双向拷贝均受影响
+- **影响详情**：把 9+3j 写入 base.conj() 后底层存 9+3j（应存 9-3j），视图逻辑值与源不一致；触发于 torch_npu copy_ 以 complex64/complex128 的 conj()/mH 视图为目标，910B3 实测。
 - **改进措施**：检测 copy_ 到 conj 视图后检查底层存储字节与源共轭对照；修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/48132 （open）：取清除共轭位的共享存储视图、源逻辑值共轭解析后走既有 copy 路径；基线 56/100 子用例断言失败、修复后全过（910B3 实测，未合入）
 - **来源**：https://gitcode.com/Ascend/pytorch/merge_requests/48132；https://gitcode.com/Ascend/pytorch/issues/5458
 
 ### INF-1418 `cann_ring_attention_update_dim_check_no_return` CANN RingAttentionUpdate 维数校验漏 return 放行
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / 通用 / AnalysisAxis 维数校验
 - **原因行为**：prevAttnOut/curAttnOut 维数校验分支打日志后漏写 return ACLNN_ERR_PARAM_INVALID（V1/V2 共用），全文件仅此处校验 attnOut 维数、无上游兜底
@@ -4077,10 +4077,10 @@
 
 ### INF-1420 `cann_adamax_fp32_intermediate_overflow_nan` CANN InplaceApplyAdaMax FP32 中间量溢出产 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / 通用 / AdaMaxVF 先除后乘次序
-- **原因行为**：u=(m/(v+ε))·lr_adj 固定先除后乘：m 达 ±FLT_MAX、v+ε 低至 1e-6 量级时商在 FP32 域溢出为 ±inf，再与 0/小标量相乘得 NaN、或与 ±inf 的 var 相减得 NaN
+- **原因行为**：固定先除后乘：m 达 ±FLT_MAX、v+ε 低至 ε 时商在 FP32 溢出为 ±inf；lr=0 时 inf·0 得 NaN，|lr_adj|<1 时得 ±inf 假溢出，与同号 ±inf var 相减得 NaN。
 - **影响对象**：数值结果（数值异常）
 - **影响详情**：真实 update 有限可表示时仍错：lr=0 冻结更新返回 NaN 而非 var 原值（golden -3.89e-4 vs NaN）；|lr_adj|<1 收缩商得 -inf 假溢出（真实 -2.36e37）；var=±inf 同号 update 得 NaN
 - **改进措施**：检测 kernel_l1 mixed 极端值用例（L1_528/252/1137/295/675 形态）FP64 golden 对账；修复 issue 附修复：标量 |lr_adj|<=1 先乘后除；>1 保持先除后乘；NaN 修复 varNew=NaN 且 m_out 有限时 varNew=var。5/5 修复 PASS + 23/23 防复发用例，状态未核实
@@ -4088,7 +4088,7 @@
 
 ### INF-1421 `opsnn_gather_elements_v3_uint32_post_overflow` CANN GatherElementsV3 乘积 uint32 溢出回绕
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / 通用 / Host tiling 展平乘积 uint32
 - **原因行为**：Host tiling 把展平维度乘积直接写入 uint32_t，Kernel 也用 32 位元素偏移访问 x：合法 shape 下 xPost=2^32 回绕为 0
@@ -4099,7 +4099,7 @@
 
 ### INF-1423 `ttmetal_sfpu_replay_buffer_cross_talk` tt-metal SFPU replay 体溢出覆写 FPU MOP 槽
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / tt-metal / SFPU replay buffer 槽位划分
 - **原因行为**：accurate bf16 exp 的 replay 体（20-22 条）与 dequant 体（槽 15..19）越过 SFPU/FPU 分界槽 16，覆写 matmul/reduce 录制的 MOP 体；后续 tile 重放被污染程序
@@ -4110,10 +4110,10 @@
 
 ### INF-1426 `opplugin_max_min_empty_dim_allzero` op-plugin max/min 空 tensor 静默返回全 0
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / pytorch / Max/Min 空输入校验
-- **原因行为**：空 tensor（numel==0）或带 dim 归约遇 size=0 维度时不报错：无 dim 场景返回标量 0.0，带 dim 场景返回 values 全 0 + indices 全 0；CPU/CUDA 均抛 RuntimeError
+- **原因行为**：max/min空输入不校验：无dim且numel==0时8.5静默返回0.0（9.1报错）；带dim且size(dim)==0时8.5/9.1均静默返回values、indices全0；CPU/CUDA报错。
 - **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：错误值 0.0 与全 0 索引流向下游：阈值/边界判断误判、gather/index_select 全指向位置 0；上游空输入缺陷（如动态 batching seq_len=0）被掩盖而非暴露；8.5 与 9.1 均未修带 dim 场景
 - **改进措施**：检测 空 tensor/size=0 维度上对照 CPU 行为；修复 部分修复：PR !4922 仅覆盖无 dim + numel==0（9.1 dev 生效，8.5 未生效）；带 dim 归约 size=0 维度两版本均未覆盖
@@ -4121,7 +4121,7 @@
 
 ### INF-1427 `cann_rms_norm_bf16_as_int16_aicore920` CANN rms_norm 宏漏 920 排除，bf16 按 int16 处理
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / 通用 / bfloat16_t 条件宏
 - **原因行为**：条件宏缺少 __CCE_AICORE__ != 920 排除：Ascend960（920）上宏被激活，bfloat16_t 重定义为 int16_t，bf16 数据按整型解释参与 rms_norm 计算
@@ -4132,7 +4132,7 @@
 
 ### INF-1428 `cann_swin_ln_qkv_epsilon_not_passed` CANN SwinLnQKV epsilon 硬编码 1e-5
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：算子/内核 / 通用 / epsilon 属性未传入 kernel
 - **原因行为**：算子定义可选 epsilon（默认 1e-7），Host tiling 不读该属性、tiling 数据无 epsilon 字段，Device kernel 固定用 1e-5
@@ -4698,7 +4698,7 @@
 
 ### INF-1422 `triton_ascend_floor_cos_block2_wrong` triton-ascend floor(cos) BLOCK=2 返回 1.0
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：编译器 / triton / simd 向量数学 lowering
 - **原因行为**：两元素 BLOCK 的 tl.floor(tl.cos(x)) 对小非零 fp32 输入（-3.47e-4）返回 1.0，torch 参考 0.0；BLOCK=1 不复现，指向向量数学 lowering 路径
@@ -4709,7 +4709,7 @@
 
 ### INF-1431 `torchnpu_te_backend_view_copy_dce` TorchNPU TE 后端物化 view 原语致 copy_ 被 DCE 丢弃
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：编译器 / pytorch / triton_experimental 注册表
 - **原因行为**：_register_npu_inductor_fallbacks 对不在名单的 lowering 一律 make_fallback，view/as_strided/diagonal 等 9 个纯布局原语被物化为 extern 临时量
@@ -4720,9 +4720,9 @@
 
 ### INF-1432 `triton_ascend_masked_store_slots_unwritten` triton-ascend masked store 漏写有效输出槽位
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
-- **原因对象**：编译器 / triton / masked store lowering
+- **原因对象**：编译器 / triton / masked vector store
 - **原因行为**：带 mask 的向量 tl.store 对每请求标量映射只写部分合法输出槽位：输出保留初始化哨兵值 -777 而非请求状态索引；同测试标量循环写法通过
 - **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：vLLM DFlash _prepare_dflash_inputs_kernel 映射写出错；eager 与 graph capture 均失败（非 replay 特有）；独立复现器无 vLLM 依赖
@@ -5538,7 +5538,7 @@
 
 ### INF-1417 `cann_ge_eager_dynamic_shape_output_realloc_missing` CANN GE 动态 shape 增大时输出缓冲不重分配越界写
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：运行时/执行 / 通用 / MallocOutputTensor 复用判据
 - **原因行为**：输出内存复用仅判 GetSize()>0：动态 shape 下每轮调用时 shape 增大仍复用旧缓冲，kernel 向过小缓冲越界写；TensorData::Free 不重置 size_ 还会把已释放内存误判可复用
@@ -5698,7 +5698,7 @@
 
 ### INF-1425 `hccl_single_rank_v_op_displacement_dropped` HCCL 单 rank V 算子忽略 displacement 错位读写
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：集合通信 / 通用 / SingleRankProc 本地拷贝分支
 - **原因行为**：AllGatherV/ReduceScatterV/AlltoAllV 退化为单 rank 本地拷贝时只按 count 计算长度，直接用原始地址，未按 recvDispls/sendDispls 调整源/目的地址
@@ -5824,7 +5824,7 @@
 
 ### INF-1433 `vllm_dp_moe_lora_cross_replica_state` vLLM DP>1 MoE-LoRA 以本机 LoRA 态算全部 token
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：并行切分 / vllm / naive DP prepare 映射收集
 - **原因行为**：DP>1 无 EP 时 token 与 LoRA-slot 映射一起 all-gather，但 MoE-LoRA kernel 决策与 slot 表保持 rank 本地，各副本把本机 LoRA delta 施加到所有 token
@@ -9126,7 +9126,7 @@
 
 ### INF-1419 `vllm_ascend_strided_bulk_transfer_physical_blocks` vllm-ascend 块跨步传输丢尾部物理槽
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-10-17
 
 - **原因对象**：KV缓存 / vllm / 非分层传输元数据打包
 - **原因行为**：旧元数据把每个组件 payload 乘 kernel 块比后当一段连续区拷贝：缩放块跨步 MLA 缓存中 NoPE/RoPE 分量交错，区间重叠并漏掉每逻辑块最后 5 个物理槽（640 token）
@@ -9138,10 +9138,10 @@
 
 ### INF-1424 `vllm_kv_connector_preempt_orphan_blocks` vLLM KV Connector 迟到失效上报留下可复用坏块
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：KV缓存 / vllm / invalid_blocks 扫描集
-- **原因行为**：失效块处理只扫 running 与 kv_holding_waiting：owner 被 abort 或 preempt 后块已释放（hash 保留）但不在扫描集，evict 不执行，坏块经前缀缓存复用；迟到上报误杀复用块新请求
+- **原因行为**：KV 加载失效上报迟到处理；_handle_invalid_blocks 只扫 running 与 kv_holding_waiting；abort/抢占释放块且 hash 保留时不执行 evict，迟到失效上报按物理块 ID 找请求。
 - **影响对象**：KV状态；跨请求/跨样本数据；输出内容（静默错误）
 - **影响详情**：加载失败的块留在前缀缓存被后续同前缀请求命中并 decode 出损坏 KV；#61905 中无关请求 C 分到复用块后被迟到失败报告误杀（fail）或回退重算（recompute）；CPU 调度器探针实测
 - **改进措施**：检测 mock connector CPU 探针（issue 附脚本仓库）；追踪 invalid_block_ids 报告时刻与 owner 生命周期；修复 部分修复在途：#61769 记录 abort 路径块 ID（未覆盖 preempt）；#61912 跟踪 preempt 路径修复；未见合入
@@ -9149,7 +9149,7 @@
 
 ### INF-1429 `vllm_ascend_qwen397b_vscale_partial_import` vllm-ascend Qwen3.5-397B V-scale 部分导入后损坏
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-10-17
 
 - **原因对象**：KV缓存 / vllm / C8 静态 V-scale 生命周期
 - **原因行为**：397B 配置（prefill 1536-token 页 / decode 2560-token 页、kernel 块 512、每页 3/5 块）在部分异步 PD 导入后静态 V-scale 恢复不完整；K-scale 修复已装仍复现
@@ -9161,11 +9161,11 @@
 
 ### INF-1430 `vllm_ascend_glm_kpool_empty_work_corruption` vllm-ascend GLM KPool 空 work 越界写污染相邻缓存
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：KV缓存 / vllm / PoolKeyIndexer 空 work 初始化
 - **原因行为**：DSA-CP 使本地分片有 query 但无已完成 pooled key 时，PoolKeyIndexer 进入空 work 初始化路径，向 TND 输出分配之外写入
-- **影响对象**：KV状态；模型权重；输出内容（静默错误）
+- **影响对象**：KV状态；模型权重；输出内容（数值异常）
 - **影响详情**：孤立空 history 用例报非法写；模型中无关缓存权重变 NaN、请求输出重复 '!' 或非有限 logprobs
 - **改进措施**：检测 空 local history / 零 query / 全 padding replay 回归；mssanitizer 守护 indexer；修复 PR https://github.com/vllm-project/vllm-ascend/pull/19073 （main）/ https://github.com/vllm-project/vllm-ascend/pull/19084 （v0.30.0）（均 open）：附加哨兵请求提供有效 work、空 pooled history 钳到 1 个有效物理池、以原始 positions/请求边界丢弃哨兵与合成 history；11 个 A3 精度/集成用例通过
 - **来源**：https://github.com/vllm-project/vllm-ascend/pull/19073
@@ -9938,7 +9938,7 @@
 
 ### INF-1408 `vllm_cpu_lora_mixed_batch_leak` vLLM CPU 后端混批把 LoRA 施加到 base 请求
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：调度/服务 / vllm / CPU LoRA 批处理路径
 - **原因行为**：CPU 后端同一批内调度 LoRA 请求时，把 base 请求也按 adapter 计算，base 输出被替换为 adapter 输出
@@ -9949,7 +9949,7 @@
 
 ### INF-1409 `vllm_fast_prefill_prompt_logprobs0_bypass` vLLM fast-prefill 漏拦 prompt_logprobs=0
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：调度/服务 / vllm / fast-prefill 请求准入校验
 - **原因行为**：fast-prefill 禁用 prompt logprobs 的守卫只检查 truthy，prompt_logprobs=0 合法值绕过，V2 继续输出错误 prompt logprob，V1 命中断言崩溃
@@ -11883,7 +11883,7 @@
 
 ### INF-1415 `ttmetal_vllm_gemma4_topk_clamp32` tt-metal Gemma4 设备采样静默把 top_k 钳到 32
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：解码/采样 / tt-metal / SamplingGenerator 参数格式化
 - **原因行为**：Gemma4 系 model_capabilities 未声明 max_device_top_k，插件把任意 top_k 送设备采样，format_sampling_params 把 <1 与 >32 的 top_k 改写为 32，无消息
@@ -15091,7 +15091,7 @@
 
 ### INF-1413 `sglang_update_weights_vision_unknown_names_skip` SGLang 权重更新跳过未知视觉权重名仍报成功
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-17
 
 - **原因对象**：权重/检查点 / sglang / load_weights 未知名回退分支
 - **原因行为**：未知权重名以 `.bias` 结尾时无日志直接跳过，其余未知名仅打一行 Parameter not found 后跳过；load_weights 不上报跳过清单，weight_updater 无条件返回 success

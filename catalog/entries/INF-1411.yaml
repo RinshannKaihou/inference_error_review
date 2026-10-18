@@ -4,7 +4,7 @@ slug: ttmetal_transpose_narrow_row_wrong_data
 aliases: []
 title: tt-metal 分片行主序 transpose 窄行形状静默错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

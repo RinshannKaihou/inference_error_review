@@ -4,7 +4,7 @@ slug: sglang_update_weights_vision_unknown_names_skip
 aliases: []
 title: SGLang 权重更新跳过未知视觉权重名仍报成功
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -43,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

@@ -4,7 +4,7 @@ slug: torchnpu_te_backend_view_copy_dce
 aliases: []
 title: TorchNPU TE 后端物化 view 原语致 copy_ 被 DCE 丢弃
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

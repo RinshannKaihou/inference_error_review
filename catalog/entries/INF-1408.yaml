@@ -4,7 +4,7 @@ slug: vllm_cpu_lora_mixed_batch_leak
 aliases: []
 title: vLLM CPU 后端混批把 LoRA 施加到 base 请求
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - subsystem
+    - behavior

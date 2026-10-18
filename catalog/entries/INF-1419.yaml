@@ -4,7 +4,7 @@ slug: vllm_ascend_strided_bulk_transfer_physical_blocks
 aliases: []
 title: vllm-ascend 块跨步传输丢尾部物理槽
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -36,6 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1394
+pattern: PAT-INF-0155
 original:
   mechanism: 'vllm-ascend 非 layerwise AscendStore KVPool 传输可损坏缩放块跨步 MLA 缓存：一个调度块含多个 kernel 块，每块内 NoPE/RoPE 分量被另一分量或 padding 交错分隔；旧元数据把每组件 payload 乘 kernel 块比后按一段连续区拷贝，区间重叠且漏掉每逻辑块最后 5 个物理槽（640 token）。实测 A3 Kimi-K3 布局（5760-token 调度块 / 128-token kernel 块，比 45）：真实 17280-token 池恢复后第一 MLA 层收到相同 hidden states 但不同历史 KV、产出不同输出。修复 PR（#19069 v0.30.0 / #19070 main，open）：受影响非分层组件每物理块一个传输描述符、保留逻辑块跨步；dense 与比 1 缓存保留紧凑描述符；注册实际物理存储跨度；拒绝需分段传输的非连续内部块。缓存兼容性：修复后打包内容与旧池对象不兼容（总字节不变），需全端一起升级并用新 cache 命名空间/cache_salt 或使受影响条目失效，仅重启 worker 不使持久池对象失效，无自动迁移。layerwise 描述符/部分块路径未改。Related to #18898。'
   source: 2026-10-17 GitHub vllm-project/vllm-ascend PR https://github.com/vllm-project/vllm-ascend/pull/19069 （open；真实池恢复实测+兼容性说明）
@@ -45,3 +46,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  updates:
+  - date: '2026-10-18'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

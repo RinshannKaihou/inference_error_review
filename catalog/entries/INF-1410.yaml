@@ -4,7 +4,7 @@ slug: ttmetal_bf16_tanh_nan_laundering
 aliases: []
 title: tt-metal bf16 tanh 把 NaN 输入洗成 ±1.0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - detail

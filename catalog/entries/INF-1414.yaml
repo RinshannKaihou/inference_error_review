@@ -4,7 +4,7 @@ slug: flashinfer_ragged_attention_q_stride_dropped
 aliases: []
 title: FlashInfer ragged attention 忽略 query 步长
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

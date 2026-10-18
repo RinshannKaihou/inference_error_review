@@ -4,13 +4,13 @@ slug: vllm_kv_connector_preempt_orphan_blocks
 aliases: []
 title: vLLM KV Connector 迟到失效上报留下可复用坏块
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: vllm
     component: invalid_blocks 扫描集
-  behavior: 失效块处理只扫 running 与 kv_holding_waiting：owner 被 abort 或 preempt 后块已释放（hash 保留）但不在扫描集，evict 不执行，坏块经前缀缓存复用；迟到上报误杀复用块新请求
+  behavior: KV 加载失效上报迟到处理；_handle_invalid_blocks 只扫 running 与 kv_holding_waiting；abort/抢占释放块且 hash 保留时不执行 evict，迟到失效上报按物理块 ID 找请求。
 effect:
   objects:
   - KV状态
@@ -48,3 +48,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

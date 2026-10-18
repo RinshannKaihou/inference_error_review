@@ -4,13 +4,13 @@ slug: cann_adamax_fp32_intermediate_overflow_nan
 aliases: []
 title: CANN InplaceApplyAdaMax FP32 中间量溢出产 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: 通用
     component: AdaMaxVF 先除后乘次序
-  behavior: u=(m/(v+ε))·lr_adj 固定先除后乘：m 达 ±FLT_MAX、v+ε 低至 1e-6 量级时商在 FP32 域溢出为 ±inf，再与 0/小标量相乘得 NaN、或与 ±inf 的 var 相减得 NaN
+  behavior: 固定先除后乘：m 达 ±FLT_MAX、v+ε 低至 ε 时商在 FP32 溢出为 ±inf；lr=0 时 inf·0 得 NaN，|lr_adj|<1 时得 ±inf 假溢出，与同号 ±inf var 相减得 NaN。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

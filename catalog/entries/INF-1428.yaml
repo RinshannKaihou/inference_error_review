@@ -4,7 +4,7 @@ slug: cann_swin_ln_qkv_epsilon_not_passed
 aliases: []
 title: CANN SwinLnQKV epsilon 硬编码 1e-5
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -44,3 +44,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

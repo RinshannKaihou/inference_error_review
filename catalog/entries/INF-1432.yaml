@@ -4,12 +4,12 @@ slug: triton_ascend_masked_store_slots_unwritten
 aliases: []
 title: triton-ascend masked store 漏写有效输出槽位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: triton
-    component: masked store lowering
+    component: masked vector store
   behavior: 带 mask 的向量 tl.store 对每请求标量映射只写部分合法输出槽位：输出保留初始化哨兵值 -777 而非请求状态索引；同测试标量循环写法通过
 effect:
   objects:
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - component

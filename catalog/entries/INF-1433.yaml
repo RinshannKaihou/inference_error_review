@@ -4,7 +4,7 @@ slug: vllm_dp_moe_lora_cross_replica_state
 aliases: []
 title: vLLM DP>1 MoE-LoRA 以本机 LoRA 态算全部 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - subsystem
+    - title

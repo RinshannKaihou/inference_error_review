@@ -4,7 +4,7 @@ slug: torchnpu_copy_conj_view_unconjugated
 aliases: []
 title: TorchNPU copy_ 写共轭视图不取共轭
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 把 9+3j 写入 base.conj() 后底层存 9+3j（应存 9-3j），视图逻辑值与源不一致；complex64/128、conj/mH、广播、CPU/NPU 双向拷贝均受影响
+  detail: 把 9+3j 写入 base.conj() 后底层存 9+3j（应存 9-3j），视图逻辑值与源不一致；触发于 torch_npu copy_ 以 complex64/complex128 的 conj()/mH 视图为目标，910B3 实测。
   visibility: 静默错误
 mitigation:
   detect: copy_ 到 conj 视图后检查底层存储字节与源共轭对照
@@ -44,3 +44,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-17'
+  audit:
+    round: daily-audit-2026-10-18
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail
