@@ -4,7 +4,7 @@ slug: vllm_tp_inductor_rmsnorm_autotune_expert_divergence
 aliases: []
 title: vLLM TP 各 rank Inductor 归约自调谐致专家分叉
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -13,6 +13,7 @@ cause:
   behavior: TP 复制的 fused_add_rms_norm 是 Inductor 归约，各 worker 独立 autotune 可选不同 config（4096 vs 8192），求和顺序不同使输出分叉，近并列分数下各 rank 路由不同专家。
 effect:
   objects:
+  - 隐状态
   - 输出内容
   - 数值结果
   detail: 实测 ~1.5e-5/token-layer，约 1e-3 token 在 69 层中至少一次专家翻转（55/1,104 次调用 topk_ids 分叉）；翻转 token 输出是两专家各半之和，无报错静默返回
@@ -43,3 +44,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出内容
+        to: 隐状态
+    uncertain:
+    - subsystem

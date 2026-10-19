@@ -4,18 +4,19 @@ slug: vllm_ascend_mlapo_hardcoded_rmsnorm_epsilon
 aliases: []
 title: vllm-ascend MLAPO 硬编码 RMSNorm epsilon
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 模型定义
+  - subsystem: 算子/内核
     stack: vllm
     component: mla_preprocess epsilon 常量
   behavior: MLAPO 融合算子对 Q 与 KV RMSNorm 均用固定 1e-6，不读模型各层 rms_norm_eps；配置≠1e-6（如 GLM-5.2 的 1e-5）时融合路径与 native 路径归一化公式不同。
 effect:
   objects:
+  - 数值结果
   - 隐状态
-  detail: 配置 epsilon≠1e-6 的模型在 MLAPO 融合路径下 Q-down/KV 归一化结果系统性偏离 native 路径（源码级确认的模型参数失配；端到端精度影响未测量，issue 明示不声称已观测 e2e 回退）
-  visibility: 质量退化
+  detail: 配置 epsilon≠1e-6 的模型在 MLAPO 融合路径下 Q/KV 归一化结果系统性偏离 native 路径（源码级确认的模型参数失配；端到端精度影响未测量，issue 明示不声称已观测 e2e 回退）
+  visibility: 静默错误
 mitigation:
   detect: SFA-to-MLAPO 数值回归（baseline 16 failed/24，修复后 24/24 通过即证明失配真实）
   fix: 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19107 （open，c2026-10-18）：q_epsilon/kv_epsilon 经 PyTorch 算子、ACLNN 属性与 tiling data 传入全部四个 MLAPO kernel 变体，缺省 1e-6 兼容旧调用；910B3 实测 baseline 16 failed→24 passed+新算子测试 68 passed；发布未核实
@@ -44,3 +45,26 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 模型定义
+        to: 算子/内核
+      effect:
+        from: 隐状态
+        to: 数值结果
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    rewritten:
+    - detail

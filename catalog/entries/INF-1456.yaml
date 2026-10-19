@@ -4,7 +4,7 @@ slug: vllm_kv_transfer_prompt_token_ids_replaces_prompt
 aliases: []
 title: vLLM prompt_token_ids 无连接器时替换渲染 prompt
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

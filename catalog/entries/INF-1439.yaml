@@ -4,7 +4,7 @@ slug: torchair_aten_gelu_tanh_only_dispatch
 aliases: []
 title: torch_npu ATen gelu 静默走 tanh 近似
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,7 +32,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/6841
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0313
 original:
   mechanism: torch.nn.functional.gelu(approximate='none') 在 Atlas A3 上被静默按 tanh 近似计算。根因链（issue 给出本仓源码定位）：(1) activation/gelu/op_kernel/arch35/gelu_dag.h:29-62 kernel 只实现 tanh 式（GeluCustom），无 erf 分支；(2) activation/gelu/op_api/aclnn_gelu.cpp:87 aclnnGeluGetWorkspaceSize 签名没有 approximate 参数（:116 l0op::Gelu 同）；(3) 正确实现已存在：aclnn_gelu_v2.cpp:87 的 aclnnGeluV2(x, approximate:int64, y) 带 attr，gelu_v2_dag.h 实现 ErfFast/AscendC::Erf 与 GeluV2Tanh 双路径按 TPL_NONE/TPL_TANH 分派。结论：torch_npu 2.7.1.post4 的 ATen gelu 分发到 tanh-only 的 aclnnGelu，未按 approximate 路由到 aclnnGeluV2。数值证据：x=2.0 处 NPU F.gelu(none)=1.9545976 与 CPU tanh 式 1.9545977 逐位吻合、与 CPU erf 1.9544998 偏差 4.7e-4；4096 点 fp32 统计 |NPU(none)−CPU_erf|max=4.735e-4、|NPU(none)−CPU_tanh|max=2.9e-7；对照 torch_npu.npu_gelu(x,approximate='none') 正确（vs erf 4.8e-7 且与 tanh 结果不同）证明 CANN 包内存在正确 erf 路径仅分发选错。影响：fp32 训练/推理 gelu 输出与 PyTorch erf 语义偏差最高约 5e-4，对蒸馏对齐、梯度校验、逐位回归构成静默语义漂移。torch_npu/op-plugin 为闭源二进制分发无法在活动仓直接落 PR，故在 ops-nn 提 issue 记录。
   source: 2026-10-18 GitCode cann/ops-nn issue https://gitcode.com/cann/ops-nn/issues/6841 （open）
@@ -42,3 +44,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

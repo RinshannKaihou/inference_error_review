@@ -4,7 +4,7 @@ slug: sglang_ngram_overlap_stop_token_radix_kv_corruption
 aliases: []
 title: SGLang NGRAM 尾步 verify 污染 radix KV
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 输出内容
-  detail: 0.5.22 默认 3/192 请求 greedy 错（确定性）；关 overlap scheduler 0/5 精确；radix/CUDA graph 关闭降低不消除；#42720 修 length 结尾，stop/EOS 结尾仍坏
+  detail: 0.5.22 默认配置，共享前缀且 stop token 结尾并发下，少数 greedy 请求从某步起产出错误 token，192 个请求约 3 个错，同批共享前缀请求常同一步失败；错误可经前缀缓存扩散；关 overlap scheduler 0/5 精确。
   visibility: 静默错误
 mitigation:
   detect: probec 探针 twin（精确已知输出、对归约顺序不敏感）批量并发 + 共享前缀 + stop-token 结尾；对照组关 overlap scheduler
@@ -43,3 +43,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

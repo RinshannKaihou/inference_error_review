@@ -4,7 +4,7 @@ slug: ops_math_stateless_randperm_fp_dtype_duplicates
 aliases: []
 title: StatelessRandperm 浮点输出重复值破坏排列
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -46,3 +46,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

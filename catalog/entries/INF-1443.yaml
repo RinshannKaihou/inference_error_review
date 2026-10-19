@@ -4,7 +4,7 @@ slug: ttmetal_where_bf16_cond_fp32_operands_garbage
 aliases: []
 title: tt-metal where BF16 条件 × FP32 值静默垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - detail

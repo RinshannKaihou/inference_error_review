@@ -4,17 +4,17 @@ slug: ops_nn_quantize_add_layer_norm_950_missing_roundtrip
 aliases: []
 title: quantize_add_layer_norm 950 缺低精度回转
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: 通用
     component: arch35 量化段
-  behavior: 950（arch35）两内核量化前缺少规格要求的低精度回转（fp32→fp16/bf16 RTNE→fp32），fp32 直接量化；910 系与 SE 规格均有该步。
+  behavior: 950（arch35）两内核量化前缺少规格要求的低精度回转：float32 归一化结果未先舍入到 fp16/bf16 再转回 float32，直接进入量化。
 effect:
   objects:
   - 数值结果
-  detail: 22 条用例 y 输出逐位比对失败共 1,867 个数值不一致、全部相差 ±1（int8 量化值）；CPU 双路复算证明设备输出与不带回转算法在 244,954 个数值上逐位相同、golden 与带回转算法逐位相同——差异全部来自回转缺失而非算错
+  detail: Ascend 950 对 fp16/bf16 输入使用 quantize_add_layer_norm 时，量化输出 y 与标准答案逐位比对失败：22 条用例共 1,867 个数值不一致，全部相差 ±1 个量化档；无报错，fp32 输入不受影响。
   visibility: 静默错误
 mitigation:
   detect: y 输出与带回转 golden 逐位比对（TTK 框架标准流程）；fp32 输入用例应逐位不变可作对照
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+    rewritten:
+    - behavior
+    - detail

@@ -4,7 +4,7 @@ slug: vllm_eagle_drafter_default_rope_base_10000
 aliases: []
 title: vLLM EAGLE drafter 缺省 RoPE base 10000
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 位置编码
@@ -15,7 +15,7 @@ effect:
   objects:
   - 隐状态
   - 输出内容
-  detail: draft config 缺 rope_theta 而 target base≠10000（长上下文模型常见）时 drafter 位置编码系统性错位：draft 接受率下降/质量劣化，无日志无错误；配置解析级，无 GPU 即可复现
+  detail: draft config 无 rope 键且 target rope_theta≠10000 时，drafter 静默按 base 10000 计算位置编码，与 target 不一致，草稿质量/接受率劣化，无日志提示；配置解析级，无 GPU 可确认
   visibility: 质量退化
 mitigation:
   detect: 对 draft config 缺 rope 键的组合，打印 get_rope 解析 base 对照 target（issue 附 ~30 行脚本）
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - effect
+    - visibility

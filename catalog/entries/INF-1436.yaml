@@ -4,7 +4,7 @@ slug: cann_round_family_negative_zero_sign_loss
 aliases: []
 title: CANN 取整/双曲族负零符号位丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: round(-0.5)=+0.0（CPU 为 -0.0）、-0.0 输入符号翻转；signbit 对照 CPU [T,T,F,T,F] vs NPU [F,T,F,F,F]；依赖 signbit/copysign/1/x→±inf 语义的下游与逐位 golden 比对被破坏；幅值逐位一致仅符号错
+  detail: NPU round(-0.5)=+0.0（CPU为-0.0），-0.0输入符号翻转；signbit逐位对照NPU与CPU多处不一致，幅值逐位正确；依赖signbit/copysign/1/x→±inf的下游与逐位golden比对被静默破坏。
   visibility: 静默错误
 mitigation:
   detect: signbit(x.round()) 与 CPU 对照（≤秒级单算子探针）；对 (-0.5,0) 区间输入做逐位比对
@@ -44,3 +44,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

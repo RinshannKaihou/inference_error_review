@@ -4,7 +4,7 @@ slug: op_plugin_maxpool_indices_contract_break
 aliases: []
 title: op-plugin max_pool indices 形状 dtype 契约破坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    issue_unfixed:
+    - detail

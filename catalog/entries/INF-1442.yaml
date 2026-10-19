@@ -4,18 +4,19 @@ slug: vllm_ngram_spec_gdn_state_missing_accepted_token_write
 aliases: []
 title: vLLM n-gram 投机部分接受时 GDN 态漏写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 解码/采样
     stack: vllm
-    component: 投机解码部分接受步 GDN 状态回退
-  behavior: n-gram 投机部分接受步（状态须取中间位置）时，GDN 循环状态缺失此前已接受 token 的写入——oracle 回放证明失败请求状态少一个已接受 token 的写，非拒绝 draft 的写被保留。
+    component: 投机解码部分接受步 GDN 循环状态漏写
+  behavior: n-gram 投机解码在部分 draft 被接受步骤上，GDN 循环状态漏掉已接受 token 的更新，缺失一个此前已接受 token 的写；无任何失败可由拒绝 draft 的写被保留解释。
 effect:
   objects:
+  - KV状态
   - 输出内容
   - 隐状态
-  detail: 192 请求 greedy：默认 k=4 错 8、triton kernel 12、关 prefix cache 20、k=1/2 → 1/7；无投机 12 配置 0 错；确定性（同 967 错 token 两主机一致）；draft 全接受 32,712/32,712 全对
+  detail: vLLM 0.31.0 混合GDN模型开n-gram投机且部分draft被接受时，greedy输出192请求约4-10%从某步起错token，多数错一个token后恢复；同8请求同967错token在RTX 3090两主机重跑一致；关投机12配置全对，draft全被接受也全对。
   visibility: 静默错误
 mitigation:
   detect: probec 探针 twin（合成权重已知正确输出、对归约顺序不敏感，任何偏离即引擎错误）：probec run --matrix hybrid --only FLASH_ATTN/ngram_spec_decoys
@@ -43,3 +44,25 @@ original:
 migration:
   method: scan
   scanned: '2026-10-18'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 解码/采样
+      effect:
+        from: 输出内容
+        to: KV状态
+    rewritten:
+    - behavior
+    - component
+    - detail

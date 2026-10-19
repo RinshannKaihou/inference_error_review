@@ -3,24 +3,24 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1456 条；状态：active 1433、pending_audit 23
+共 1456 条；状态：active 1456
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
 | 算子/内核 | 350 |
 | 编译器 | 53 |
-| 运行时/执行 | 75 |
+| 运行时/执行 | 74 |
 | 集合通信 | 14 |
 | 并行切分 | 12 |
 | KV缓存 | 298 |
 | 调度/服务 | 72 |
 | 输出解析 | 53 |
-| 解码/采样 | 120 |
-| 量化 | 147 |
+| 解码/采样 | 121 |
+| 量化 | 148 |
 | 位置编码 | 34 |
 | 分词/模板 | 29 |
-| 模型定义 | 43 |
+| 模型定义 | 42 |
 | 权重/检查点 | 34 |
 | 数据管线 | 1 |
 | 优化器 | 2 |
@@ -4143,7 +4143,7 @@
 
 ### INF-1434 `op_plugin_fp32_conv_hf32_silent_downgrade` op-plugin fp32 conv 全族静默 HF32 类降精度
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / pytorch / conv 族 aclnn 出口精度模式选择
 - **原因行为**：fp32 conv1d/conv2d/conv_transpose1d/conv_transpose2d 在 NPU 上的 aclnn 出口按 HF32 类低位宽模式执行，未遵循 high_precision 精度模式配置；梯度同样被污染。
@@ -4151,10 +4151,11 @@
 - **影响详情**：rel 误差 6.0e-4~1.8e-3（≈2^-10.5 量级），双芯逐位相同（确定性、非随机噪声）；fp32 前向与反向梯度均偏离；set_option high_precision 已废弃不生效、jit_compile 路径无法逃逸
 - **改进措施**：检测 同机 matmul/bmm/einsum 对照（逐位或 <2.7e-6 达标）可排除平台普遍性；conv 形态矩阵双端逐位比对；修复 待定（issue open，要求 op-plugin 侧确认 conv 族 aclnn 出口选择是否遵循精度模式配置并文档化 fp32 conv 精度行为）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/593
+- **关联**：cross:TRN-0314
 
 ### INF-1435 `op_plugin_maxpool_indices_contract_break` op-plugin max_pool indices 形状 dtype 契约破坏
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / pytorch / MaxPool WithIndices 输出转换层
 - **原因行为**：WithMask 分支把内核 int8 打包缓冲（含行尾 16B 对齐填充）原样返回，未折叠成 int64 视图未裁剪填充；WithIndices/3d 分配 int32 后原样返回未提升 int64；内核数值本身正确。
@@ -4165,18 +4166,18 @@
 
 ### INF-1436 `cann_round_family_negative_zero_sign_loss` CANN 取整/双曲族负零符号位丢失
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / 通用 / 闭源舍入内核 910 路径
 - **原因行为**：round 结果幅值为 0 的负输入（-0.5/-0.4/-0.0）返回 +0.0 丢符号位；同机 910 路径 Trunc/Ceil/Floor/Round/Sinh 同款，arch35 实现显式保符号而 910 内核缺失该处理。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：round(-0.5)=+0.0（CPU 为 -0.0）、-0.0 输入符号翻转；signbit 对照 CPU [T,T,F,T,F] vs NPU [F,T,F,F,F]；依赖 signbit/copysign/1/x→±inf 语义的下游与逐位 golden 比对被破坏；幅值逐位一致仅符号错
+- **影响详情**：NPU round(-0.5)=+0.0（CPU为-0.0），-0.0输入符号翻转；signbit逐位对照NPU与CPU多处不一致，幅值逐位正确；依赖signbit/copysign/1/x→±inf的下游与逐位golden比对被静默破坏。
 - **改进措施**：检测 signbit(x.round()) 与 CPU 对照（≤秒级单算子探针）；对 (-0.5,0) 区间输入做逐位比对；修复 待定（op-plugin #591 作为追踪入口 open：两条通路均闭源 CANN 算子，op-plugin 侧无可修分支，修复点在 CANN aclnnRound/Round/aclnnRoundDecimals 内核补负零符号恢复；同机 ops-math#3446 Trunc/Ceil/Floor/Round/Sinh 五算子同款待修）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/591；https://gitcode.com/cann/ops-math/issues/3446
 
 ### INF-1437 `ops_math_stateless_randperm_fp_dtype_duplicates` StatelessRandperm 浮点输出重复值破坏排列
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / 通用 / 输出转换与 Host 校验
 - **原因行为**：kernel CopyData 逐项 static_cast<Y> 写输出，Host 只按浮点 dtype 最大有限值校验 n，未校验 0..n-1 连续整数能否被精确表示；舍入使非单射转换产生重复值。
@@ -4185,9 +4186,20 @@
 - **改进措施**：检测 对输出做 unique 计数与 n 对照（2051/259 边界即刻暴露）；修复 修复 PR https://gitcode.com/cann/ops-math/merge_requests/6411 （open）：Host 校验改为按可精确表示的最大连续整数（FP16 2^11/BF16 2^8/FLOAT 2^24 配合 n-1 判据），对齐 PyTorch check_supported_max_int_with_precision；950PR 真机 op_host UT 6 边界用例全过；另修 INT8/UINT8/INT16 边界差一误拒（#3575）
 - **来源**：https://gitcode.com/cann/ops-math/issues/3576；https://gitcode.com/cann/ops-math/issues/3575；https://gitcode.com/cann/ops-math/merge_requests/6411
 
+### INF-1438 `vllm_ascend_mlapo_hardcoded_rmsnorm_epsilon` vllm-ascend MLAPO 硬编码 RMSNorm epsilon
+
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+
+- **原因对象**：算子/内核 / vllm / mla_preprocess epsilon 常量
+- **原因行为**：MLAPO 融合算子对 Q 与 KV RMSNorm 均用固定 1e-6，不读模型各层 rms_norm_eps；配置≠1e-6（如 GLM-5.2 的 1e-5）时融合路径与 native 路径归一化公式不同。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：配置 epsilon≠1e-6 的模型在 MLAPO 融合路径下 Q/KV 归一化结果系统性偏离 native 路径（源码级确认的模型参数失配；端到端精度影响未测量，issue 明示不声称已观测 e2e 回退）
+- **改进措施**：检测 SFA-to-MLAPO 数值回归（baseline 16 failed/24，修复后 24/24 通过即证明失配真实）；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19107 （open，c2026-10-18）：q_epsilon/kv_epsilon 经 PyTorch 算子、ACLNN 属性与 tiling data 传入全部四个 MLAPO kernel 变体，缺省 1e-6 兼容旧调用；910B3 实测 baseline 16 failed→24 passed+新算子测试 68 passed；发布未核实
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/18859；https://github.com/vllm-project/vllm-ascend/pull/19107
+
 ### INF-1439 `torchair_aten_gelu_tanh_only_dispatch` torch_npu ATen gelu 静默走 tanh 近似
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / pytorch / ATen gelu 分发
 - **原因行为**：ATen gelu 分发到 tanh-only 的 aclnnGelu（无 approximate 参数），未按 'none' 路由到带 attr 的 aclnnGeluV2；正确 erf 路径存在但未被选用。
@@ -4195,21 +4207,11 @@
 - **影响详情**：F.gelu(none) 与 F.gelu(tanh) 在 NPU 上逐位相同；4096 点 fp32 统计 |NPU(none)−CPU_erf|max=4.735e-4（vs CPU_tanh 仅 2.9e-7 噪声级）；fp16/bf16 同样按 tanh 式计算；无任何告警
 - **改进措施**：检测 对比 F.gelu(x,approximate='none') 与 F.gelu(x,approximate='tanh') 是否逐位相同（相同即中招）；x=2.0 处 erf 期望 1.9544998；修复 用户侧 workaround 已核实：torch_npu.npu_gelu(x, approximate='none') 走正确 erf 路径（vs CPU erf 4.8e-7）；根治=ATen gelu 分发按 approximate 路由到 aclnnGeluV2 TPL_NONE（未实施，torch_npu/op-plugin 闭源二进制分发无法直接落 PR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6841
-
-### INF-1440 `ops_nn_quantize_add_layer_norm_950_missing_roundtrip` quantize_add_layer_norm 950 缺低精度回转
-
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
-
-- **原因对象**：算子/内核 / 通用 / arch35 量化段
-- **原因行为**：950（arch35）两内核量化前缺少规格要求的低精度回转（fp32→fp16/bf16 RTNE→fp32），fp32 直接量化；910 系与 SE 规格均有该步。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：22 条用例 y 输出逐位比对失败共 1,867 个数值不一致、全部相差 ±1（int8 量化值）；CPU 双路复算证明设备输出与不带回转算法在 244,954 个数值上逐位相同、golden 与带回转算法逐位相同——差异全部来自回转缺失而非算错
-- **改进措施**：检测 y 输出与带回转 golden 逐位比对（TTK 框架标准流程）；fp32 输入用例应逐位不变可作对照；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/11513 （open）：量化前按 910 同款补两次类型转换（fp32→低精度 RTNE→fp32），fp32 输入编译期跳过；950 真机验证 22/22 逐位恢复、TTK 282 条 y frozen 通过 57→259、x 路径不变；剩余 23 条失败为千万级元素求和顺序 ±1 已知类
-- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/11513
+- **关联**：cross:TRN-0313
 
 ### INF-1443 `ttmetal_where_bf16_cond_fp32_operands_garbage` tt-metal where BF16 条件 × FP32 值静默垃圾
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / tt-metal / binary where 混 dtype 谓词路径
 - **原因行为**：张量重载 ttnn.where 接受 BF16 条件 + FP32 值张量不报错但输出全错：全 false 谓词每 lane 返回 2 的幂垃圾（~1e34），半掩码存活 lane 返回 denormal；标量重载会拒绝，张量重载漏检。
@@ -4220,11 +4222,11 @@
 
 ### INF-1446 `vllm_gdn_chunk_prefill_fp32_state_fp16_downcast_overflow` vLLM GDN chunk prefill fp32 状态被降 fp16 溢出
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / vllm / chunk 路径状态 dtype 处理
 - **原因行为**：GDN chunk/prefill 内核在 fp32 状态缓存下仍把循环状态降为激活 dtype：chunk_delta_h/chunk_o 缓冲按激活 dtype 分配、tl.dot 降型；公共 API 又把返回值转回 q dtype。
-- **影响对象**：隐状态；数值结果（数值异常）
+- **影响对象**：KV状态；隐状态；数值结果（数值异常）
 - **影响详情**：fp16 激活 + fp32 状态（~1e6，fp16 上限 65504）下 chunk 路径输出 100% 非有限（65536/65536）、final_state 非有限；同输入 fp32 参考全有限；--mamba-ssm-cache-dtype float32 不防护此路径
 - **改进措施**：检测 issue 附 kernel 级 repro（chunk vs fused_recurrent 对照，~20 行）；chunk 输出 isfinite 统计；修复 修复方向 issue 内给出：扩展 #54146 的 dtype 门控（仅 initial_state.dtype==float32 时按状态 dtype 物化）到 chunk_delta_h/chunk_o/chunk.py 三处；#54146（decode 侧）已修，chunk 路径是其明示的后续；未实施（issue open）
 - **来源**：https://github.com/vllm-project/vllm/issues/62116
@@ -4232,7 +4234,7 @@
 
 ### INF-1452 `sglang_kimi_k3_nvidia_kda_prefill_nan` SGLang nvidia_kda prefill NaN 污染 KV
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：算子/内核 / sglang / nvidia_kda 线性注意力 prefill
 - **原因行为**：nvidia_kda 后端下 Kimi-K3 prefill ~1,800 token 起单 KDA 头自 token 78 漂移、每 35-55 token 十倍增长至溢出；NaN 写 KV 与循环状态被后续请求继承；Triton 正确。
@@ -4831,7 +4833,7 @@
 
 ### INF-1441 `triton_ascend_split_reduction_index_missing_chunk_offset` triton-ascend split 归约 index 丢 chunk 偏移
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：编译器 / triton / split r-loop 索引归约
 - **原因行为**：归约轴被 split（R0_BLOCK<rnumel）且携带 index（argmax/argmin 类）时，拼接各 chunk 未把 chunk_id*R0_BLOCK 加回 index，返回局部下标而非全局下标；value 正确。
@@ -5658,24 +5660,13 @@
 - **改进措施**：检测 动态 shape 递增图 + mssanitizer memcheck；修复 PR https://gitcode.com/cann/ge/merge_requests/5135 （open）：复用条件改为「已有内存尺寸不小于本轮逻辑尺寸」不足时重分配；UT+ut_exe_graph 676 用例通过、真机 RT2 修复前第 2 轮失败；未合入
 - **来源**：https://gitcode.com/cann/ge/merge_requests/5135
 
-### INF-1442 `vllm_ngram_spec_gdn_state_missing_accepted_token_write` vLLM n-gram 投机部分接受时 GDN 态漏写
-
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
-
-- **原因对象**：运行时/执行 / vllm / 投机解码部分接受步 GDN 状态回退
-- **原因行为**：n-gram 投机部分接受步（状态须取中间位置）时，GDN 循环状态缺失此前已接受 token 的写入——oracle 回放证明失败请求状态少一个已接受 token 的写，非拒绝 draft 的写被保留。
-- **影响对象**：输出内容；隐状态（静默错误）
-- **影响详情**：192 请求 greedy：默认 k=4 错 8、triton kernel 12、关 prefix cache 20、k=1/2 → 1/7；无投机 12 配置 0 错；确定性（同 967 错 token 两主机一致）；draft 全接受 32,712/32,712 全对
-- **改进措施**：检测 probec 探针 twin（合成权重已知正确输出、对归约顺序不敏感，任何偏离即引擎错误）：probec run --matrix hybrid --only FLASH_ATTN/ngram_spec_decoys；修复 上游修复未见（issue open，v0.31.0）
-- **来源**：https://github.com/vllm-project/vllm/issues/62304
-
 ### INF-1450 `trtllm_breakable_prefill_graph_shared_output_buffer_corruption` TRT-LLM 断点 prefill 图共享输出缓冲损坏
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：运行时/执行 / tensorrt-llm / breakable prefill 图输出缓冲
-- **原因行为**：断点 prefill CUDA graph 按 bucket 回放时，共享输出缓冲落在错误的 bucket 上，部分 bucket 回放输出互相覆盖或读到被污染内容。
-- **影响对象**：数值结果（静默错误）
+- **原因行为**：断点 prefill CUDA graph 的共享输出缓冲被归到错误的 bucket。
+- **影响对象**：输出内容；数值结果（静默错误）
 - **影响详情**：部分 bucket 的 breakable prefill CUDA graph 回放产生损坏输出；本轮按 search item 标题/短语收录，正文逐段深读未完成，细节留待审计复核
 - **改进措施**：检测 分 bucket 的 breakable prefill graph 回放输出 golden 对照；修复 待定（issue open；本轮按标题/索引收录，正文机制细节未逐段深读——见日报未覆盖说明）
 - **来源**：https://github.com/NVIDIA/TensorRT-LLM/issues/20504
@@ -5968,11 +5959,11 @@
 
 ### INF-1445 `vllm_tp_inductor_rmsnorm_autotune_expert_divergence` vLLM TP 各 rank Inductor 归约自调谐致专家分叉
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：并行切分 / vllm / TP 复制归约各 rank 独立 autotune
 - **原因行为**：TP 复制的 fused_add_rms_norm 是 Inductor 归约，各 worker 独立 autotune 可选不同 config（4096 vs 8192），求和顺序不同使输出分叉，近并列分数下各 rank 路由不同专家。
-- **影响对象**：输出内容；数值结果（静默错误）
+- **影响对象**：隐状态；输出内容；数值结果（静默错误）
 - **影响详情**：实测 ~1.5e-5/token-layer，约 1e-3 token 在 69 层中至少一次专家翻转（55/1,104 次调用 topk_ids 分叉）；翻转 token 输出是两专家各半之和，无报错静默返回
 - **改进措施**：检测 各 rank 对每次 select_experts 哈希 router 输入/router_logits/topk_ids 并 diff（issue 的 wrapper 方法，无集合通信）；或对比各 rank Inductor 归约 config 获胜者；修复 规避（issue 实测验证）：inductor_compile_config 设 test_configs.force_filter_reduction_configs=true 两侧钉死同一归约 config 后 1,104/1,104 调用 0 分叉；上游修复未见（issue open）
 - **来源**：https://github.com/vllm-project/vllm/issues/61053
@@ -9316,7 +9307,7 @@
 
 ### INF-1447 `vllm_nvfp4_kv_writer_reader_stride_mismatch_blnhc` vLLM nvfp4 KV 写读 stride 失配 BLNHC 布局损坏
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：KV缓存 / vllm / nvfp4 KV 写内核 HND 内部公式
 - **原因行为**：nvfp4 KV 写内核按内部 head-major 公式推导 stride 与 scale 分区，reader 按实际 stride 缩放，仅 head-major 页一致；QSA 默认 BLNHC 下写读落位不匹配，K/V 落错字节。
@@ -9328,12 +9319,12 @@
 
 ### INF-1448 `sglang_ngram_overlap_stop_token_radix_kv_corruption` SGLang NGRAM 尾步 verify 污染 radix KV
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：KV缓存 / sglang / 末 token 在途尾步 verify 写 KV
 - **原因行为**：NGRAM + overlap scheduler（默认开）下，stop token 结束请求的最后 token 在途时仍执行的尾步 verify 写 KV 落入或覆盖 radix 前缀块；greedy 少数并发请求错，共享前缀同批失败。
 - **影响对象**：KV状态；输出内容（静默错误）
-- **影响详情**：0.5.22 默认 3/192 请求 greedy 错（确定性）；关 overlap scheduler 0/5 精确；radix/CUDA graph 关闭降低不消除；#42720 修 length 结尾，stop/EOS 结尾仍坏
+- **影响详情**：0.5.22 默认配置，共享前缀且 stop token 结尾并发下，少数 greedy 请求从某步起产出错误 token，192 个请求约 3 个错，同批共享前缀请求常同一步失败；错误可经前缀缓存扩散；关 overlap scheduler 0/5 精确。
 - **改进措施**：检测 probec 探针 twin（精确已知输出、对归约顺序不敏感）批量并发 + 共享前缀 + stop-token 结尾；对照组关 overlap scheduler；修复 部分规避：--disable-overlap-schedule（实测 5/5 精确，代价性能）；上游完整修复未见（issue open；机制方向=在途尾步 verify 的 KV 写入不应落入 radix 共享块）
 - **来源**：https://github.com/sgl-project/sglang/issues/44997
 
@@ -10127,7 +10118,7 @@
 
 ### INF-1449 `sglang_mm_hashes_client_controlled_cache_identity` SGLang mm_hashes 客户端可控缓存身份错图
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：调度/服务 / sglang / mm_hashes 直写 item hash
 - **原因行为**：tokenizer_manager 对调用方 mm_hashes 直接 set_hash 短路内容哈希；item.hash 是 image 段 padValue——声明同 hash 的两请求该段相同，第二个无论实际图像都命中第一个缓存。
@@ -10138,7 +10129,7 @@
 
 ### INF-1456 `vllm_kv_transfer_prompt_token_ids_replaces_prompt` vLLM prompt_token_ids 无连接器时替换渲染 prompt
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：调度/服务 / vllm / prompt_token_ids 复用路径
 - **原因行为**：请求带 kv_transfer_params.prompt_token_ids 时 renderer 把 id 直接喂引擎替换渲染的 messages，跳过 template 与分词；无 connector 检查，任何 server 生效
@@ -12081,9 +12072,20 @@
 - **改进措施**：检测 对比 top_k=32 与更大 top_k 的输出分布；修复 修复路由已存在：vllm-tt-plugin #140（2026-09-30 合入）对声明 max_device_top_k 的模型把超限请求送 host 采样；Gemma4/Gemma4DFlash/Gemma4DFlashContract/Gemma4MTP 均未声明，等待模型侧补声明
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/60365（源码行号级
 
+### INF-1442 `vllm_ngram_spec_gdn_state_missing_accepted_token_write` vLLM n-gram 投机部分接受时 GDN 态漏写
+
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+
+- **原因对象**：解码/采样 / vllm / 投机解码部分接受步 GDN 循环状态漏写
+- **原因行为**：n-gram 投机解码在部分 draft 被接受步骤上，GDN 循环状态漏掉已接受 token 的更新，缺失一个此前已接受 token 的写；无任何失败可由拒绝 draft 的写被保留解释。
+- **影响对象**：KV状态；输出内容；隐状态（静默错误）
+- **影响详情**：vLLM 0.31.0 混合GDN模型开n-gram投机且部分draft被接受时，greedy输出192请求约4-10%从某步起错token，多数错一个token后恢复；同8请求同967错token在RTX 3090两主机重跑一致；关投机12配置全对，draft全被接受也全对。
+- **改进措施**：检测 probec 探针 twin（合成权重已知正确输出、对归约顺序不敏感，任何偏离即引擎错误）：probec run --matrix hybrid --only FLASH_ATTN/ngram_spec_decoys；修复 上游修复未见（issue open，v0.31.0）
+- **来源**：https://github.com/vllm-project/vllm/issues/62304
+
 ### INF-1444 `sglang_ngram_zero_pad_token0_oversample` SGLang NGRAM 零填充 draft 过采样 token 0
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：解码/采样 / sglang / 零填充兄弟概率累加
 - **原因行为**：corpus 用 token 0 填充 draft tree（parent 挂 root）；温度>0 verify 逐兄弟累加 target_probs，每个 pad 再加一次 p(0)，拒绝残差只扣一次——token 0 被过量接受。
@@ -12094,7 +12096,7 @@
 
 ### INF-1451 `vllm_ngram_greedy_second_think_close_drift` vLLM 投机+预算双 </think> 注入
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：解码/采样 / vllm / 预算强制与 draft 窗口交互
 - **原因行为**：投机解码（V1）+ thinking_token_budget 下，自然 </think> 在被接受 draft 内且预算同窗口耗尽时，仍在更晚行强制注入 </think>——输出两个 </think>；greedy 投机与非投机不一致。
@@ -13752,9 +13754,20 @@
 - **改进措施**：检测 监控 MTP 接受率归零与重复字符输出；检查 V-scale 视图与 GDN 写重叠（#17956 的 address tracing）；未评估；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19016 （open 未合并，另有 v0.30 backport #19017）：K-scale 改 stride-aware Triton byte scatter 只写被寻址元素；V-scale 经 MRv1 pre-forward helper 按组去重清零/恢复
 - **来源**：https://github.com/vllm-project/vllm-ascend/pull/19016；https://github.com/vllm-project/vllm-ascend/pull/17956；https://github.com/vllm-project/vllm-ascend/pull/18618；https://github.com/vllm-project/vllm-ascend/pull/18801；https://github.com/vllm-project/vllm-ascend/issues/19065
 
+### INF-1440 `ops_nn_quantize_add_layer_norm_950_missing_roundtrip` quantize_add_layer_norm 950 缺低精度回转
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+
+- **原因对象**：量化 / 通用 / arch35 量化段
+- **原因行为**：950（arch35）两内核量化前缺少规格要求的低精度回转：float32 归一化结果未先舍入到 fp16/bf16 再转回 float32，直接进入量化。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Ascend 950 对 fp16/bf16 输入使用 quantize_add_layer_norm 时，量化输出 y 与标准答案逐位比对失败：22 条用例共 1,867 个数值不一致，全部相差 ±1 个量化档；无报错，fp32 输入不受影响。
+- **改进措施**：检测 y 输出与带回转 golden 逐位比对（TTK 框架标准流程）；fp32 输入用例应逐位不变可作对照；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/11513 （open）：量化前按 910 同款补两次类型转换（fp32→低精度 RTNE→fp32），fp32 输入编译期跳过；950 真机验证 22/22 逐位恢复、TTK 282 条 y frozen 通过 57→259、x 路径不变；剩余 23 条失败为千万级元素求和顺序 ±1 已知类
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/11513
+
 ### INF-1453 `sglang_fp8_marlin_sm86_intermittent_wrong_tokens` SGLang FP8 Marlin SM86 间歇错 token
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：量化 / sglang / FP8 Marlin 与 overlap 交互
 - **原因行为**：SM86 上 block-FP8 走 FP8 Marlin 间歇错 token；GEMM 隔离、bf16 源、vLLM 同 checkpoint 全精确——缺陷在其与默认管线（overlap 最强关联）组合
@@ -13765,12 +13778,12 @@
 
 ### INF-1454 `sglang_marlin_moe_sm86_intermittent_wrong_expert_output` SGLang Marlin MoE SM86 间歇错误专家输出
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：量化 / sglang / Marlin MoE SM86 间歇错值
 - **原因行为**：AWQ W4A16 MoE 走 moe_wna16_marlin 在 SM86 间歇错 token；Triton WNA16、vLLM Marlin、bf16 全精确；单请求逐次仍错，GEMM 隔离精确，根因未定位
-- **影响对象**：输出内容（静默错误）
-- **影响详情**：192 请求多数 run 1-18 个从某 decode 步起错；批内无关请求常同 step 同时错；单请求逐次 11/192 仍错（24 次重复 3-6 种输出、2-5 次错）；重跑错的不同、部分 run 干净
+- **影响对象**：输出内容（不可复现）
+- **影响详情**：多数 run 有 1-18 请求从某 decode 步起错 token；批内无关请求常同 step 同时错；单请求逐次 11/192 仍错（4 prompt×24 重复，每 prompt 3-6 种输出、2-5 次错）；重跑错请求不同、部分 run 干净
 - **改进措施**：检测 probec 探针 twin（AWQ 可精确表示权重 + 已知输出）批量 greedy 对照；--quantization moe_wna16 切 Triton 路径；修复 规避（实测）：--quantization moe_wna16 切 Triton WNA16 MoE 内核（0/0 精确）；上游修复未见（issue open）
 - **来源**：https://github.com/sgl-project/sglang/issues/44999
 
@@ -14154,12 +14167,12 @@
 
 ### INF-1455 `vllm_eagle_drafter_default_rope_base_10000` vLLM EAGLE drafter 缺省 RoPE base 10000
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-18
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-18
 
 - **原因对象**：位置编码 / vllm / draft config rope 解析
 - **原因行为**：EAGLE draft head 只从 draft config 取 rope，不从 target 复制；无 rope 键时双层默认落 10000——target 值无路径到达 drafter，静默 base 10000 运行
 - **影响对象**：隐状态；输出内容（质量退化）
-- **影响详情**：draft config 缺 rope_theta 而 target base≠10000（长上下文模型常见）时 drafter 位置编码系统性错位：draft 接受率下降/质量劣化，无日志无错误；配置解析级，无 GPU 即可复现
+- **影响详情**：draft config 无 rope 键且 target rope_theta≠10000 时，drafter 静默按 base 10000 计算位置编码，与 target 不一致，草稿质量/接受率劣化，无日志提示；配置解析级，无 GPU 可确认
 - **改进措施**：检测 对 draft config 缺 rope 键的组合，打印 get_rope 解析 base 对照 target（issue 附 ~30 行脚本）；修复 上游修复未见（issue open，0.31.0/0.31.1.dev2/main bd5bbce6 同路径）；规避：给 draft checkpoint config.json 显式补 rope_theta 与 target 一致
 - **来源**：https://github.com/vllm-project/vllm/issues/61231
 
@@ -14958,17 +14971,6 @@
 - **影响详情**：所有 GQA 层同时受影响，输出整体崩坏但无任何异常或报错；仅 MHA（H_KV=H_Q）或 MQA（H_KV=1）配置下恰好等价于正确映射。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：引用：`gh`：SHI-Labs/NATTEN #92（"GQA without repeat()"）。
-
-### INF-1438 `vllm_ascend_mlapo_hardcoded_rmsnorm_epsilon` vllm-ascend MLAPO 硬编码 RMSNorm epsilon
-
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-18
-
-- **原因对象**：模型定义 / vllm / mla_preprocess epsilon 常量
-- **原因行为**：MLAPO 融合算子对 Q 与 KV RMSNorm 均用固定 1e-6，不读模型各层 rms_norm_eps；配置≠1e-6（如 GLM-5.2 的 1e-5）时融合路径与 native 路径归一化公式不同。
-- **影响对象**：隐状态（质量退化）
-- **影响详情**：配置 epsilon≠1e-6 的模型在 MLAPO 融合路径下 Q-down/KV 归一化结果系统性偏离 native 路径（源码级确认的模型参数失配；端到端精度影响未测量，issue 明示不声称已观测 e2e 回退）
-- **改进措施**：检测 SFA-to-MLAPO 数值回归（baseline 16 failed/24，修复后 24/24 通过即证明失配真实）；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19107 （open，c2026-10-18）：q_epsilon/kv_epsilon 经 PyTorch 算子、ACLNN 属性与 tiling data 传入全部四个 MLAPO kernel 变体，缺省 1e-6 兼容旧调用；910B3 实测 baseline 16 failed→24 passed+新算子测试 68 passed；发布未核实
-- **来源**：https://github.com/vllm-project/vllm-ascend/issues/18859；https://github.com/vllm-project/vllm-ascend/pull/19107
 
 ## 权重/检查点
 

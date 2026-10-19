@@ -4,7 +4,7 @@ slug: sglang_marlin_moe_sm86_intermittent_wrong_expert_output
 aliases: []
 title: SGLang Marlin MoE SM86 间歇错误专家输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: 192 请求多数 run 1-18 个从某 decode 步起错；批内无关请求常同 step 同时错；单请求逐次 11/192 仍错（24 次重复 3-6 种输出、2-5 次错）；重跑错的不同、部分 run 干净
-  visibility: 静默错误
+  detail: 多数 run 有 1-18 请求从某 decode 步起错 token；批内无关请求常同 step 同时错；单请求逐次 11/192 仍错（4 prompt×24 重复，每 prompt 3-6 种输出、2-5 次错）；重跑错请求不同、部分 run 干净
+  visibility: 不可复现
 mitigation:
   detect: probec 探针 twin（AWQ 可精确表示权重 + 已知输出）批量 greedy 对照；--quantization moe_wna16 切 Triton 路径
   fix: 规避（实测）：--quantization moe_wna16 切 Triton WNA16 MoE 内核（0/0 精确）；上游修复未见（issue open）
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    rewritten:
+    - detail

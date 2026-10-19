@@ -4,15 +4,16 @@ slug: trtllm_breakable_prefill_graph_shared_output_buffer_corruption
 aliases: []
 title: TRT-LLM 断点 prefill 图共享输出缓冲损坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: tensorrt-llm
     component: breakable prefill 图输出缓冲
-  behavior: 断点 prefill CUDA graph 按 bucket 回放时，共享输出缓冲落在错误的 bucket 上，部分 bucket 回放输出互相覆盖或读到被污染内容。
+  behavior: 断点 prefill CUDA graph 的共享输出缓冲被归到错误的 bucket。
 effect:
   objects:
+  - 输出内容
   - 数值结果
   detail: 部分 bucket 的 breakable prefill CUDA graph 回放产生损坏输出；本轮按 search item 标题/短语收录，正文逐段深读未完成，细节留待审计复核
   visibility: 静默错误
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-19
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 输出内容
+    rewritten:
+    - behavior
