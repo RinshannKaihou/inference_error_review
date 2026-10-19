@@ -3784,7 +3784,7 @@
 - **影响对象**：输出内容；输出分布（不可复现）
 - **影响详情**：同引擎同 seed 同 prompt 的 temperature=0 两次 generate() 输出序列不同：长公共前缀+单 token 分岔+再对齐的归约序签名；评测/A-B 跨轮比较出现幻影差异
 - **改进措施**：检测 待定；修复 待定（报告者已排除 CUDA graph 重放（NONE 模式仍发散）、采样 RNG（temperature=0）、缓存冷热（暖对暖发散）；同机 Qwen1.5-MoE 稠密注意力对照稳定，归因收窄到 LFM2/hybrid-mamba 特有路径但未定位内核）
-- **来源**：https://github.com/vllm-project/vllm/issues/61319（2026-10-13
+- **来源**：https://github.com/vllm-project/vllm/issues/61319
 - **关联**：var:INF-0344
 
 ### INF-1368 `ttmetal_chunk_gated_delta_rule_chunk64_dl_tile_wrong_slot` ttnn chunk_gated_delta_rule chunk64 装错槽
@@ -3796,7 +3796,7 @@
 - **影响对象**：数值结果；隐状态（静默错误）
 - **影响详情**：chunk_size=64（Ct==2）时 dl 与 k_dec_t 后半错：final state PCC 0.003、output PCC 0.995（B=1,T=256,4 头,K=V=128，fused 与 phased 路径同错）；chunk_size=32 正确
 - **改进措施**：检测 待定；修复 待定（现有 chunk-64 测试只比较设备路径互相之间（test_scan_mcast_bit_exact[chunk64_ct2]、test_fused_tinv_chunk64），全部路径共享缺陷故恒绿；报告者已参数化 test_prep_outputs_vs_torch 至 chunk64 抓到 k_dec_t PCC 3.4e-5<0.999，PR to follow；同一 i==0 模式也在 #58891 分支上）
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/60393（2026-10-13
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60393
 
 ### INF-1369 `ttmetal_gather_rank5_dim_lt_rank_minus_3_scrambled_inverse_transpose` ttnn.gather rank>4 且 dim<rank-3 时输出错乱
 
@@ -3807,7 +3807,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：rank5 dim∈{0,1}、rank6 dim∈{0,1,2} 全错（唯一例外 dim==rank-4 且其前全 1 时正确）；TILE codegen、ROW_MAJOR native、TILE forced native 三路同错
 - **改进措施**：检测 待定；修复 待定（#58402 条目 18 拆出独立跟踪；同缺陷亦在 #56880 评论报告；Wormhole main @337e303cd55 复现）
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/60398（2026-10-13
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60398
 
 ### INF-1370 `ttmetal_matmul_reuse_dram_sharded_srca_reload_tf32_truncation` ttnn matmul 三工厂 SrcA 重载 fp32 部分和 TF32 截断
 
@@ -3818,7 +3818,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：fp32_dest_acc_en=True 多 K block累加时输出系统性负偏置；reuse 2.47e-2、DRAM-sharded decode 2.44e-2、batched DRAM-sharded 1.26e-2–8.5e-4、带fused bias 1.3e-2–2.55e-2。
 - **改进措施**：检测 待定；修复 待定（#50250 已为 mcast_1d/2d 工厂实现无损重载，三个受影响工厂可参照；issue 2026-10-08 创建、2026-10-09 closed/completed，修复 PR 未在扫描窗口内核实——closed 不自动证明修复已发布）
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/59828（2026-10-08；https://github.com/tenstorrent/tt-metal/issues/59828#issuecomment（jberkowitzTT
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/59828
 
 ### INF-1378 `torch_npu_gather_scatter_loss_missing_oob_validation` torch_npu gather/scatter/损失算子缺越界校验静默错值
 
@@ -4018,7 +4018,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：254 种 bf16 NaN 位型全测：每条 NaN lane 返回 ±1.0（32-bit Dest 探针证实恰为 1.0）；上游 NaN 不再向上游传播，下游看到的是貌似正常的有限值；softcap/situ_glu/logit_softcap 同路径
 - **改进措施**：检测 注入 NaN 输入检查 tanh 输出是否为 NaN；修复 issue 附修复方向：clamp 后对非有限 lane 走 accurate kernel 构造（整数递减、乘零加一），Inf→±1、NaN 保持 NaN；未核实合入状态
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/61158（254
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61158
 
 ### INF-1411 `ttmetal_transpose_narrow_row_wrong_data` tt-metal 分片行主序 transpose 窄行形状静默错
 
@@ -4029,7 +4029,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：四类形状输出静默错数据：WH 按字节宽打包、BH 16B 向下取整（4 bf16 datum 每行步进 0，32 行全叠同 16 字节；12 datum 步进 16 覆盖前行尾部）；H>32 时每 tile 列裁剪成 H%32；W%32 残余时页错
 - **改进措施**：检测 对 H 非 32 倍数的分片行主序 transpose 逐元素对 golden；修复 待定（issue 含四类形状分析与双架构实测）
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/61153（四类形状逐一分析
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61153
 
 ### INF-1412 `ttmetal_fast_untilize_bfp_dense_route` tt-metal fast_untilize BFP 输入错走稠密路径
 
@@ -4040,7 +4040,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：第二 tile 起指数从上一 tile 尾数区读取，行主序输出静默错（36/36 变体失败，tile0 正确）；LLK 头文件自己写明 BFP 输入必须走逐 tile 路径
 - **改进措施**：检测 多 tile Bfp2_b fast_untilize 与 golden 对照；修复 issue 给出修复：用仓库 IS_BFP_FORMAT（全部 6 个 BFP 码点）做谓词；未核实合入
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/61110（36/36
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61110
 
 ### INF-1414 `flashinfer_ragged_attention_q_stride_dropped` FlashInfer ragged attention 忽略 query 步长
 
@@ -4051,7 +4051,7 @@
 - **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：非连续 query（transpose 后视图）时 attention 输出静默错；GLM-4.7-Flash gsm8k 83.6%→0.8%；不抛错
 - **改进措施**：检测 对 query 传 packed 与 strided 两种布局对照输出；修复 vLLM 侧规避 q.contiguous()：https://github.com/vllm-project/vllm/pull/61634（已合入 vLLM，FlashInfer 侧修复未见）
-- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/6479（含最小复现
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/6479
 
 ### INF-1416 `torchnpu_copy_conj_view_unconjugated` TorchNPU copy_ 写共轭视图不取共轭
 
@@ -4106,7 +4106,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：exp(dequant) 后的 matmul/reduce tile 静默错（tile0 正确、tile1+ 错；reduce 行和 -26 vs 40），无 hang 无 assert（dequant 先 init 的反向序在 BH 上 hang）
 - **改进措施**：检测 tt-llk test_matmul_exp_interleave.py / dequant+reduce gtest（报告随附）；修复 待定（issue 报告于 Wormhole n150 / Blackhole p100a shipped 代码）
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/61212（exp；https://github.com/tenstorrent/tt-metal/issues/61206（dequant
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61212；https://github.com/tenstorrent/tt-metal/issues/61206
 
 ### INF-1426 `opplugin_max_min_empty_dim_allzero` op-plugin max/min 空 tensor 静默返回全 0
 
@@ -5624,7 +5624,7 @@
 - **影响对象**：输出内容；输出分布（不可复现）
 - **影响详情**：非均匀小批量步（短 prompt、短末 chunk、混批）真实 token 被按陈旧行分配错误 n-gram ID，输出随服务历史漂移：并发突发后 10 探针 0/10 一致，修复后 10/10；CPU 模型 46 步 94 处 ID 错
 - **改进措施**：检测 待定；修复 issue 内给出最小修复（刷新范围外填 input_batch.num_tokens 非递减 padding + ngram_context 全行填 EOS）与替代方案（把 AMD n-gram op 注册为 splitting op，与 NVIDIA 路径一致）；报告者已在 2x R9700 TP1/TP2 验证修复后 10/10 一致、eager/FULL 位级不变；上游修复状态未核实
-- **来源**：https://github.com/vllm-project/vllm/issues/61486（2026-10-13
+- **来源**：https://github.com/vllm-project/vllm/issues/61486
 - **关联**：var:INF-1349
 
 ### INF-1371 `torch_npu_npugraph_ex_replay_overwrites_prior_input` torch_npu npugraph_ex 回放覆写前次输入存储
@@ -5955,7 +5955,7 @@
 - **影响对象**：输出分布；输出内容（静默错误）
 - **影响详情**：副本 LoRA 态不同时 LoRA 请求 logits 静默错：对端空转只得半份 delta；对端持不同 adapter 则混入对方 delta；零-B adapter 完全不可见
 - **改进措施**：检测 对比 DP=1 与 DP>1 的 LoRA 请求 logits；零-B adapter 无法暴露；修复 待定
-- **来源**：https://github.com/vllm-project/vllm/issues/61453（open
+- **来源**：https://github.com/vllm-project/vllm/issues/61453
 
 ### INF-1445 `vllm_tp_inductor_rmsnorm_autotune_expert_divergence` vLLM TP 各 rank Inductor 归约自调谐致专家分叉
 
@@ -9169,7 +9169,7 @@
 - **影响对象**：KV状态；输出内容（静默错误）
 - **影响详情**：host-tier 命中的请求报满前缀命中、正常完成且答案流畅但事实错误（verbatim-recall 18/20 错 vs 冷/device 命中 0/20）；4x B300 TP4 GLM-5.3-Flash FP8 实测
 - **改进措施**：检测 待定；修复 main 已由 PR #40913+#40915 修复（声明 INDEXER host 池，v0.5.21 分支点后合入）；v0.5.21 backport PR #43998 open（2026-10-13）；规避：关闭 --enable-hierarchical-cache 或使用含 #40915 的构建
-- **来源**：https://github.com/sgl-project/sglang/issues/43997（2026-10-13；https://github.com/sgl-project/sglang/pull/43998（open
+- **来源**：https://github.com/sgl-project/sglang/issues/43997；https://github.com/sgl-project/sglang/pull/43998
 
 ### INF-1364 `sglang_pd_prefill_early_send_cached_prefix_stale_h2d_kv` SGLang PD prefill 早发前缀在 H2D 回载完成前送出陈旧 KV
 
@@ -9180,7 +9180,7 @@
 - **影响对象**：KV状态；输出内容（静默错误）
 - **影响详情**：decode 端静默收到部分前缀的陈旧 KV，答案随重载区间内上下文改变；GB300 1P1D NIXL Qwen3-4B 双 100K 同前缀请求 39/40（direct）、29/30（kernel）、29/30（+checksum，全部被 KV checksum mismatch 标记）损坏
 - **改进措施**：检测 待定（--disaggregation-enable-kv-checksum 可标记每次损坏，但默认不拦截）；修复 规避：SGLANG_DISAGG_PREFILL_EARLY_SEND_CACHED_PREFIX=0（0/84）；候选修复（issue 内提议，未实现）：批内排队过 load-back 时跳过早发（batch.hicache_consumer_index>=0）或让 KV 传输等待 load-back finish event
-- **来源**：https://github.com/sgl-project/sglang/issues/44070（2026-10-13
+- **来源**：https://github.com/sgl-project/sglang/issues/44070
 
 ### INF-1373 `cann_gather_pa_kv_cache_32b_floor_tail_drop` GatherPaKvCache 32B 取整搬运丢尾数据
 
@@ -10103,7 +10103,7 @@
 - **影响对象**：输出内容；跨请求/跨样本数据（静默错误）
 - **影响详情**：base+LoRA 混批时非 LoRA 请求输出与 adapter 输出逐字节一致（35/40），无报错无警告；纯 base 或纯 LoRA 批正确
 - **改进措施**：检测 对照 base-only 输出与混批输出是否一致（随机 adapter 显著化）；修复 待定
-- **来源**：https://github.com/vllm-project/vllm/issues/62225（open
+- **来源**：https://github.com/vllm-project/vllm/issues/62225
 
 ### INF-1409 `vllm_fast_prefill_prompt_logprobs0_bypass` vLLM fast-prefill 漏拦 prompt_logprobs=0
 
@@ -10114,7 +10114,7 @@
 - **影响对象**：输出内容；输出分布（静默错误）
 - **影响详情**：V2（CUDA 默认）HTTP 200 返回偏离数十 nat 的错误 prompt logprob，无提示；V1 EngineCore 死亡、所有客户端失去服务；echo=true 路由隐式继承同样绕过
 - **改进措施**：检测 同模型双服务器（带/不带 --kv-sharing-fast-prefill）对照 prompt logprob；修复 待定
-- **来源**：https://github.com/vllm-project/vllm/issues/62122（open
+- **来源**：https://github.com/vllm-project/vllm/issues/62122
 
 ### INF-1449 `sglang_mm_hashes_client_controlled_cache_identity` SGLang mm_hashes 客户端可控缓存身份错图
 
@@ -12070,7 +12070,7 @@
 - **影响对象**：输出分布；输出内容（静默错误）
 - **影响详情**：top_k>32 请求实际只在 top-32 里采样（top_k=100 与 top_k=32 输出同分布）；插件侧已有路由修复（vllm-tt-plugin#140）但仅对声明了上限的模型生效
 - **改进措施**：检测 对比 top_k=32 与更大 top_k 的输出分布；修复 修复路由已存在：vllm-tt-plugin #140（2026-09-30 合入）对声明 max_device_top_k 的模型把超限请求送 host 采样；Gemma4/Gemma4DFlash/Gemma4DFlashContract/Gemma4MTP 均未声明，等待模型侧补声明
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/60365（源码行号级
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/60365
 
 ### INF-1442 `vllm_ngram_spec_gdn_state_missing_accepted_token_write` vLLM n-gram 投机部分接受时 GDN 态漏写
 
@@ -14498,7 +14498,7 @@
 - **影响对象**：输入编码（静默错误）
 - **影响详情**：嵌入/池化模型的 prompt token 序列静默缺结构性特殊 token：BERT 类丢 [CLS]/[SEP]、Llama 丢 BOS、Qwen3-Embedding 丢 pooling 用 EOS；Cohere /v2/embed truncate=START 同路径
 - **改进措施**：检测 待定；修复 待定（issue 提供可复现 CPU 级最小复现：render server + tiny-random-LlamaForCausalLM 的 /v1/completions/render，unset vs "left" 输出 [1,17366,11203,29889] vs [278,17366,11203,29889]；与 AutoTokenizer 行为对照）
-- **来源**：https://github.com/vllm-project/vllm/issues/61359（2026-10-13
+- **来源**：https://github.com/vllm-project/vllm/issues/61359
 
 ## 模型定义
 
@@ -15355,7 +15355,7 @@
 - **影响对象**：模型权重；输出内容（静默错误）
 - **影响详情**：RL 训练器权重名转换错误（如 vision tower）时引擎保留旧视觉权重继续服务，/update_weights_from_disk 返回 success:true；.bias 情形连日志都没有
 - **改进措施**：检测 更新后对比 vision tower 权重哈希/输出；审计 trainer→HF 名转换；修复 待定
-- **来源**：https://github.com/sgl-project/sglang/issues/44504（open
+- **来源**：https://github.com/sgl-project/sglang/issues/44504
 
 ## 数据管线
 

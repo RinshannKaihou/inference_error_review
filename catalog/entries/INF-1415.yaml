@@ -31,7 +31,7 @@ labels:
   stage: N/A
 remarks: ''
 evidence:
-- url: https://github.com/tenstorrent/tt-metal/issues/60365（源码行号级
+- url: https://github.com/tenstorrent/tt-metal/issues/60365
   kind: github_issue
 relations: []
 original:
@@ -50,3 +50,7 @@ migration:
     - kimi-k3
     - doubao-seed-2.1-pro
     panel: []
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - evidence

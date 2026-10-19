@@ -11,6 +11,7 @@
   python3 tools/catalog_tool.py cross-sync [--dry-run]   # add reverse links for the other catalog's cross links
   python3 tools/catalog_tool.py pattern-sync [--dry-run] # derive catalog/patterns/ + entry `pattern` from the var forest
   python3 tools/catalog_tool.py pattern-set PAT-INF-0042 --title ... --shared-mechanism ...
+  python3 tools/catalog_tool.py repair-evidence [--dry-run]  # trim evidence URLs that swallowed trailing text
 
 `new` reads ONE JSON object (stdin or --file): the structured fields plus the scan's narrative under
 "original". On a problem it prints {"ok": false, "errors": [...]} and exits 2 — fix the JSON and resubmit.
@@ -59,7 +60,10 @@ TBD, NA = "待定", "N/A"
 
 ID_RE = re.compile(r"^(INF|TRN)-\d{4,}$")
 DATE_RE = re.compile(r"^20\d\d-\d\d-\d\d$")
-URL_RE = re.compile(r"https?://[^\s）)，。；、`>\]\"']+")
+# 只收 ASCII：中文行文常把全角括注直接贴在链接后面（"…/issues/61319（2026-10-13 open）"），
+# 旧写法只排除了全角右括号等，左括号「（」被吞进 URL，链接 404、`new` 的来源查重也对不上。
+# 编目里没有合法的非 ASCII 链接，所以整段排除。
+URL_RE = re.compile(r"https?://[^\s)`>\]\"'\x80-\U0010ffff]+")
 ARXIV_ID_RE = re.compile(r"arXiv[:：]\s*(\d{4}\.\d{4,5})", re.I)
 TOP_KEYS = ("id", "legacy_ids", "slug", "title", "kind", "status", "cause", "effect",
             "mitigation", "labels", "remarks", "evidence", "relations", "original")
@@ -184,6 +188,12 @@ def mentions(entry, repo_short, number):
     return False
 
 
+def clean_url(u):
+    """A stored URL cut back to what URL_RE accepts (the same trimming evidence_of applies)."""
+    m = URL_RE.match(u or "")
+    return m.group().rstrip(".,;:") if m else u
+
+
 def evidence_of(source_text):
     urls = []
     for u in URL_RE.findall(source_text or ""):
@@ -293,6 +303,8 @@ def check_entry(e, voc, strict_lengths=False):
                     errors.append(f"citation 缺少 text: {item}")
             elif item.get("kind") not in EVIDENCE_KINDS or not str(item.get("url", "")).startswith("http"):
                 errors.append(f"evidence 项非法: {item}")
+            elif clean_url(item["url"]) != item["url"]:
+                errors.append(f"evidence 链接带了多余字符（应为 {clean_url(item['url'])}），用 repair-evidence 修复")
     for r in e["relations"] or []:
         if r.get("kind") not in ("var", "cross"):
             errors.append(f"relation kind 非法: {r}")
@@ -830,6 +842,38 @@ def cmd_cross_sync(a):
          "added": [{"id": t, "cross": s, "title": sib["entries"][s].get("title")} for t, sids in sorted(add.items()) for s in sids]})
 
 
+def cmd_repair_evidence(a):
+    """Trim evidence URLs that an older URL_RE let swallow trailing text (e.g. "…/61319（2026-10-13").
+
+    Idempotent and deterministic; after cleaning, duplicates within an entry are dropped (first kept).
+    """
+    fixed = []
+    for eid, e in sorted(load_entries().items()):
+        if not isinstance(e["evidence"], list):
+            continue
+        ev, seen, changes = [], set(), []
+        for item in e["evidence"]:
+            if item.get("url"):
+                u = clean_url(item["url"])
+                if u != item["url"]:
+                    changes.append({"from": item["url"], "to": u})
+                    item = {**item, "url": u, "kind": url_kind(u)}
+                if norm_url(u) in seen:
+                    continue
+                seen.add(norm_url(u))
+            ev.append(item)
+        if not changes:
+            continue
+        fixed.append({"id": eid, "changes": changes, "dropped_duplicates": len(e["evidence"]) - len(ev)})
+        if not a.dry_run:
+            e["evidence"] = ev
+            e.setdefault("migration", {}).setdefault("updates", []).append({"date": today(), "fields": ["evidence"]})
+            with open(os.path.join(ENTRIES, f"{eid}.yaml"), "w", encoding="utf-8") as fh:
+                fh.write(dump_yaml(e))
+    out({"ok": True, "dry_run": a.dry_run, "entries": len(fixed), "urls": sum(len(f["changes"]) for f in fixed),
+         "fixed": fixed})
+
+
 def load_patterns():
     if not os.path.isdir(PATTERNS):
         return {}
@@ -1023,10 +1067,13 @@ def main():
     p.add_argument("--dry-run", action="store_true")
     p = sp.add_parser("cross-sync")
     p.add_argument("--dry-run", action="store_true")
+    p = sp.add_parser("repair-evidence")
+    p.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     {"new": cmd_new, "update": cmd_update, "find": cmd_find, "build": cmd_build,
      "validate": cmd_validate, "stats": cmd_stats, "cross-sync": cmd_cross_sync,
-     "pattern-sync": cmd_pattern_sync, "pattern-set": cmd_pattern_set}[a.cmd](a)
+     "pattern-sync": cmd_pattern_sync, "pattern-set": cmd_pattern_set,
+     "repair-evidence": cmd_repair_evidence}[a.cmd](a)
 
 
 if __name__ == "__main__":

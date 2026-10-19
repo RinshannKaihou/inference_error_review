@@ -31,7 +31,7 @@ labels:
   stage: N/A
 remarks: ''
 evidence:
-- url: https://github.com/vllm-project/vllm/issues/61453（open
+- url: https://github.com/vllm-project/vllm/issues/61453
   kind: github_issue
 relations: []
 original:
@@ -57,3 +57,7 @@ migration:
     uncertain:
     - subsystem
     - title
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - evidence

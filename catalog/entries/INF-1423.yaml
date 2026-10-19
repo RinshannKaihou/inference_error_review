@@ -30,9 +30,9 @@ labels:
   stage: N/A
 remarks: 两个 issue 同机制（SFPU replay 体越界覆写 FPU MOP 槽），合并为一条，双证据。
 evidence:
-- url: https://github.com/tenstorrent/tt-metal/issues/61212（exp
+- url: https://github.com/tenstorrent/tt-metal/issues/61212
   kind: github_issue
-- url: https://github.com/tenstorrent/tt-metal/issues/61206（dequant
+- url: https://github.com/tenstorrent/tt-metal/issues/61206
   kind: github_issue
 relations: []
 original:
@@ -57,3 +57,7 @@ migration:
     - glm-5.3
     uncertain:
     - behavior
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - evidence

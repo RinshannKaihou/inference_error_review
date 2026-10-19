@@ -31,7 +31,7 @@ labels:
   stage: N/A
 remarks: ''
 evidence:
-- url: https://github.com/sgl-project/sglang/issues/44504（open
+- url: https://github.com/sgl-project/sglang/issues/44504
   kind: github_issue
 relations: []
 original:
@@ -54,3 +54,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - evidence

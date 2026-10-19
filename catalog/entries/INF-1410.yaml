@@ -30,7 +30,7 @@ labels:
   stage: N/A
 remarks: ''
 evidence:
-- url: https://github.com/tenstorrent/tt-metal/issues/61158（254
+- url: https://github.com/tenstorrent/tt-metal/issues/61158
   kind: github_issue
 relations: []
 original:
@@ -55,3 +55,7 @@ migration:
     - glm-5.3
     uncertain:
     - detail
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - evidence

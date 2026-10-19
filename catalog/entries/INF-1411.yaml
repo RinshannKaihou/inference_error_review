@@ -30,7 +30,7 @@ labels:
   stage: N/A
 remarks: ''
 evidence:
-- url: https://github.com/tenstorrent/tt-metal/issues/61153（四类形状逐一分析
+- url: https://github.com/tenstorrent/tt-metal/issues/61153
   kind: github_issue
 relations: []
 original:
@@ -53,3 +53,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - evidence
