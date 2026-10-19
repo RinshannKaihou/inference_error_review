@@ -43,6 +43,8 @@ original:
   behavior: 在 Ascend 950 上用浮点 dtype 调 StatelessRandperm/torch.randperm：dtype=float16 且 n=2051 时输出只有 2050 个不同值（2049 与 2048 重复）、dtype=bfloat16 且 n=259 时只有 258 个不同值，float32 在 n 超过 2^24+1 后同理。每次都发生、与种子无关，无报错。依赖无重复索引的洗牌/抽样调用方拿到重复索引后行为被静默破坏。
   trigger_surface: cann/ops-math StatelessRandperm arch35（950）；浮点输出 dtype + n 超出该 dtype 连续整数精确表示范围（FP16≥2050/BF16≥258/FLOAT>2^24+1）；torch.randperm NPU 路由
   discovery: 2026-10-18 每日扫描
+  notes:
+  - '2026-10-19 回访 2026-10-19：issue #3576 已 closed（关闭时间在本轮窗口，关闭原因/是否修复未在批次快照中注明，修复 PR !6411 状态未复核）；#3575 同 PR 线'
 migration:
   method: scan
   scanned: '2026-10-18'
@@ -53,3 +55,7 @@ migration:
     - kimi-k3
     - doubao-seed-2.1-pro
     panel: []
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - original.notes

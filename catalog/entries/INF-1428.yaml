@@ -41,6 +41,8 @@ original:
   behavior: 调用 SwinTransformerLnQKV 算子时，无论用默认 epsilon 还是显式传入自定义值，LayerNorm 实际用的都是硬编码 1e-5：接口文档承诺的 1e-7 语义不生效，Q/K/V 输出与按接口契约实现的参考值有系统偏差。不报错；静态源码对照确认，未见设备端数值复现记录。
   trigger_surface: SwinTransformerLnQKV（ffn 域 swin_attention_ffn 系链路）任意调用；master 未修
   discovery: 2026-10-17 每日扫描
+  notes:
+  - 2026-10-19 回访 2026-10-19：ops-transformer#6119 open；修复 PR !13800 仍 open（u2026-10-19T08:37）未合入
 migration:
   method: scan
   scanned: '2026-10-17'
@@ -51,3 +53,7 @@ migration:
     - kimi-k3
     - doubao-seed-2.1-pro
     panel: []
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - original.notes
