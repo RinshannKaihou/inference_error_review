@@ -41,6 +41,8 @@ original:
   behavior: A3 上跑 GLM-5.3-Flash 类带 KPool 索引器 + DSA-CP + MTP + graph 的配置时，一旦某 DP 分片出现非空 query 但空 pooled history（如部分导入未完成、边界请求），KV 池发生越界写：模型缓存里无关权重变 NaN、生成输出变成重复 '!' 或 logprobs 非有限，服务本身不崩溃。
   trigger_surface: GLM KPool indexer + DSA-CP + MTP + graph capture/replay（A3）；空 local history / 零 query 请求 / 全 padding replay
   discovery: 2026-10-17 每日扫描
+  notes:
+  - '2026-10-19 回访 2026-10-18：修复 PR #19073 已 closed 且 merged=True（v0.30.0 backport #19084 亦 merged），发布版本未核实'
 migration:
   method: scan
   scanned: '2026-10-17'
@@ -61,3 +63,7 @@ migration:
         to: 数值异常
     uncertain:
     - behavior
+  updates:
+  - date: '2026-10-19'
+    fields:
+    - original.notes
