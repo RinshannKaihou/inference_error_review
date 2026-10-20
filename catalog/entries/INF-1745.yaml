@@ -4,18 +4,18 @@ slug: ops_nn_swiglu_group_quant_grad_ub_war_missing_reverse_sync
 aliases: []
 title: SwigluGroupQuantGrad 输出读与次轮搬入复用 UB
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: cann
     component: SwigluGroupQuantGrad 流水
-  behavior: CopyOutGradX 搬出后未发 MTE3→MTE2 同步，下一轮 CopyInX 直接把新输入搬进同一 UB 地址；队列的 FreeTensor/AllocTensor 只是软件生命周期，不构成流水间 happens-before。
+  behavior: CopyOutGradX 搬出后只有 V_MTE3 正向同步、无 MTE3→MTE2，MTE2 侧不等 MTE3 读完就覆盖；外层循环复用的 xQueue buffer 下一轮 CopyInX 又搬入新输入，同一 UB 地址写后读。
 effect:
   objects:
   - 梯度
-  detail: racecheck 在 float16 高性能模板报 2 条 UB WAR（WAR()+0x4000/0x6000：读 466/467 行、写 156/158 行）；补同步后 racecheck 无告警、样例运行正常。
-  visibility: 不可复现
+  detail: 触发面：swiglu_group_quant_grad，外层循环复用同一 UB buffer。racecheck 在 float16 高性能模板报 2 条 Potential WAR（MTE3 读、MTE2 写同一 UB 地址 0x4000/0x6000）；运行不报错、不产生 NaN，补丁后无告警。
+  visibility: 静默错误
 mitigation:
   detect: 对 gradX 输出路径开 mssanitizer racecheck 跑多轮；只比对一次输出数值发现不了，竞态窗口依赖流水排布。
   fix: issue closed；修复补丁 patch_add_mte3_mte2_sync.diff 在 CopyOutGradX 的搬出后补 MTE3_MTE2 同步（未给 MR 号）。
@@ -42,3 +42,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误
+    rewritten:
+    - behavior
+    - detail
+    uncertain:
+    - subsystem

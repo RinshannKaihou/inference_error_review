@@ -4,17 +4,17 @@ slug: fa_mla_skip_batch_softmax_slot_collision
 aliases: []
 title: FA MLA 被 skip 空 batch 占用 softmax 槽位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: FA MLA arch35 槽位管理
-  behavior: multiCoreInnerIdx 在 skip 前递增，被 skip 的空 batch 也占用 softmaxSum/Max 的 mod3 环形槽位，PRELOAD_N=1 时 vec1 覆写 vec2 未读的 softmax 状态。
+  behavior: multiCoreInnerIdx在skip前自增，空batch也占3槽环形缓冲；PRELOAD_N=1时前一非空batch末s2的bmm2延到后一非空batch，中间skip次数%3==0则vec1覆写vec2未读的softmax状态
 effect:
   objects:
   - 数值结果
-  detail: MLA noquant 多 batch 场景下某 batch 的 s2LoopEndIdx<=0 被 skip、且累计 skip 次数%3==0 时 attention_out 逐元素错，LSE 仍正确，无报错；切到 PRELOAD_N=0 结果不同。
+  detail: arch35 MLA noquant多batch推理中夹一个空batch（KV长度为0或mask窗口无有效KV，s2LoopEndIdx<=0被skip）且位于核分配序列中间、累计skip次数%3==0时，attention_out逐元素偏差而同调用LSE正常；PRELOAD_N改0结果对得上。
   visibility: 静默错误
 mitigation:
   detect: 构造 KV 长度为 0 的空 batch 并置于核分配序列中间，比较 PRELOAD_N=1 与 PRELOAD_N=0 的 attention_out
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - detail

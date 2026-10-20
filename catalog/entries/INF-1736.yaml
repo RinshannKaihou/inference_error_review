@@ -4,7 +4,7 @@ slug: mhc_sinkhorn_bwd_inputsum_buffer_32b_short
 aliases: []
 title: mhc_sinkhorn_backward sum 缓冲小 32B 越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: sum 的 DataCopyPad 写 32 float(128B)，而 Init 只按 tUbFactor×nAlignSize=24 float(96B) 分配 inputSumQue_，越界 32B。
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: tUbFactor=3<nSize_=4 且 perloopSize%8!=0 时 mssanitizer 报 illegal write 32B @0x820，越界落点 0x880 正是 CopyOut 输出缓冲，连带 160/96 字节未初始化读。
   visibility: 静默错误
@@ -42,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度

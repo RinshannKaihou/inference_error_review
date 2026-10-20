@@ -4,7 +4,7 @@ slug: npu_event_record_reads_beyond_thpstream
 aliases: []
 title: NPU Event 无类型检查越界读 npu_stream 字段
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 可用性/进度
   detail: torch.npu.Event().record(torch.Stream()) 抛 Event device 不匹配；该报错只是 UB 的偶然结果——垃圾 device_index 恰好相等时会按垃圾流继续下发 record 任务。CUDA/XPU 同位置有类型检查且只读基类字段。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 把 torch.Stream/torch.npu.Stream 与 torch.Event/torch.npu.Event 的四种组合逐一喂给 record/wait/elapsed_time；越界读用 ASAN 确认
   fix: 待定（issue closed，未给修复 PR）；按 CUDA/XPU 模式修：入口加 TORCH_CHECK(THPStream_Check(...))，转基类 THPStream*，用 stream_id/device_index/device_type 经 c10::Stream::unpack3 重建 Stream
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    uncertain:
+    - behavior

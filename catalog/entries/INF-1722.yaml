@@ -4,7 +4,7 @@ slug: sfa_tail_minus1_not_shrink_s2realsize
 aliases: []
 title: sparse_flash_attention 遇 -1 未收缩有效长度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: topk=2051 中仅前 8 有效、其余 -1 时输出 max 达 1.9e29（仍 finite）；K=2、indices=[5,-1] 时输出落到 -872/156，无报错，等长全有效对照正常。
+  detail: topk=2051 仅前 8 有效、其余 -1 时输出 max 达 1.9e29（仍 finite）；K=2、indices=[5,-1] 时输出 -872~156；均无报错、无 NaN/Inf。尾部仅少量 -1 时数值看似正常，但与截断到有效 topk 的结果相差 0.067。
   visibility: 静默错误
 mitigation:
   detect: 构造尾部大量 -1 的 sparse_indices，与截断到有效 topk 的等价用例比对；不能只用 isfinite 判定正确
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

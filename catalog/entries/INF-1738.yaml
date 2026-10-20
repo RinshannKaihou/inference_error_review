@@ -4,7 +4,7 @@ slug: npu_frexp_ilogb_ldexp_wrong_mantissa
 aliases: []
 title: frexp 走 ilogb/ldexp 致尾数全错、2^k 边界差一档
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: frexp 走 lowering（不回退 eager）时尾数与指数大幅错误，2^k 边界失配 42/176/213 例；改按 IEEE-754 位域取指数/尾数后边界失配降为 0，fp16/bf16 经 codegen upcast 后同样受益。
+  detail: frexp 经 Inductor 真正 lowering（不回退 eager）时，fp32/fp16/bf16 的尾数与指数均与 eager 不一致，2^k 边界失配 42/176/213 例；形状、dtype 正常且无报错，仅在比对 eager 结果或下游做 norm/量化换算时暴露数值整体偏移。
   visibility: 静默错误
 mitigation:
   detect: fp32/fp16/bf16 的 aten.frexp 输出与 eager 逐位比对，重点覆盖 2^k 边界、inf/nan/±0 与融合 frexp+add 路径
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem
+    - behavior

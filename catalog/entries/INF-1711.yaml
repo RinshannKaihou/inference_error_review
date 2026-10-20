@@ -4,7 +4,7 @@ slug: ms_fusion_attention_all_zero_mask_row
 aliases: []
 title: 全零 mask 行使融合注意力输出退化为均匀加权
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

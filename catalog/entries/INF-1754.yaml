@@ -2,20 +2,20 @@ id: INF-1754
 legacy_ids: []
 slug: te_broadcast_backward_odometer_lost_high_pid
 aliases: []
-title: TE 广播反向内核首发射丢失高 pid program 致梯度错
+title: TE 广播反向发射 3D tile 归约致梯度系统性错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: pytorch
     component: TE 反向归约发射
-  behavior: TE 把瓦片展开（重叠非零 stride）广播对的反向归约发射成 3D tile 再 tl.sum(ACC,0)，首次发射丢掉高 pid 的 program，广播梯度只累加了一部分。
+  behavior: TE 的 npu_linearize 把重叠非零 stride（瓦片展开）广播对的反向归约发射成 3D tile；triton-ascend 对 leading-axis 归约 lowering 交换 stride 映射，归约落到错误轴上
 effect:
   objects:
   - 梯度
   - 数值结果
-  detail: 35 条 opinfo float 行反向失败（abs diff 最大 150+，atan2 f32 30/50 元素错，pow f32 达 8.06e6）；最小复现连 torch.add 都错，广播梯度应为 10 恒得 1，等形 contiguous 输入正确。
+  detail: triton_experimental 后端下 opinfo 33 行广播算子 float 反向失败，abs diff 最大 150+，pow f32 偏差达 8.06e6；最小复现 torch.add 广播梯度应为 10 恒得 1，等形 contiguous 输入或 default 后端正常。
   visibility: 静默错误
 mitigation:
   detect: 对重叠 stride 的广播对做前向+反向，与 eager 比梯度；再退到纯 triton 的 3D tl.sum(acc,0) 与 2D 形式对照
@@ -43,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior
+    - detail
+    - title

@@ -4,7 +4,7 @@ slug: ops_nn_ttk_golden_dual_baseline_collapse
 aliases: []
 title: 11 算子 TTK golden 四类缺陷致精度结论失真
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 测试判定
-  detail: 3200/3200 行 |b-g|=0，rmse 比值随输出量级放大（lamb_next_m_v fp16 达 98.79 仍 PASS）；>2^24 的 int32 静默丢低位，部分 dtype 精度从未被真正验证。
+  detail: TTK 精度任务中，有量纲 rmse 比值随输出量级放大（lamb_next_m_v fp16 98.79）仍 PASS；3200/3200 行 |b-g|=0；整型用例 2^30+100 变 2^30+128，整型 dtype 结论从未被真正验证；空张量用例直接判 golden 失败。
   visibility: 静默错误
 mitigation:
   detect: 查 golden 里是否无条件 astype(float32)、看 ttk-compare.log 是否 |b-g| 恒 0；rmse 比值远大于 mare/mere 即是塌陷指纹。
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

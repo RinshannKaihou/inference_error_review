@@ -2,9 +2,9 @@ id: INF-1748
 legacy_ids: []
 slug: flex_attention_fp32_defaults_to_tf32_kernel
 aliases: []
-title: FlexAttention fp32 默认生成 TF32 kernel
+title: high 档下 NPU FlexAttention fp32 按 TF32 计算
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: seq_len=277、dtype=float32 的用例：compiled RMSE=6.245e-5，NPU eager RMSE=5.165e-8，FP32 精度断言失败退出码 1；改用 dtype 感知 helper（fp32 走 IEEE）后同一用例 PASS。
+  detail: set_float32_matmul_precision("high") + fp32 输入 + NPU FlexAttention 编译路径下，结果与 eager 差两三个数量级（RMSE 6.2e-5 对 5.2e-8），fp32 精度断言失败；非 fp32 输入或不走编译路径则看不出异常。
   visibility: 静默错误
 mitigation:
   detect: 在 set_float32_matmul_precision("high") 下编译 fp32 FlexAttention，比较 compiled 与 eager 的 RMSE；对比 fp32 走 IEEE 默认值的结果
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    - title

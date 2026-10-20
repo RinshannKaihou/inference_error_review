@@ -4,7 +4,7 @@ slug: indcutor_npu_stride_layout_attr_mismatch
 aliases: []
 title: Inductor-NPU 生成代码 stride/布局与 eager 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 测试判定
-  detail: opinfo/dynamic_shapes 共 23 例同根因失败：18 例输出 stride 与 eager 不符（5×5 得 (1,5) 对 (5,1)），3 例 IndexError，2 例 max_pool3d 的 dtype 属性 int64≠int32，1 例 resize_ 不支持。
+  detail: Inductor-NPU 编译 out-variant/linalg/池化/resize_ 算子（零维简并维、符号 shape）时 23 例失败：12+ 例 stride 与 eager 不符，3 例 IndexError，2 例 dtype int64≠int32，1 例 resize_ 不支持。
   visibility: 静默错误
 mitigation:
   detect: NPU 上跑 test_torchinductor_opinfo/dynamic_shapes 的 npu 变体，对输出同时比 stride 与 dtype 属性，而不只比数值
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

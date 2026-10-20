@@ -4,7 +4,7 @@ slug: fa_tnd_lse_offset_uses_abs_bidx
 aliases: []
 title: FA TND 布局 lseOffset 用绝对 bIdx 越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: CombineSplitKVRes 的 lseOffset 按绝对 bIdx 计算，TND 下应改用累积有效 S1；S1=0 的 batch 使有效 batch 偏移越过 LSE 缓冲区。
 effect:
   objects:
+  - 数值结果
   - 输出分布
   detail: TND、B=6、Q cumulative seqlen=[1,1,1,1,1,2] 开 LSE 时，batch5 的 LSE 未写入而保持预填的 3e+99（inf）；attention_out 正常，调用无报错。
   visibility: 数值异常
@@ -42,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出分布
+        to: 数值结果

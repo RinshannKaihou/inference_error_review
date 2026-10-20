@@ -4,7 +4,7 @@ slug: te_reduction_int32_index_overflow_2_31
 aliases: []
 title: 归约元素数超 2^31 时 int32 索引回绕致错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: numel=2^31+257 的 (8388609,256) 张量做 sum(dim=1)，triton_experimental 下结果错误或触发设备故障（MTE/EE1003 核心报错）；把索引全量提升 int64 则编译挂死、耗时暴涨。
+  detail: numel=2^31+257 的 (8388609,256) 张量在 triton_experimental 下做 sum(dim=1)，编译能过、能跑，但归约结果与 eager 不同，或直接触发设备故障（MTE/EE1003 核心报错）；若把索引全量提升 int64 规避，则编译挂死不返回。
   visibility: 静默错误
 mitigation:
   detect: 构造 numel 略超 2^31 的张量做归约，与 eager 比对；同时看编译耗时/UB 占用是否异常
@@ -45,3 +45,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

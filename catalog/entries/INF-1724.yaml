@@ -4,7 +4,7 @@ slug: fd_lse_sentinel_neg_fltmax_mismatch
 aliases: []
 title: FD 全遮挡行 LSE 哨兵 -FLT_MAX 与 +inf 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: arch35 公共 FD LSE 用位模式 0xFF167699（约 -2e38）判全遮挡行，而 FA softmax 约定的无效行哨兵是 0xFF7FFFFF（-FLT_MAX），FD 行遂写成 -FLT_MAX。
 effect:
   objects:
+  - 数值结果
   - 输出分布
   detail: Flash MLA FP16、Q BNSD[5,18,509,576]、KV PA_BBND 下 45810 个 LSE 点中 390 个错误，全为 FD 覆盖的全遮挡行；改非 FD 调度后错误为 0，正常行前后差 3.8e-6。
   visibility: 静默错误
@@ -42,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出分布
+        to: 数值结果

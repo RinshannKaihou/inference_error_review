@@ -2,9 +2,9 @@ id: INF-1740
 legacy_ids: []
 slug: inductor_cat_first_shard_mask_dropped
 aliases: []
-title: 动态 shape 下 cat 首分片 load 掩码被删致越界读
+title: 动态shape下cat融合尾块掩码被删致越界读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - title
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - detail

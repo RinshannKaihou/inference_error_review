@@ -4,7 +4,7 @@ slug: ms_multistream_event_reuse_reset_order
 aliases: []
 title: 多流复用 event 时 reset 与 record 错位致等待超时
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   detail: 并行下发/多流场景偶现 event wait timeout：plog 报 event wait timeout occurred during task execution（timeout=1980s），随后流同步失败、进程退出；重跑同网络不一定复现。
-  visibility: 不可复现
+  visibility: 挂起
 mitigation:
   detect: step 结尾统计已同步的 stream 集合；多流并行下发压测时按 event_id 抓 plog 的 wait timeout，并检查 reset 是否在 step 内完成
   fix: issue 给出方案：step 结尾或 event 复用前在从流与默认流之间插入一对 record/wait（或改用 aclrtCreateEventExWithFlag），reset 后再补一对 event 把 reset 汇聚到主流；未见 PR 链接，发布状态未核实
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 挂起

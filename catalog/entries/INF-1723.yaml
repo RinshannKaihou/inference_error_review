@@ -4,18 +4,19 @@ slug: ms_msa_gelu_impl_divergence
 aliases: []
 title: MSA 的 GELU 实现差异使 MLP 输出与 PTA 分叉
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: mindspore
     component: GELU 激活实现（MSA）
-  behavior: MSA 侧 GELU 的实现与 PyTorch 不同（近似式/数值精度不同），fc1 输出逐元素一致而 GELU 之后张量开始分叉，替换 GELU 实现即对齐。
+  behavior: MSA 的 GELU 实现与 PTA 不一致：fc1 输出逐元素相同，GELU 之后张量开始分叉；公式层面的具体差异 issue 未给出，显式替换 GELU 实现后 task3 对齐。
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 输出内容
-  detail: task3 的 logits/loss 与 PTA 对不上，逐层对比把第一处差异定位在 block0.mlp 的 fc1→GELU→fc2 之间；不报错、无 NaN，只有数值偏离。
+  detail: MSA 双栈 bf16、同权重同输入下 task3 的 logits 与 PTA 不一致，差异不在 attention 也不在 loss；逐层 dump 显示 embedding、attention、fc1 输出逐元素一致，第一处分叉在 fc1→GELU→fc2 之间；不报错、无 NaN。
   visibility: 静默错误
 mitigation:
   detect: 同权重同输入双栈逐层 dump：linear_fc1.output 一致而 linear_fc2.input 不一致，即定位到激活；把 GELU 换成 PTA 等价实现看是否对齐
@@ -43,3 +44,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果
+    rewritten:
+    - behavior
+    - detail

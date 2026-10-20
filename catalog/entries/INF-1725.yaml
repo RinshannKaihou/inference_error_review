@@ -4,17 +4,17 @@ slug: ms_unpaired_backward_hook_global_map_cleared
 aliases: []
 title: 嵌套反向清空全局 hook 表致外层 hook 静默丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 观测/评测
+  - subsystem: 运行时/执行
     stack: mindspore
     component: PyNative unpaired hook 表
   behavior: unpair_backward_hook_grad_ 是全局静态 map，内层反向的 ProcessUnPairedCellHook 直接 clear() 整表，把外层引擎注册的 hook 一并清掉。
 effect:
   objects:
   - 指标/日志
-  detail: 嵌套 GradOperation/Tensor.backward 时外层 register_backward_hook 的回调不再触发，hook 日志里只剩内层记录；无报错，依赖 hook 的梯度观测少一层。
+  detail: PyNative 下若 Cell 输入不参与求导且存在嵌套反向（自定义 bprop 内再调 GradOperation/Tensor.backward），外层 register_backward_hook 回调不再执行；日志无报错，监控面板该层梯度数据缺失，单层反向不受影响。
   visibility: 静默错误
 mitigation:
   detect: 外层 Cell 注册 register_backward_hook，在自定义 bprop 里再触发一次内层 GradOperation，检查 hook 回调日志是否缺少外层记录
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 观测/评测
+        to: 运行时/执行
+    rewritten:
+    - detail

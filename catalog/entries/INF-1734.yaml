@@ -4,7 +4,7 @@ slug: ms_dvm_fusion_pp_mtp_step2_divergence
 aliases: []
 title: DVM 融合在 PP+MTP 第 2 步起确定性数值突变
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - subsystem
+    - effect
+    - visibility

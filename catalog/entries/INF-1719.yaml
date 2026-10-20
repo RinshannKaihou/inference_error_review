@@ -4,13 +4,13 @@ slug: ms_aclnn_rope_old_interface_zero_output
 aliases: []
 title: aclnn RoPE 仍走旧接口致前向输出全 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 位置编码
     stack: mindspore
     component: aclnn RoPE 接口适配
-  behavior: aclnnRotaryPositionEmbedding 的适配仍调用旧版 aclnn 接口，与新接口的参数/输出约定不一致，算子执行结果直接为 0。
+  behavior: aclnnRotaryPositionEmbedding 使用旧版 aclnn 接口，算子执行结果为 0；issue 未给出新旧接口的参数对照或源码位置，接口差异的具体点待定。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

@@ -4,7 +4,7 @@ slug: ops_nn_softmax_v2_aicpu_non_suffix_multi_axis
 aliases: []
 title: SoftmaxV2 AICPU 非后缀多轴归约混组错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,8 @@ cause:
   behavior: AICPU kernel 只把连续后缀轴当快路径；axes 为 [0,2] 这类非连续后缀时仍按后缀假设分组，把不同分组的元素混进同一次归一化。
 effect:
   objects:
-  - 输出分布
   - 数值结果
+  - 输出分布
   detail: FP32 [2,3,4]、axes=[0,2]：首个输出 0.0949649，按未归约第 1 维独立分组算得 0.0494982，kernel 仍返回成功；连续后缀轴用例通过。
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出分布
+        to: 数值结果

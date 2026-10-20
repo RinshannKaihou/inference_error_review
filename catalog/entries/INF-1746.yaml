@@ -4,7 +4,7 @@ slug: aclgraph_side_stream_address_not_in_pool
 aliases: []
 title: 侧流 kernel 地址未登记 graph pool 致唤醒后越界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -52,3 +52,17 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - effect
+    - behavior

@@ -4,10 +4,10 @@ slug: ops_nn_ctc_loss_v2_grad_missing_beta_term
 aliases: []
 title: CTCLossV2Grad 边界类别首步漏 beta 贡献项
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 损失计算
+  - subsystem: 算子/内核
     stack: cann
     component: CTCLossV2Grad arch35
   behavior: t=0 且 targets 首个 label 落在边界类别时，kernel 对该位置只写 exp(log_probs)*grad_out 的前向项，漏掉 -exp(res+nll-log_probs)*grad_out 的后向项。
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 损失计算
+        to: 算子/内核

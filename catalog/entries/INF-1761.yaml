@@ -4,7 +4,7 @@ slug: ops_nn_compare_data_zip_silent_truncation
 aliases: []
 title: compare_data.py 用 zip 比对致多余输出漏检
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 测试判定
-  detail: 2 个 golden + 3 个 output（第 3 个为垃圾 999.0）实测判 PASSED；kernel 多产出错误输出文件时 UT 完全失效，覆盖 optim/loss/pooling/quant/matmul/experimental。
+  detail: 2 golden + 3 output（第 3 个为垃圾 999.0）实测判 PASSED；多出或命名错位的 output 文件不被比对也不报错，回归看着全绿，实际验证从未覆盖那份输出；涉及 optim/loss/pooling/quant/matmul/experimental。
   visibility: 静默错误
 mitigation:
   detect: 在用例目录多放一个合法命名但内容错误的 *output*.bin，若脚本仍 PASSED 即为命中；也可静态查 zip 前是否有数量校验。
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail
