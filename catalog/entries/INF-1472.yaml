@@ -33,6 +33,7 @@ evidence:
 - url: https://gitcode.com/Ascend/op-plugin/issues/601
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0159
 original:
   mechanism: 'op-plugin issue #601（c2026-10-19，Atlas A3 Ascend910_9362 ×2，CANN 9.1.0，torch 2.7.1 + torch_npu 2.7.1.post4）：norm 族（batch_norm/instance_norm/group_norm）fp16 输出偏差 44~155 ULP，但 running_mean/running_var 逐位一致——偏差来自归一化路径的中间计算精度（如以 fp16 中间量做均值/方差），非随机。对照：同机 fp32 全族逐位一致；matmul 等族 fp32 <2.7e-6 达标。建议归一化路径中间统计量提升精度（fp32 累加）或文档声明 fp16 精度口径。复现脚本：/mnt/workspace/a3hunt/round5/。'
   source: 2026-10-19 GitCode Ascend/op-plugin issue https://gitcode.com/Ascend/op-plugin/issues/601 （open）
@@ -53,3 +54,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - pattern

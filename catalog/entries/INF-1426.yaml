@@ -34,6 +34,7 @@ evidence:
 - url: https://gitcode.com/Ascend/op-plugin/issues/381
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0158
 original:
   mechanism: Ascend op-plugin 的 torch.max/torch.min（op_plugin/ops/opapi/MaxKernelNpuOpApi.cpp / MinKernelNpuOpApi.cpp）对空输入不校验：场景 A（无 dim + numel==0）NPU 8.5 静默返回标量 0.0，CPU/CUDA 抛 RuntimeError（NPU 9.1 经 PR !4922 已修复为报错）；场景 C（带 dim 归约 size(dim)==0，如 torch.zeros([0,5,3]).max(dim=0)）NPU 8.5 与 9.1 均静默返回 values 全 0 + indices 全 0，CPU/CUDA 报错。min 同理。影响：0.0 被当真实最大值参与阈值/上界校验导致误判；indices 全 0 使下游 gather/index_select/embedding lookup 全指向位置 0 产生语义错误；上游空输入缺陷（动态 batching seq_len=0、空集合取最大值）本应报错暴露根因，NPU 静默返回使错误传播更远；同代码三端行为分裂（CPU/GPU 报错、NPU 跑通但错）。环境：Ascend910、torch 2.7.1+cpu、torch_npu 2.7.1.post2.dev20260727（CANN 8.5）/2.7.1.post8.dev20260715（CANN 9.1）双版本复现。
   source: '2026-10-17 GitCode Ascend/op-plugin issue https://gitcode.com/Ascend/op-plugin/issues/381 （open；复现脚本+三端行为矩阵；关联 PR !4922 与 issue #75）'
@@ -52,3 +53,7 @@ migration:
     panel: []
     rewritten:
     - behavior
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - pattern

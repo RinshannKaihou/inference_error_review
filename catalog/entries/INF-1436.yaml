@@ -35,6 +35,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-math/issues/3446
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0167
 original:
   mechanism: torch.round 在 NPU 上对结果幅值为 0 的负输入返回 +0.0 而非 -0.0（IEEE-754 round-half-to-even 应保留符号位）：round(-0.5)/round(-0.4) CPU 给 -0.0、NPU 给 +0.0；-0.0 输入符号位被翻转。幅值全部逐位一致仅符号位丢失，双芯复跑一致。根因链：op_plugin_functions.yaml round.out 条目主通路直接调用闭源 aclnnRound，旧机兜底 RoundKernelNpu.cpp 走闭源 CANN Round 算子，op-plugin 侧只有整型恒等守卫与格式搬运、无自实现舍入算术——修复点在 CANN 舍入内核（aclnnRound/Round/aclnnRoundDecimals 需对 round 后幅值为 0 的负输入恢复符号位）。同机 ops-math#3446（2026-10-10，A3/910 arch 2201 路径，CANN 9.0.0）：Trunc/Ceil/Floor/Round/Sinh 五算子结果为负零时同样返回 +0.0，真机逐位证据（期望 0x80000000 实得 0x0）；定位线索：仓内 arch35/ascend950 实现（trunc_dag.h）显式做符号位保留（Truncate 后 Duplicate(UINT32_SIGN)+And+Or 把输入符号位或回结果），910(2201) 所走内核路径未做该处理。两单同机同根因家族（910 路径负零符号恢复缺失），合并收录。复现：A3 真机 /mnt/workspace/a3hunt/round2/repro_round_negzero.py（#591）、逐位 int32 探针（#3446）。
   source: 2026-10-18 GitCode Ascend/op-plugin issue https://gitcode.com/Ascend/op-plugin/issues/591 （open，追踪入口）；同机同根因 ops-math#3446 https://gitcode.com/cann/ops-math/issues/3446 （open，2026-10-14 本库曾留观）
@@ -53,3 +54,7 @@ migration:
     panel: []
     rewritten:
     - detail
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - pattern
