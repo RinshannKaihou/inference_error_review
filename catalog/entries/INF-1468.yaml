@@ -4,7 +4,7 @@ slug: ttmetal_moreh_mean_backward_keepdim_false_padding_values
 aliases: []
 title: tt-metal moreh 反传 keepdim=False 读填充值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: keepdim=false 时不读真实 output_grad 形状、假设降维置 1；实际梯度的 32 值沿 tile 行排，假设形状竖排，广播读到 tile padding。
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: mean_backward dim=3：992/1024 错（全 1 梯度错值 0.0、随机梯度 1.06e37，确定性）；norm_backward dim=3 max err 4.54；dim=1/2 精确；无异常
   visibility: 静默错误
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度
+    uncertain:
+    - detail

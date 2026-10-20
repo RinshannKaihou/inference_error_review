@@ -4,7 +4,7 @@ slug: ops_nn_loss_norm_arch35_sync_reduction_precision_defects
 aliases: []
 title: ops-nn Loss/Norm 算子 arch35 跨核同步与规约精度缺陷
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 固定种子 219 例 --pc 2 两轮红例集合不一致；SFL 1198 例 111 红（D≥1000、reduction=none）；Poisson rmse 比值 4.55~8.31（限 1.5）；SFLGrad 小 D VEC_ERROR
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 固定种子多轮/多并发度对照判定一致性（--pc 2 两轮红例集不同即同步缺陷特征）；SFL 用 D≥1000 reduction=none 用例扫描
   fix: 待定（issue open；环境 Ascend950PR、CANN 9.3.0、ops-test-kit）
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误
+    uncertain:
+    - behavior

@@ -4,7 +4,7 @@ slug: op_plugin_cross_entropy_oob_target_silent_swallow
 aliases: []
 title: op-plugin cross_entropy 越界 target 静默吞掉
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,7 +32,9 @@ remarks: 推理库收录理由：cross_entropy 用于 RL reward/评估管线与�
 evidence:
 - url: https://gitcode.com/Ascend/op-plugin/issues/598
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0320
 original:
   mechanism: 'op-plugin issue #598（c2026-10-19，Atlas A3 Ascend910_9362 ×2，CANN 9.1.0，torch 2.7.1 + torch_npu 2.7.1.post4，双芯一致复现、换输入复测确认）：x=randn(4,8)、t=[0,1,99,2]（99 越界，类别数 8）时 F.cross_entropy：CPU 干净抛 IndexError；NPU 静默吞掉越界样本——reduction=mean 悄悄排除该样本（结果可复现但与语义不符）；reduction=none 越界槽位填入跨芯不一致垃圾值（npu:0=0.624 vs npu:1=1.797）＝真实越界读、同输入不同芯结果不同＝非确定性。与 #592（index_select 越界崩核）同族（无主机校验→非法输入直达设备），那边 fail-loud 崩核、这边 fail-silent 更隐蔽。建议入口加主机端 target 边界校验对齐 CPU。复现脚本：/mnt/workspace/a3hunt/round5/。'
   source: 2026-10-19 GitCode Ascend/op-plugin issue https://gitcode.com/Ascend/op-plugin/issues/598 （open）
@@ -42,3 +44,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - subsystem
+    - behavior

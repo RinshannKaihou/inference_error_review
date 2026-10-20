@@ -4,7 +4,7 @@ slug: vllm_parser_structural_tag_overrides_response_format_with_tools
 aliases: []
 title: vLLM tools 请求的 response_format 被组合覆盖
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 输出解析
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - behavior

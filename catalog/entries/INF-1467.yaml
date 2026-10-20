@@ -4,13 +4,13 @@ slug: ttmetal_sum_w_reduction_128tile_ceiling_fp16_dest
 aliases: []
 title: tt-metal sum/mean 沿 W 超 128 tile 封顶不累加
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: tt-metal
     component: 沿 W 归约 16 位 Dest 路径
-  behavior: fp32_dest_acc_en=False 时沿 W 求和超 128 tile 后结果钉死在 8192 不再增长——归约累计在 16 位 Dest 环境溢出/截断；fp32_dest_acc_en=True 正确。
+  behavior: fp32_dest_acc_en=False时，ttnn.sum/mean沿W或H+W行宽超过128 tile即错误：全1输入停在8192不再增长，随机输入错误和偏差数倍；fp32_dest_acc_en=True全部正确。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - title
+    - component

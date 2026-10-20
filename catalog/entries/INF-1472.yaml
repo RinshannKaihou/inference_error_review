@@ -4,7 +4,7 @@ slug: op_plugin_norm_fp16_intermediate_precision_44_155_ulp
 aliases: []
 title: op-plugin norm 族 fp16 中间精度偏差 44~155 ULP
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

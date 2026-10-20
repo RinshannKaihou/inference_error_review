@@ -4,7 +4,7 @@ slug: vllm_kv_offload_direct_layout_tp_namespace_cross_corruption
 aliases: []
 title: vLLM KV offload 跨 TP 共享 tier 加载坏 KV
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

@@ -4,7 +4,7 @@ slug: vllm_nccl_packed_weight_sync_buffer_reuse_corrupts_moe
 aliases: []
 title: vLLM packed NCCL 权重同步缓冲复用静默写坏 MoE 权重
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - detail

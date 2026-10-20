@@ -4,7 +4,7 @@ slug: vllm_fp8_per_tensor_moe_cuda_graph_padding_amax_cross_request
 aliases: []
 title: vLLM FP8 per-tensor MoE padding 污染 scale
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -16,7 +16,7 @@ effect:
   - 输出内容
   - 输出分布
   detail: 同一贪心 prompt 答案随前一请求内容变化、首 token 即分叉：114 对中 88 对不同（21 对首 token）、270 对中 269 对不同；enforce-eager 与 per-block/bf16 干净；SKIP_PADDING=0 仅缩小不消除
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 固定 probe 后接不同 primer 对照输出/logprob；开 --enforce-eager 对照归零
   fix: 待定（issue open；VLLM_MOE_SKIP_PADDING=0 仅将效应缩至亚 nat 级（61/114 对、无首 token 分叉、max 0.75 nat）不消除——修复须把 padding 行从 amax 排除；0.31.0 L40S/RTX 6000 Ada 实测）
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    uncertain:
+    - effect

@@ -3,14 +3,14 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1481 条；状态：active 1456、pending_audit 25
+共 1481 条；状态：active 1481
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 363 |
-| 编译器 | 56 |
-| 运行时/执行 | 76 |
+| 算子/内核 | 365 |
+| 编译器 | 55 |
+| 运行时/执行 | 75 |
 | 集合通信 | 14 |
 | 并行切分 | 12 |
 | KV缓存 | 299 |
@@ -4243,9 +4243,20 @@
 - **改进措施**：检测 答案文本 '!!!!' 模式 + logprob NaN；kernel 级探针（minimal.pt 单头 2048 token，~10s 无需模型）token 1792 起复现；修复 规避：改用 Triton prefill 后端（--linear-attn-prefill-backend triton）或依赖 #43246 后 main 的 Blackwell 默认 FlashInfer（显式选 nvidia_kda 才中招）；上游修复未见（issue open）
 - **来源**：https://github.com/sgl-project/sglang/issues/44758
 
+### INF-1464 `triton_matmul_persistent_ragged_k_unpadded_silently_accepted` Triton persistent matmul 未 padding 输入静默错
+
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：算子/内核 / triton / ragged-K padding 检查失效
+- **原因行为**：persistent kernel 需 ragged-K 按 slice 零 padding，但检查自 #8765 起永不为 None 不会失败；未 padding 输入把 slice 尾后至末 tile 的行静默加进该 slice 结果。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：3 个 100 行未 padding slice 全 1 输入：H100 默认选 persistent，y[e] 实测 [128,128,100]（期望 [100,100,100]）；非 persistent 正确；3.7.0 回归（3.6.0 拒绝）
+- **改进措施**：检测 与无 TMA GPU（persistent 不可用）或非 persistent 路径对照；slice 长度非 tile 倍数时逐 slice 校验和；修复 待定（issue open；未 padding 输入正是 make_ragged_tensor_metadata 的原生返回，易踩）
+- **来源**：https://github.com/triton-lang/triton/issues/12368
+
 ### INF-1465 `ttmetal_sdpa_causal_sliding_window_partial_chunk_wrong_rows` tt-metal SDPA causal+滑窗部分块行错误
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / tt-metal / SDPA causal+滑窗部分块掩码
 - **原因行为**：is_causal=True + sliding_window_size 且 S 非 q_chunk_size 倍数时部分 query 块输出错误行；同 S 换 q_chunk 128 或去滑窗精确，部分部分块长度干净，非全部触发。
@@ -4254,12 +4265,23 @@
 - **改进措施**：检测 对非整块序列长度做 PCC 分块扫描；q_chunk 128/去滑窗对照；修复 待定（issue open）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/61489
 
+### INF-1466 `ttmetal_move_reallocate_rowmajor_dram_overlap_corrupt` tt-metal move/reallocate 行主序 DRAM 重叠搬坏数据
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
+
+- **原因对象**：算子/内核 / tt-metal / ttnn.move
+- **原因行为**：ttnn.move 在 DRAM 搬移 ROW_MAJOR tensor、新旧 buffer 重叠、行数超核数且行字节非 64 倍数时返回错值；TILE 与 L1 同形全部精确。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：bf16 行宽 8/16/24/40/72 元素（16~144B）DRAM 全错、32 元素（64B）正确；P100A 24 case 20 错，284 配置扫描 P100A/P150 21 错、N150 18 错，全 row-major DRAM；无错误消息
+- **改进措施**：检测 move 前后 bit 级对比；检查行字节是否 64 对齐；修复 待定（issue open）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61398
+
 ### INF-1467 `ttmetal_sum_w_reduction_128tile_ceiling_fp16_dest` tt-metal sum/mean 沿 W 超 128 tile 封顶不累加
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / tt-metal / 沿 W 归约 16 位 Dest 路径
-- **原因行为**：fp32_dest_acc_en=False 时沿 W 求和超 128 tile 后结果钉死在 8192 不再增长——归约累计在 16 位 Dest 环境溢出/截断；fp32_dest_acc_en=True 正确。
+- **原因行为**：fp32_dest_acc_en=False时，ttnn.sum/mean沿W或H+W行宽超过128 tile即错误：全1输入停在8192不再增长，随机输入错误和偏差数倍；fp32_dest_acc_en=True全部正确。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：全 1 行：W=6144/16384/65536/262144 全返回 8192；随机行 W=65536 期望 -243.51 返回 -980.0；mean 与 H+W 归约同限；int32 不受影响
 - **改进措施**：检测 宽行（>128 tile）与 fp32_dest_acc_en=True 对照；全 1 大宽行结果应等于行宽；修复 待定（issue open；规避：fp32_dest_acc_en=True）
@@ -4267,18 +4289,18 @@
 
 ### INF-1468 `ttmetal_moreh_mean_backward_keepdim_false_padding_values` tt-metal moreh 反传 keepdim=False 读填充值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / tt-metal / output_grad 形状假设错误
 - **原因行为**：keepdim=false 时不读真实 output_grad 形状、假设降维置 1；实际梯度的 32 值沿 tile 行排，假设形状竖排，广播读到 tile padding。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：梯度；数值结果（静默错误）
 - **影响详情**：mean_backward dim=3：992/1024 错（全 1 梯度错值 0.0、随机梯度 1.06e37，确定性）；norm_backward dim=3 max err 4.54；dim=1/2 精确；无异常
 - **改进措施**：检测 与 torch backward 对照；检查 keepdim=False + 末维归约组合；修复 待定（issue open）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/61490
 
 ### INF-1469 `op_plugin_sdpa_bool_mask_allfalse_row_ignored` op-plugin SDPA bool 掩码全 False 行被忽略
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / bool→bias 转换分支
 - **原因行为**：bool attn_mask 全 False 行（query 全屏蔽）时 bool→bias 转换未对该行落 -inf：NPU 输出完整注意力值而非 CPU 语义的 0；float -inf mask 双端一致，定位转换分支。
@@ -4289,7 +4311,7 @@
 
 ### INF-1470 `op_plugin_masked_scatter_small_src_oob_garbage_silent` op-plugin masked_scatter src 不足静默填越界垃圾
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / masked_scatter 容量校验缺失
 - **原因行为**：mask 命中数多于 src 元素时无入口校验：CPU 抛 RuntimeError，NPU 静默接受，超出槽位填越界读到的设备内存垃圾（确定性、非 NaN）。
@@ -4297,10 +4319,11 @@
 - **影响详情**：填充看似成功、垃圾值随前向扩散、无告警；A3 双芯一致；修复 PR !6055（容量入口校验）open
 - **改进措施**：检测 调用前自查 mask.sum() <= src.numel()；CPU 对照触发 RuntimeError；修复 修复 PR https://gitcode.com/Ascend/op-plugin/merge_requests/6055 （open，未合入未发布）——入口校验 src.numel() >= mask.sum()，不足抛 RuntimeError 对齐 CPU
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/602；https://gitcode.com/Ascend/op-plugin/merge_requests/6055
+- **关联**：cross:TRN-0327
 
 ### INF-1471 `op_plugin_cross_entropy_oob_target_silent_swallow` op-plugin cross_entropy 越界 target 静默吞掉
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / target 边界校验缺失
 - **原因行为**：target 越界时无主机端校验：mean 悄悄排除该样本，none 槽位填跨芯不一致垃圾值（npu:0=0.624 vs npu:1=1.797）＝真实越界读。
@@ -4308,10 +4331,11 @@
 - **影响详情**：mean 静默丢样本、none 非确定性垃圾（跨芯不一致）；A3 双芯复现；CPU 抛 IndexError
 - **改进措施**：检测 入口自查 target < num_classes；与 CPU 对照（CPU 抛 IndexError）；修复 待定（issue open；建议 op-plugin 入口加主机端 target 边界校验对齐 CPU 抛 IndexError）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/598
+- **关联**：cross:TRN-0320
 
 ### INF-1472 `op_plugin_norm_fp16_intermediate_precision_44_155_ulp` op-plugin norm 族 fp16 中间精度偏差 44~155 ULP
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / norm 族归一化中间统计精度
 - **原因行为**：norm 族 fp16 输出偏差 44~155 ULP 但 running stats 逐位一致——偏差来自归一化中间计算精度（如 fp16 中间量做均值/方差），非随机。
@@ -4322,7 +4346,7 @@
 
 ### INF-1473 `op_plugin_cumsum_fp16_accumulation_error_growth` op-plugin cumsum fp16 累加误差沿扫描维增长
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / cumsum fp16 累加策略
 - **原因行为**：fp16 cumsum 累加精度沿扫描维增长性劣化；对照 bf16 路径与 CPU 逐位一致——内核存在正确实现路径，fp16 路径未走或降级。
@@ -4333,7 +4357,7 @@
 
 ### INF-1474 `ops_math_addn_mixed_dtype_no_check_bit_reinterpret` aclnnAddN 混合 dtype 不校验静默错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / 通用 / AddN dtype 校验缺失+返回值吞
 - **原因行为**：CheckDtypeValid 只查白名单不比较输入间 dtype；dtype 比对检查的 return false 被当 ACLNN_SUCCESS 吞掉；白名单内混合 dtype 按 tensors[0] 重解释其它输入位模式。
@@ -4344,7 +4368,7 @@
 
 ### INF-1475 `ops_transformer_prompt_flash_attention_fp16_pre_softmax_overflow_inf` PromptFlashAttention FP16 归一化前累加溢出输出 Inf
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / 通用 / PFA P×V 累加 FP16 中间存储
 - **原因行为**：未归一化 P×V 累加值 n×V 逼近 FP16 上限（65504）的位置起输出 +Inf（V=35 时 position 1871 起）；推测某 FP16 路径在 softmax 归一化前对累加做范围受限存储/转换/合并。
@@ -4355,7 +4379,7 @@
 
 ### INF-1476 `ops_nn_weight_quant_bmm_v2_preload_a_l1_oob_nondeterministic` WeightQuantBmmV2 预取 A 越界写 L1 竞态错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / 通用 / PreloadA 未按 L1 容量钳制
 - **原因行为**：PreloadA 按 host 下发的 aPreloadSize 预载 A 不校验 L1 A 区实际容量；限核 16/22 时尾块重切分致越界踩 WeightL1_P1，与反量化写并发互覆。
@@ -4366,22 +4390,22 @@
 
 ### INF-1477 `ops_nn_loss_norm_arch35_sync_reduction_precision_defects` ops-nn Loss/Norm 算子 arch35 跨核同步与规约精度缺陷
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / 通用 / 跨核规约 SyncAll 与精度缺陷
 - **原因行为**：SyncAll 前未排空 MTE3，0 号核读到未落地 partial（偶现）；SFL (hi,lo) 残差槽未清零、Poisson 裸加、SFLGrad rightPadding 滥写、MultilabelMargin 块对齐超 k。
-- **影响对象**：数值结果（不可复现）
+- **影响对象**：数值结果（静默错误）
 - **影响详情**：固定种子 219 例 --pc 2 两轮红例集合不一致；SFL 1198 例 111 红（D≥1000、reduction=none）；Poisson rmse 比值 4.55~8.31（限 1.5）；SFLGrad 小 D VEC_ERROR
 - **改进措施**：检测 固定种子多轮/多并发度对照判定一致性（--pc 2 两轮红例集不同即同步缺陷特征）；SFL 用 D≥1000 reduction=none 用例扫描；修复 待定（issue open；环境 Ascend950PR、CANN 9.3.0、ops-test-kit）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6879
 
 ### INF-1479 `ascend_pytorch_bmm_block_n_unaligned_precision` Ascend pytorch bmm BLOCK_N 不对齐 16 精度劣化
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：算子/内核 / pytorch / bmm tiling BLOCK_N 未对齐
 - **原因行为**：bmm tiling config 生成时 BLOCK_N 未对齐 16，该类形状走劣化 tiling 路径产生精度偏差；修复 PR 对齐 BLOCK_N。
-- **影响对象**：数值结果（质量退化）
+- **影响对象**：数值结果（静默错误）
 - **影响详情**：BLOCK_N 非 16 对齐形状 bmm 精度偏差（量级正文未给出）；按 issue-PR 对应关系收录，证据边界弱
 - **改进措施**：检测 非 16 对齐 N 的 bmm 与 CPU/对齐形状对照；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/48172 （open，未合入）——生成 bmm configs 时 BLOCK_N 对齐 16
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5526；https://gitcode.com/Ascend/pytorch/merge_requests/48172
@@ -4987,7 +5011,7 @@
 
 ### INF-1462 `triton_loop_reduction_thread_locality_wrong_accumulate_op` Triton 循环内归约优化用循环算符累积致符号翻转
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：编译器 / triton / 归约外提累积算符选择
 - **原因行为**：ThreadLocality 优化把归约跨线程部分移到循环后，用循环更新算符（-）而非归约算符（+）累积 partial：acc -= tl.sum 得 +512；acc += tl.max 得 -inf。
@@ -4998,7 +5022,7 @@
 
 ### INF-1463 `triton_warp_specialize_second_consumer_offset_double_add` Triton warp_specialize 第二 consumer 偏移叠加
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：编译器 / triton / sliceOp 行偏移映射共享
 - **原因行为**：sliceOp 把 off_m→off_m+64 记入第二 consumer 全部克隆 op 共享的映射；指针偏移本已按行切片，克隆时再加 64，第二组 64~127 行被存到 128~191 行。
@@ -5006,17 +5030,6 @@
 - **影响详情**：128×128 tile warp_specialize=False 全对、=True 行错位写出 tile 边界 64 行、无错误消息；descriptor load 与 pointer store 混用即触发
 - **改进措施**：检测 warp_specialize True/False 对照 + NaN 预填输出缓冲检测未写/错写行；修复 待定（issue open；规避 warp_specialize=False）
 - **来源**：https://github.com/triton-lang/triton/issues/12369；https://github.com/triton-lang/triton/issues/12370
-
-### INF-1464 `triton_matmul_persistent_ragged_k_unpadded_silently_accepted` Triton persistent matmul 未 padding 输入静默错
-
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
-
-- **原因对象**：编译器 / triton / ragged-K padding 检查失效
-- **原因行为**：persistent kernel 需 ragged-K 按 slice 零 padding，但检查自 #8765 起永不为 None 不会失败；未 padding 输入把 slice 尾后至末 tile 的行静默加进该 slice 结果。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：3 个 100 行未 padding slice 全 1 输入：H100 默认选 persistent，y[e] 实测 [128,128,100]（期望 [100,100,100]）；非 persistent 正确；3.7.0 回归（3.6.0 拒绝）
-- **改进措施**：检测 与无 TMA GPU（persistent 不可用）或非 persistent 路径对照；slice 长度非 tile 倍数时逐 slice 校验和；修复 待定（issue open；未 padding 输入正是 make_ragged_tensor_metadata 的原生返回，易踩）
-- **来源**：https://github.com/triton-lang/triton/issues/12368
 
 ## 运行时/执行
 
@@ -5847,25 +5860,14 @@
 - **改进措施**：检测 分 bucket 的 breakable prefill graph 回放输出 golden 对照；修复 待定（issue open；本轮按标题/索引收录，正文机制细节未逐段深读——见日报未覆盖说明）
 - **来源**：https://github.com/NVIDIA/TensorRT-LLM/issues/20504
 
-### INF-1466 `ttmetal_move_reallocate_rowmajor_dram_overlap_corrupt` tt-metal move/reallocate 行主序 DRAM 重叠搬坏数据
-
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
-
-- **原因对象**：运行时/执行 / tt-metal / DRAM 重叠搬移拷贝核
-- **原因行为**：ttnn.move 在 DRAM 搬移 ROW_MAJOR tensor、新旧 buffer 重叠、行数超核数且行字节非 64 倍数时返回错值；TILE 与 L1 同形全部精确。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：bf16 行宽 8/16/24/40/72 元素（16~144B）DRAM 全错、32 元素（64B）正确；P100A 24 case 20 错，284 配置扫描 P100A/P150 21 错、N150 18 错，全 row-major DRAM；无错误消息
-- **改进措施**：检测 move 前后 bit 级对比；检查行字节是否 64 对齐；修复 待定（issue open）
-- **来源**：https://github.com/tenstorrent/tt-metal/issues/61398
-
 ### INF-1480 `vllm_ascend_sleep_level2_preserve_params_not_restored` vllm-ascend 二级睡眠丢失 preserve 参数致推理错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：运行时/执行 / vllm / sleep/wake 缺参数保留
 - **原因行为**：Ascend worker 覆写上游 sleep/wake 生命周期但未保留 sleep_preserve_parameter_names 选定参数；level-2 丢 weights pool 后更新省略该参数则原值不恢复。
 - **影响对象**：模型权重；输出内容（静默错误）
-- **影响详情**：唤醒后选定参数与确定性推理均偏离 pre-sleep 基线；Qwen3-0.6B 验证；level-1 不受影响；修复 #18838 已合入（发布未核实）
+- **影响详情**：唤醒后选定参数与确定性推理均偏离睡眠前基线；Qwen3-0.6B 验证；level-1 不受影响；修复 #18838 已合入
 - **改进措施**：检测 sleep 前后记录选定参数值与确定性推理参考对比；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/18838 （已合入，跟踪 issue #19119 已 closed；发布版本未核实）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/19119
 
@@ -9528,7 +9530,7 @@
 
 ### INF-1459 `vllm_kv_offload_direct_layout_tp_namespace_cross_corruption` vLLM KV offload 跨 TP 共享 tier 加载坏 KV
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：KV缓存 / vllm / direct 布局 namespace 丢 TP
 - **原因行为**：direct 布局被标 is_parallelism_agnostic，namespace 丢 TP 维度；但该布局字节是各 worker 页并排，同一 block hash 跨 TP 含义不同，跨 TP 读者错装 KV。
@@ -10958,7 +10960,7 @@
 
 ### INF-1481 `vllm_parser_structural_tag_overrides_response_format_with_tools` vLLM tools 请求的 response_format 被组合覆盖
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：输出解析 / vllm / structural tag Or 组合
 - **原因行为**：_apply_structural_tag 用请求 response_format 组 OrFormat(tool_call/output) 并清空原字段；Or 下 tool-call 分支合法，schema 永不被强制。
@@ -12327,9 +12329,9 @@
 
 ### INF-1457 `vllm_dspark_dsv41_flash_thinking_output_corruption` vLLM DSpark 损坏 DeepSeek-V4.1-Flash 思考输出
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
-- **原因对象**：解码/采样 / vllm / DSpark 投机 verify 接受路径
+- **原因对象**：解码/采样 / vllm / DSpark 投机解码
 - **原因行为**：DSpark 投机开启后 thinking 模式 chat 输出退化循环且不再产出结构化 tool_calls；关投机同配置完全干净，纯文本 completions 不受影响。
 - **影响对象**：输出内容（质量退化）
 - **影响详情**：thinking 流出现 to invoketo invoke、*75*75 等退化循环，无结构化 tool_calls；/v1/completions 与 25 档基准零失败，损坏特定于 chat/thinking 格式；k=3/4/5/7 全触发
@@ -14020,18 +14022,18 @@
 
 ### INF-1460 `vllm_fp8_per_tensor_moe_cuda_graph_padding_amax_cross_request` vLLM FP8 per-tensor MoE padding 污染 scale
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：量化 / vllm / MoE amax 混入 padding 行
 - **原因行为**：CUDA graph padding 行参与 MoE 动态 per-tensor amax：padding 内容是上一步残留 hidden states，上一请求内容改变下一请求的量化 scale。
-- **影响对象**：输出内容；输出分布（静默错误）
+- **影响对象**：输出内容；输出分布（不可复现）
 - **影响详情**：同一贪心 prompt 答案随前一请求内容变化、首 token 即分叉：114 对中 88 对不同（21 对首 token）、270 对中 269 对不同；enforce-eager 与 per-block/bf16 干净；SKIP_PADDING=0 仅缩小不消除
 - **改进措施**：检测 固定 probe 后接不同 primer 对照输出/logprob；开 --enforce-eager 对照归零；修复 待定（issue open；VLLM_MOE_SKIP_PADDING=0 仅将效应缩至亚 nat 级（61/114 对、无首 token 分叉、max 0.75 nat）不消除——修复须把 padding 行从 amax 排除；0.31.0 L40S/RTX 6000 Ada 实测）
 - **来源**：https://github.com/vllm-project/vllm/issues/62124
 
 ### INF-1461 `sglang_nvfp4_marlin_small_block_scales_underflow_garble` SGLang NVFP4 Marlin 小 block scale 下全输出乱码
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：量化 / sglang / Marlin FP4 scale 重标定
 - **原因行为**：nvfp4_marlin_process_scales 以 (scales*2**7).view(int16)<<1 转 S0E5M3，假设顶位恒置位；小 block scale 违反假设，BF16 反量化下溢全输出垃圾。
@@ -14042,7 +14044,7 @@
 
 ### INF-1478 `ops_nn_dynamic_quant_empty_x_leaves_scaleout_uninitialized` aclnnDynamicQuant 空 x 早退不写非空 scaleOut
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：量化 / 通用 / 空 x 早退分支缺输出回填
 - **原因行为**：x 空张量（末维 0）时早退返回 ACLNN_SUCCESS 且不写非空 scaleOut（[M]）；分支不构造任何任务、全文件无回填载体；GE tiling 路径同场景显式拒绝。
@@ -15623,7 +15625,7 @@
 
 ### INF-1458 `vllm_nccl_packed_weight_sync_buffer_reuse_corrupts_moe` vLLM packed NCCL 权重同步缓冲复用静默写坏 MoE 权重
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-19
 
 - **原因对象**：权重/检查点 / vllm / packed NCCL 接收缓冲跨流复用
 - **原因行为**：接收缓冲在重放拷贝仍在飞时被 caching allocator 归还复用，下一 pack 的 NCCL 写覆盖未消费字节，重放读到新数据写坏专家权重。

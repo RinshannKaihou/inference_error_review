@@ -4,7 +4,7 @@ slug: ops_nn_weight_quant_bmm_v2_preload_a_l1_oob_nondeterministic
 aliases: []
 title: WeightQuantBmmV2 预取 A 越界写 L1 竞态错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - subsystem

@@ -4,7 +4,7 @@ slug: ops_nn_dynamic_quant_empty_x_leaves_scaleout_uninitialized
 aliases: []
 title: aclnnDynamicQuant 空 x 早退不写非空 scaleOut
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

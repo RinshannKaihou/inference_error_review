@@ -4,12 +4,12 @@ slug: vllm_dspark_dsv41_flash_thinking_output_corruption
 aliases: []
 title: vLLM DSpark 损坏 DeepSeek-V4.1-Flash 思考输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
     stack: vllm
-    component: DSpark 投机 verify 接受路径
+    component: DSpark 投机解码
   behavior: DSpark 投机开启后 thinking 模式 chat 输出退化循环且不再产出结构化 tool_calls；关投机同配置完全干净，纯文本 completions 不受影响。
 effect:
   objects:
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-19'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - component
+    uncertain:
+    - title
