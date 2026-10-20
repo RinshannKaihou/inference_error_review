@@ -1,6 +1,6 @@
 id: PAT-INF-0001
-title: 待定
-shared_mechanism: 待定
+title: KV缓存内容偏离当前请求真实计算的副本
+shared_mechanism: 共同点是注意力消费到的 K/V 已不等于当前请求真实算出的那份：数值被压到错误网格（scale 缺失、粒度错配、位宽不足），或归属错位（键缺隔离、块表与页复用竞态）。差异在失真类型：前者随长度累积漂移，后者整段读到他人或过期内容。
 representative: INF-0675
 members:
 - INF-0399

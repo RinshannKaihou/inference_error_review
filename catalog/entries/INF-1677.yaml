@@ -34,6 +34,7 @@ evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/4629
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0181
 original:
   mechanism: 'Ascend/pytorch #4629（2026-09-05，open，Ubuntu 24.04 aarch64 / Ascend 910C 双芯 / CANN 9.2.0 / torch 2.7.1+cpu / torch_npu 2.7.1.post4，transfer_to_npu 接入，torch_npu.npu.NPUGraph() + graph(capture_error_mode=''relaxed'')）：用 NPUGraph 捕获 FireRedASR2-AED 自回归解码单步后首次 graph.replay() 即失败——Host 侧 AclrtSynchronizeStreamWithTimeout(copy_stream) error 507011，Device 侧 AI Core aivec error，dump 显示 gather_v3_base.h:137 CheckIdxValue 断言 (0 <= val && val < gxSize_) failed，索引 3 越界（gxSize=3）。该 gather（s_ys.index_select(0, rows)）的索引 rows = topk(p_ids∈[0,9)) // 3 + stride 恒 ≤2，索引 3 在算术上不可能产生，只能来自被污染的内存。被捕获的 step 含 log_softmax→topk×2→div→gather/index_select→index_copy_ 动态值链，输入输出均为固定地址静态 buffer、图外逐 replay 刷新。12 组二分实验（每组独立子进程、捕获+3 次重放+数值校验）定案：失败需两个执行历史同时在场——模型加载与特征编码全程 torch.no_grad()，且捕获前同进程先跑过 eager batch_beam_search；所有算子组单独捕获重放全绿，完整 step_body 逐字复刻 + 严格捕获模式也全绿，唯完整 e2e 时序必挂。capture_error_mode=''relaxed'' 会吞掉捕获期的 device 错误，坏图存至首次 replay 才引爆。报告者判断与 #4379（多流入图 acl graph 内存复用，修复 PR #32810）同根因家族但触发面不同（本单单流、无 sleep/wakeup）。'
   source: 2026-09-05 GitCode Ascend/pytorch issue https://gitcode.com/Ascend/pytorch/issues/4629 （open）
@@ -56,3 +57,7 @@ migration:
     - glm-5.3
     issue_unfixed:
     - behavior
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - pattern

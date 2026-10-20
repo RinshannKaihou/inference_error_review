@@ -1,6 +1,6 @@
 id: PAT-INF-0008
-title: 待定
-shared_mechanism: 待定
+title: 反向梯度缺少极点与零值专用分支
+shared_mechanism: 共同点是反向算子按前向结果或朴素解析式合成导数，缺少极点、零元素与极值分支的专用处理，使 0×inf、1−1、倒数等中间量失去数学极限语义。差异在于触发输入形态：零元素、全零切片、±inf 参数或大正负值。
 representative: INF-0170
 members:
 - INF-0155

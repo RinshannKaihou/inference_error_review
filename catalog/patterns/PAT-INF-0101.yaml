@@ -1,6 +1,6 @@
 id: PAT-INF-0101
-title: 待定
-shared_mechanism: 待定
+title: 成员机制不同源，待拆分
+shared_mechanism: 两个成员不共享失效机制：一条是检查点恢复后块表容量未被保留，导致混合架构缓存与状态索引不一致；另一条是某些层被整体跳过或重复施加，执行序列偏移只能靠逐层增量才看得出。
 representative: INF-1174
 members:
 - INF-0404
