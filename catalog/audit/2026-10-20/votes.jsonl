@@ -329,3 +329,25 @@
 {"job": "verify|INF-1480|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
 {"job": "verify|INF-1457|kimi-k3", "model": "kimi-k3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "DeepSeek-V4.1-Flash", "evidence": "DeepSeek-V4.1-Flash-1017 checkpoint……原版 DeepSeek-V4.1-Flash + DSpark 同机干净"}}]}
 {"job": "verify|INF-1467|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1482|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1484|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1482|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1482|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1483|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "报错"}}
+{"job": "baseC|INF-1482|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-1484|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1483|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1484|doubao-seed-2.1-pro", "model": "doubao-seed-2.1-pro", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1484|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-1482|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1483|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "9 维起越界写 shape.dimNum 与后续字段", "evidence": "9 维输入可覆盖紧跟其后的 shape.dimNum，使后续 GetTensorSize 用损坏的维数信息做越界读；更高维输入会继续覆盖 deviceData、hostData、dataSize 乃至 Tensor 对象之外的内存。"}}]}
+{"job": "baseF|INF-1482|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1483|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseF|INF-1484|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1484|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-1483|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-1483|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "panelF|INF-1483|MiniMax-M3", "model": "MiniMax-M3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-1483|MiniMax-M3", "model": "MiniMax-M3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "报错"}}
+{"job": "panelC|INF-1483|hy3", "model": "hy3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelF|INF-1483|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
