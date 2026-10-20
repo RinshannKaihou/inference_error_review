@@ -40,6 +40,8 @@ original:
   behavior: NPU 上做动态量化（pertoken）时如果输入张量末维长度为 0（但 scale 输出非空），接口返回成功却完全不写 scale：拿到的是分配器复用的旧内存（可被预置成 NaN），后续反量化全错，而且因为显存复用每次结果还可能不一样。
   trigger_surface: aclnnDynamicQuant(pertoken) + x 空张量（[M,0]，M>0）；aclnn 路径；Ascend 910B2、CANN 9.2.0-beta.2
   discovery: 2026-10-19 每日扫描
+  notes:
+  - 2026-10-20 回访 2026-10-20：#6605 仍 open（u2026-10-19T13:14）
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -54,3 +56,6 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  - date: '2026-10-20'
+    fields:
+    - original.notes

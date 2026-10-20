@@ -41,6 +41,8 @@ original:
   behavior: 在 NPU 上调用 max_pool2d/1d/3d 且 return_indices=True 时，返回的 indices 形状与 dtype 与 CPU 契约不符：2d 返回 int8 且末维放大 8 倍（如期望 (2,3,4,16) int64 实得 (2,3,4,64) int8），某些核参数下 H 维多一行；1d 凭空多出一个维度；3d dtype 变 int32。无报错，数值经重组后正确，但 MaxUnpool2d 等依赖 indices 契约的下游直接不可用或错位。adaptive_max_pool2d 正常。
   trigger_surface: op-plugin MaxPool WithIndices 输出转换层；max_pool2d/1d/3d(return_indices=True)；Atlas A3（910_9362）、torch_npu 2.7.1.post4；out 变体（max_pool*d_with_indices_out）同源问题未修
   discovery: 2026-10-18 每日扫描
+  notes:
+  - 2026-10-20 回访 2026-10-20：#590 仍 open（u2026-10-18T19:46），修复 PR !6052 状态未复核
 migration:
   method: scan
   scanned: '2026-10-18'
@@ -57,3 +59,7 @@ migration:
     - glm-5.3
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - original.notes

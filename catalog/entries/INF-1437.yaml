@@ -45,6 +45,7 @@ original:
   discovery: 2026-10-18 每日扫描
   notes:
   - '2026-10-19 回访 2026-10-19：issue #3576 已 closed（关闭时间在本轮窗口，关闭原因/是否修复未在批次快照中注明，修复 PR !6411 状态未复核）；#3575 同 PR 线'
+  - 2026-10-20 回访 2026-10-20：#3576 维持 closed（10-19 记录），修复 PR !6411 状态仍未复核
 migration:
   method: scan
   scanned: '2026-10-18'
@@ -57,5 +58,8 @@ migration:
     panel: []
   updates:
   - date: '2026-10-19'
+    fields:
+    - original.notes
+  - date: '2026-10-20'
     fields:
     - original.notes

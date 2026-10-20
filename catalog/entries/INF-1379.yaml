@@ -43,6 +43,7 @@ original:
   - 2026-10-16 回访 2026-10-16：vllm-ascend#18754（采样侧流 q 竞态）仍 open（10-14 15:20Z 后无更新，批次内无新评论数据）；无修复进展
   - 2026-10-17 回访 2026-10-17：vllm-ascend#18754 open，10-14T15:20Z 后无更新；采样侧流 q 竞态仍未修复。
   - 2026-10-19 回访 2026-10-19：vllm-ascend#18754 维持 open（u2026-10-14 后无新活动）
+  - 2026-10-20 回访 2026-10-20：#18754 维持 open（u2026-10-14T15:20 后无活动）
 migration:
   method: scan
   scanned: '2026-10-14'
@@ -63,5 +64,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-10-19'
+    fields:
+    - original.notes
+  - date: '2026-10-20'
     fields:
     - original.notes

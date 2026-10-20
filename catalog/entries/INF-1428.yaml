@@ -43,6 +43,7 @@ original:
   discovery: 2026-10-17 每日扫描
   notes:
   - 2026-10-19 回访 2026-10-19：ops-transformer#6119 open；修复 PR !13800 仍 open（u2026-10-19T08:37）未合入
+  - 2026-10-20 回访 2026-10-20：#6119 仍 open（u2026-10-17T07:44 后无更新），修复 PR !13800 状态未复核
 migration:
   method: scan
   scanned: '2026-10-17'
@@ -55,5 +56,8 @@ migration:
     panel: []
   updates:
   - date: '2026-10-19'
+    fields:
+    - original.notes
+  - date: '2026-10-20'
     fields:
     - original.notes

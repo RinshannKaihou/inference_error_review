@@ -40,6 +40,8 @@ original:
   behavior: 在同一 wrapper 上快速连续 plan 不同 batch（如 vLLM 每步调度重新 plan 的服务形态）且 device 忙时，前一次 run 的 attention 输出错（与参考 max_abs_err 0.1~2），有时对应 kernel 卡跑数分钟；输出仍正常返回、无报错。等待前次 plan 的 H2D 完成后（guard）全部正确。
   trigger_surface: flashinfer 0.7.0.post1（至 main 3637083a3）；BatchPrefillWithPagedKVCacheWrapper.plan() 复用 pinned int workspace；同一 wrapper 连续 plan 且 host 领先 device；SM86 实测（机制与架构无关）
   discovery: 2026-10-16 每日扫描
+  notes:
+  - '2026-10-20 回访 2026-10-20：flashinfer #6533 仍 open（本轮窗口无新活动）'
 migration:
   method: scan
   scanned: '2026-10-16'
@@ -64,3 +66,7 @@ migration:
     uncertain:
     - behavior
     - detail
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - original.notes

@@ -39,6 +39,8 @@ original:
   behavior: 开启 DSpark 投机解码服务 DeepSeek-V4.1-Flash-1017 时，chat 接口的思考流输出变成重复片段循环（如 to invoketo invoke 反复、*75*75*75 连刷），工具调用不再以结构化 tool_calls 返回；同一服务器关掉投机立刻恢复正常，纯文本 completions 接口始终正常。所有投机步数 k 都触发，release 与 nightly 都在。
   trigger_surface: DeepSeek-V4.1-Flash-1017 + DSpark 投机（任意 k）+ chat/thinking 模式；SM120 TP8+EP 实测
   discovery: 2026-10-19 每日扫描
+  notes:
+  - '2026-10-20 回访 2026-10-20：GitHub 索引 #62417 仍 open（本轮窗口无新评论迹象）'
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -57,3 +59,7 @@ migration:
     - component
     uncertain:
     - title
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - original.notes

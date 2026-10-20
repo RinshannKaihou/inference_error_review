@@ -39,6 +39,8 @@ original:
   behavior: 直接调 aclnnAddN 把两个 dtype 不同的张量（如一个 fp32 一个 int32、或一个 fp16 一个 fp32）相加时，接口不报资料声明的 161002，而是把第二个输入的比特位按第一个输入的类型重新解释：int32 位模式读成大数或 NaN、fp32 拆成两个 fp16 还伴随越界读，返回看似正常的错误数值。
   trigger_surface: aclnnAddN（aclnn 直调或经框架分发）+ 输入 dtype 彼此不同但均在支持白名单；A3、CANN 9.2.0-beta.2 实测
   discovery: 2026-10-19 每日扫描
+  notes:
+  - 2026-10-20 回访 2026-10-20：#3652 仍 open（u2026-10-20T03:21 有活动，正文未见修复链接）
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -53,3 +55,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - original.notes

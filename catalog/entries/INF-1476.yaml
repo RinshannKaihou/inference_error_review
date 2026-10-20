@@ -39,6 +39,8 @@ original:
   behavior: 昇腾 950 上跑量化矩阵乘（WeightQuantBatchMatmulV2）、图模式且限制在 16 或 22 个核时，输出的前若干列整列错误（相对偏差 0.2~0.6），且同一进程重跑结果每次都不一样；其他核数完全正常。根因是 A 矩阵预取越界写进 L1 里权重缓冲区并与反量化写竞争。
   trigger_surface: Ascend950 + WeightQuantBatchMatmulV2（N_FIRST_TAIL_RESPLIT 模板）+ 图模式限核 16/22 核；perchannel int4 转置 weight + bf16 x；CANN 9.3.0
   discovery: 2026-10-19 每日扫描
+  notes:
+  - 2026-10-20 回访 2026-10-20：ops-nn PR !12304 索引状态 merged（共享批次），发布未核实
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -55,3 +57,7 @@ migration:
     - glm-5.3
     uncertain:
     - subsystem
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - original.notes

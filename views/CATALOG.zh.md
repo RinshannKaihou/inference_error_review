@@ -3,21 +3,21 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1761 条；状态：active 1761
+共 1795 条；状态：active 1761、pending_audit 34
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 483 |
-| 编译器 | 100 |
-| 运行时/执行 | 101 |
-| 集合通信 | 20 |
+| 算子/内核 | 504 |
+| 编译器 | 104 |
+| 运行时/执行 | 104 |
+| 集合通信 | 22 |
 | 并行切分 | 15 |
-| KV缓存 | 308 |
-| 调度/服务 | 72 |
+| KV缓存 | 309 |
+| 调度/服务 | 74 |
 | 输出解析 | 55 |
 | 解码/采样 | 125 |
-| 量化 | 171 |
+| 量化 | 172 |
 | 位置编码 | 36 |
 | 分词/模板 | 29 |
 | 模型定义 | 43 |
@@ -5723,6 +5723,238 @@
 - **改进措施**：检测 用 targets 首个 label 等于边界类别（C-1）且 t=0 的用例上板比对 torch 的 _ctc_loss_backward；常规 CTC 用例通过。；修复 待定（issue closed，未给 MR）：grad 应为 (exp(log_probs)-exp(res+nll-log_probs))*grad_out，并补该边界用例。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6245
 
+### INF-1763 `vllm_rocm_aiter_unified_attn_32bit_span_overflow` vLLM ROCm AITER unified attn 32 位跨度误判
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / vllm / _unified_attention_gfx950
+- **原因行为**：kernel 以 k.nelement()*element_size()<=2^31-1 判断可用 32 位加载，但 vLLM 传的是整池 K/V 视图：视图元素数减半而字节跨度覆盖整个池，2–4GiB 池通过检查后 2GiB 后块偏移溢出
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：gfx950 上每层 KV 2–4GiB 时 attention 输出错值（kernel 对 fp32 参考 max error 0.49，TRITON_ATTN 0.009）；Qwen3-32B+EAGLE3 接受长度 2.30 降至 1.64–1.72；6.2GiB 池（视图跨度过大反而不进 3
+- **改进措施**：检测 与 TRITON_ATTN/ROCM_ATTN 比对 kernel 输出或 EAGLE 接受长度可发现；修复 修复 aiter PR https://github.com/ROCm/aiter/pull/6661 （按 k/v 字节跨度门控，含单测；open，vLLM 需等 aiter 发版+pin 升级后才生效，未发布）
+- **来源**：https://github.com/vllm-project/vllm/issues/62606
+
+### INF-1764 `vllm_rocm_attn_triton_fallback_layouts_wrong` vLLM ROCm_ATTN Triton fallback 布局错值/崩卡
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / vllm / ROCN_ATTN Triton fallback
+- **原因行为**：RDNA 上仅 head 128/block 16/GQA 3–16 走 HIP kernel，其余布局走 Triton fallback，部分布局解码读 cache 错误且偶发 GPU fault
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：12,389 批 A/B 中 635 批错输出（误差 0.02–0.57，正确应 <0.02+0.02|ref|）、119 次 GPU fault；错误集中在 block 32/64/528 与 head 96/192/256；TRITON_ATTN 同输入 14,608 批全对
+- **改进措施**：检测 对 default 后端与 TRITON_ATTN 做 A/B logits/attention 比对；修复 规避：--attention-backend triton（同输入全对）；修复 PR 未见（待定）
+- **来源**：https://github.com/vllm-project/vllm/issues/62697
+
+### INF-1767 `ops_transformer_flashattn_dn_tnd_tail_overwrite` FlashAttn arch92 DN TND 尾块多写跨 batch 污染
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / DN unmerged 模板 actVecMSiz
+- **原因行为**：CV=1:1 下把 32 行对齐的 actMSizeAlign32 当作单 AIV 有效输出行数（CV=2 的第二 AIV 修正分支不进入），actVecMSize 由 100 行变 128 行，copy_ub_to_gm 直接以 s1De
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：TND 变长 BF16 causal（mask_mode=3 路由 DN 模板）时每个非整块 batch 尾块多写对齐行覆盖下一 batch 输出（B=[100,200,300,400] 分别多写 28/24/20/0 行，覆盖展平 [12800,16384) 等区间）；用户实测第 12800 点位
+- **改进措施**：检测 TND 变长多 batch 输出与参考逐点比对；多写范围与跨核执行先后有关；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14216 （open，未发布）：不合轴 DN 调度器 s1Cur 改为 mBaseSize 块序号并修复 s1 推进哨兵越界；关联 issue https://gitcode.com/cann/ops-transformer/issues/6385
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6344；https://gitcode.com/cann/ops-transformer/merge_requests/14216；https://gitcode.com/cann/ops-transformer/issues/6385
+
+### INF-1768 `ops_transformer_fia_v4_tnd_numkv_zero_garbage` FIA V4 TND 缺省 numKVHeads=0 静默全零/垃圾
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / FIA V4 TND 通路
+- **原因行为**：TND 布局下 numKeyValueHeads 取默认 0 时不按 key/value 的 N 轴归一（BNSD 布局逐位正确），静默产出全 0 或未初始化显存内容；该值在 TND 通路还完全无校验（不整除/越界均不报错被截断）
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：910B2+CANN 9.2.0 实测：TND 缺省/显式 0 输出与参考 max diff 5.01（MHA 全 0 8192/8192；变长两 batch 96.9% 零；GQA 64:8 全 0 524288/524288；GQA N8 KV1 maxabs 4.30 未初始化）；固定输入重复
+- **改进措施**：检测 与 fp32 参考实现做 sha1 指纹/max diff 比对；输出全 0 或 ±512 量级垃圾为特征；修复 待定（建议 host 校验 0 归一或 161002 拦截；issue open）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6353
+
+### INF-1771 `ops_transformer_qli_v2_seqused_block_table_unvalidated` QuantLightningIndexerV2 不校验 seqused/bloc
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / host tiling 校验缺失
+- **原因行为**：host 校验只查 seqused_k 非空+dtype（无取值上界，blockCount_ 取 key dim0 不与之比较）、block_table 只查存在性/dtype/维度/dim0==B（从不读数值做上界校验），非法值直通 ke
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：A2 实测：seqused_k=512/999（宽 block_table）GetWorkspaceSize 返回 0 后静默返回 ≥容量 token 索引（max 508/997，越界元素 2048/3029 个）；seqused_k=257（窄表）直接 aicore exception 5070
+- **改进措施**：检测 对返回索引做 < seqused_k×block_size 容量断言可检出；窄表场景表现为设备异常；修复 待定（期望 GetWorkspaceSize 返回 161002 或截断；issue open）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6359；https://gitcode.com/cann/ops-transformer/issues/6360
+
+### INF-1772 `ops_math_inplace_uniform_nan_inf_endpoints` aclnnInplaceUniform NaN/±inf 端点静默全 NaN/i
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / CheckParams 的 from>to 校验
+- **原因行为**：区间校验只有 from>to 一条比较：NaN 参与比较恒 false 绕过、-inf>to 为 false 放过、to=+inf 时 from>+inf 为 false 放过（from=+inf 被拒只是误打误撞），非法端点被当合法输入派
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：A2/A3 实测：from 或 to=NaN 输出 64/64 全 NaN；from=-inf 输出全 NaN；to=+inf 输出全 inf；两段式接口全部返回 ACLNN_SUCCESS；文档契约明确 NaN/±inf 违反约束应返回 161002
+- **改进措施**：检测 对输出做 NaN/Inf 扫描；调用栈无 161002 而输出全 NaN 是特征；修复 待定（建议 !(from<=to)||!isfinite 双条件拒绝；issue open）
+- **来源**：https://gitcode.com/cann/ops-math/issues/3693
+
+### INF-1773 `tt_metal_uint16_binary_wider_output_wrong` ttnn uint16 二元运算配 32 位输出全线错值
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / uint16+32 位输出 dtype 路径
+- **原因行为**：两个 uint16 操作数请求 32 位输出 dtype（int32/uint32/float32）时 add/sub/mul、六个比较、三个逻辑运算全部返回错误值；默认输出或 uint16 输出正确（机制定位未给出）
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Wormhole n150 与 Blackhole p100a 同错：add int32 11320/12288 错、eq int32 6525 错（返回 2,3,4,5 等 13 种值而非 0/1）、logical_or float32 12224/5717 错；18 op×6 广播形×5 dty
+- **改进措施**：检测 与 torch 同输入整数结果比对；eq 输出非 {0,1} 是快速特征；修复 待定（issue open，tt-metal 229f9d5336）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61550
+
+### INF-1774 `tt_metal_typecast_u32_upper_range_collapse` ttnn.typecast fp32→uint32 上半区间塌缩 2^31
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / calculate_typecast_fp32_t
+- **原因行为**：fp32→uint32 转换的尾数提取路径按 biased-exponent 移位结果门控 lane（exp-=32…CC_LT0），[2^31,2^32) 区间的指数档被排除在正确路径外，结果恒为 2^31
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：WH/BH 主线（u32 函数 d9c2c92d→HEAD 字节相同）：[2^31,2^32) 内 192/192 与 960/960 随机可精确表示 f32 全部返回 2147483648（占目标 dtype 一半寻址范围）；<2^31 全对；bf16 输入同样塌缩；inf/nan 亦返回 2^3
+- **改进措施**：检测 对 ≥2^31 的输入抽查转换结果；修复 待定（issue open；根因定位至 ckernel_sfpu_typecast.h:249）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61736
+
+### INF-1775 `tt_metal_mean_sum_whole_tensor_cancel_zero` ttnn mean/sum 全轴归约大值相消返回 0
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / mean/sum 整张量归约路径
+- **原因行为**：整张量全轴归约（dim=None 或显式全维度列表）在大数值跨 N/C 相消时返回 0；分轴归约（先 H/W 后 N/C，或 dim=[1,3]）正确（机制定位未给出）
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：WH n150/BH p100a：mean 案例 +1024/-1024 相消输入 torch=0.03125 而 ttnn=0；sum 案例 torch=1024 而 ttnn=0；sum(sum(x,dim=[2,3]),dim=[0,1]) 分轴=1024 正确；models/common/m
+- **改进措施**：检测 对已知相消输入抽查全轴归约值；修复 待定（issue open，tt-metal 229f9d53365）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61584；https://github.com/tenstorrent/tt-metal/issues/61703
+
+### INF-1776 `tt_metal_deepseek_b1_matmul_k8192_tail_drop` BH DeepSeek B1 matmul K=8192 丢弃尾 K tile
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / deepseek_v3_b1 Matmul K=8
+- **原因行为**：K=8192 时单核 Matmul 不使用激活的第 8176–8191 列（最后一个 K tile），仅尾 16 列非零的激活输出全零；K=8160 正确（机制定位未给出）
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：[1,8192]×[8192,64]（SDPA 输出投影形状）：激活仅在末 16 列非零时输出全零（3/3）；K=8160 同输入正确（3/3）；随机输入误差小到现有 PCC 0.99 检查通过——静默漏检
+- **改进措施**：检测 构造仅在末 16 列非零的激活对照（issue 提供现成单测改法）；修复 待定（issue closed 但未见修复链接与内容，修复状态未核实）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61585
+
+### INF-1778 `tt_metal_concat_mixed_placement_wrong` ttnn.concat 混合放置/空输入错值或 SIGFPE
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / concat 搬运与空输入分支
+- **原因行为**：两个缺陷：(1) 行主序窄张量（8/24 元素宽）a 在 L1、b 在 DRAM、输出 L1 时返回错值，其余放置组合正确；(2) 拼接维为空的输入在列表中时返回形状正确但数据错误，行主序末维非 32 倍数时直接 SIGFPE 杀进程（机制
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：WH n150：(1,1,288,8) bf16 L1+DRAM→L1 错；373 个含空输入调用 36 错值+20 SIGFPE、36 个无空输入对照全对；同现象 61535（sub_core_grids 混合布局 32/436 调用错）与 61625（L1+DRAM→L1）分立报告
+- **改进措施**：检测 与 torch.cat 逐元素比对；空输入+窄行主序场景留意进程 SIGFPE；修复 待定（三 issue 均 open）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61625；https://github.com/tenstorrent/tt-metal/issues/61543；https://github.com/tenstorrent/tt-metal/issues/61535
+
+### INF-1779 `tt_metal_sharded_qkv_head_ops_grid_semantics` ttnn sharded QKV 头操作按 (0,0) 核读错头
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / nlp_create/concat_heads 遍
+- **原因行为**：nlp_create_qkv_heads 对 WIDTH_SHARDED 输入从 (0,0) 起数核而非输入分片网格；nlp_concat_heads_decode 接受 COL_MAJOR 高度分片但按行主序走核且无校验（姊妹算子 nlp
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：n150：分片网格 (1,0)-(4,0)/(0,1)-(3,1)/(0,0)-(1,1)/(2,1)-(3,2) 全错头而 (0,0)-(3,0) 精确；concat_heads_decode 16 用户 8x2 网格 COL_MAJOR 时 14/16 行错（users 1-14），无报错
+- **改进措施**：检测 逐头与输入切片比对；修复 待定（两 issue open）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61705；https://github.com/tenstorrent/tt-metal/issues/61650
+
+### INF-1781 `ops_transformer_bsa_scale_zero_mask_mismatch` BlockSparseAttention 缺省 scale=0 与 mask 不
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / 默认值与 CheckSparsePattern
+- **原因行为**：两缺陷：(1) 不传 scale_value 时按 0.0 计算（算子定义 attr_scaleValue 默认 "0"、torch_npu 文档默认 0.0），输出退化为选中 token 的 V 均值；(2) blockSparseMas
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：A2 实测：默认 vs scale=0.125 max_abs_diff 0.566；默认与显式 scale_value=0.0 逐位一致、与 CPU fp32 参考(scale=0)一致——即按 0 缩放静默算完；mask 块数不足用例输出与任何参考不可解释（0.678/NaN）、mssaniti
+- **改进措施**：检测 与 CPU fp32 参考逐点比对；输出≈V 均值是 scale=0 特征；修复 待定（建议默认改 1.0/强制显式/0 表示 D^-0.5 语义；两 issue open）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6347；https://gitcode.com/cann/ops-transformer/issues/6349
+
+### INF-1783 `tt_metal_embedding_llk_boundary_family` tt-metal SFPU 边界族：celu/i1/ldexp/silu 错值
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / SFPU 激活/数学 LLK
+- **原因行为**：四个边界值缺陷：(1) celu alpha<0 时 Cody-Waite helper 只钳负侧（max(x,-87)），正向上溢参数回绕 8 位指数域返回有限错值；(2) i1 输入钳 ±88.5（exp 溢出点）而 i1 本身 |x|
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：WH n150 shipped/BH：celu(x=-100,alpha=-1) 返回 +1.0（torch -inf）；i1(±1000/100) 返回 ±1.15e37（torch ±inf），88.5~91.9 全钉常数；ldexp(inf,-0.00037)=3.3895e+38、ldexp
+- **改进措施**：检测 边界值探针（±inf、负 alpha、88~92 区间）对照 torch；修复 待定（celu/i1 issue 给出具体修复公式未提 PR；silu 修复已从 tt-llk#1722 移植待 triage）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61021；https://github.com/tenstorrent/tt-metal/issues/61022；https://github.com/tenstorrent/tt-metal/issues/61723；https://github.com/tenstorrent/tt-metal/issues/61333
+
+### INF-1784 `tt_metal_data_movement_dtype_grid_family` ttnn 搬运/转换族：typecast/embedding/divide 等
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / tt-metal / experimental.typecast 等转换
+- **原因行为**：六条互补缺陷：(1) experimental.typecast 经 prim::copy FPU datacopy 做整型/float32 转换错值（int32↔fp32 4096/4096 错、f32→bf16 1998 错；ttnn.
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：n150/p100a 实测各条 always 错：typecast 整型/FP32 转换全错；embedding L1 索引+DRAM 权重 2e38 垃圾；divide 40×72 末列 319/320 错；repeat_interleave 半数元素错；topk 32 专家返回非法 id；BFP 栈 >2^31 元素段错误
+- **改进措施**：检测 各条均有确定性小复现（与 torch 对照）；修复 待定（多条 issue open；BFP pack 修复方案 size_t 已给出未提 PR；topk 修复方向：tiles==1 时 DST tile1 填 -inf/tile3 填越界索引）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61704；https://github.com/tenstorrent/tt-metal/issues/61666；https://github.com/tenstorrent/tt-metal/issues/61701；https://github.com/tenstorrent/tt-metal/issues/61700；https://github.com/tenstorrent/tt-metal/issues/61631；https://github.com/tenstorrent/tt-metal/issues/61495；https://github.com/tenstorrent/tt-metal/issues/61497
+
+### INF-1789 `ops_transformer_fa_out_dtype_graph_mode_ignored` FA 图模式忽略 out_dtype 降精度输出
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / 图模式 out_dtype 处理
+- **原因行为**：图模式（graph-mode）推理下 flash_attention_score 不遵守 out_dtype 参数，输出按内部低精度直接产出；修复 MR 标题 fix(flash_attention_score): honor out_dt
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：图模式推理请求高精度 out_dtype 时实际拿到降精度输出（MR 14243，open；错误量级未在索引正文给出——按修复单标题判定，细节未逐行核实）
+- **改进措施**：检测 图模式与单算子调用输出 dtype/精度比对；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14243 （open，未发布；正文为空模板，机制细节以 MR 改动为准）
+- **来源**：https://gitcode.com/cann/ops-transformer/merge_requests/14243
+
+### INF-1790 `ops_nn_layernormv4_pow2_correction_precision` LayerNormV4 二次幂修正精度缺陷
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / LayerNormV4 二次幂修正
+- **原因行为**：LayerNormV4 的二次幂修正逻辑存在精度缺陷，修复 MR 12401 标题「修复layernormv4二次幂修正精度」（正文为空模板，机制细节以 MR diff 为准）
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：LayerNormV4 输出存在精度偏差（量级未在索引正文给出——按修复单标题判定，细节未逐行核实）
+- **改进措施**：检测 与 CPU/参考实现逐位或 ULP 比对；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12401 （open，未发布；正文为空模板）
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12401
+
+### INF-1792 `ops_nn_bn_kahan_inf_nan_accumulator` BN 梯度 Kahan ±Inf 部分和算 NaN 毒化
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / bn_training_update_grad K
+- **原因行为**：补偿位 c=(t-sum)-y 在部分和为 ±Inf 时算得 Inf-Inf=NaN；后续 y=src-c 变 NaN 并跨调用毒化累加器——Kahan 补偿路径在非有限部分和下未做防护
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：三方校验实测：golden/GPU 输出 ±Inf 而 NPU 输出 NaN（bn_training_update_grad）；修复新增 c!=c 自比检出 NaN lane 并 Select 清零，非有限路径退化为 IEEE 普通加法（对齐 golden/torch.sum），有限路径精度不变
+- **改进措施**：检测 输出 NaN 扫描（golden 应为 ±Inf 处）；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12373 （open：三方校验修复前 NPU NaN/golden ±Inf、修复后对齐；未发布）
+- **来源**：https://gitcode.com/cann/ops-nn/merge_requests/12373
+
+### INF-1793 `ops_nn_bn3d_training_reduce_overflow` BN3D 训练 reduce 中间累加溢出不恢复
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / BN3DTrainingReduce FP32 累
+- **原因行为**：FP32 部分和先溢出后不能恢复：[FLT_MAX,0,FLT_MAX,-FLT_MAX] 真实和有限但中间序溢出；修复以 DAV3510 有界 384 位累加恢复受影响通道再舍回 FP32（保留真实 NaN/Inf/超范围），split-
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：Ascend950PR_9579 实测：原 4 条冻结用例 9 个错误非有限通道；修复后 9 通道全部恢复为精确和的 FP32 舍入值；95 例三方 90 PASS（5 FAIL 保留：CPU FP64=0/GPU NaN 分歧等既有判据问题，未改 golden）
+- **改进措施**：检测 抵消型大幅值输入探针（FLT_MAX 对减）；修复 修复含于 https://gitcode.com/cann/ops-nn/issues/6955 配套 MR !12382（open；A100 对照验证；未发布）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6955；https://gitcode.com/cann/ops-nn/merge_requests/12382
+
+### INF-1794 `ops_math_pad_backward_empty_input_uninit` pad 反向/UnfoldGrad 空输入不写非空出参
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / 空输入早退路径
+- **原因行为**：空 tensor 输入（S2=0 等）配非空出参时 kernel 早退返回 ACLNN_SUCCESS 但不写非空输出——出参保留未初始化内存内容；修复补齐早退路径的输出初始化
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：下游读到显存残留值（内容随历史分配变化、不可复现）；issue #3553（10-13 创建，本轮修复 MR merged 状态复核收录）；修复 MR 6509 已 merged（修复后早退路径初始化输出）
+- **改进措施**：检测 对空输入调用后校验输出是否被写（哨兵预填）；修复 修复 MR https://gitcode.com/cann/ops-math/merge_requests/6509 （merged 2026-10-19；发布版本未核实）
+- **来源**：https://gitcode.com/cann/ops-math/issues/3553；https://gitcode.com/cann/ops-math/merge_requests/6509
+- **关联**：cross:TRN-0275
+
+### INF-1795 `ops_math_cdist_grad_nan_boundary` cdist_grad 边界 NaN 处理错误（已修）
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / cann / cdist_grad NaN 边界处理
+- **原因行为**：cdist_grad 在边界场景（零距离/重合点等）的 NaN 处理逻辑错误；修复 MR 6518「修复cdist_grad边界场景下nan值处理逻辑」（merged 2026-10-20，正文细节以 MR diff 为准）
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：边界输入下梯度出现错误 NaN（或应 NaN 处未 NaN）；同仓 issue #3677（CdistGrad NaN 处理逻辑）此前留观——正文为空模板无法判定，本轮以修复 MR merged 为证据收录（量级细节未逐行核实）
+- **改进措施**：检测 重合点/零距离探针比对 torch cdist 反传；修复 修复 MR https://gitcode.com/cann/ops-math/merge_requests/6518 （merged 2026-10-20T01:57；发布未核实）
+- **来源**：https://gitcode.com/cann/ops-math/merge_requests/6518；https://gitcode.com/cann/ops-math/issues/3677
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -6843,6 +7075,50 @@
 - **影响详情**：resnet18 bs8 fp32：eager absmax 0.162 对 mlir 0.715，最大相对误差 12682；错误幅度跨进程在 0.28~2.0 间变化、同进程两次仅差 2.98e-07；dynamic=True 可规避，Triton/DVM/NPUGraphs 后端均 PASS。
 - **改进措施**：检测 标准 CNN 在 npu_backend=mlir 下与 eager 比 max|diff| 与 isnan；再按 stage 二分（stem/layer1..4 单独编译均正确，合并到 layer3 才错）；修复 待定（issue open）；规避：dynamic=True，或改用 Triton/DVM/NPUGraphs/TorchAir-GE 后端；建议把 resnet 类标准模型的 MLIR 正确性纳入 CI
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5063；https://gitcode.com/Ascend/pytorch/issues/5214；https://gitcode.com/Ascend/pytorch/issues/4825
+
+### INF-1766 `triton_sort_topk_not_permutation_negzero_nan` tl.sort/topk 对 ±0/NaN 行非排列（复制丢元）
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / triton / _compare_and_swap 比较器
+- **原因行为**：每对元素各自独立决定换与否：左侧用 x>y、右侧用 not(y>x)，两比较在互不为大于时（±0 混合或 NaN）都为 false，两侧不一致导致左元素保留、右元素取左值
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：含 -0.0 与 +0.0 或 NaN 的浮点行排序/topk 后不再是输入排列：一个元素出现两次、另一个丢失（如 [1,-0.0,0.0,-2]→[-2,-0.0,-0.0,1]；[nan,1]→[nan,nan]）；tl.sort/tl.topk/tl.bitonic_merge 均中
+- **改进措施**：检测 比较输出与输入的位模式多重集（按 int 视图排序）可检出；修复 待定（修复需在比较中处理相等不可区分对；issue 提出于 main@6fe3348e6）
+- **来源**：https://github.com/triton-lang/triton/issues/12397
+
+### INF-1769 `triton_ascend_num_stages_state_store_misched` triton-ascend num_stages>1 流水错调度携带态存储
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / triton / 软件流水循环携带 store 调度
+- **原因行为**：循环体内存储循环携带值的 kernel 在 num_stages>1 时被错误调度，in-loop store 读到过期流水级，kernel 静默产出错误结果（非崩溃非编译错）
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：Mamba-2 SSD _state_passing_fwd/_bwd_kernel（num_stages=3 autotune 配置）约 25–46% 新进程产出位相同的错误输出（rel diff ~1e-3 vs 参考 ~4e-7）；前向反向同中；钉 num_stages=1 后 16/16 进
+- **改进措施**：检测 同脚本多进程重跑并与纯 torch 参考对比；坏进程输出位级稳定（编译期调度决定）是特征签名；修复 规避：检测 torch_npu 时为 state-passing autotune 配置钉 num_stages=1（state-spaces/mamba#1063 已带；GPU/ROCm 调度不受影响）；上游修复未见（open）
+- **来源**：https://github.com/triton-lang/triton-ascend/issues/2662；https://github.com/state-spaces/mamba/pull/1063
+
+### INF-1770 `ascend_pytorch_nd_tile_rsplit_noncontig_wrong` torch_npu ND tile rsplit 非连续输入静默算错
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / torch_npu / npu_rsplit_partial 代码生成
+- **原因行为**：prefer_nd_tiling+tile_reductions 开启的 ND tile 归约走 rsplit 多核路径时，非连续输入（如 permute 后）下工作区按 rsplit_id 开槽/合并内核读回与实际切分或 stride 不
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：910B2 单卡 torch.compile 下 sum(dim=(1,2))：连续输入 abs_diff=0；permute 后非连续三进程 rel 5.4%/6.5%/13.8%；单变量 r0 扫描仅 r0=32 档（rsplit 多核路径）rel=0.1123 错，其余档 1e-7
+- **改进措施**：检测 torch.compile 结果与 eager 逐元素比对（连续输入对、非连续错是特征）；修复 待定（建议修复前对非连续输入保守回退非 rsplit 路径；两开关默认 False）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5558；https://gitcode.com/Ascend/pytorch/issues/5540
+
+### INF-1786 `ops_nn_conv_infershape_dw_fusion_nine_defects` CANN conv InferShape 与 DW 融合 pass 9 缺陷
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / cann / conv infershape 与 DW 融合
+- **原因行为**：9 处静态确认缺陷：CheckConvGroups 动态 shape 下 groups==0 两道门均漏过致 kn%groups 除零 UB；GetConvDilations/ReportInputWithPadError 属性缺失时空指针
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：按触发条件构造即复现：groups=0+动态 filter N=-1+x C=0 → kn%groups 除零 UB；DepthwiseConv2D filter 由 AscendWeightQuant 产出且上游 origin format 非 HWCN/NCHW → desc 已改 Reshap
+- **改进措施**：检测 对融合前后图做等价性校验/输出与 eager 对照；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12390 （open：静态扫描+人工逐条溯源确认 9 处；opgraph 1218 UT 过、depthwise 68/68、ophost 8530 过；未发布）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6961；https://gitcode.com/cann/ops-nn/merge_requests/12390
 
 ## 运行时/执行
 
@@ -7973,6 +8249,39 @@
 - **改进措施**：检测 把 torch.Stream/torch.npu.Stream 与 torch.Event/torch.npu.Event 的四种组合逐一喂给 record/wait/elapsed_time；越界读用 ASAN 确认；修复 待定（issue closed，未给修复 PR）；按 CUDA/XPU 模式修：入口加 TORCH_CHECK(THPStream_Check(...))，转基类 THPStream*，用 stream_id/device_index/device_type 经 c10::Stream::unpack3 重建 Stream
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/4758
 
+### INF-1762 `vllm_full_graph_fa3_split_kv_wrong_logits` vLLM FULL 图+FA3 split-KV 回放步 logits 大错
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：运行时/执行 / vllm / FULL graph 回放与 FA3 combin
+- **原因行为**：combine kernel 的 tile scheduler 按图捕获时的 dummy batch 选择，而非按实际回放批形状选择
+- **影响对象**：输出分布（静默错误）
+- **影响详情**：FULL 图回放部分步 logits 错数个 nat、argmax 改变；触发 A：prefix 命中恰好 2 个新 token；触发 B：max_num_seqs≤16 的混合批；关 split-KV 或 FULL_AND_PIECEWISE 正常
+- **改进措施**：检测 对 FULL 图回放步比对 eager logprobs 可发现；现无内置检测；修复 规避：--attention-config.flash_attn_max_num_splits_for_cuda_graph=1（默认 32，图内关 split-KV）；修复 PR 未见（待定）
+- **来源**：https://github.com/vllm-project/vllm/issues/62626
+
+### INF-1777 `tt_metal_llama_prefill_batch_dependent_logits` tt-metal Llama P100 batched prefill logi
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：运行时/执行 / tt-metal / tt_transformers 128 bucke
+- **原因行为**：P100 上 128 bucket 混批 prefill 时同一 prompt 的 logits 与单独 prefill 不同（max abs diff 0.4375）；1024 bucket 完全一致；disable_batched_pr
+- **影响对象**：输出分布（不可复现）
+- **影响详情**：128 bucket 批 2/4：logits diff 0.4375，种子采样第 2 token 分叉、贪心第 27 token 分叉；重复运行各自位稳定；1024 bucket 全等；同 prompt 同 seed 的输出文本取决于批内其他请求
+- **改进措施**：检测 同 prompt 单批 vs 混批 logits 比对；修复 待定（P100 补 disable_batched_prefill 覆盖是候选规避；issue open）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/61638
+
+### INF-1785 `ascend_pytorch_mimalloc_d2h_zero_pages` torch_npu D2H 后 Host 整页归零（mimalloc）
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：运行时/执行 / torch_npu / CANN D2H 的 Host 脏页标记
+- **原因行为**：PyTorch 2.10 起 ARM 默认 mimalloc，释放路径对 Host 内存打 MADV_FREE（LazyFree）；CANN 侧重新使用这些 Host 内存做 D2H 时未执行 mark dirty，LazyFree 标记残
+- **影响对象**：跨请求/跨样本数据（不可复现）
+- **影响详情**：A3+CANN 9.0.0：训练/推理无报错，内存压力较大时偶发精度尖刺；D2H 拷贝后 Host 侧出现大量 0 值，数量为页大小整数倍、变 0 区间按页对齐整页为 0；权重被读为 0 值
+- **改进措施**：检测 对 D2H 后 Host 缓冲做页粒度校验/抽查；内存压力下偶发是特征；修复 方案一：回退 ARM 默认 mimalloc 配置（改 PyTorch 原生取消 ARM 默认）；方案二：驱动层进程粒度开关 + torch_npu 感知 mimalloc 版本经环境变量透传 RTS 同步/异步路径防护（issue 给出两方案，落地状态未核实）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5567；https://github.com/pytorch/pytorch/pull/164741
+
 ## 集合通信
 
 ### INF-0103 `ttmetal_all_broadcast_writer_accessor_cross_buffer_space` all_broadcast 输出 accessor 误用输入 buffer
@@ -8199,6 +8508,28 @@
 - **影响详情**：独立算子场景下 remoteUserDeviceMemCount 恒为 0，DeepCopyH2DChannelRoce 的 >0 判断永不成立，远端 device 用户内存不会被拷到设备，算子读到未初始化或旧值；host 拷贝长度同时错位。
 - **改进措施**：检测 建链后检查 linkRoce.remoteUserDeviceMemCount 是否非 0，或对比 remoteUserHostMem 与 DeviceMem 的计数是否被同一数值覆盖；修复 issue 给出单点修复：第 378 行第三参数改为 &linkRoce.remoteUserDeviceMemCount；issue 已 closed，合入与发布未核实
 - **来源**：https://gitcode.com/cann/hcomm/issues/612
+
+### INF-1788 `sglang_kimi_k3_dcp_a2a_garbled_decode` SGLang Kimi-K3 DCP a2a 双节点解码乱码
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：集合通信 / sglang / DCP a2a 与 NCCL graph 注册
+- **原因行为**：两节点 GB300 MNNVL（TP8/DCP8）+ CUDA graph 解码下 DCP a2a 产生退化输出：初始 token 尚可、后续解码退化为重复 '!'；候选启动防护与关 NCCL_GRAPH_REGISTER 均 0/12 复
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：12-prompt 贪心 smoke 探针：原始环境 12/12 乱码；NCCL_GRAPH_REGISTER=0 或候选启动防护 0/12；fi_a2a 0/12；小 harness 未复现成功、PR head GPU 验证待做
+- **改进措施**：检测 贪心 smoke 探针（如 17*23 应答）+ 重复 '!' 退化模式；修复 规避：NCCL_GRAPH_REGISTER=0；候选修复 PR https://github.com/sgl-project/sglang/pull/45371 （启动防护；模型级探针已过，harness 未复现、PR head 验证未完成，open）
+- **来源**：https://github.com/sgl-project/sglang/issues/45367；https://github.com/sgl-project/sglang/pull/45371
+
+### INF-1791 `hcomm_allgather_aiv_rdma_servernum_oob_write` AllGather AIV RDMA serverNum 超配写越界
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：集合通信 / cann / aiv_all_gather 写偏移假设
+- **原因行为**：kernel 按 (i*rankSize_+blockIdx_)*len 计算写 output 偏移，隐含 userRankSize==serverNum*localRankSize 两级分解假设；PD 分离等部署下 level1 子通信域
+- **影响对象**：数值结果（报错）
+- **影响详情**：板端日志复现：单卡数据量 61440B 场景原代码 i=1..3 越界写至 output[8..31]（超出 480KB 输出缓冲约 1.4MB），触发 MTE invalid GM address；修复 host 侧折算 kernelServerNum=min(userRankSize/local
+- **改进措施**：检测 MTE invalid GM address 设备异常（PD 分离 AllGather 场景）；serverNum 对账日志（修复 MR 新增）；修复 修复 MR https://gitcode.com/cann/hcomm/merge_requests/6144 （open：host 侧折算+死代码清理+对账日志；待上板回归，未发布）；姊妹 MR !6142 同题 closed
+- **来源**：https://gitcode.com/cann/hcomm/merge_requests/6144；https://gitcode.com/cann/hcomm/merge_requests/6142；https://gitcode.com/cann/hcomm/merge_requests/6146
 
 ## 并行切分
 
@@ -11841,6 +12172,17 @@
 - **改进措施**：检测 监控 decode stage 的 response 延迟分布（200ms→秒级的抬升是前兆）；对同类请求比对 prefill/decode 两侧 KV 内容与调度轮次的 snapshot 是否一致；修复 issue open；正文建议在 prefill→decode 的 state 传递处加 barrier/fence（SharedCacheBuffer release 路径 atomic_thread_fence(release)、acquire 路径 acquire fence），未核实是否落地
 - **来源**：https://gitcode.com/Ascend/MindIE-LLM/issues/676
 
+### INF-1765 `vllm_rocm_attn_dsv41_encoder_swa_replay_kv_rewrite` SGLang ROCm DSV4.1 SWA replay 改写缓存 KV
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：KV缓存 / sglang / HipRadixBackend 回放写位置
+- **原因行为**：ROCm 后端 folds_encoder_swa_replay=False，回放作为独立 forward 执行且其 out_cache_loc 指向被回放 token 的缓存槽，压缩器把重算值写回覆盖原 prefill 写入
+- **影响对象**：KV状态（静默错误）
+- **影响详情**：每次 prefix 命中把最近 ≤128 个缓存 token 的 main KV、压缩 KV、index keys 覆写为以回放起点截断滑窗重算的值；后续命中同前缀的请求读到改写值；CUDA 侧 #44857 已修（回放行写 padding slot 0），ROCm 未修
+- **改进措施**：检测 比较回放 prefill 前后缓存 c1/c2 字节（GB300 上修复验证即此法）；修复 修复参照 CUDA PR https://github.com/sgl-project/sglang/pull/44857 （回放行 raw_out_loc 置 0 由 c1/c2/index-K store 跳过；ROCm 侧未移植，open）
+- **来源**：https://github.com/sgl-project/sglang/issues/44870；https://github.com/sgl-project/sglang/pull/44857
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -12650,6 +12992,28 @@
 - **影响详情**：客户端可发无害 messages 而模型跑在自选 token 序列上，chat template 与 system prompt 被移除；仅影响请求者自身响应（安全团队定级常规 issue）；0.27.0 引入、0.31.0 复现、main 仍缺检查
 - **改进措施**：检测 对照带/不带 kv_transfer_params.prompt_token_ids 的渲染输出 token 序列（issue 附无 GPU 复现脚本）；修复 上游修复未见（issue open，经安全团队转常规）；规避：入口层（网关）拒绝非 P/D 部署的 kv_transfer_params 字段
 - **来源**：https://github.com/vllm-project/vllm/issues/62307
+
+### INF-1780 `vllm_dsv41_decoder_replay_prompt_logprobs_trim` vLLM DSV4.1 replay 修剪 prompt_logprobs 行
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：调度/服务 / vllm / decoder replay 行保留条件
+- **原因行为**：decoder replay 下保留所有 prefill 行的条件未包含 prompt_logprob_token_ids is not None：candidate-scoring 请求被当生成请求修剪 eager prefill chu
+- **影响对象**：输出分布（静默错误）
+- **影响详情**：H100+MRV2 eager 300-token 输入：保留行 172-299，请求行 172 行在窗外，start=0 max abs logprob err 1.87、实际 next token 峰值 1.85；被裁位置输出统一 -log(4096) 均匀 logprobs；start=172
+- **改进措施**：检测 与 prompt_logprobs=0 全保留参考跑同请求比对；修复 一行修复（现有 per-request 行保留条件加 prompt_logprob_token_ids is not None）已在 issue 验证全 0；PR 状态未核实（待定）
+- **来源**：https://github.com/vllm-project/vllm/issues/62651
+
+### INF-1787 `vllm_eplb_record_mode_silent_stall` vllm-ascend EPLB record 模式静默失效
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：调度/服务 / vllm / EplbUpdator/Worker record
+- **原因行为**：forward_before 不检查 record path 就生成并启动 D2D 专家权重迁移（loader 进入 TRANSFERRING），而 forward_end 在 record path 下跳过 update_expert_m
+- **影响对象**：模型权重（静默错误）
+- **影响详情**：DeepSeek-V2-Lite-Chat 4×910B3 实测：设 expert_map_record_path 后每个 server 从第二轮起日志 Current D2D weight update is on-going, cannot accept new update task，一次运行
+- **改进措施**：检测 监控 D2D on-going 日志频次与已应用计划数（0 应用是特征）；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19288 （open：record 模式 forward_before 提前返回、EplbWorker record_only 保持已安装布局为基准；3 个回归 UT 修复前失败修复后通过，ut/eplb 24 passed vs 19；未发布）
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/19288
 
 ## 输出解析
 
@@ -16620,6 +16984,17 @@
 - **影响详情**：触发条件：aclnnMatmulCompressDequant 传入长度非 16 整数倍的 deqScale。表现：拿到全零输出张量、返回码 ACLNN_SUCCESS、流同步正常，只有与参考比对才发现整片是零，返回值看不出参数不合法（期望返回 161002）；实机数值与返回值作者列为待确认。
 - **改进措施**：检测 构造 deqScale 长度非 16 整数倍的调用，检查返回码是否 0、输出是否全零；接口层文档期望的是 161002 参数非法。；修复 待定（issue closed，未给 MR）：else 分支应直接返回 ACLNN_ERR_PARAM_INVALID，或在 CheckShapeValid 前置校验 deqScale 对齐。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/5925
+
+### INF-1782 `vllm_f32_triton_tf32_default_mismatch` vLLM float32 模型 Triton kernel 默认 TF32 降精
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：量化 / vllm / 三个 Triton kernel 的 tl.dot
+- **原因行为**：三个 Triton kernel 的 float32 tl.dot 未设 input_precision，NVIDIA 上 Triton 默认 TF32（10 位尾数）；与 vLLM 自身 VLLM_FLOAT32_MATMUL_PRECI
+- **影响对象**：数值结果（质量退化）
+- **影响详情**：固定种子复现：每 kernel 输出对 fp64 参考偏差约 1.5e-2×输出 RMS（IEEE 路径与 torch fp32 约 1e-5）；dtype=float32 服务（默认选 TRITON_ATTN）201 token prompt logprobs 默认 vs TRITON_F32_D
+- **改进措施**：检测 与 TRITON_F32_DEFAULT=ieee 对照跑同请求比 logprobs；修复 规避：环境变量 TRITON_F32_DEFAULT=ieee（同 kernel 即恢复 ~1e-5）；代码修复 PR 未见（待定）
+- **来源**：https://github.com/vllm-project/vllm/issues/62582
 
 ## 位置编码
 

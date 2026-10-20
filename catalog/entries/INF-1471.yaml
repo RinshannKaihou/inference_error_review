@@ -41,6 +41,8 @@ original:
   behavior: NPU 上算 cross_entropy 时把类别下标越界的 target 静默处理：mean 模式直接把这个样本从平均里剔掉（数值看着正常但语义错了），none 模式在该位置返回垃圾值且两张卡各不相同。CPU 会立刻抛 IndexError，NPU 什么都不说。
   trigger_surface: torch_npu F.cross_entropy + target 越界；Atlas A3 双芯、CANN 9.1.0
   discovery: 2026-10-19 每日扫描
+  notes:
+  - 2026-10-20 回访 2026-10-20：#598 状态未在增量窗口内变化
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-10-20'
     fields:
     - relations
+  - date: '2026-10-20'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-20
     base:

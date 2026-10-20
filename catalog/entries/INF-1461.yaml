@@ -39,6 +39,8 @@ original:
   behavior: 在 Ampere/Hopper 消费卡与数据中心卡上用 SGLang 跑以小 block scale 导出的 NVFP4 量化模型时，所有输出从第一个 token 起就是乱码：192 个请求全错、49,152 个 token 里约 49,133 个错。同样权重换成 ModelOpt 常规 scale 导出或 B200 原生 W4A4 路径则完全正确，vLLM 新版本对同 checkpoint 也正确。
   trigger_surface: SGLang 0.5.22/main（ba3fc94）+ NVFP4 checkpoint（小 block scale，如 per-tensor weight_scale_2=1）+ SM80-SM90（Marlin 回退）；RTX 3090/H100 PCIe 实测
   discovery: 2026-10-19 每日扫描
+  notes:
+  - 2026-10-20 回访 2026-10-20：#44998 仍 open
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -53,3 +55,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - original.notes

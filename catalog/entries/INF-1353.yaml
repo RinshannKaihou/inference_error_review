@@ -49,6 +49,7 @@ original:
   - 2026-10-13 回访 2026-10-13：获两项独立复现——Winterslife 在 RTX 5090（SM120，driver 580.126.09，torch 2.13.0+cu130）无模型 op 级往返复现（B=2,N=5568,H=2,D=256，BLNHC K relerr 1.486）；issue 作者侧 2x RTX PRO 5000 Blackwell SM120 TP2 v0.30.0 wheel 写穿测试证实 scale[0,0,0,0] 与 data[0,2,0,0] 别名同一字节 512（写 123 经 scale 视图改变该 data 字节）。
   - 2026-10-19 回访 2026-10-18：issue 仍 open（2 评论），上游修复未见；本轮 window 内完整正文复核确认机制描述，新增推理库 var 条目 INF-1447（同源双记录，本条保持 8.100 主体）
   - 2026-10-19 回访 2026-10-19：vllm#61225 仍 open，上游修复未见（core REST 状态核验）
+  - 2026-10-20 回访 2026-10-20：vllm#61225 仍 open（core REST/索引均无关闭迹象）
 migration:
   method: scan
   scanned: '2026-10-13'
@@ -70,5 +71,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-10-19'
+    fields:
+    - original.notes
+  - date: '2026-10-20'
     fields:
     - original.notes

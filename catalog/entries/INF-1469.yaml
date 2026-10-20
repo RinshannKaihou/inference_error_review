@@ -40,6 +40,8 @@ original:
   behavior: NPU 上跑 scaled_dot_product_attention、attn_mask 用 bool 型且存在整行全 False（该 query 被完全屏蔽）时，输出不是 CPU 语义的 0，而是完整的注意力值（约 0.48）：被屏蔽位置反而贡献了注意力，下游生成会静默产生非法内容。同样的掩码用 float -inf 表示则两端一致。
   trigger_surface: torch_npu SDPA + bool attn_mask + 全 False 行；Atlas A3、CANN 9.1.0；float mask 不触发
   discovery: 2026-10-19 每日扫描
+  notes:
+  - 2026-10-20 回访 2026-10-20：#605 仍 open（u2026-10-19T06:07 后无更新）
 migration:
   method: scan
   scanned: '2026-10-19'
@@ -54,3 +56,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-20'
+    fields:
+    - original.notes
