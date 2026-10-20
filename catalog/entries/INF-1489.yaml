@@ -4,13 +4,13 @@ slug: vllm_ascend_pd_pp4_first_request_badcase_garbage
 aliases: []
 title: PD 分离 PP=4 首请求特定 prompt 输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: vllm
-    component: ascend_direct 首请求 KV 传递
-  behavior: PD 分离部署下首个 badcase 请求的上下文在 prefill（PP=4）交给 decode 时内容不正确；机制未定，PP=4 与「首请求」两个条件同时必要
+    component: PP或ascend_direct首请求链路
+  behavior: 在PD分离、Prefill PP=4、use_ascend_direct=true下，服务拉起后首个特定261-token prompt请求输出乱码；根因未定位
 effect:
   objects:
   - 输出内容
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - component
+    uncertain:
+    - subsystem

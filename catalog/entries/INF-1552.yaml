@@ -4,7 +4,7 @@ slug: vllm_ascend_mega_moe_max_tokens_silent_clip
 aliases: []
 title: MegaMoE 容量设 8192 静默裁剪真实专家路由
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - detail

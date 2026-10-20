@@ -4,17 +4,17 @@ slug: te_mv_tail_program_segment_loss
 aliases: []
 title: TE 编译 aten.mv 尾部 program 段整段丢写致错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: pytorch
     component: TE mv/matmul fold
-  behavior: 3D×1D 经 _override_matmul_should_fold_for_npu 放宽为一律 fold 到 mv，TE 对 mv 的 tile 归约在高 pid program 段漏写，输出按 block 边界整段错。
+  behavior: TE对aten.mv前向lowering产生错值，符合NPU多program发射时高pid段写入/归约被跳过。
 effect:
   objects:
   - 数值结果
-  detail: torch.mv：25×10 max_abs 3.69（前 10 行对、15/25 错）、16×8 4.06、32×10 7.0、100×10 9.1；fp32 正常应 <1e-5；跨种子稳定，opinfo matmul/rmatmul 4 例 15/25 元素失配。
+  detail: triton_experimental后端torch.compile(torch.mv)或3D×1D matmul折叠到mv；M≥16、K小、行数非grid整倍数时前段正确、从某行起按block边界整段丢失/覆盖。最大差约9.1；跨种子稳定，4例matmul/rmatmul 15/25元素失配。
   visibility: 静默错误
 mitigation:
   detect: 逐 shape 扫描 torch.compile(torch.mv) 与 eager 的 max_abs，重点看 M≥16 且行数非 grid 整倍数的小 K 形状，错误集中在尾部行；3D×1D matmul 另跑 forward-only 图排除反向
@@ -42,3 +42,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核
+    rewritten:
+    - behavior
+    - detail
+    uncertain:
+    - title

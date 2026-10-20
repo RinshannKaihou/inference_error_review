@@ -4,7 +4,7 @@ slug: msmodelslim_oasq_smooth_scale_paren_error
 aliases: []
 title: OASQ 平滑 scale 括号错位，缩放系数偏离设计
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -13,8 +13,8 @@ cause:
   behavior: OASQ 的 compute_smooth_scale 把变换套在整段比值上，而不是分别作用后相除，平滑系数偏离设计公式，低比特精度受损。
 effect:
   objects:
-  - 模型权重
   - 输出内容
+  - 模型权重
   detail: W4A4/MXFP 等低比特量化（如 Wan2.2 DAOS 配方）拿到错误的平滑系数，量化权重精度受损；量化流程不报错，正文未给精度下降量级。
   visibility: 质量退化
 mitigation:
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 模型权重
+        to: 输出内容
+    uncertain:
+    - behavior
+    - detail

@@ -4,17 +4,17 @@ slug: cann_moe_gating_top_k_sqrtsoftplus_overflow_tail_oob
 aliases: []
 title: MoeGatingTopK arch35 数值溢出与尾段越界读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
     stack: 通用
     component: moe_gating_top_k arch35
-  behavior: normType=2 用朴素 sqrt(ln(1+exp(x)))：x>88 时 exp 溢出为 Inf、x<-15 时被吸收为 1 输出 0；softmax 首趟行最大值无掩码全向量加载，尾块越界读。
+  behavior: normType=2 SqrtSoftplus朴素：x>88溢出、x<-15吸收；without_group softmax pass1行最大值float无掩码加载，expertCountAlign%64==32时尾段越界读行外残留。
 effect:
   objects:
   - 数值结果
-  detail: Ascend950 arch35 上 L1 499/500、E2E 429/481 通过；normType=2 约 38 例 NaN/Inf 或相对误差 100%，约 11 例整行 NaN 且同一用例复跑时好时坏（非确定性）。
+  detail: Ascend950 arch35上，normType=2输入含较大正值时输出Inf/NaN，含较大负值时输出0且相对误差100%；约11例同输入复跑不一致，batch尾行或k边界行成片NaN，算子返回成功。修复前ACLNN 499/500、E2E 429/481通过。
   visibility: 数值异常
 mitigation:
   detect: ttk 跑 normType=2 的大正值/大负值用例与 expertCountAlign%64==32 的 k 边界用例，比对 NaN/Inf 位置并重复执行查非确定性
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - detail
+    uncertain:
+    - subsystem

@@ -4,13 +4,13 @@ slug: eager_add_drops_channels_last_stride
 aliases: []
 title: eager add 改 strides 致 as_strided 读错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: add 算子 stride
-  behavior: NPU eager add 把 channels_last 输入的 stride 改成 NCHW 连续布局，compile 路径保留原 stride；下游 as_strided 仍按 channels_last 公式取值，读到错位元素。
+  behavior: NPU eager add 把 channels_last 输入的 stride 改成 NCHW 连续布局，torch.compile 路径保留原 stride。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

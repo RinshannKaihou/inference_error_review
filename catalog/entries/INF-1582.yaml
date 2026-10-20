@@ -4,7 +4,7 @@ slug: cann_moe_finalize_routing_bf16_fp32_accum_policy
 aliases: []
 title: MoeFinalizeRouting bf16 中间精度口径不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: bf16 331 例中 299 例超阈（90.3%，阈 0.0078125=1 ULP）；fp16 316 例逐位一致、fp32 353 例 max_abs≤2.83e-5；K=1 单步即差 2 ULP，误差随 K 与值域放大（max_rel 420）。
+  detail: bf16 331 例中 299 例超阈（90.3%，双指标阈值均 0.0078125=2^-7）；fp16 316 例逐位一致、fp32 353 例 max_abs≤2.83e-5；K=1 单步即差 2 个 bf16 ULP，误差随 K 与值域放大（max_rel 420）。
   visibility: 静默错误
 mitigation:
   detect: 同形状仅换 dtype（bf16/fp16/fp32）的对照用例；K=1 单步用例可直接暴露每算子一次的舍入差；按 bf16 ULP 统计差异
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

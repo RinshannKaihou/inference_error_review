@@ -4,7 +4,7 @@ slug: slikg_bf16_dq_unaligned_clear_skip
 aliases: []
 title: SLIKG BF16 dQ 未对齐清零分支漏写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 梯度
-  detail: A3、TND、q[4096,64,128] BF16、topk=512：54 个无有效 KV 的 query、40 个 AIV 每核 clear 11060 元素，逐段模拟漏写 383344 元素，与实测一致，首步 grad_norm=NaN。
+  detail: A3、TND、BF16 dQ、topk=512、mask_mode=3、cmp_ratio=4 且 clear 分段不满足 32B 对齐时，无可见压缩 KV 的 query 行 dQ 保留显存旧值，训练首步 grad_norm 变 NaN；无报错无栈，重复结果一致，换 topk/mask 后消失。
   visibility: 数值异常
 mitigation:
   detect: 对无有效压缩 KV 的 query 行单独检查 dQ 是否清零；观察首步 grad_norm 是否 NaN
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

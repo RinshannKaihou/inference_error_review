@@ -4,7 +4,7 @@ slug: vllm_ascend_zero_draft_rng_advance
 aliases: []
 title: 零 draft 请求仍推进采样 RNG 致输出不可复现
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -13,8 +13,8 @@ cause:
   behavior: 对每个请求先执行 temp_q.exponential_(generator) 再用 torch.where 丢掉，num_draft_tokens=0 的请求虽然不采用 temp_q，其 generator 状态已被一次整表抽样推进。
 effect:
   objects:
-  - 输出分布
   - 输出内容
+  - 输出分布
   detail: 同一 seed 下，某个请求在推测解码步里有没有 draft 会改变它后续的采样序列：零 draft 请求的随机流被多抽一次，输出与参考/重跑不一致。
   visibility: 不可复现
 mitigation:
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出分布
+        to: 输出内容

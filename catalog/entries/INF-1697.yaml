@@ -4,7 +4,7 @@ slug: smla_reduction_block_boundary_batch_mismatch
 aliases: []
 title: SMLA/MQSMLA 规约块边界错位致 batch 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: 开启 batch_consistency 后同一输入按不同 batch 切分得到不同结果（bc_ori_cmp_reduction_boundary 等用例失败）；S2 尾块落到零行 AIV 时 Vec1 还发送无人等待的 MTE3_MTE2 事件，导致卡死超时。
+  detail: SMLA/MQSMLA 开启 batch_consistency 后，同一输入与权重下仅改变 batch 切分和执行顺序，输出不一致，batch consistency 用例直接失败；某些 S2 尾块落在分块边界上的用例整核卡死、计算超时，日志无精度报错，仅任务不返回。
   visibility: 不可复现
 mitigation:
   detect: 开启 batch_consistency 后按不同 batch 切分与 order 复跑同一输入，比较逐点输出；同时观察 AIV 零行是否导致超时
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

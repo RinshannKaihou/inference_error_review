@@ -4,13 +4,13 @@ slug: cann_block_sparse_attention_v3_all_zero_mask_output_unwritten
 aliases: []
 title: BlockSparseAttentionV3 掩码全 0 时输出未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: 通用
     component: BlockSparseAttentionV3
-  behavior: blockSparseMask 全 0（无任何 block 参与计算）时该分支提前返回，attention_out 与 softmax_lse 的写回被整段跳过，输出 buffer 保持调用前的显存残留，但仍返回成功。
+  behavior: blockSparseMask 全 0（无任何 block 参与计算）时，算子仍返回成功，但 attention_out 与 softmax_lse 未被写入。
 effect:
   objects:
   - 数值结果
@@ -52,3 +52,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - visibility

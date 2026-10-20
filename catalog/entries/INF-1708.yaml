@@ -4,7 +4,7 @@ slug: rope_golden_dtype_overflow_false_fail
 aliases: []
 title: RoPE golden 未对齐 kernel 溢出语义致误报
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -15,7 +15,7 @@ effect:
   objects:
   - 测试判定
   detail: input_data_ranges 含 (65504,65504)、(3.4028235e38,3.4028235e38) 等极值用例时 golden 给有限值而 NPU 给 ±inf/nan（或相反），isclose 判 FAIL，本应 PASS 的用例被判失败。
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: 对极值/大幅值用例同时用 kernel 与 golden 跑，判断失败是口径差异还是算子缺陷；比较输出 dtype 边界的溢出语义
   fix: 修 tests/assets/golden.py：按 kernel 的 fp32 内部计算、在写回输出 dtype 处按 IEEE754 饱和（issue closed，合入状态未核实）
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 报错

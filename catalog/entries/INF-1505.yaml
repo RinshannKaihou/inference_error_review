@@ -4,7 +4,7 @@ slug: msprobe_int8_quant_output_skipped_or_binary_compared
 aliases: []
 title: int8 量化算子输出被比对跳过或误判 fail
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 测试判定
-  detail: npu_dynamic_quant、npu_rms_norm_dynamic_quant 的 int8 输出整行 SKIP，Message 为 'data type <class numpy.int8> not inexact'；改二进制比较后 error_rate 非 0，量化算子无法通过验证
+  detail: api_accuracy_checker 比对含 int8 输出的 NPU 量化算子时，结果为 SKIP，备注为 'data type numpy.int8 not inexact'；改严格二进制比较后 error_rate 非 0、全部 fail
   visibility: 静默错误
 mitigation:
   detect: 比对结果里筛 Status=SKIP 且 Message 含 'not inexact' 的行，统计被跳过的 int8 输出算子数；不要以 SKIP 当通过
@@ -54,3 +54,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

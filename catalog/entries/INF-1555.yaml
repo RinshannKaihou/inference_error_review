@@ -4,7 +4,7 @@ slug: vllm_ascend_gdn_ragged_state_row_indexing
 aliases: []
 title: GDN 循环状态按 packed 偏移寻址致跨请求串扰
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,9 +13,10 @@ cause:
   behavior: metadata 保留 [B,K+1] 定宽状态表，调用方 flatten 后传入，kernel 却按 packed token 偏移寻址，正确行基址应是 request_index×(K+1)。
 effect:
   objects:
+  - KV状态
   - 跨请求/跨样本数据
   - 输出内容
-  detail: MTP3 + 语法约束解码下各请求 verify 长度不同，短行请求读到邻居请求的状态行：结构化输出字段错、标点非法、重复、跑满 max_tokens；等长 [4,4] 对照通过。
+  detail: Qwen3.5 开 MTP3 并发结构化输出时，若语法校验使 batch 内 verify 长度不同，产出畸形 JSON、错误字段、重复片段或跑满 max_tokens，服务不报错；等长 [4,4] 对照通过。
   visibility: 静默错误
 mitigation:
   detect: 构造各请求 verify 长度不齐的 batch（如 accepted [4,1]、query 长度 [2,4]），用无权重算子复现器检查状态行是否按 request_index×(K+1) 寻址；等长 batch 做对照
@@ -43,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: KV状态
+    rewritten:
+    - detail

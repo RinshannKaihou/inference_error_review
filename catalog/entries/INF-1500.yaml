@@ -2,15 +2,15 @@ id: INF-1500
 legacy_ids: []
 slug: msprobe_compare_gpu_side_matches_megatron_not_te
 aliases: []
-title: GPU 侧采集比对错位到 Megatron 同名函数
+title: 比对工具将 GPU 侧模块匹配到 Megatron 对应函数取数
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: GPU 侧模块匹配
-  behavior: GPU 侧模块实际执行 Transformer Engine 的对应函数，比对工具却取到 Megatron 对应函数的数值，两侧 shape 都对不上，模块级比对结论失真
+  behavior: 比对工具将 GPU 侧 Transformer Engine 对应函数匹配到 Megatron 对应函数取数
 effect:
   objects:
   - 测试判定
@@ -47,3 +47,17 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - title

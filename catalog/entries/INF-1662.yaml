@@ -4,7 +4,7 @@ slug: ms_aclnn_cache_vector_content_hash_miss
 aliases: []
 title: aclnn 缓存哈希漏 vector 元素值致 loss 暴涨
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -13,6 +13,7 @@ cause:
   behavior: op_api_cache 对 pair<vector<int64_t>,bool> 没有专门哈希重载，落入 MemcpyToBuf 只哈希 vector 的指针/size/capacity，actual_seq 的数值不进 key。
 effect:
   objects:
+  - 数值结果
   - 训练信号
   - 梯度
   detail: TND 训练 step380 后 indexer_loss/梯度偶发暴涨并随训练增长；关 aclnn 缓存（aclnn_cache_queue_length=0）异常完全消失，离线单算子复算正确。
@@ -50,3 +51,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 训练信号
+        to: 数值结果

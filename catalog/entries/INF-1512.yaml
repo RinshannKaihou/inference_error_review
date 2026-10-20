@@ -2,9 +2,9 @@ id: INF-1512
 legacy_ids: []
 slug: mssanitizer_racecheck_nondeterministic_verdict
 aliases: []
-title: 竞争检测结论概率性出现：20 次执行 5 次误报
+title: 竞争检测结论概率性出现：20次执行5次报UB_WAR
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - title

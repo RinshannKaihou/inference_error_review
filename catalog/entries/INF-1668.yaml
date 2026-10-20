@@ -4,7 +4,7 @@ slug: te_softmax_store_mask_pad_lane_row_bleed
 aliases: []
 title: TE softmax store 丢归约掩码致 pad lane 写穿行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: SAM 端到端 990 个 NaN（5×196+5×2）；内核级对拍 155,998 个错配，99.5% 在 col{0,1}；普通行被写入 0.00236（应 0.00028），全掩码行 pad 值 NaN 经 pass-1 maximum 扩散整行。
-  visibility: 静默错误
+  detail: SAM 输出 990 个 NaN：5 行整行 196 全坏，5 行仅 col0/1 坏；内核级对拍 155,998 个错配、修复后 0；普通行最后两个位置被邻居覆盖（0.00236 而非 0.00028），全掩码行 pad NaN 经 maximum 扩散整行。
+  visibility: 数值异常
 mitigation:
   detect: 末维 196、含全掩码行的 softmax 输入（R0_BLOCK=16>14）编译后与 eager 对拍，检查相邻行 col 0/1 是否被改写或出 NaN；也可内核级按地址公式构造参考值
   fix: MR https://gitcode.com/Ascend/pytorch/merge_requests/47195 （open，未核实是否合入）：在白名单构造处 triton.py:3662 把分解式含内层 lane 符号的融合节点纳入白名单（+11/-1）
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: ops_nn_groupnormswishgrad_golden_fp16_by_shape
 aliases: []
 title: SwishGrad 参考按元素数才升 fp32 致假失败
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 测试判定
-  detail: 125 条中 52 条判 accuracy False，其中 fp16 33 例（相对误差 0.002~0.018）、bf16 16 例（0.007~0.18）来自该 cast 条件；成对 3D/4D 用例（15/16、32/33、34/35）只有 3D 失败。
+  detail: 125 条中 52 条 accuracy False；52 条被拆成四族，最大两族根因在参考侧：2D/3D 的 fp16/bf16 用例相对误差超阈（fp16 0.002~0.018，bf16 0.007~0.18）；成对 3D/4D 用例仅 3D 失败，4D 走 fp32 参考通过。
   visibility: 静默错误
 mitigation:
   detect: 查参考执行器是否按 shape/元素数决定升精度；用同 shape 的 3D 与 4D 成对用例对照，只 3D 失败即说明是参考侧 dtype 而非算子。
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - visibility

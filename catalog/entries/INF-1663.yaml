@@ -4,12 +4,12 @@ slug: ops_nn_tensor_scatter_update_parallel_error_swallowed
 aliases: []
 title: TensorScatterUpdate 并行分支吞掉越界错误码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: 通用
-    component: AICPU UpdateOutput 并行分支
+    component: AICPU UpdateOneOutput 并行
   behavior: updates_nums>65536 时走 ParallelFor，其无条件返回 OK 覆盖 worker 写的 PARAM_INVALID；ret 还是非原子 uint32，多 worker 并发读写。
 effect:
   objects:
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - component
+    uncertain:
+    - behavior

@@ -4,7 +4,7 @@ slug: sgl_kernel_npu_recompute_w_u_equal_len_batch_index
 aliases: []
 title: recompute_w_u 等长路径 batch 索引恒 0 静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    issue_unfixed:
+    - detail

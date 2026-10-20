@@ -4,7 +4,7 @@ slug: msmodelslim_scale_absmax_missing_zero_guard_nan
 aliases: []
 title: 量化 scale 缺零值防护，全零输入写入 NaN 权重
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,7 +15,7 @@ effect:
   objects:
   - 模型权重
   - 数值结果
-  detail: 全零 block、全零通道或全零 token 处的 scale 为 NaN，NaN 直接写进量化后权重；量化命令成功退出、无报错，下游推理才出现 NaN 或乱码。
+  detail: 全零 block、全零通道或全零 token（如 padding、全零激活 token）参与量化时，权重/激活被写成 NaN；量化命令正常结束、无报错或警告，权重文件照常导出，直到逐张量检查或下游推理才暴露为 NaN/Inf 与乱码。任意硬件。
   visibility: 数值异常
 mitigation:
   detect: 量化产物导出后逐张量扫 NaN/Inf（mstools 查看权重）；或对全零 block/通道构造最小输入跑 scale 计算，同文件权重侧的 clamp(min=1e-5) 是正确写法参照
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

@@ -4,10 +4,10 @@ slug: mindie_splitfuse_prefill_kv_early_into_decode_buffer
 aliases: []
 title: splitfuse 下 prefill 的 KV 过早写入 decode 侧缓冲
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: KV缓存
     stack: 通用
     component: splitfuse state 传递
   behavior: prefill 算完即把新 KV 写入 decode 侧共享缓冲，未等 decode 处理完当前 batch，decode 下一轮调度读到半新 state 而冲突。
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: KV缓存
+    uncertain:
+    - effect

@@ -4,15 +4,16 @@ slug: msprobe_alg_all_silently_drops_custom_algorithm
 aliases: []
 title: -alg all 静默丢弃自定义比对算法
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: algorithm_manager.py
-  behavior: algorithm_manager.py 第 235 行去重误把 self.built_in_support_algorithm 写成 self.custom_support_algorithm，条件恒 False，自定义算法从未加入
+  behavior: algorithm_manager.py 第235行去重检查变量名写错，使用 self.custom_support_algorithm，条件恒为 False，自定义算法从未被添加
 effect:
   objects:
+  - 指标/日志
   - 测试判定
   detail: msaccucmp.py compare -alg all -c custom_algo 的输出表头只有 10 个内置算法、不含自定义算法，且无任何警告；指定具体算法名的场景不受影响
   visibility: 静默错误
@@ -47,3 +48,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 测试判定
+        to: 指标/日志
+    rewritten:
+    - behavior

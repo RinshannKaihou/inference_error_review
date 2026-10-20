@@ -4,7 +4,7 @@ slug: msmodelslim_kv_cache_field_silently_dropped_c8
 aliases: []
 title: KV Smooth 配置的 kv_cache 字段被静默丢弃，C8 未生效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -53,3 +53,17 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - effect
+    - behavior

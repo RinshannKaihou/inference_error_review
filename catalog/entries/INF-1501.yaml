@@ -4,7 +4,7 @@ slug: op_plugin_matmul_backward_meta_stride_inherit
 aliases: []
 title: matmul_backward meta 继承输入非连续 stride
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: meta 实现直接返回 torch.empty_like(self)/empty_like(other)，把输入的非连续 stride 继承给梯度输出；实际反向 kernel 产出的是连续 tensor，元信息与真实结果不符。
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: 非连续输入下两个梯度张量被推导为非连续而实际连续，图模式后续算子按错误 stride 推导，产生连锁的形状/访存假设错误；单算子 eager 对比看不出。
   visibility: 静默错误
@@ -52,3 +53,20 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度
+    uncertain:
+    - detail

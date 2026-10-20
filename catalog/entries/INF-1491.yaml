@@ -4,13 +4,13 @@ slug: msprobe_nan_check_nondeterministic_and_tensor_list_skipped
 aliases: []
 title: nan check 同数据结果不稳定且溢出未抛异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: nan check 溢出检测
-  behavior: 同一份 dump 两次检测 is_nan 在 0/1 之间跳变；配置 tensor_list 时 NanTest 因 SoC 校验失败被跳过，即使检出 is_nan:1 也不抛 Exception
+  behavior: 同一模型相同数据两次 nan check 溢出检测的 is_nan 结论不一致；配置 statistics.tensor_list 后 NanTest 采集失败被跳过，检出 is_nan:1 也不抛 Exception
 effect:
   objects:
   - 测试判定
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

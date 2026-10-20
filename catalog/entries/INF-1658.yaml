@@ -4,10 +4,10 @@ slug: ms_tanh_expander_no_clamp_overflow
 aliases: []
 title: tanh 展开未裁剪输入，大值 exp 溢出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: mindspore
     component: tanh 展开/lowering
   behavior: tanh 的展开实现用指数形式且不对输入做区间裁剪，幅值较大时 exp(2x) 溢出，与 Aclnn 先 clip 到安全区间的实现不一致。
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核

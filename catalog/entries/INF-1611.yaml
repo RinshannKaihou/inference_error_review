@@ -4,13 +4,13 @@ slug: ms_complex_div_inf_returns_nan
 aliases: []
 title: GPU complex div 除 inf 返回 NaN 而非 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: mindspore
     component: GPU complex128 Div
-  behavior: 复数除法对无穷除数未做特殊处理，1/(inf+0j) 走普通复数除法分支，得到 nan+nanj，而数学上应为 0+0j。
+  behavior: GPU 上 complex128 复数除法以 inf+0j 为除数时返回 nan+nanj，而数学结果应为 0+0j。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

@@ -4,10 +4,10 @@ slug: ms_dvm_input_cache_ignores_shape_override
 aliases: []
 title: 融合输入缓存忽略逻辑 shape 覆盖致广播错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 编译器
     stack: mindspore
     component: DVM Input 缓存复用
   behavior: Input(x, shape_override) 的缓存 key 只有 Tensor*，命中时不比较逻辑 shape；同一 tensor 先按 [1,C,1,1] 进融合，后续默认 Input(x) 复用了广播版 NDObject。
@@ -49,3 +49,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 编译器

@@ -3,33 +3,33 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1709 条；状态：active 1481、pending_audit 228
+共 1709 条；状态：active 1709
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 451 |
+| 算子/内核 | 457 |
 | 编译器 | 90 |
-| 运行时/执行 | 100 |
+| 运行时/执行 | 94 |
 | 集合通信 | 20 |
-| 并行切分 | 14 |
-| KV缓存 | 307 |
-| 调度/服务 | 74 |
+| 并行切分 | 15 |
+| KV缓存 | 308 |
+| 调度/服务 | 72 |
 | 输出解析 | 55 |
 | 解码/采样 | 125 |
-| 量化 | 166 |
+| 量化 | 168 |
 | 位置编码 | 34 |
 | 分词/模板 | 29 |
 | 模型定义 | 43 |
 | 权重/检查点 | 40 |
 | 数据管线 | 2 |
 | 优化器 | 2 |
-| 损失计算 | 3 |
-| MoE路由 | 30 |
-| 重计算/卸载 | 5 |
+| 损失计算 | 2 |
+| MoE路由 | 32 |
+| 重计算/卸载 | 6 |
 | RL训练回路 | 1 |
-| 观测/评测 | 42 |
-| 配置/参数 | 6 |
+| 观测/评测 | 39 |
+| 配置/参数 | 5 |
 | 构建/发布 | 5 |
 | 模型自身 | 16 |
 | 外部攻击 | 18 |
@@ -4413,7 +4413,7 @@
 
 ### INF-1482 `op_plugin_clamp_empty_tensor_shortcircuit_broadcast` clamp 空张量短路跳过 broadcast 校验
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / clamp_npu_output_size 短路
 - **原因行为**：clamp_npu_output_size 在 self.numel()==0 时直接返回 self.sizes()，跳过 left-pad 与逐维 broadcast 比较，也不走 at::infer_size 校验。
@@ -4425,7 +4425,7 @@
 
 ### INF-1483 `op_plugin_atb_tensor_convert_dim_over_8_oob_write` ATB Tensor 转换超 8 维越界写
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / AtTensor2AtbTensor 维数校验
 - **原因行为**：AtTensor2AtbTensor 按输入维数逐维写 atb::Dims.dims[MAX_DIM=8]，不校验 dim>8；9 维起越界写 shape.dimNum 与后续字段。
@@ -4436,18 +4436,18 @@
 
 ### INF-1484 `op_plugin_a3_bf16_exponential_tail_missing_sampling_degenerate` A3 bf16 exponential_ 尾部缺失致采样退化
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / exponential_ A3 bf16 路径
 - **原因行为**：A3（非 950）路径先在 bf16 目标张量上 uniform_(0,1) 再算 -log(1-u)/lambd，随机源与变换都落在 bf16 粒度，尾部小值缺失。
-- **影响对象**：输出分布（质量退化）
+- **影响对象**：数值结果；输出分布（静默错误）
 - **影响详情**：bf16 最小值约 3.9e-3、2 万样本仅约 128 个唯一值；exponential race 采样 top1 命中率接近 1.0，退化近似 greedy；fp32 与 CPU bf16 正常。
 - **改进措施**：检测 A3 上 torch.empty(..., dtype=bfloat16).exponential_() 后看最小值与唯一值个数，与 NPU fp32 / CPU bf16 对照；修复 issue 建议用 fp32 临时张量生成 uniform 并计算后再 cast 回 bf16，或下沉到分布正确的底层 exponential 随机算子；修复未核实（issue open）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/231
 
 ### INF-1485 `op_plugin_add_rms_norm_fused_vs_unfused_mismatch` add_rms_norm 融合与分离路径结果不齐
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / npu_add_rms_norm 融合路径
 - **原因行为**：npu_add_rms_norm 把残差加与 RMSNorm 放在同一融合算子内完成；与先 x+residual 再 npu_rms_norm 的分离路径相比归一化结果数值不一致。
@@ -4459,7 +4459,7 @@
 
 ### INF-1486 `op_plugin_fp32_sdpa_non4_dim_fa_path_mismatch` fp32 且 D 非 4 倍数走 FA 致精度不齐
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / fp32 SDPA 路径选择
 - **原因行为**：fp32 且最后一维 D 不是 4 的倍数时，CUDA 走小算子拼接、NPU 走 FA 算子；两条路径累加与规约顺序不同，小值域结果对不齐。
@@ -4471,18 +4471,30 @@
 
 ### INF-1488 `msprobe_located_relu_head_overhead_template_memory_stomp` relu 极致头开销模板寄存器未重置致内存踩踏
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / relu 极致头开销模板
-- **原因行为**：relu 等算子采用极致头开销（head-overhead）模板实现，寄存器重置操作缺失，写越界踩踏相邻内存，污染其他张量并让 loss 变 nan
-- **影响对象**：数值结果；训练信号（数值异常）
+- **原因行为**：relu 等算子采用极致头开销（head-overhead）模板，模板里寄存器重置操作缺失，导致内存踩踏，越界写污染不属于该算子的显存
+- **影响对象**：训练信号；数值结果（数值异常）
 - **影响详情**：loss 直接变为 nan；接入 msprobe 采集后现象消失，故障只在未插桩的裸环境出现，用户换环境验证时无法复现
 - **改进措施**：检测 待定（正文只给出算子模板层面的原因，未给可用检测手段）；修复 待定（issue 未给修复 PR；报告者结论为 relu 极致头开销模板缺寄存器重置）
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/524
 
+### INF-1494 `op_plugin_paged_attention_splitfuse_v2_context_lens_graph` splitfuse_v2 context_lens 拷贝未入图致精度
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / pytorch / splitfuse_v2 context_lens
+- **原因行为**：context_lens 由 host 同步拷贝到 device 的动作没被图捕获；图模式复用已捕获的图时该输入不按预期刷新，attention 仍按旧 context_lens 计算。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：310P 上图模式调用 _npu_paged_attention_splitfuse_v2，context_lens 变化后输出仍按上一轮值计算，attention 结果与参考不一致；无报错、无 NaN。
+- **改进措施**：检测 图模式下连续两次以不同 context_lens 调用该接口，比对第二次输出是否跟随输入变化；与逐轮 eager 执行对照可发现差异；修复 issue 为 closed，正文只给现象，未给修复 PR 与具体修法（合入与发布状态未核实）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/275
+- **关联**：var:INF-1371
+
 ### INF-1496 `op_plugin_index_add_deterministic_mode_precision` 确定性模式下 index_add_ 结果未对齐原生
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / index_add_ 确定性分支
 - **原因行为**：开启确定性计算后 index_add_ 的累加结果与原生实现有偏差；issue 给出的修法是改走 index_put_ 分支以对齐原生语义。
@@ -4491,24 +4503,13 @@
 - **改进措施**：检测 开启确定性算法后对 index_add_ 做单算子比对（NPU vs CPU/原生），并确认该分支是否按 issue 修法走 index_put_；修复 修复 PR https://gitcode.com/Ascend/op-plugin/pull/5415 （issue #259 正文给出；issue 为 closed，PR 合入与发布状态未核实）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/259
 
-### INF-1499 `op_plugin_moe_finalize_routing_meta_scale_none_shape` finalize_routing meta 空 scale 推导错形状
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：算子/内核 / pytorch / moe_finalize_routing_meta
-- **原因行为**：scale 为空、expanded_permute_rows 为 (E,C,H) 时，meta 直接把输入形状 (E,C,H) 当输出返回，而实际算子输出是 (R,H)，meta 推导与真实输出不一致。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：空 scale 场景下 fake/meta 张量拿到 (E,C,H) 而非 (R,H)，图模式按错误形状分配与推导，下游 reshape/索引对不上；非空 scale 路径正常。
-- **改进措施**：检测 对 npu_moe_finalize_routing_meta 在 scale=None、expanded_permute_rows=(E,C,H) 下比对 meta 推导形状与实际算子输出形状；修复 issue 为 closed，正文未给修复 PR（合入与发布状态未核实）
-- **来源**：https://gitcode.com/Ascend/op-plugin/issues/224
-
 ### INF-1501 `op_plugin_matmul_backward_meta_stride_inherit` matmul_backward meta 继承输入非连续 stride
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / matmul_backward_meta
 - **原因行为**：meta 实现直接返回 torch.empty_like(self)/empty_like(other)，把输入的非连续 stride 继承给梯度输出；实际反向 kernel 产出的是连续 tensor，元信息与真实结果不符。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：梯度；数值结果（静默错误）
 - **影响详情**：非连续输入下两个梯度张量被推导为非连续而实际连续，图模式后续算子按错误 stride 推导，产生连锁的形状/访存假设错误；单算子 eager 对比看不出。
 - **改进措施**：检测 输入非连续（transpose 后未 contiguous）时比对 matmul_backward_meta 推导的 stride 与实际执行结果的 stride；修复 issue 为 open，正文未给修复 PR；报告者要求 meta 在 shape/stride/dtype 上与实际执行保持一致（合入与发布状态未核实）
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/30
@@ -4516,7 +4517,7 @@
 
 ### INF-1503 `op_plugin_ascend950_compare_maxmin_mixed_input_dtype` 950 比较/max-min 混合输入 dtype 推导错
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / eq/ge/maximum dtype 推导
 - **原因行为**：沿用 other.dim()==0 且非 NPU 的旧 CPU scalar 特判与 IsCPUScalar 转 scalar 逻辑，比较与 max/min 算子在混合 host/device 输入下 dtype 推导与标杆不一致。
@@ -4527,19 +4528,19 @@
 
 ### INF-1506 `op_plugin_layer_norm_empty_input_mean_rstd_shape` layer_norm 空输入 mean/rstd 返回错形状
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / native_layer_norm 空输入分支
 - **原因行为**：M<=0（归一化轴之前各维乘积为 0）的分支把 mean_out/rstd_out 建成 shape {M} 的一维空张量，而参考实现保持输入维度、归一化轴置 1（(0,3,4) 应为 (0,1,1)）。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：输入含 0 维时 native_layer_norm 的 mean/rstd 返回 (0,) 而非 (0,1,1)，下游按 keepdim 形状取用即错位；非空输入正常，无报错无 NaN。
+- **影响详情**：Ascend950+对应CANN下，torch.native_layer_norm 空输入（M<=0，如[0,3,4]/[3,4]）前向不报错、输出为空，但 mean/rstd 返回一维{0}而非PyTorch参考实现[0,1,1]；下游按keepdim取用会错位，非空输入正常。
 - **改进措施**：检测 构造 shape [0,3,4]、normalized_shape=[3,4] 的空输入调 torch.native_layer_norm，检查 mean/rstd 的 shape 是否为 keepdim 形式；修复 修复 PR https://gitcode.com/Ascend/op-plugin/pull/5841 （issue 为 closed；合入与发布状态未核实）；修法是在 M<=0 分支加 SoC 守护，Ascend950 起按输入维度算 mean_shape
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/495
 - **关联**：var:INF-1426
 
 ### INF-1516 `torchnpu_copy_opapi_nz_format_d2d_corruption` copy_ op_api 路径 NZ 张量 D2D 静默损坏
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / copy_ op_api 格式转换
 - **原因行为**：MR !40289 给 copy_ 打开 internal_format_opapi 后绕过 codegen 格式守卫，而 op_api 的 copy_ 只在 D2H 补了格式保护，D2D/H2D 缺格式转换。
@@ -4550,7 +4551,7 @@
 
 ### INF-1517 `torchnpu_embeddingbag_empty_input_uninitialized_output` EmbeddingBag 空输入返回未初始化输出
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / aclnnEmbeddingBag 空输入
 - **原因行为**：空 input + 全 0 offsets + per_sample_weights 时，aclnnEmbeddingBag 的输出 buffer 未清零也未写零，直接残留 weight 数据后返回。
@@ -4561,54 +4562,65 @@
 
 ### INF-1518 `torchnpu_fia_long_seq_bf16_accum_precision` 长序列 bf16 融合 attention 精度远低于分解路径
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / npu_fused_infer_attn
 - **原因行为**：长序列 bf16 下融合 attention kernel 的累加精度显著低于 matmul→softmax→matmul 分解路径，误差随序列长度放大。
-- **影响对象**：数值结果；输出内容（质量退化）
+- **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：S=8192、D=128、单头：分解路径 max abs 1.67e-7、平均相对 3.4e-6；融合 3.06e-4、1.09e-2（约 3000×）；自回归解码逐步放大，生成退化为重复输出。
 - **改进措施**：检测 同一组 bf16 q/k/v 分别走融合算子与逐算子分解，与 CPU fp64 参考比对 max abs 与平均相对误差；长序列（S≥2048） 才明显；修复 待定（issue open，无修复 PR；报告者请求算子提供 fp32 accumulate 选项或确认调用契约）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5238
 
 ### INF-1519 `torchnpu_gated_delta_rule_multitoken_device_degrade` 多 token 调用致设备对该算子路径持久降级
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / npu_recurrent_gated
-- **原因行为**：actual_seq_lengths 元素 >1 且 state 缓存 slot 不足时，算子在多 token 路径上疑似越界写，此后该算子多 token 路径在整卡上永久失败。
+- **原因行为**：传入单序列多 token（actual_seq_lengths 元素>1）且 state 缓存 slot 数不足时，该算子多 token 路径失败。
 - **影响对象**：可用性/进度（报错）
 - **影响详情**：首次报 507057，重启容器后报 507035；npu-smi 仍 Health=OK、常规健康检查通过，跨进程/容器不恢复，非 root 无法 reset；其它算子负载正常。
 - **改进措施**：检测 同一卡上依次用 actual_seq_lengths=[1] 与 >1 调用，再重测此前通过的 [2,2]；查 npu-smi health 与 plog；修复 待定（issue open；报告者建议补 slot 数/形状参数校验与约束文档，恢复需 root 复位）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5259
 
+### INF-1524 `torchnpu_set_float32_matmul_precision_silent_noop` matmul_precision/TF32 开关在 NPU 静默不生效
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / pytorch / matmul_precision 开关
+- **原因行为**：NPU 无 TF32 张量核，set_float32_matmul_precision 与 backends.cuda.matmul.allow_tf32 被静默接受，既不改 kernel 选择也不给 warning。
+- **影响对象**：性能/资源（性能退化）
+- **影响详情**：NPU 上设置 highest/high/medium 三档 fp32 matmul 结果逐位相同（torch.equal 为 True）；torch.backends.cuda.matmul.allow_tf32 在 NPU 环境下仍返回 True 但无意义，用户据此得出的性能/精度对比结论失真。
+- **改进措施**：检测 同一 fp32 matmul 在三档 precision 下比较 torch.equal 与耗时；从 CUDA 迁入的代码尤其要看；修复 待定（issue closed，正文未给修复 PR；期望设置时给 warning 说明 NPU 无 TF32，或文档写明这些 CUDA 专有开关的行为）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5108
+
 ### INF-1527 `ops_nn_addrelu_bf16_tail_block_out_of_range` AddRelu 尾维非对齐输出越出值域上界
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / AddRelu 尾块写回与寻址
 - **原因行为**：CANN 9.1.0 镜像内 aclnnAddRelu 在尾维非对齐用例上输出越出输入值域上界，实测 5.11e13（数学上界 400），报告判断为尾块写回不全或地址偏移截断，未定位到代码行。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：1000 条用例 290 条精度不通过（29%），含整型逐位不等 134 条、NPU 侧独有 NaN/Inf 78 条；127 条同输入稳定失败，720 条里 185 条（25.7%）两轮判定翻转。
+- **影响详情**：尾维非对齐且值域±100时，round-3 1000条执行成功但290条accuracy False：整型torch.equal失败87条、NPU输出含nan/inf 78条、无error_info的二进制不一致47条、浮点误差超阈78条；720条同输入两轮185条翻转、127条两轮都失败。
 - **改进措施**：检测 同输入连续两轮逐 bit 比对并复跑：720 条里 185 条判定在两轮间翻转是主要特征；只看单轮通过率会低估。；修复 issue 6064 已 closed，正文未给修复 PR 与合入版本，修复状态未核实。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6064
 
 ### INF-1529 `ops_nn_groupnorm_variance_cancellation_rstd` GroupNorm 大偏移小展布致 rstd 错值
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / GroupNorm 二阶矩归约
-- **原因行为**：aclnnGroupNorm 以 E[x²]−E[x]² 求方差：大偏移、展布极小时两项相减只剩舍入噪声；|x|≥sqrt(dtype_max) 时 x² 溢出、平方和无法形成。方差错值经 rstd=rsqrt(var+eps) 放大。
+- **原因行为**：aclnnGroupNorm 报告判定为二阶矩归约缺陷：大偏移小展布时平方和/方差相减只剩舍入噪声；|x|≥sqrt(dtype_max) 时 x² 离值域、平方和无法正确形成。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：1000 条全部执行成功、119 条精度不通过（通过率 88.1%）；rstd 失败 74 次而 mean 仅 13 次；offset=0 的 74 条零失败，spread/offset<1e-3 时失败率 53.8%~77.8%；最坏 1638 倍阈值。
+- **影响详情**：1000条均执行成功、119条精度不通过（88.1%）；rstd失败74次而mean仅13次；offset=0的74条零失败；失败率随spread/offset单调上升：<1e-5为53.8%、1e-5~1e-3为72.2%、1e-3~0.1为77.8%；最坏1638倍阈值。
 - **改进措施**：检测 用 offset≠0 且展布极小的输入单独比对 rstd；再看 |x| 是否越过 sqrt(dtype_max)（fp16 为 255.937）——该边界以下全过、以上开始失败是平方和溢出的指纹。；修复 issue 6067 仍 open，正文只给触发面与源码假设（rstd 数值路径），未给修复 PR（合入与发布状态未核实）。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6067
 
 ### INF-1530 `ops_nn_groupnormsiluv2_near_constant_variance` GroupNormSiluV2 近常数输入 rstd 偏离标杆
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `var` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `var` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / GroupNormSiluV2 方差计算
-- **原因行为**：内核在 fp32 标量算 var=E[x²]−E[x]²，输入围绕 ±1、宽≤0.002 时两项相消只剩噪声；标杆在 float64 按离差平方和定义式计算，rstd 与主输出因此偏离（机制与 GroupNorm 同族）。
+- **原因行为**：内核在 fp32 标量用 E[x²]−E[x]²+eps 计算 rstd，输入围绕 ±1、宽≤0.002 时相减噪声与真方差同量级；与 float64 离差平方和标杆口径不同。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：999 条中 978 条判定、32 条不通过（3.3%）：近常数族 9/36（rstd 差 0.0006~0.0093）、|x|≥60000 族 13/27（0.0394）、bf16 meanOut 6 例 0.0041~0.0067；32 例均 activateSilu=true。
 - **改进措施**：检测 构造围绕 ±1、宽≤0.002 的输入并扫 eps（fp32 在 eps≤1e-4 全失败、eps≥1e-3 全通过）；标杆用 float64 定义式，别用同款原点矩算法。；修复 issue 5906 已 closed，正文未给修复 PR；是否改 Welford 或两遍式离差算法未核实。
@@ -4617,7 +4629,7 @@
 
 ### INF-1533 `ops_nn_embedding_dense_grad_v2_unsigned_index` EmbeddingDenseGradV2 负索引按无符号读致越界
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / arch22 常规内核索引读取
 - **原因行为**：arch22 内核按 uint32 读 indices、按 uint64 比 paddingIdx：-1 变成 4294967295，与哨兵不等，padding 过滤失效后按 2^32×embeddingDim 偏移 atomic add。
@@ -4628,7 +4640,7 @@
 
 ### INF-1534 `ops_nn_sparse_fill_empty_rows_zero_width_filler` SparseFillEmptyRows 零宽 dense 仍写 filler 行
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / SparseFillEmptyRows 内核
 - **原因行为**：dense_shape 某维为 0 且 indices 为空时，内核仍按行写 filler、未先处理零维：y_indices/y_values 写成 [2,2]/[2]，超出 InferShape 推导的 [0,2]/[0]。
@@ -4639,29 +4651,29 @@
 
 ### INF-1535 `ops_nn_cross_entropy_extreme_logits_cancellation` CrossEntropyLoss 极端 FP32 logits 出 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / CrossEntropyLoss 日志概率计算
 - **原因行为**：先算 input−rowMax 再 Exp，-FLT_MAX 这类极端负值进入指数路径触发 NaN；再用 logBatchSum=rowMax+log(expSum) 回代，整行极端值时消减致错误 log-softmax。
 - **影响对象**：数值结果；训练信号（数值异常）
-- **影响详情**：整行 -FLT_MAX 与 [0,-FLT_MAX,1] 两类用例上，修复前 log-softmax 出现 NaN 或错误值；修复后 Exp 前下限钳到 -87.0f、log-prob 改用 (input−rowMax)−logExpSum，新增回归用例通过。
+- **影响详情**：CrossEntropyLoss 使用含 -FLT_MAX 的 FP32 logits 时，部分 masked（如 [0,-FLT_MAX,1]）或整行 -FLT_MAX 会使损失/逐 token log-prob 出现 NaN 或明显错误值；正常量级 logits 下正常。
 - **改进措施**：检测 构造含 torch.finfo(float32).min 的行与整行 -FLT_MAX 的输入，检查输出是否 NaN 或与 log_softmax 参考不符；常规值域用例发现不了。；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/9233 （open，未发布）：Exp 前把稳定化输入下限钳到 -87.0f、log-prob 改为 (input−rowMax)−logExpSum、新增两类极端 logits 回归用例
 - **来源**：https://gitcode.com/cann/ops-nn/merge_requests/9233
 
 ### INF-1536 `ops_nn_conv3d_bp_filter_winograd_resident_uninit` Winograd 驻留切分错位读到未初始化 workspace
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / winograd 驻留变换任务切分
 - **原因行为**：运行时 M 轴调节档把 cout 分块从模板 64 改成 48/32/16，驻留变换任务切分仍按常量 64 划分；两套块边界错位后部分驻留半区无人写入，MMAD 读到未初始化 workspace。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（数值异常）
 - **影响详情**：fp32 cout=192/cin=448/pad(1,0) 用例中 64 个完整 co 通道（[48-63]/[96-127]/[160-175]）读到未初始化数据，占 33.3% 元素，本机 NaN、fuzz 环境为 0；错误通道与缺口区间逐一吻合。
 - **改进措施**：检测 fp32 winograd 路径上核对输出通道分组是否整段为 0 或 NaN；用 TTK 复现用例比对，tiling_key 不变说明修的是块边界而非路径选择。；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/11267 （closed）：运行时分块大小自 IterateAll 透传至驻留任务切分，块宽不足驻留长度时整块驻留只产生 1 个任务
 - **来源**：https://gitcode.com/cann/ops-nn/merge_requests/11267
 
 ### INF-1537 `ops_nn_logsoftmaxv2_double_underflow_neg_inf` LogSoftmaxV2 DOUBLE 输入下溢成负无穷
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / LogSoftmaxV2 AICPU 实现
 - **原因行为**：AICPU 实现先算概率再取对数：DOUBLE 输入的 exp 下溢成 0，log(0) 让有限 logits 输出成负无穷；顺序与并行两条路径都受影响。
@@ -4673,7 +4685,7 @@
 
 ### INF-1538 `ops_nn_layer_norm_epsilon_default_1e12` LayerNorm epsilon 默认 1e-12 偏离两代口径
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / layer_norm_def eps 默认值
 - **原因行为**：rt2.0 算子定义把 epsilon 默认值写成 Float(1e-12)，与 rt1.0 proto 的 1e-7、同仓 LayerNormV3/V4 的 1e-5 都不一致；未显式传 eps 的调用方拿到过小的 eps。
@@ -4684,7 +4696,7 @@
 
 ### INF-1539 `ops_nn_gather_elements_dim2_fastdiv_int32` gather_elements 二维大张量快除参数按 int32
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / gather_elements dim2 路径
 - **原因行为**：dim2 场景直接用 tiling 里算好的快除参数，而 tiling 的计算固定按 int32；元素数超 int32 上限时快除索引错位。dim>2 场景在 kernel 内按 int64 重算，所以正常。
@@ -4695,7 +4707,7 @@
 
 ### INF-1548 `vllm_ascend_fia_bool_mask_ignored_past_512` FIA bool atten_mask 在 512 之后被静默忽略
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / vllm / FIA 算子 mask 处理
 - **原因行为**：sparse_mode=0 且 bool atten_mask 形状为 [1,1,1,S] 时，算子只在 KV 位置 0–512 内应用 mask，超过 512 的部分不读 mask，也不报错不告警；512 是硬编码常数。
@@ -4706,18 +4718,18 @@
 
 ### INF-1550 `vllm_ascend_dispatch_ffn_combine_w8a8_k_stride` fused_mc2 W8A8 MoE 工作区按 K 定宽致 N>K 错值
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / vllm / dispatch_ffn_combine W8A8
 - **原因行为**：W8A8 变体的 GMM1 输出工作区按输入维 K 分配、kernel 也按 K 定 stride，而 GMM1 实际每行写 N=2×moe_intermediate 列；N>K 时行间互相覆盖、末行越界。
 - **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：N 略大于 K（K=2048、N=3072）时每个 MoE 层静默覆盖，首 token 起整段乱码；N≫K（K=256、N=1536）时写出工作区触发 AI Core invalid GM address 崩溃。修复后同一形状相对误差由约 1 降到 4e-3。
+- **影响详情**：enable_fused_mc2=1的W8A8 MoE在N>K时：加载正常但首token起乱码，图与eager均复现；N远大于K触发AI Core invalid GM address崩溃。bf16权重、关闭开关或N≤K正常。
 - **改进措施**：检测 算子级用 M=128、K=2048、N=3072(k2=1536)、E=40、topk=7 的 W8A8 入参与反量化参考比相对误差；端到端只翻转 enable_fused_mc2 做 A/B；修复 待定（issue open，正文称补丁已开发并验证：host tiling 的 C/A 区宽度与 kernel 的 LayoutC ldm、group 偏移、两条 epilogue 与区域递进都改用 N；文中 PR 链接未给出）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/16561
 
 ### INF-1551 `vllm_ascend_split_qkv_rmsnorm_rope_pos_race` QKV 融合算子 RoPE 位置竞态致 Q/K 错转
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / vllm / triton QKV 融合算子
 - **原因行为**：get_element 从同一轮仍在填充的 UB tile 里标量读 RoPE position，MTE 传输与标量读之间没有排序，第二个外层迭代起读到上一轮的 position。
@@ -4728,7 +4740,7 @@
 
 ### INF-1553 `vllm_ascend_chunk_fwd_o_grouped_head_nonfinite` chunk_fwd_o 在 Hg≠H 大 token 数下输出非有限值
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / vllm / chunk_fwd_o（GDN）
 - **原因行为**：Qwen3.5 GDN 生产形状 Hg=16、H=48、K=V=128（Hg≠H）下，AscendC 与 triton 两条 chunk_fwd_o 在 packed token 约 8K 起输出 Inf/NaN，AscendC 还会越界。
@@ -4739,7 +4751,7 @@
 
 ### INF-1556 `ops_math_expint_arch35_exp_overflow_nan` expint 大输入 exp 上溢与对齐区未初始化致 inf/NaN
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / expint arch35 kernel
 - **原因行为**：Compute 求 e^x 未做上界钳位，x>88 越过 FP32 上限变 inf 污染后续运算；FP16/BF16 结果 Cast 前未按目标 dtype 钳位；CopyIn 只搬有效元素，64 对齐尾部未初始化即参与向量运算引入 NaN
@@ -4750,7 +4762,7 @@
 
 ### INF-1557 `ops_math_reduce_std_v2_update_mask_double_decrement` ReduceStdV2Update 多轮 mask 重复递减漏算后半数据
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / ReduceStdV2Update kernel
 - **原因行为**：UpdateMask<float>(remaining) 已按引用扣减剩余元素，kernel 又手工递减一次，元素数超单轮 FP32 mask 容量 64 时后半数据被跳过；FP16/BF16 tail-A 源步长按 FP32 算
@@ -4761,7 +4773,7 @@
 
 ### INF-1558 `ops_math_reduce_v2_axesall_alignment_pad_pollution` reduce_v2 AxesAll 对齐 pad 污染全归约结果
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / reduce_*_v2 Axes2 kernel
 - **原因行为**：Axes2 路径（axes∉{0,1}，默认 -1）对未裁剪的 curTileLen 全量做 Ln 累加，无 globalIdx>=totalElements 跳过；tiling 按 32B 对齐分核，非整除输入把 pad 读入
@@ -4772,7 +4784,7 @@
 
 ### INF-1559 `ops_math_fill_diagonal_v2_sparse_uint64_underflow` fill_diagonal_v2 sparse 对齐回退下溢漏写对角
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / fill_diagonal_v2 sparse
 - **原因行为**：Init 里 blockStart 减去 cache 行对齐回退量（uint8 时最多 127），tiling 分块无最小块长保证；块长小于回退量时无符号减法下溢绕成巨值，blockStart>=0 保护对 uint64 恒真
@@ -4783,7 +4795,7 @@
 
 ### INF-1560 `ops_math_stft_mte3_workspace_race_zero_frames` STFT 写 workspace 缺 MTE3 同步致输出帧偶现为 0
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / stft kernel 三处 Process
 - **原因行为**：StftPlanMul 与 SplitWindows 经 MTE3 把 plan×window、splitWindow 写入 workspace 后未等写完成，Cube matmul 立即读取；首次调用 workspace 为新分配零内存
@@ -4794,7 +4806,7 @@
 
 ### INF-1561 `ops_math_topk_sort_tiling_uint32_narrowing` TopK/Sort tiling 用 uint32 承接维度累乘致溢出
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / top_k_v2/sort tiling
 - **原因行为**：unsortedDimNum、lastDimTileNum、inputTopkSize、tileNum 等调度量在 uint32_t 上累乘，int64 维度直接赋值无校验；超大 batch 与超长序列下超 uint32 上限即溢出截断
@@ -4806,7 +4818,7 @@
 
 ### INF-1562 `ops_math_im2col_div_rtn_int_narrowing` im2col div_rtn 以 int 承接 int64 商余数窄化
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / aclnn_im2col.cpp div_rtn
 - **原因行为**：模板 div_rtn 的返回类型是 T（调用处 T=int64_t），函数体内 q、r 却声明为 int，64 位商与余数被隐式窄化；dilation*(kernelSize-1)、2*padding 的乘法也无溢出保护
@@ -4818,7 +4830,7 @@
 
 ### INF-1563 `ops_math_slice_write_aicpu_negative_begin_oob` SliceWrite AICPU 未拒负 begin 生成越界写地址
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / slice_write_aicpu.cpp
 - **原因行为**：第 93-100 行只校验 value 尺寸加偏移不超过 x 尺寸，未拒绝负的行/列偏移；begin=[-1]、value 长 1、x 长 4 时 1+(-1)<=4 成立，第 43-45 行随即以 x_data-1 作写入地址并拷贝
@@ -4829,7 +4841,7 @@
 
 ### INF-1564 `ops_math_as_strided_slice_stride_int32_truncation` as_strided 等三算子大 stride 索引截断读错地址
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / arch35 SIMT/MoveAlign 索引
 - **原因行为**：arch35(A5) SIMT 与 MoveAlign 路径的 stride 数组、inputIdx 与索引乘积累加用 int32/uint32；stride>2^31（MoveAlign）或 >2^32（SIMT）时截断，按错误地址读取
@@ -4841,7 +4853,7 @@
 
 ### INF-1565 `ops_math_round_aicpu_fp64_relative_epsilon_ties` Round AICPU 相对误差判 ties 误舍 FP64 近半整数
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / round_aicpu.cpp 判等
 - **原因行为**：IsValueEqualForDouble 把 fraction 与 0.5 的判等放宽到约 5e-15 相对误差，远大于相邻 FP64 间隔；紧邻半整数的合法 DOUBLE 值被当成精确 ties，按 ties-to-even 舍错一侧
@@ -4852,7 +4864,7 @@
 
 ### INF-1566 `ops_math_xlog1py_log1p_rounding_zero` Xlog1py 用 ln(1+y) 计算致小 y 精度归零
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / xlog1py arch35 kernel
 - **原因行为**：kernel 按 x*ln(1+y) 计算而非 log1p，y=1e-8 时 1+y 在 FP32 下舍入为 1，结果直接变 0；1+y 舍入阈值附近的其它小值也出现很大相对误差
@@ -4863,7 +4875,7 @@
 
 ### INF-1568 `ops_math_angle_v2_complex64_signed_zero_branch_cut` AngleV2 complex64 丢负零符号致分支切割错
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / angle_v2_complex.h 角落分支
 - **原因行为**：complex 角落处理用与零的浮点比较来选 ±π 与符号，IEEE-754 比较把 +0 与 -0 视为相等，负零符号位丢失；实部为负无穷时也未恢复分支切割的 π 符号
@@ -4875,21 +4887,21 @@
 
 ### INF-1571 `ops_math_cdist_grad_exp_log_pow_precision` cdist_grad 以 exp(log) 近似 pow 致梯度精度劣化
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / cdist_grad 反向 DAG
 - **原因行为**：GENERAL(0<p<2) 与 LARGEP(p>2) 反向用 Exp(Muls(Log(ratio), p-1)) 近似 pow，误差约 2-4 ULP；torch 的 _cdist_backward 用表驱动 std::pow
-- **影响对象**：梯度（质量退化）
+- **影响对象**：梯度（静默错误）
 - **影响详情**：p=2.6133、float32 走 NORM_MODE_LARGE_P 分支时 NPU 均方根误差 3.91e-4，GPU A100 为 8.40e-5，劣化约 4.65 倍，ATK 双标杆精度（比例阈值 2.0）不达标
 - **改进措施**：检测 对 p 落在 (0,2) 与 (>2) 两段的 fp32 反向用例（如 p=2.6133）与 aten._cdist_backward 比均方根误差比值（阈值 2.0），golden 用 CPU fp64；修复 issue 给方案（closed）：改用 Vec::Power（DOUBLE_FLOAT_TECH，约 1 ULP）替代 exp/log，保留 ratio+mask 结构以保证 cdist==0 时不产生 0/0=NaN（合入状态未核实）
 - **来源**：https://gitcode.com/cann/ops-math/issues/2110
 
-### INF-1572 `ms_batchnorm_inference_uninitialized_output` 推理态 BatchNorm 第二输出返回未初始化值
+### INF-1572 `ms_batchnorm_inference_uninitialized_output` CPU PyNative推理态BatchNorm第二输出疑似未初始化内存
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / CPU BatchNorm 推理态
-- **原因行为**：is_training=False 时 BatchNorm 前向不写第二个输出（batch mean），PyNative 把未初始化显存当结果返回，Graph 返回确定的 0。
+- **原因行为**：CPU 上 is_training=False 的 BatchNorm 第二个输出（batch mean）在 PyNative 与 GRAPH_MODE 下不一致，报告者判断 PyNative 返回疑似未初始化内存。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：MindSpore 2.8.0 CPU 同一组输入：GRAPH_MODE 第 2 个输出 [0.,0.]，PYNATIVE_MODE 为 [0.16018087 6.242943] 且每次运行不同；第 0/2/3/4 个输出一致。
 - **改进措施**：检测 推理态 BatchNorm 的全部返回值在两种模式下逐元素比对；第二个输出非零且多次运行变化即为未初始化读；修复 待定（issue open，无修复 PR）；方向：推理态未使用的输出显式置零
@@ -4897,7 +4909,7 @@
 
 ### INF-1574 `ops_math_accumulatenv2_fp16_accum_empty_tail` AccumulateNV2 FP16 低精度累加与空张量 0%0
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / AccumulateNV2 kernel
 - **原因行为**：FP16 多输入累加直接用低精度累加而不升 FP32，FP32 在边界场景也有舍入误差；空 Tensor / 空广播走非法路径，零维计算触发 0%0 后继续访问数据；非 32B 对齐尾块访问越界
@@ -4906,12 +4918,23 @@
 - **改进措施**：检测 多输入广播且元素数非 32B 对齐的 FP16 累加用例与 fp32 参考比相对误差；空 Tensor / 空广播用例检查是否走到零维 0%0 路径；修复 MR https://gitcode.com/cann/ops-math/merge_requests/5310 （fix(AccumulateNV2) 修复 Arch35 广播、精度及空张量异常，issue closed）：FP16 累加升精度、空 Tensor 短路、尾块改对齐搬运（合入与发布未核实）
 - **来源**：https://gitcode.com/cann/ops-math/issues/3014；https://gitcode.com/cann/ops-math/merge_requests/5310
 
+### INF-1575 `ms_tensor_max_dim_graph_drops_indices` Tensor.max(dim) 图模式静默丢弃 indices
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / mindspore / Tensor.max/min 位置参数重载
+- **原因行为**：GRAPH_MODE 下 Tensor.max(0)/Tensor.min(0) 按维度归约时仅返回 values，不返回 indices；PyNative 返回 (values, indices)。
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：MindSpore 2.9.0/2.10.0 CPU：Graph 下 (max,min) 只剩两个 values（items=2），PyNative 每次归约应返回 (values, indices) 共 4 项。
+- **改进措施**：检测 同一 Cell 在 PyNative/Graph 下打印返回结构的 type、len 与每个元素的 dtype，检查 indices 的整数 dtype 是否还在；修复 待定（issue open；2.9.0 与 2.10.0 均复现）
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29596
+
 ### INF-1576 `cann_block_sparse_attention_v3_all_zero_mask_output_unwritten` BlockSparseAttentionV3 掩码全 0 时输出未写
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / BlockSparseAttentionV3
-- **原因行为**：blockSparseMask 全 0（无任何 block 参与计算）时该分支提前返回，attention_out 与 softmax_lse 的写回被整段跳过，输出 buffer 保持调用前的显存残留，但仍返回成功。
+- **原因行为**：blockSparseMask 全 0（无任何 block 参与计算）时，算子仍返回成功，但 attention_out 与 softmax_lse 未被写入。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：56GiB NaN 预填后 attention_out 为 NaN，16KB NaN 预填后 softmax_lse 为 NaN；同输入 5 次调用 lse 在 0 与 355.1054 间交替；两组不同输入输出逐元素相同；mask 全 1 时相对误差 1.65e-3。
 - **改进措施**：检测 构造 blockSparseMask 全 0 并预填显存（大块 NaN 与按 lse 尺寸定向预填），检查输出是否随预填值变化；重复调用查 lse 是否在两次取值间摆动；修复 待定（issue closed，未附修复 PR；建议对“参与 block 数为 0”分支显式清零输出或报参数错）
@@ -4920,40 +4943,40 @@
 
 ### INF-1578 `cann_kv_rms_norm_rope_cache_recompute_dv_single_block_uninit_sum` KvRmsNormRopeCache dv 单块时 Σx² 未计算
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / recompute 模板归约路径
 - **原因行为**：FindNearestPower2(1) 返回 0，dv≤ubFactor 时 basicBlockLoop=0，折叠循环不进入、Σx² 未算；totalSumLocal 保持默认构造，五处 RmsNorm 仍取其地址。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：bf16、dk=32768/dv=512 实测 c_kv 1024/1024 元素错、整体放大 228 倍（max_rel 229.36）；修复后 max_abs 0.0039。算子返回 SUCCESS、无报错，且无 YAML 用例覆盖该路径。
+- **影响详情**：bf16、dk=32768/dv=512 实测 c_kv 1024/1024 元素错、放大约200多倍（max_rel 229.36）；修复后 max_abs 0.0039。算子返回成功、不报错，也没有用例覆盖该路径。
 - **改进措施**：检测 构造 dk 超大 + dv 小（或 dv 恰整除 ubFactor）使 recompute 模板的 dv 只占一个 UB 块，dump c_kv 与 numpy 的 x/sqrt(mean(x^2)+eps)*gamma 比对；修复 PR https://gitcode.com/cann/ops-transformer/pull/8518 （为 ReduceSumBasicComputeVF 增加 basicBlockLoop==0 的单块归约分支并给 totalSumLocal 赋值；另建议加固 RmsNormBasicComputeVF 的 foldPoint==0 隐式前置条件）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/3691
 
 ### INF-1580 `cann_fused_floyd_attention_s2_block_rescale_exp_overflow` FusedFloydAttention K>1024 分块重缩放溢出
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / S2 分块 softmax 重缩放
-- **原因行为**：K>1024 沿 S2 分块，后续块以更新模式调 SoftmaxFlashV2，用 exp(max_old-max_new) 重缩放已累计概率；scale=1.0、|输入|≥5 时该因子超 88.7 溢出为 Inf 并污染概率 P。
+- **原因行为**：K>1024 分块重缩放中，D=64/N=16/M=128、scale=1.0、|输入|≥5 且 fp16/bf16 时，两块行内 max 差极易超 ln(FLT_MAX)≈88.7，重缩放因子溢出为 +Inf 污染 P。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：K=2048/D=64/N=16/M=128/scale=1.0 的 4 例（fp16/bf16 × 两值域）attentionOut 误差比例超阈 33~27829 倍，NPU 对 golden 最大相对误差 1.3e5~6.7e5；仅 D=32、M=256、N=32 或 K≤1024 时通过。
+- **影响详情**：K=2048/D=64/N=16/M=128/scale=1.0、|输入|≥5 的 4 例 fp16/bf16 attentionOut NPU 对 golden 最大相对误差 132890~673722，双标杆误差比例超阈几十到几万倍；D=32/M=256/N=32 或 K≤1024 通过。
 - **改进措施**：检测 K∈(1024,2048]、D=64、N=16、M=128、scale=1.0、|输入|≥5 的网格用例；dump 块间 max 差与重缩放因子，确认 exp 参数是否超 88.7；修复 待定（issue closed，正文未附修复 PR；建议对块间 exp(max_old-max_new) 做 clamp 或改 log-domain 合并）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5040
 
 ### INF-1582 `cann_moe_finalize_routing_bf16_fp32_accum_policy` MoeFinalizeRouting bf16 中间精度口径不一致
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / moe_finalize_routing
 - **原因行为**：bf16 路径把输入与 bias/scales 全部上转 fp32 累加、写回只舍入一次；fp16 路径按原生 half 计算。同算子两种 dtype 的中间精度策略不同，文档未规定。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：bf16 331 例中 299 例超阈（90.3%，阈 0.0078125=1 ULP）；fp16 316 例逐位一致、fp32 353 例 max_abs≤2.83e-5；K=1 单步即差 2 ULP，误差随 K 与值域放大（max_rel 420）。
+- **影响详情**：bf16 331 例中 299 例超阈（90.3%，双指标阈值均 0.0078125=2^-7）；fp16 316 例逐位一致、fp32 353 例 max_abs≤2.83e-5；K=1 单步即差 2 个 bf16 ULP，误差随 K 与值域放大（max_rel 420）。
 - **改进措施**：检测 同形状仅换 dtype（bf16/fp16/fp32）的对照用例；K=1 单步用例可直接暴露每算子一次的舍入差；按 bf16 ULP 统计差异；修复 待定（issue closed；需先由维护者裁定 bf16 中间精度口径，再统一 kernel 或参考实现，并在文档写明 fp16 原生 / bf16 fp32 累加的差异）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5045
 
 ### INF-1587 `ms_masked_fill_backward_nan_mask_leak` MaskedFill 反向乘法掩码在 NaN/Inf 下漏梯度
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / MaskedFillGrad 反向
 - **原因行为**：反向用 dout*mask 与 dout*(1-mask) 做乘法掩码，0*NaN、0*Inf 仍是 NaN/Inf，被掩码位置的异常值经广播规约进入最终梯度。
@@ -4962,31 +4985,42 @@
 - **改进措施**：检测 构造 dout 含 NaN/Inf、mask 一半为 False 的反向用例，检查被掩码位置梯度是否严格为 0，并与 PyTorch 同算子对比；修复 issue 给出修复方案（dinput 用 MaskedFill/Select 先清零再广播规约，dvalue 用 Select(mask,dout,0)+SumExt 避开 MaskedSelect 动态 shape），master 与 2.8.0 复现，无合并 PR 编号
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/28905
 
+### INF-1591 `cann_recurrent_gated_delta_rule_fp32_state_copyout_sizeof` recurrent_gated_delta_rule state 拷贝错
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / 通用 / rdv CopyOutState 拷贝长度
+- **原因行为**：arch35 CopyOutState 用 sizeof(outType)（bf16=2B）算 blockLen 与 srcStride，state 为 fp32 时字节数、步长都错；golden 对 fp32 state 未 clone。
+- **影响对象**：KV状态；数值结果（静默错误）
+- **影响详情**：state为fp32且输出为bf16时，rdv 74参数组合的fp32-state系列（param_combinations2/3）精度校验失败：PctThd 99.50%、PctRlt 1.920128%、Max-RelativeError 1.9999902；bf16 state正常。
+- **改进措施**：检测 state dtype=fp32 而输出为 bf16 的 rdv 用例（bash test_run.sh rdv），核对 state 逐行内容与 PctRlt 是否超 PctThd；修复 PR 9182 （blockLen/srcStride 改用 sizeof(stateType)；golden 的 initial_state 加 .clone() 避免原地污染）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/3945
+
 ### INF-1593 `cann_sparse_flash_mla_grad_meta_int32_softmax_norm_dtype` sparse_flash_mla_grad Meta 推导 int32 错
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / sparse_flash_mla_grad
 - **原因行为**：Meta 用 sparse_indices.dtype（int32）创建 ori/cmp_softmax_l1_norm，FakeTensor 与 torch.compile 据此把两个 float32 输出推成 int32。
-- **影响对象**：数值结果；训练信号（静默错误）
+- **影响对象**：训练信号；数值结果（静默错误）
 - **影响详情**：torchtitan DeepSeek-V4 SMLA 整网 torch.compile 下 dsa_indexer_aux_loss/mean 从 4.58e-4 变为 -4.51e10；只改 Meta 输出 dtype、kernel 不动即恢复 4.58e-4。
 - **改进措施**：检测 在 meta device 上调 torch.ops.cann_ops_transformer.sparse_flash_mla_grad，检查 cmp_softmax_l1_norm 的 dtype 是否被推成 int32；整网看 aux loss 是否突然跳到 1e10 量级；修复 待定（issue closed；最小修复是把两个统计量输出的 Meta dtype 固定为 torch.float32，并在下游 Meta 显式校验 float32 契约 + 补 FakeTensor 单测）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/4188
 
 ### INF-1597 `cann_moe_token_unpermute_ep_grad_prob_slot_lost` MoeTokenUnpermuteWithEpGrad 非零梯度槽丢失
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / probsGrad 累加与写回
 - **原因行为**：probs 非 None 路径对每个槽位无条件调 ReduceSumFunc 并以标量偏移写单个 fp32，tiling 的保留槽位上限使 tokens×topk>1 时槽位复用、非零项被覆盖或写错位置；写回缓冲未清零。
 - **影响对象**：梯度；数值结果（静默错误）
-- **影响详情**：1000 例中 941 例失败（94.1%）；probsGradOut 933 例错，866 例大值域相对误差恰为 1.0（唯一非零槽位输出 0），绝对/相对最大误差位置无一例相同；permutedTokensGradOut 932 例错，最大相对误差 1061；n=1 或输入全零时全通过。
+- **影响详情**：1000例执行成功，59通过941失败（94.1%）。probsGradOut应有一个非零槽位，实测丢失：866例大值域最大相对误差为1.0；或错位：绝对/相对最大误差位置899例全不同。permutedTokensGradOut最大相对误差1061.19、最大绝对误差659.78。n=1或全零通过
 - **改进措施**：检测 probs 非 None、tokens×topk>1 且 grad/permutedTokens 非零的用例，检查 probsGradOut 是否恰有一个非零槽位、位置是否与 sortedIndices∩rangeOptional 一致；修复 待定（issue closed，正文未附修复 PR；三个假设分别指向标量偏移写回、目标 buffer 未清零、折半归约多读）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5044
 
 ### INF-1599 `cann_causal_conv1d_non_contiguous_offset_and_inplace_loss` causal_conv1d 非连续张量写错位与原地丢失
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / causal_conv1d 非连续路径
 - **原因行为**：kernel 按连续布局硬编码输出偏移，非连续 y 的写入落到错误位置；非连续 convStatesRef 的原地更新没有写回用户原始 tensor（prefill 的 aclnn_causal_conv1d_fn 同款）。
@@ -4997,7 +5031,7 @@
 
 ### INF-1609 `ms_log_softmax_float64_low_precision` log_softmax 静默接受 float64 却按低精度算
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / CPU log_softmax float64
 - **原因行为**：CPU PyNative 的 log_softmax 不拒绝 float64 输入，返回 float64 张量，但内部按较低精度计算，与 float64 稳定公式的最大绝对误差 2.2e-6。
@@ -5008,21 +5042,21 @@
 
 ### INF-1610 `ms_msa_pta_systematic_loss_offset` MSA 与 PTA 同配置训练 loss 稳定偏低数个百分点
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `speculative` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `speculative` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / MSA 与 PTA 算子数值路径
 - **原因行为**：配置、权重、种子、BF16 与 softmax FP32 全部对齐后，MSA 的 loss 仍稳定单向偏低；候选来源是 BF16 累加顺序、FlashAttention、分布式优化器聚合与图执行差异，未定位到单一算子。
-- **影响对象**：训练信号；训练轨迹（质量退化）
+- **影响对象**：训练信号；训练轨迹（静默错误）
 - **影响详情**：CogVideoX-5B TP4：MSA loss 比 PTA 低 1.72%–1.79%（10 轮）与 4.58%（2 轮）；InternVL3 低 1.62%–1.94%（5 轮），方向从不翻转。
 - **改进措施**：检测 同权重同种子双框架跑同一步数比较 loss 相对差；差异稳定、单向、随变异配置不变时可判为框架级偏移而非配置错误；修复 待定（issue open）；已排除种子/Dropout/loss scale/权重/配置，FlashAttention 无法禁用（PTA 侧禁用即崩溃），未给出修复
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29332
 
 ### INF-1611 `ms_complex_div_inf_returns_nan` GPU complex div 除 inf 返回 NaN 而非 0
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / GPU complex128 Div
-- **原因行为**：复数除法对无穷除数未做特殊处理，1/(inf+0j) 走普通复数除法分支，得到 nan+nanj，而数学上应为 0+0j。
+- **原因行为**：GPU 上 complex128 复数除法以 inf+0j 为除数时返回 nan+nanj，而数学结果应为 0+0j。
 - **影响对象**：数值结果（数值异常）
 - **影响详情**：MindSpore 2.6.0.dev20250323 GPU：ms.ops.div(ones_like(x), x) 且 x=[inf+0j] complex128 返回 (nan+nanj)，与期望的 0+0j 不符。
 - **改进措施**：检测 对含 inf 的复数输入与 NumPy/PyTorch 复数除法对比；出现 nan+nanj 而非 0+0j 即为该分支；修复 待定（issue open，无修复 PR）
@@ -5030,7 +5064,7 @@
 
 ### INF-1613 `sgl_kernel_npu_recompute_w_u_equal_len_batch_index` recompute_w_u 等长路径 batch 索引恒 0 静默错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / sglang / wy_fast recompute_w_u
 - **原因行为**：等长分支（cu_seqlens=None）由 i_bh//H 求 batch，i_bh∈[0,H) 故 i_b 恒 0；beta/g_cumsum 已是 [B,H,T]，偏移仍按 [B,T,H] 加 bos=i_b*T，少乘 H。
@@ -5039,20 +5073,31 @@
 - **改进措施**：检测 对 B>1 的等长输入单独跑一份与 CUDA/eager 参考的逐元素对比；varlen 用例覆盖不到这条分支；修复 issue 给出补丁：i_b=program_id(1)、i_t=i_t_o、bos_bh=i_b*H*T_max，并合并 #690 的 i_t 修复（open，未发布）；vllm-ascend 同源缺陷见 #14333
 - **来源**：https://github.com/sgl-project/sgl-kernel-npu/issues/709
 
-### INF-1626 `sgl_kernel_npu_ssm_state_pool_k_major_transposed` SSM 状态池按 K-major 索引读写转置
+### INF-1650 `ms_softmax_const_fold_exp_overflow_nan` 常量折叠的 softmax 用朴素 exp 溢出成 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
-- **原因对象**：算子/内核 / sglang / fused_sigmoid_gating
-- **原因行为**：状态池实际是 [slots,HV,V,K]（V-major），kernel 载入与写回都用 o_k[:,None]*V + o_v[None,:]（K-major）；K==V==128 时不越界不报错，读写的都是 S.T。
-- **影响对象**：KV状态；数值结果（静默错误）
-- **影响详情**：零初态时只有 store 错：state 最大差 1.02，而 state^T 只差 1.19e-07（纯转置）；初态非零后 load 也错，decode 输出 maxdiff 3.7e-2（相对 0.85）。全程无报错、无 NaN。
-- **改进措施**：检测 对照时同时比较 state 与 state^T；用零初态隔离 store、随机初态再放开 load 的两次实验可区分读写腿；修复 issue 给出交换两项的补丁（o_v[None,:]*K + o_k[:,None]，load 与 store 各一处），未见修复 PR（open）
-- **来源**：https://github.com/sgl-project/sgl-kernel-npu/issues/640
+- **原因对象**：算子/内核 / mindspore / Graph Const 常量折叠 softmax
+- **原因行为**：前端常量折叠对 ops.softmax 用朴素 np.exp 实现且不先减行最大值，大幅值常量输入在编译期 exp 溢出，输出 nan 而运行时路径正确。
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：常量 [[1000,1000],[1200,1200]] 上 Graph(Const) 的 softmax 输出全 nan 并报 overflow encountered in exp，PyNative 与 Graph(Arg) 都得 [[0.5,0.5],[0.5,0.5]]。
+- **改进措施**：检测 同一 softmax 表达式分别用入参和无参 @jit（捕获闭包常量）执行并比较；Graph(Const) 出现 nan 或 exp 溢出告警即命中；修复 待定（issue open，无修复 PR）；方向：常量折叠改用减行最大值的稳定 softmax 实现，而非朴素 np.exp
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29396
+
+### INF-1654 `ms_matmul_empty_graph_scalar` 零尺寸 matmul 在图模式返回标量 0.0
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / mindspore / Graph/JIT matmul 空张量推导
+- **原因行为**：Graph/JIT 的 matmul 形状推导对含 0 维的输入退化成标量输出，没有按 (0,3)@(3,2)→(0,2) 的矩阵乘法规则给出空矩阵。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：x (0,3)、y (3,2) 时 PyNative 返回 shape (0,2) 空矩阵，Graph/JIT 返回 shape () 的标量 0.0；空 batch 或空序列分支下游按 shape 取索引即出错。
+- **改进措施**：检测 对 (0,3)@(3,2) 分别在 PyNative 与 @ms.jit 下执行并打印 shape；图模式给出 () 而不是 (0,2) 即命中；修复 待定（issue closed，未见修复 PR/版本说明）；方向：图模式 matmul 的 shape 推导保留 0 维，不要退化成标量
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29315
 
 ### INF-1657 `ops_nn_index_empty_self_leaves_out_uninitialized` aclnnIndex 空 self 早退致非空 out 未初始化
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / 空张量早退缺输出回填
 - **原因行为**：aclnn_index.cpp:544-549 在 self 空、out 非空时只置 workspaceSize=0 后 return ACLNN_SUCCESS；全文件无 Fill/ViewCopy 回填，输出 GM 不被触碰。
@@ -5062,9 +5107,20 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6304
 - **关联**：var:INF-1478
 
+### INF-1658 `ms_tanh_expander_no_clamp_overflow` tanh 展开未裁剪输入，大值 exp 溢出
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / mindspore / tanh 展开/lowering
+- **原因行为**：tanh 的展开实现用指数形式且不对输入做区间裁剪，幅值较大时 exp(2x) 溢出，与 Aclnn 先 clip 到安全区间的实现不一致。
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：大幅值输入下展开结果与 Aclnn 不一致、数值不稳定，常规幅值区间两侧一致；issue 未给具体数值与最小用例，只说明可观察到差异。
+- **改进措施**：检测 对同一 tanh 输入分别在展开路径与 aclnn 路径下执行，取 |x| 很大的边界值比较输出；出现溢出或与 aclnn 不一致即命中；修复 待定（issue open，仅供方向：展开时按 aclnn 的区间对输入做 clip，再走指数形式）
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/28936
+
 ### INF-1659 `ops_nn_index_add_arch22_index_unvalidated_oob_write` aclnnIndexAdd arch22 索引缺校验致越界写
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / arch22 scatter_add 索引寻址
 - **原因行为**：inplace_scatter_add_small_tail.h:88 等四处把 indices 按 uint32 取出后直接算 varGm[indexValue*N] 偏移，无 [0,M) 校验；arch35 有守卫，arch22 缺失。
@@ -5073,9 +5129,20 @@
 - **改进措施**：检测 var 尾部多分配两元素作 canary 并预置哨兵，传 idx=M 后读回；负索引用例强制 stream 同步看是否 507035。；修复 issue 6308 open；建议按 arch35 样板在取值后加 if (indexValue >= M) continue（uint32 下负值位模式天然被拦）；未给修复 PR。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6308
 
+### INF-1660 `ms_pynative_lora_zero_b_grad_wrong` PyNative 链式 matmul 在 B=0 时算错 LoRA 梯度
+
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / mindspore / PyNative 自动微分 VJP
+- **原因行为**：PyNative+Ascend 910B2、bf16、基座+adapter 残差与延迟初始化的完整模型中，B 全零的 x@A^T@B^T 链式 matmul 反向算错 adapter 梯度：grad_A 非零、grad_B 为 0。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：B=0 初始化下 grad_A≈1.0（数学上必为 0）、grad_B=0（应非零），adapter 完全不更新，grad_norm=0，lr=1e-5 与 lr=1.0 的 loss 逐位相同。
+- **改进措施**：检测 B 置零后跑一步 backward，打印 sum(|lora_a.grad|) 与 sum(|lora_b.grad|)；前者非零或后者为 0 即命中，再把 B 换极小非零值看是否恢复；修复 待定（issue closed，未给修复 PR）；规避：把 B 初始化为极小非零（如 normal_(0,1e-4)），issue 报告者以此绕过
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29469
+
 ### INF-1661 `ops_nn_gather_elements_v2_no_index_range_check` aclnnGather 负/越界索引静默回绕或越界读
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / scalar 内核索引寻址
 - **原因行为**：gather_elements_v2_scalar.h 把 xGatherPos 直接乘 xPostDim_ 算 GM 偏移，无 [0,gatherDim) 检查；负索引转无符号成巨偏移，越界读或回绕到最后一行。
@@ -5086,9 +5153,9 @@
 
 ### INF-1663 `ops_nn_tensor_scatter_update_parallel_error_swallowed` TensorScatterUpdate 并行分支吞掉越界错误码
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
-- **原因对象**：算子/内核 / 通用 / AICPU UpdateOutput 并行分支
+- **原因对象**：算子/内核 / 通用 / AICPU UpdateOneOutput 并行
 - **原因行为**：updates_nums>65536 时走 ParallelFor，其无条件返回 OK 覆盖 worker 写的 PARAM_INVALID；ret 还是非原子 uint32，多 worker 并发读写。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：910B3 + CANN 9.1.0 内置算子：x[14000,5]、indices 含 14000 越界值、updates_nums=70000 时 RunGraph 返回 success，输出 10 个元素错；降到 ≤65536 则正确报 PARAM_INVALID。
@@ -5097,7 +5164,7 @@
 
 ### INF-1666 `ms_ascend_addmm_kbk_scalar_rounding` KBK Addmm 按输入 dtype 重建 alpha/beta 致偏差
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / Ascend Addmm ACLNN 适配
 - **原因行为**：KBK 路径按输入 Tensor 的 dtype 重建 alpha/beta，bf16 输入让非精确 Scalar 在进入 ACLNN 前先被舍入，PyBoost 保留原始 Scalar。
@@ -5106,9 +5173,20 @@
 - **改进措施**：检测 同一 addmm 调用分别走 PyBoost 与 jit(backend=ms_backend, jit_level=O0)，用非精确 alpha/beta（如 -4.775000095367432）比较输出；两者不等即命中；修复 待定（issue open，无修复 PR）；方向：KBK 与 PyBoost 统一 alpha/beta 的 dtype 处理，不要按输入 Tensor dtype 重建 Scalar
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29602
 
+### INF-1667 `ops_nn_fused_cross_entropy_max_sum_subnormal_log_underflow` FusedCrossEntropyLoss 次正规 sum_exp 出 -inf
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / 通用 / arch35 Log 指令与 1/sum_exp
+- **原因行为**：疑似 kernel 的 Log() 对非零 fp32 次正规 sum_exp_logits（<1.175e-38，如 1e-38）下溢为 -inf，1.0/sum_exp 上溢为 inf。
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：950PR + CANN 9.2.0，ttk bt=8/v=8、sum_exp=1e-38：loss 8/8 全 -inf（golden 约 -83~-92），softmax 8/8 为 inf；1e-36/1e-37 通过，1e-39 起同样失败，aclnn 通路一致。
+- **改进措施**：检测 构造 sum_exp_logits∈(0,1.175e-38) 的用例跑 ttk kernel 模式比对 golden，检查 1e-37 与 1e-38 之间的阈值翻转。；修复 issue 6126 closed；正文只给疑似根因（Log 指令对次正规数下溢，建议在 910B 复核是否为硬件指令通用行为），未给修复 PR。
+- **来源**：https://gitcode.com/cann/ops-nn/issues/6126
+
 ### INF-1669 `ms_ascend_baddbmm_bf16_epilogue_rounding` BF16 baddbmm epilogue 舍入偏离 FP32 参考
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / aclnnBaddbmm bf16 舍入
 - **原因行为**：Ascend BF16 baddbmm 走 aclnn 默认计算模式时 self*beta 的 epilogue 提前按 BF16 舍入，与 FP32 计算后只舍入一次的结果不同。
@@ -5119,7 +5197,7 @@
 
 ### INF-1670 `ops_nn_batch_matmul_v3_merge_batch_fp16_overflow` BatchMatMulV3 fp16 batch 合并累加溢出为 NaN
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / batch_mat_mul tiling 合并
 - **原因行为**：MergeBatchAndMAxis 只以 batchA×M 超 INT32_MAX 作合并准入，未估 fp16 值域：并入 M 轴后 K=128、|v|≤100 累加超 65504，溢出成 Inf/NaN。
@@ -5130,10 +5208,10 @@
 
 ### INF-1672 `ms_leaky_relu_alpha_float32_rounding` float64 输入下 leaky_relu 的 alpha 先按 f32 舍入
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / leaky_relu alpha 标量转换
-- **原因行为**：float64 输入配 Python 浮点 alpha 时，alpha 先被转成 float32 再扩展到 float64 参与计算，双精度路径被单精度常数污染。
+- **原因行为**：CPU 后端 PyNative 与 Graph 下，float64 输入且非精确 Python 浮点 alpha（0.2）时，alpha 先转 float32 再扩展到 float64 参与计算。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：x 为 float64、alpha=0.2 时 PyNative 与 Graph 输出都偏离 float64 公式 3.725290298461914e-09，误差量级正好对应 alpha 的一次 f32 舍入。
 - **改进措施**：检测 float64 输入 + 非精确 alpha（0.2）与 np.where(x>=0,x,alpha*x) 的 float64 结果比较；出现 ~1e-9 量级偏差即命中，再换 alpha 为可精确表示的 0.5 做对照；修复 待定（issue open，无修复 PR）；方向：float64 输入时 Python alpha 直接按 float64 转换，不经 float32
@@ -5141,7 +5219,7 @@
 
 ### INF-1674 `ops_nn_scatter_reduce_common_sort_missing_sync` scatter_reduce 排序漏 MTE3→V/S 同步致竞态错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / scatter_reduce 排序同步
 - **原因行为**：SortLocalRuns() 循环尾只发 MTE3→MTE2，未约束下一轮 V/S 对同一对 UB 的写；DataCopyPad 未读完缓冲即被 Sort/Adds/补哨兵覆写，落盘排序键与索引被污染。
@@ -5152,18 +5230,18 @@
 
 ### INF-1676 `ops_nn_rrelu_with_noise_dim_limit_25` RReluWithNoise 26~32 维输入静默输出全零
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / CheckFormatValid 维度上限
 - **原因行为**：max_support_dim=32 放行到 32 维，但 gert::Shape 只有 25 维定长数组，26~32 维 shape 被截断、numel 算成 0，命中空 Tensor 快路径返回成功而不写输出。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：910B + CANN 9.2.0、torch_npu 2.12.0.rc1：32 维输入 30 次重复全部输出全 0 且无报错（期望 [-0.25,-0.125,0,0.5,1,-0.5,2,-0.75]）；≤25 维 30 次全对；33 维正常报 161002。
+- **影响详情**：910B+CANN9.2.0、torch_npu2.12.0.rc1：32维输入30次全输出0且无报错（期望[-0.25,-0.125,0,0.5,1,-0.5,2,-0.75]）；≤25维30次全对；33维正常报AclNN_Parameter_Error(EZ1001)。
 - **改进措施**：检测 用 26~32 维输入调用并与 ≤25 维同数据对照；输出全 0 且无报错即为命中，注意入参校验不会拦。；修复 issue 5956 closed；正文建议 max_support_dim 由 32 收紧为 25 并在第一段接口报 161002，同步修正资料维度约束；未给 PR。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/5956
 
 ### INF-1678 `ops_nn_group_reduce_empty_group_dirty_partial` group reduce 空分组读脏 workspace 致 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / Group 模板 Phase1 分核
 - **原因行为**：9.2.0-beta.2 的 Group 模板 Phase1 用 CeilDiv 分块，rGroupCnt>rOuter 时有空分组、对应核早退不写 workspace 行；Phase2 仍按 rGroupCnt 全行 Reduce。
@@ -5174,7 +5252,7 @@
 
 ### INF-1686 `ops_nn_selu_grad_zero_boundary_cmp` selu_grad 用 LT 判 outputs 致 0 点走错分支
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / 通用 / arch35 selu_grad 分支判定
 - **原因行为**：selu_grad.h:78 用 CMPMODE::LT 判 outputs<0，outputs==0 落 SCALE 分支；PyTorch elu_backward 用 <=0 走 SAP 分支。
@@ -5183,12 +5261,23 @@
 - **改进措施**：检测 构造 outputs 恰为 0（含 -0.0）的用例做逐位对比；int 型输入的随机用例里取 0 约占 9%，能放大该差异。；修复 issue 3976 closed；正文给出把 CMPMODE::LT 改为 LE（对齐 PyTorch elu_backward 的 <=0），未给修复 PR。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/3976
 
+### INF-1687 `te_mv_tail_program_segment_loss` TE 编译 aten.mv 尾部 program 段整段丢写致错值
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / pytorch / TE mv/matmul fold
+- **原因行为**：TE对aten.mv前向lowering产生错值，符合NPU多program发射时高pid段写入/归约被跳过。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：triton_experimental后端torch.compile(torch.mv)或3D×1D matmul折叠到mv；M≥16、K小、行数非grid整倍数时前段正确、从某行起按block边界整段丢失/覆盖。最大差约9.1；跨种子稳定，4例matmul/rmatmul 15/25元素失配。
+- **改进措施**：检测 逐 shape 扫描 torch.compile(torch.mv) 与 eager 的 max_abs，重点看 M≥16 且行数非 grid 整倍数的小 K 形状，错误集中在尾部行；3D×1D matmul 另跑 forward-only 图排除反向；修复 待定（issue closed）；方向：排查 TE 对 aten.mv reduction 的 program 发射边界，或对 rhs 为 1D 的 matvec 关闭 fold、回退 bmm/mv 原生路径
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5071
+
 ### INF-1688 `eager_add_drops_channels_last_stride` eager add 改 strides 致 as_strided 读错
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / add 算子 stride
-- **原因行为**：NPU eager add 把 channels_last 输入的 stride 改成 NCHW 连续布局，compile 路径保留原 stride；下游 as_strided 仍按 channels_last 公式取值，读到错位元素。
+- **原因行为**：NPU eager add 把 channels_last 输入的 stride 改成 NCHW 连续布局，torch.compile 路径保留原 stride。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：shape (8,384,20,20)：CPU stride (153600,1,7680,384)，NPU eager (153600,400,20,1)；按 (153600,1,61440,384,7680) as_strided 后 100% 元素不匹配。
 - **改进措施**：检测 在 NPU 上对 channels_last 输入做 (x+1).stride() 并与 CPU 对比；或直接跑 as_strided 视图前后比对，NPU eager 与 compiled 结果会互相不一致；修复 待定（issue open，无修复 PR）：eager add 应保持输入 memory_format/stride，与 CPU 及 compiled 路径一致
@@ -5196,7 +5285,7 @@
 
 ### INF-1689 `ms_ops_all_complex_imaginary_false` ops.all 把纯虚数当假值返回 False
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / mindspore / ops.all 复数真值判定
 - **原因行为**：ops.all 对 complex 张量只按实部判真值（丢掉虚部），纯虚数元素 5j 被判为 False，与任何非零复数都为真的语义不符。
@@ -5207,7 +5296,7 @@
 
 ### INF-1691 `fia_gsmerge_flag_wrong_stride` FIA gsMergeFlag 误置致 BMM1 读 K stride 错
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / FIA arch35 tiling
 - **原因行为**：gsMergeFlag 在 gSize=1、S1*gSize<64 时被误置，kernel 按 isGqa=1 把 BSH 的 mm1Ka stride 由 n2*g*d 改成 d，BMM1 错步长读 K 数据。
@@ -5218,84 +5307,62 @@
 
 ### INF-1693 `slikg_bf16_dq_unaligned_clear_skip` SLIKG BF16 dQ 未对齐清零分支漏写
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / ClearInvalidS1Output
 - **原因行为**：ClearInvalidS1Output 改为按 32B 对齐判断后，未对齐分支只剩 FP32 的清零路径；BF16 的 dQ 既不满足对齐也不满足类型分支，整段漏写，无可见压缩 KV 的 query 行保留显存旧值。
 - **影响对象**：梯度（数值异常）
-- **影响详情**：A3、TND、q[4096,64,128] BF16、topk=512：54 个无有效 KV 的 query、40 个 AIV 每核 clear 11060 元素，逐段模拟漏写 383344 元素，与实测一致，首步 grad_norm=NaN。
+- **影响详情**：A3、TND、BF16 dQ、topk=512、mask_mode=3、cmp_ratio=4 且 clear 分段不满足 32B 对齐时，无可见压缩 KV 的 query 行 dQ 保留显存旧值，训练首步 grad_norm 变 NaN；无报错无栈，重复结果一致，换 topk/mask 后消失。
 - **改进措施**：检测 对无有效压缩 KV 的 query 行单独检查 dQ 是否清零；观察首步 grad_norm 是否 NaN；修复 待定（issue 只定位到引入该判断的 PR #11435 / commit d77a4ca，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5420
 
 ### INF-1694 `flexattention_uneven_causal_kv_tail_grad_uninit` FlexAttention 不等长 causal 反向 KV 尾部梯度未初始化
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / FlexAttention 反向模板
-- **原因行为**：反向模板直接写入 empty_strided 分配的 dK/dV；Q_LEN<KV_LEN 时没有 query 访问的 KV 尾部 block 既无写入也无预清零，梯度保留未初始化内存。
-- **影响对象**：梯度（静默错误）
+- **原因行为**：triton_experimental FlexAttention causal 反向且 Q_LEN<KV_LEN 时，反向模板直接写入 empty_strided 分配的 dK/dV，无 query 覆盖的 KV 尾部未被可靠写入。
+- **影响对象**：梯度（不可复现）
 - **影响详情**：Q_LEN=384、KV_LEN=512 时 KV[384:512] 的 dK/dV 数值不确定；修复（预清零 dV、按 block 有无 query 决定是否置零 dK 并跳过 dV 写回）后 FlexAttention 专项测试 11 passed。
 - **改进措施**：检测 不等长 causal（Q_LEN<KV_LEN）反向，检查 KV 尾部未被 query 覆盖区间（如 [384:512]）的 dK/dV 是否随分配历史变化；重复跑同一输入比梯度是否一致；修复 MR https://gitcode.com/Ascend/pytorch/merge_requests/46746 （未核实是否合入）：lowering 阶段预清零 dV，模板跟踪 KV block 是否存在 query block，无则 dK 置零并跳过 dV 写回，并补不等长 causal 反向回归测试
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5236
 
 ### INF-1695 `qfa_mxfp8_simd_scalar_param_lost` QFA MXFP8 FD 标量传参丢失致 LSE 为 inf
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / QFA MXFP8 FD combine
 - **原因行为**：第 15 个运行时标量 minCheckValue 在每个 AIV 首次 VF 调用时丢失并被污染为 0.0，Compare EQ(0,0) 误命中，Select 输出 3e+99 使 LSE 为 inf。
-- **影响对象**：输出分布；数值结果（数值异常）
+- **影响对象**：数值结果；输出分布（数值异常）
 - **影响详情**：TEST1_WK（B=6 GQA、PA BnNBsD、mask_mode=3、p_scale=8、enable_lse=True）下仅 flat=16020/16083 两点 LSE 为 3e+99（溢出为 inf），期望约 8.58，其余 19842 点与 attention 输出全对。
 - **改进措施**：检测 对 enable_lse 用例逐点比对 LSE，关注是否出现 3e+99/inf 的孤立坏点；可用 AscendC printf 插桩确认 Select 前判值；修复 MR 12816（master）/12828（9.2.0）：minCheckValue 改经 UB fdMinCheckBuf_ 由 VF 内 LoadAlign 读取（closed，未核实发布）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5634
 
 ### INF-1697 `smla_reduction_block_boundary_batch_mismatch` SMLA/MQSMLA 规约块边界错位致 batch 不一致
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / SMLA SetRunInfo 与主循环
 - **原因行为**：规约块大小先做 totalS2/32 整除丢余数、ORI 尾块与 CMP 首块沿用同一 s2LoopCount、MQSMLA 重划 ORI 后未同步 cmpS2Start，使 reduceBlockId 与 metadata 分块不一致。
 - **影响对象**：数值结果；可用性/进度（不可复现）
-- **影响详情**：开启 batch_consistency 后同一输入按不同 batch 切分得到不同结果（bc_ori_cmp_reduction_boundary 等用例失败）；S2 尾块落到零行 AIV 时 Vec1 还发送无人等待的 MTE3_MTE2 事件，导致卡死超时。
+- **影响详情**：SMLA/MQSMLA 开启 batch_consistency 后，同一输入与权重下仅改变 batch 切分和执行顺序，输出不一致，batch consistency 用例直接失败；某些 S2 尾块落在分块边界上的用例整核卡死、计算超时，日志无精度报错，仅任务不返回。
 - **改进措施**：检测 开启 batch_consistency 后按不同 batch 切分与 order 复跑同一输入，比较逐点输出；同时观察 AIV 零行是否导致超时；修复 issue 即修复说明：块大小改 (totalS2+31)/32 再上对齐、新增 reductionLoopCount 补齐逻辑计数、重划后置 cmpS2Start=oriS2End、零行 AIV 不发该事件（closed，未核实合入版本）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5640
 
-### INF-1698 `moe_init_routing_quant_k_gt1_rowidx` MoeInitRoutingQuant K>1 行索引逆映射偏 1
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：算子/内核 / pytorch / MoeInitRoutingQuant
-- **原因行为**：K>1 时同一行号在 sortedRowIdx 中出现 K 次，基准用 stable argsort 加 last-write-wins，kernel 归并与 gather 的散写次序不同，逆映射偏 1。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：K>1 的 158 条用例全失败（K=1 的 840 条全通过）：expandedRowIdxOut max_diff 1.0（137 例）；连带 expandedXOut 140 例 int8 错值 max_diff 149~255；expandedExpertIdxOut 逐位一致。
-- **改进措施**：检测 用 numpy stable argsort 加散写实现基准，MD5 逐位比对 expandedRowIdxOut 与 expandedXOut，覆盖 K>1；修复 待定（issue 为缺陷报告，未见修复 PR）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/5049
-
 ### INF-1699 `mhc_pre_sinkhorn_backward_output_never_written` MhcPreSinkhornBackward 输出 grad_x 全程未写
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / MhcPreSinkhornBackward
 - **原因行为**：kernel 未执行 grad_x 写路径：initcheck 事件流显示输出 buffer MALLOC 后零写、无 MMAD、无 UB 到 GM 写指令，仅 host LOAD 读，输出保持未初始化值。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：grad_x 静默返回全 0，example 对输出无校验故不报错；该算子是同批 169 条 initcheck 告警中唯一确认的输出未写真缺陷，其余为 host 漏填或读自身 workspace 未初始化区。
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：调用成功且无报错，grad_x 全 0；example 不校验输出，训练中该路梯度恒为 0、参数不更新。不开 sanitizer 同样全 0；开 initcheck 或加非零断言可发现未写输出。
 - **改进措施**：检测 开启 sanitizer 插桩跑 mssanitizer -t initcheck，逐算子核对输出 buffer 是否有写者；对输出加非零断言；修复 待定（issue 建议算子侧排查 grad_x 输出路径为何未执行，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5140
 
-### INF-1700 `indexer_quant_cache_mxfp4_odd_headdim` indexer_quant_cache MX-FP4 半字节错位
-
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：算子/内核 / pytorch / indexer_quant_cache
-- **原因行为**：MX-FP4 每字节打包 2 个逻辑元素，headDim 为奇数时相邻行起点交替落在字节高/低 4 位；kernel 把 cache 声明为 int8_t，只能整字节 CopyOut，无法表达半字节偏移。
-- **影响对象**：数值结果；KV状态（静默错误）
-- **影响详情**：quantMode=3 且 cache.headDim=65 时 cache 输出精度仅 56.9%~62.5%（不同 stride 方案都到不了 100%），属系统性错位而非随机噪声；无报错，tiling 直接放行。
-- **改进措施**：检测 对 quantMode=3 构造奇数 headDim，逐元素比对 cache 量化结果与 golden；同时检查分页 view 的 row/block stride 奇偶；修复 在 host tiling（indexer_quant_cache_tiling_arch35.cpp）要求 quantMode=3 时 headDim 与分页 row/block stride 必为偶数，否则 GRAPH_FAILED（关联 MR，closed，未核实合入版本）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/4137
-
 ### INF-1701 `ascendc_cast_int32_float_nan_pipeline` AscendC Cast int32 转 float 在深流水后全 NaN
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / AscendC Cast（mix kernel）
 - **原因行为**：4-deep cross-core pipeline 达满深度后（kvSeqLoop>=3），AIV 侧 Cast<float,int32_t> 转换 Fixpipe（SPLIT_M）写入 UB 的 int32 数据，输出全为 NaN。
@@ -5306,10 +5373,10 @@
 
 ### INF-1702 `rope_grad_fp16_half_d66_nan` RoPE Grad fp16 half D=66 反向出 NaN
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / RoPE Grad kernel
-- **原因行为**：fp16、mode=0（rotate_half_grad）、cos/sin 为 11SD 广播、D=66 非对齐（PAD 路径）时，特定 (B,N) 组合下 dcosOut/dsinOut 产生 NaN/Inf，dxOut 不受影响。
+- **原因行为**：fp16、mode=0 half、D=66 且 cos/sin 为 11SD 广播的特定 (B,N) 组合下，dcosOut/dsinOut 出现 NaN/Inf，dxOut 正常。
 - **影响对象**：数值结果（数值异常）
 - **影响详情**：(B,N)=(8,2)/(4,16)/(8,16)/(16,8)/(128,1)（S=4）5 例：dcosOut/dsinOut 的 NaN/Inf 位置与 CPU 标杆、GPU 基准三方不一致，输入为常规值域；bf16/fp32、interleave、D=64/256 及非 11SD 广播零失败。
 - **改进措施**：检测 对 fp16 + half + D=66 + 11SD 组合按 (B,N) 扫描，比较三方 NaN/Inf 出现位置；修复 待定（issue 为缺陷报告，未见修复 PR）
@@ -5317,7 +5384,7 @@
 
 ### INF-1703 `norm_rope_concat_bf16_relative_error` NormRopeConcat bf16 相对误差超阈与 RMS 统计量异常
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / NormRopeConcat kernel
 - **原因行为**：疑似 kernel 在原生 bf16 下完成 norm 归约与 RoPE 乘加，与标杆 fp32 中间精度差 1~2 ULP；isTraining=true 且含 RMS 类 norm 时 mean/rstd 未按标杆清零。
@@ -5328,21 +5395,21 @@
 
 ### INF-1704 `all_gather_matmul_uint32_offset_overflow` AllGatherMatmul 偏移 uint32 相乘溢出截断
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / all_gather_matmul_v2 AIV
 - **原因行为**：blockSt 与 blockSize 的乘子（cal_idx、m0、pValue、m、n）均为 uint32_t，乘法在 uint32 空间完成才赋给 uint64_t，MN 超 2^32 时截断，偏移与搬运量算错。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：输入 shape 的 MN 超过 uint32 最大值（4.29e9）时算子结果精度异常、无报错；报告者由代码检视定位到中间结果按 uint32 相乘截断，并建议排查其它大 shape 相乘处。
+- **影响详情**：输入 shape 的 M*N 超过 uint32 最大值（4.29e9）的 all_gather_matmul_v2 AIV 中，shape 校验通过、执行不报错不崩，输出数值整体错位；缩小到 uint32 范围内恢复正常，常规尺寸回归长期不可见。
 - **改进措施**：检测 对超大 MN 的 shape 做定点对比测试；静态检查 kernel 中 32 位乘法的上界；修复 待定（issue 只给修改方案：相关变量改 uint64_t 或先转 uint64_t 再乘，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/3714
 
 ### INF-1705 `mhc_pre_backward_uint64_trunc_uninit_mask` MhcPreBackward 偏移截断与未初始化 MaskReg
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / MhcPreBackward kernel
-- **原因行为**：偏移量 D_/N_/nD_ 为 uint64_t 却传给只接受 uint32_t 的 AscendC 接口而被截断；Duplicate 用的 maskPre/maskPost/maskComb 未初始化即当掩码，两处都使结果偶发偏差。
+- **原因行为**：uint64_t的D_/N_/fusionSize_/nD_传给仅支持uint32_t的部分AscendC API参数时被截断致偏移量算错；三处Duplicate的maskPre/maskPost/maskComb未初始化即当作掩码。
 - **影响对象**：数值结果（不可复现）
 - **影响详情**：shape (1,1,4,64) 与 (1,1,4,16384) 同时循环跑 10 次：前者一次 pass 一次 fail，后者一直 fail；同一输入重复执行结果不一致，无报错。
 - **改进措施**：检测 同一输入多轮复跑并交替 shape，统计 pass/fail 抖动；检查 MaskReg 是否初始化、偏移是否被截断；修复 待定（issue 只给现象与代码位置，未见修复 PR）
@@ -5350,7 +5417,7 @@
 
 ### INF-1706 `moe_token_unpermute_negative_sorted_indices` MoeTokenUnpermute 静默接受负 sortedIndices
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / moe_token_unpermute
 - **原因行为**：needCopyIn 只判断 idx < num_out_tokens、缺 idx >= 0；负索引在 GetWorkspace/Launch/Sync 全链路被静默接受，文档要求 [0, tokens*topK-1]。
@@ -5361,11 +5428,11 @@
 
 ### INF-1707 `gmm_finalize_routing_negative_rowindex_atomicadd` GMMFinalizeRouting 未校验 rowIndex
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / pytorch / gmm_finalize_routing
 - **原因行为**：A8W4 MSD 路径把 rowIndex 强转 uint64 outRow 后直接对 yGm 做 AtomicAdd，未校验 outRow 属于 [0,tokens)；负值回绕为巨大偏移。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（报错）
 - **影响详情**：rowIndex=-1 时 GetWS/Launch 均返回 SUCCESS，直到 Sync 才报 507057；rowIndex=1000000 时报 507015；合法 rowIndex=0 正常。越界 AtomicAdd 发生在报错之前，可写坏其它 token 的行。
 - **改进措施**：检测 对 rowIndex 注入 -1 与 >=tokens 的值，确认 GetWorkspace/Launch 是否拒绝；用 memcheck 观察越界写；修复 待定（issue 为 P-011 防御性契约缺陷报告，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/4294
@@ -5993,7 +6060,7 @@
 
 ### INF-1520 `torchnpu_te_int64_constant_downcast_identity` TE 后端 int64 降型致 masked 归约错值
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / TE 后端 int64 降型
 - **原因行为**：codegen 的 constant 与 triton_compute_type 把 int64 无条件降为 int32，INT64 边界常量按低 32 位截断成 0/-1，指针签名同时降为 *i32。
@@ -6004,7 +6071,7 @@
 
 ### INF-1521 `torchnpu_mlir_auto_fallback_no_buffer_write` MLIR 融合回退不写预分配 buffer 致错值
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / mlir_auto_fallback 回退
 - **原因行为**：MLIR 融合 kernel 调优失败后 mlir_auto_fallback 回退 _load_fx_graph，回退路径不遵守 kernel.run(..., bufN) 的写预分配 buffer 约定。
@@ -6015,7 +6082,7 @@
 
 ### INF-1522 `torchnpu_dvm_spec_reduce_overwrites_live_accumulator` DVM spec 归约覆盖仍存活的累加器输入
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / DVM spec 归约融合
 - **原因行为**：spec 两阶段归约把第一阶段中间值写入输出 buffer，而输出与第二阶段仍需读旧值的 accumulator 是同一 primals_6，旧值被覆盖后重复累加。
@@ -6026,7 +6093,7 @@
 
 ### INF-1523 `torchnpu_inductor_layernorm_welford_cross_row_accum` LayerNorm welford 归约多行互相累加致错值
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / welford_reduce codegen
 - **原因行为**：Welford 累加器（_acc_sum/_acc_sum_sq/_acc_count）未按 tile 做 tl.zeros 初始化，向量化外层轴的多行数据在各自 tile 内相互累加。
@@ -6037,7 +6104,7 @@
 
 ### INF-1542 `vllm_ascend_qwen3vl_long_image_nan_kv_pollution` Qwen3-VL 长文加图触发 NaN 并永久污染 KV cache
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / vllm / torch.compile 多模态图
 - **原因行为**：vllm-ascend 的 torch.compile 后端为“长文本 + 图像”这一输入形状生成的图数值不稳定，fp16 与 bf16 都产出 NaN；具体算子未定位。
@@ -6048,18 +6115,18 @@
 
 ### INF-1549 `vllm_ascend_compiled_moe_final_reduce_frozen` 编译图冻结 MoE 最终归约判断致重复或漏归约
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / vllm / MoERunner 归约决策
-- **原因行为**：_maybe_reduce_final_output 在 fused MoE 算子边界外求值，按首次 trace 的通信方式固化（ALLGATHER 需外层 all-reduce，MC2/ALLTOALL 已归约），换方式不重 trace。
-- **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：GLM-5.2 SFA/DSpark PD + FULL_DECODE_ONLY 编译执行下，同一张图可能重复归约或漏掉必需的 all-reduce，造成严重精度损失；报告同时给出 SFA PROLOG_V3 回退与 DSpark 查询批截断两个独立运行期假设。
+- **原因行为**：_maybe_reduce_final_output 在 fused MoE 边界外求值；ALLGATHER 且无序列并行需外层 TP all-reduce，MC2/ALLTOALL 已归约，换方式不重 trace。
+- **影响对象**：数值结果；输出内容（质量退化）
+- **影响详情**：GLM-5.2 DSpark 推测解码+PD serving 的 FULL_DECODE_ONLY 编译执行中，trace 与运行期 MoE 通信方式不一致（ALLGATHER vs MC2/ALLTOALL）时，可能重复归约或漏掉必需归约，造成严重精度损失。
 - **改进措施**：检测 用 make_fx 抓 MoE 图后在切换通信方式（ALLGATHER↔MC2/ALLTOALL）下重放，比对输出是否被重复归约或未归约；另按 attention state 构造 DecodeOnly/ChunkedPrefill/PrefillCacheHit 覆盖 SFA 分支；修复 待定（issue closed）；参考草稿 PR #16482（作者声明仅供参照、非最终方案），MoE 部分与 #16455/#16459/#16476 重叠，SFA 与 DSpark 改动可独立评审
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/16484
 
 ### INF-1569 `ms_gathernd_reduce_sum_empty_indices_mode_mismatch` gather_nd 空索引后 reduce_sum 两模式差 1
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / mindspore / GRAPH_MODE 空输入 ReduceSum
 - **原因行为**：indices 为空时 gather_nd 输出 (0,4)，图模式 ReduceSum 对零元素输入返回 1.0、PyNative 返回 0.0；两种模式的零元素归约语义没有对齐。
@@ -6068,20 +6135,54 @@
 - **改进措施**：检测 对空 indices/零元素归约同时跑 PyNative 与 GRAPH_MODE 并比对结果；日志出现 ReduceSum zero shape WARNING 时按可疑处理，不要当成无害提示；修复 待定（issue open，未给修复 PR）
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29336
 
+### INF-1577 `ms_dvm_frontend_boundary_missing_flush` DVM 融合在 frontend-only 边界漏 flush 致错值
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / mindspore / PyNative DVM 无图融合 flush
+- **原因行为**：old op_graph view、StopGradient 等 frontend-only 边界算子生成新 Tensor 但不触发 backend push/wait，pending 融合图未 flush，后续捕获当成新外部输入。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Ascend 开 MS_DEV_PYNATIVE_FUSION_FLAGS=--opt_level=1 后，neg→mul→strided_slice→abs 链路结果与关融合不一致；表现为精度错误、偶发不稳定。
+- **改进措施**：检测 同一段代码开关 DVM 融合对比输出；在 view/StopGradient/Detach 边界后强制 flush 或同步，看差异是否消失；修复 待定（issue open，master 未修）；方向：frontend-only 边界生成新 Tensor 前 flush pending 融合图
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29227
+
+### INF-1579 `ms_dvm_ops_map_view_address_collision` view 算子共享 device_address 致融合取错输入
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / mindspore / DVM ops_map_ 地址键
+- **原因行为**：ops_map_ 以 device_address 裸指针为 key，slice/reshape 出的多个 view 共享同一地址却 shape 不同，后一个 view 命中前一个的 Load 节点。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：x1[10:18] reshape 成 (2,1,4) 与 x1[40:44] 的 (4,) 地址相同，AddExt 复用 (2,1,4) 的 Load，DVM 按错 shape 计算，输出错误。
+- **改进措施**：检测 对同一基张量切多个 slice/view 后混用，比较开关 DVM 融合的输出；或打印 ops_map_ 的 key 与命中的 Load shape；修复 待定（issue open，master）；方向：key 改为 TensorPtr/alias 标识或 (address, shape, stride)
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29175
+
+### INF-1581 `ms_dvm_input_cache_ignores_shape_override` 融合输入缓存忽略逻辑 shape 覆盖致广播错
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / mindspore / DVM Input 缓存复用
+- **原因行为**：Input(x, shape_override) 的缓存 key 只有 Tensor*，命中时不比较逻辑 shape；同一 tensor 先按 [1,C,1,1] 进融合，后续默认 Input(x) 复用了广播版 NDObject。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：BatchNormElemt 把 mean/invstd 以 [1,C,1,1,…] 送入，后续 Add(mean,delta) 期望 [C]，却拿到广播版输入，输出 shape 与基线不一致。
+- **改进措施**：检测 在 BatchNormElemt/BatchNormElemtGrad 后接同一 tensor 的默认输入算子，比较开关融合的 shape 与数值；方阵 MatMul transpose view 同类；修复 待定（issue open）；短期方案：调用 Input(...,shape) 时不读写 ops_map_ 缓存；MatMul 只在真正 transpose view 时传 shape override
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29281
+- **关联**：var:INF-1579
+
 ### INF-1604 `torchair_autotune_shallow_copy_writes_through_input` TopN autotune 计时写穿真实输入致精度异常
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / inductor ext autotune 计时
 - **原因行为**：_autotune.py 用 list(args) 浅拷贝后把真实张量的 data_ptr 直接传给候选 kernel，候选为原地算子时在计时阶段改写调用方输入缓冲；编译期 real run 已有的 clone 保护未覆盖此处。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：TORCHINDUCTOR_NPU_EXT_AUTOTUNE_TOPN>1 且融合 kernel 含原地算子时，autotune 结束后真实输入已被污染，正式执行读到错误数据、精度异常；各候选还在被改写的输入上计时，选优也不可信。
+- **影响详情**：TORCHINDUCTOR_NPU_EXT_AUTOTUNE_TOPN>1 且选中候选 kernel 含原地写输入（in-place）行为时，autotune 结束后真实输入已被污染，正式执行读到错误数据、精度异常；各候选还在被改写的输入上计时，选优不可信。
 - **改进措施**：检测 对比 TORCHINDUCTOR_NPU_EXT_AUTOTUNE_TOPN=1 与 >1 的输出；或 autotune 前后对输入做 clone 比对；修复 已有关联 PR：master https://gitcode.com/Ascend/torchair/pull/3760 、26.2.0 https://gitcode.com/Ascend/torchair/pull/3761 （计时阶段为 Tensor 输入建 clone_preserve_strides 私有副本并按轮恢复）；issue closed，合入与发布未核实
 - **来源**：https://gitcode.com/Ascend/torchair/issues/833；https://gitcode.com/Ascend/torchair/pull/3760；https://gitcode.com/Ascend/torchair/pull/3761
 
 ### INF-1605 `torchair_graph_dfs_topology_order_mismatch_across_ranks` 图模式 DFS 拓扑序两卡不一致致通信算子错序
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / 图模式 DFS 拓扑排序
 - **原因行为**：torchair 图模式用默认 DFS 拓扑排序，且为内存优先的非稳定实现；两卡 HcomAllToAllV 输出 shape 不同时排序结果不同，本应一致的算子执行序在两卡间错开。
@@ -6092,18 +6193,18 @@
 
 ### INF-1606 `torchair_axis_align_transpose_semantics_lost` 轴对齐调轴使中间张量 store/load 索引序错乱
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / ascendc 后端轴对齐调轴
 - **原因行为**：轴对齐调轴改写中间变量的 store 与 load 索引顺序时两边不一致，transpose 语义在 codegen 后丢失，输出按未转置布局读写。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：打开 gelu decompose 后编译含 transpose 的模型（LayerNorm(23)+transpose(0,1)+matmul）时，图模式输出与 eager 明显偏差；不报错、不 NaN，只能靠 allclose 逐元素对比发现。
+- **影响详情**：打开 gelu decompose 后，用 ascendc 编译含 transpose 且后接布局敏感算子的模型时，图模式输出与 eager 对不上；数值偏差稳定存在但不夸张，不报错、不 NaN，形状正确，只有 allclose 或下游 loss 异常才会发现。
 - **改进措施**：检测 对该类模型同时跑 eager 与 npu_backend=ascendc，比较 max_err；关闭 gelu decompose 可作对照；修复 待定（issue 只说明调轴方法与 index 序不一致，未附修复 PR 或补丁）
 - **来源**：https://gitcode.com/Ascend/torchair/issues/846
 
 ### INF-1607 `torchair_bmm_epilogue_fusion_batch_broadcast_guard` BatchMatMul epilogue 融合未拦 batch 轴广播
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / matmul epilogue 融合守卫
 - **原因行为**：epilogue 融合守卫只用 rank 与前置 batch 维比较判断，epilogue 输入 rank 大于 MatMul 输出 rank 的广播情形被放行，融合 kernel 读到错误数据。
@@ -6114,7 +6215,7 @@
 
 ### INF-1612 `ms_true_divide_const_fold_float64` 常量折叠把 int32 true_divide 输出成 Float64
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / mindspore / Graph Const 常量折叠 dtype
 - **原因行为**：编译期常量折叠路径对 int32 输入的 true_divide 把结果提升为 Float64，而 PyNative 与 Graph(Arg) 运行时路径都输出 Float32，同一表达式两种 dtype。
@@ -6123,9 +6224,21 @@
 - **改进措施**：检测 同一表达式分别在 PyNative、jit(带参数)、jit(闭包常量) 下打印输出 dtype；三者不一致即为常量折叠 dtype 推导缺陷；修复 待定（issue open，2.8.0）；方向：常量折叠复用运行时的 promote 规则
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29397
 
+### INF-1637 `triton_ascend_runtime_fp16_bf16_scalar_arg_wrong` 运行期 fp16/bf16 标量实参传值错误
+
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：编译器 / triton / 运行期标量实参传递
+- **原因行为**：显式声明为 fp16/bf16 的运行期标量实参被错误解释，kernel 内 .to(tl.float32) 后存出的值不等于传入值；fp32 标量对照正常，3.2.2 与 3.6.0 均复现。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：最小核只做 value.to(tl.float32) 再 store，传 1.5 得不到 1.5，fp32 对照正确；任何用半精度标量做 scale/eps 的 kernel 都会静默偏，无报错、无 NaN。
+- **改进措施**：检测 对 kernel 的每个半精度标量实参做恒等回读用例（store 后与 Python 侧值比较）；单测里补 fp16/bf16 标量签名；修复 规避=标量按 fp32 声明、kernel 内显式转型；无修复 PR（open）
+- **来源**：https://github.com/triton-lang/triton-ascend/issues/2364
+- **关联**：var:INF-1634
+
 ### INF-1643 `triton_ascend_a5_2d_reduction_lane_drop_k_pow2_lt8` A5 二维 tile 归约在 K_POW2<8 时丢车道
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / triton / 2-D tile 归约 lowering
 - **原因行为**：A5 上从 [TPT,K_POW2] 二维载入的张量做 tl.sum/tl.atomic_add 归约，内层 constexpr 宽度 2 或 4（<8）时只有部分车道参与；reshape 一维不修，arange 补到 8 即恢复。
@@ -6136,7 +6249,7 @@
 
 ### INF-1644 `triton_ascend_make_block_ptr_leftover_dma_alias` make_block_ptr 余量 DMA 别名到下一个 head
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / triton / make_block_ptr 载入越界
 - **原因行为**：make_block_ptr 的 leftover DMA 按满 tile 宽度取数：packed x[T,H,K]、K=60、BK=64 时 head 0 的 60:64 列就是同 token 的 head 1，别名值进入 tl.dot。
@@ -6147,7 +6260,7 @@
 
 ### INF-1645 `triton_ascend_insert_slice_corrupts_outside_region` insert_slice 破坏插入切片之外的元素
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / triton / al.insert_slice lowering
 - **原因行为**：SIMD 模式下把 extract_slice→permute 得到的列 insert_slice 到 32×32 张量 (0,0) 处，插入列正确但切片之外的元素被改写；910B3、fp16、3.6.0+gitfd24f3aa。
@@ -6158,29 +6271,29 @@
 
 ### INF-1646 `triton_ascend_block_k256_bias_add_dropped_rows` BLOCK_K=256 特化丢弃 bias 加法前四行
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / triton / codegen BLOCK_K 特化
 - **原因行为**：3.2.2 + CANN 8.5.0 在 bf16 输出路径上，c += bias（1D bias 隐式广播）在 BLOCK_K=256 特化里每 tile 前 4 行的加法被整体丢弃；BLOCK_K=128 正常。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：40 行独立最小核（tl.dot+scale+to(bf16)+bias add）复现：BLOCK_K=256 时每 tile 前 4 行等于没加 bias，BLOCK_K=128 零失败；无报错，只有逐元素对比可见。
+- **影响详情**：910B3+CANN8.5.0，40行独立最小核复现：BLOCK_K=256、bf16输出、1D bias广播加法时，每tile前4行像没加bias而非随机噪声；无报错无NaN，某些token位置系统性偏低、精度指标小幅下降；BLOCK_K=128正常，易被当成autotune选参问题。
 - **改进措施**：检测 同一 kernel 在 BLOCK_K=128/256 两档分别跑逐元素对比；matmul+bias 类输出改 autotune 前先做固定 BLOCK_K 回归；修复 规避=避免 BLOCK_K=256 特化（退回 128）；issue closed，正文未给修复 PR
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/1863
 
 ### INF-1647 `triton_ascend_same_program_reload_corrupted` 同 program store 后重读返回损坏值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / triton / 同程序 store→load 保序
 - **原因行为**：同一 program 内 tl.store 写 output_ptr 后立即从同一地址 tl.load，读回的不是刚写入的值（损坏且每次不同）；把归一化拆到第二个 kernel 就完全正确。
-- **影响对象**：数值结果；输出分布（静默错误）
+- **影响对象**：数值结果；输出分布（不可复现）
 - **影响详情**：FlagGems top-k 带 renormalize：sum_err 1.61e10、ref_err 3.18e9、repeat_diff 3.05e9，ids 仍全对；0 次重读时 2.38e-07，1 次重读即坏，重读越多越差。
 - **改进措施**：检测 对“同一 program 内写后重读”的 kernel 做重复运行比较（repeat_diff）与只读回第 N 个值的消融；把归一化拆成第二 kernel 作对照；修复 规避=把依赖刚写入值的计算拆到第二个 kernel（issue 内已验证 repeat_diff=0）；根因落在 backend/triton-adapter-opt/bishengir/runtime 尚未定论（closed）
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/1416
 
 ### INF-1648 `triton_ascend_gather_load_reuses_first_value` gather 载入基址变化却读回同一值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / triton / gather tl.load 复用
 - **原因行为**：循环内两次 gather 只有行基址不同（base_x 分别为 0 与 2），device_print 显示基址已变而 val 完全相同；第二次载入复用了首次的读取结果，未按新地址重取。
@@ -6192,33 +6305,22 @@
 
 ### INF-1649 `triton_ascend_extract_slice_returns_zeros` extract_slice 取出全零致 dot 结果错
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / triton / al.extract_slice lowering
-- **原因行为**：950PR、3.2.2（20260611）上用 extension.extract_slice 从 x2 取块返回全零，后续 tl.dot 因此只算出部分行；同 kernel 与 torch 参考最大误差 0.88。
+- **原因行为**：950PR、CANN 9.0.0、triton-ascend 3.2.2（20260611），extension.extract_slice 取块后参与 tl.dot 时，从非零张量切出的块为全零。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：M=N=K=4 的 addmm 用例：切片打印全零，输出第 2、4 行是 0（参考非零），精度 FAIL 最大误差 0.884573；无报错。
+- **影响详情**：M=N=K=4 的 addmm 用例：切片打印全零，Triton 输出 y 第 1、3 行为 0，第 0、2 行等于参考第 2、4 行（整体错位一半），与 torch 参考最大误差 0.884573、精度 FAIL；无报错。
 - **改进措施**：检测 对 extract_slice 的结果先 store 出来自检（应为非零），再做 dot；小 shape（M=N=K=4）的 addmm 回归可稳定暴露；修复 待定（issue closed，正文未给修复 PR）；短期规避=不用 extract_slice，改指针偏移载入
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/649
 - **关联**：var:INF-1645
 
-### INF-1650 `ms_softmax_const_fold_exp_overflow_nan` 常量折叠的 softmax 用朴素 exp 溢出成 NaN
-
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：编译器 / mindspore / Graph Const 常量折叠 softmax
-- **原因行为**：前端常量折叠对 ops.softmax 用朴素 np.exp 实现且不先减行最大值，大幅值常量输入在编译期 exp 溢出，输出 nan 而运行时路径正确。
-- **影响对象**：数值结果（数值异常）
-- **影响详情**：常量 [[1000,1000],[1200,1200]] 上 Graph(Const) 的 softmax 输出全 nan 并报 overflow encountered in exp，PyNative 与 Graph(Arg) 都得 [[0.5,0.5],[0.5,0.5]]。
-- **改进措施**：检测 同一 softmax 表达式分别用入参和无参 @jit（捕获闭包常量）执行并比较；Graph(Const) 出现 nan 或 exp 溢出告警即命中；修复 待定（issue open，无修复 PR）；方向：常量折叠改用减行最大值的稳定 softmax 实现，而非朴素 np.exp
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29396
-
 ### INF-1651 `ms_select_const_fold_broadcast_shape_loss` 常量折叠的 select 广播后形状与数值被破坏
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / mindspore / Graph Const 常量折叠 select
-- **原因行为**：前端常量折叠对需要广播的 ops.select 不做广播推导，把 (2,3) 的输出缩成 (1,3)，并把 -0.0、NaN 一并写成 0.0。
+- **原因行为**：GRAPH_MODE 下 ops.select 输入为闭包常量且需广播时，前端 evaluator 错误收缩输出 shape，并把 -0.0 与 NaN 改写为 0.0。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：cond (2,1)、x (1,3)、y (2,3) 时 PyNative 与 Graph(Arg) 得 (2,3) 的 [[1,-0,nan],[4,-5,6]]，Graph(Const) 只剩 (1,3) 一行且 -0.0、NaN 全变 0.0。
 - **改进措施**：检测 把 select 的输入写成闭包常量跑一次 Graph(Const)，与传参版比较输出 shape 与逐元素值；shape 变小或 -0.0/NaN 被抹平即命中；修复 待定（issue open，无修复 PR）；方向：常量折叠复用运行时的 broadcast 推导，不要自行折叠 shape
@@ -6226,7 +6328,7 @@
 
 ### INF-1652 `ms_const_fold_int8_reduce_int64` 常量折叠把 int8 reduce 输出成 Int64
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / mindspore / 常量折叠 reduce dtype 推导
 - **原因行为**：Graph Const 常量折叠对 int8 输入的 ReduceSum/ReduceProd 把输出提成 Int64，PyNative 与 Graph(Arg) 都保持 Int8，同一表达式两种 dtype。
@@ -6238,7 +6340,7 @@
 
 ### INF-1653 `ms_graph_ignores_masked_fill_inplace_stmt` Graph 模式静默忽略语句形式 masked_fill_
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / mindspore / Graph 模式原地语句处理
 - **原因行为**：Graph 模式把语句形式的 y.masked_fill_(mask, v) 当无副作用语句丢弃，返回值形式却生效，两种等价写法结果不同。
@@ -6247,20 +6349,9 @@
 - **改进措施**：检测 对同一 Cell 分别用语句形式和返回值形式写 masked_fill_，Graph 下比较输出；语句形式未改动即命中，另需确认 PyNative 报未注册内核；修复 待定（issue open，无修复 PR）；方向：Graph 要么与返回值形式一致地生效，要么像 PyNative 一样明确拒绝不支持的 CPU 原地操作
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29624
 
-### INF-1654 `ms_matmul_empty_graph_scalar` 零尺寸 matmul 在图模式返回标量 0.0
-
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：编译器 / mindspore / Graph/JIT matmul 空张量推导
-- **原因行为**：Graph/JIT 的 matmul 形状推导对含 0 维的输入退化成标量输出，没有按 (0,3)@(3,2)→(0,2) 的矩阵乘法规则给出空矩阵。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：x (0,3)、y (3,2) 时 PyNative 返回 shape (0,2) 空矩阵，Graph/JIT 返回 shape () 的标量 0.0；空 batch 或空序列分支下游按 shape 取索引即出错。
-- **改进措施**：检测 对 (0,3)@(3,2) 分别在 PyNative 与 @ms.jit 下执行并打印 shape；图模式给出 () 而不是 (0,2) 即命中；修复 待定（issue closed，未见修复 PR/版本说明）；方向：图模式 matmul 的 shape 推导保留 0 维，不要退化成标量
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29315
-
 ### INF-1655 `ms_dvm_assign_fused_div_bad_address` Assign 参与 DVM 融合后 Div 读到非法地址
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / mindspore / DVM 图算融合 pass Assign 场景
 - **原因行为**：图算融合 pass 没有限制 Assign 后融，Assign 结果被融进子图后 Div 的第二个输入指向非法地址而不是 %0。
@@ -6271,7 +6362,7 @@
 
 ### INF-1656 `ms_strided_slice_nop_skip_negative_stride` 负 stride 切片被当 Nop 跳过致数据未翻转
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / mindspore / StridedSlice Nop 判定
 - **原因行为**：NopNode 判定只看 input/output shape 相等与 mask 参数为默认值，不看 stride 符号；负 stride 需要翻转数据，却被判为 Nop 跳过下发。
@@ -6280,42 +6371,20 @@
 - **改进措施**：检测 构造 stride 含负值、但 output 与 input shape 相同的切片，比较算子结果与 numpy 等价切片；两者不等即命中（正向与反向 StridedSliceGrad 都要查）；修复 issue 给出的方案：在 CheckStridedSliceForwardOrBackWardIsNopNode 里加 stride 符号判断，stride 含负值即提前返回 false；此前为规避精度问题已在 PR https://gitee.com/mindspore/mindspore/pulls/86464 临时删除该优化
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/20951
 
-### INF-1658 `ms_tanh_expander_no_clamp_overflow` tanh 展开未裁剪输入，大值 exp 溢出
-
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：编译器 / mindspore / tanh 展开/lowering
-- **原因行为**：tanh 的展开实现用指数形式且不对输入做区间裁剪，幅值较大时 exp(2x) 溢出，与 Aclnn 先 clip 到安全区间的实现不一致。
-- **影响对象**：数值结果（数值异常）
-- **影响详情**：大幅值输入下展开结果与 Aclnn 不一致、数值不稳定，常规幅值区间两侧一致；issue 未给具体数值与最小用例，只说明可观察到差异。
-- **改进措施**：检测 对同一 tanh 输入分别在展开路径与 aclnn 路径下执行，取 |x| 很大的边界值比较输出；出现溢出或与 aclnn 不一致即命中；修复 待定（issue open，仅供方向：展开时按 aclnn 的区间对输入做 clip，再走指数形式）
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/28936
-
-### INF-1660 `ms_pynative_lora_zero_b_grad_wrong` PyNative 链式 matmul 在 B=0 时算错 LoRA 梯度
-
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：编译器 / mindspore / PyNative 自动微分 VJP
-- **原因行为**：PyNative 反向对 x@A^T@B^T 这条链在 B 全零时算错两个 adapter 的梯度：grad_A 非零、grad_B 为 0，等于把反向链路剪错。
-- **影响对象**：梯度（静默错误）
-- **影响详情**：B=0 初始化下 grad_A≈1.0（数学上必为 0）、grad_B=0（应非零），adapter 完全不更新，grad_norm=0，lr=1e-5 与 lr=1.0 的 loss 逐位相同。
-- **改进措施**：检测 B 置零后跑一步 backward，打印 sum(|lora_a.grad|) 与 sum(|lora_b.grad|)；前者非零或后者为 0 即命中，再把 B 换极小非零值看是否恢复；修复 待定（issue closed，未给修复 PR）；规避：把 B 初始化为极小非零（如 normal_(0,1e-4)），issue 报告者以此绕过
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29469
-
 ### INF-1668 `te_softmax_store_mask_pad_lane_row_bleed` TE softmax store 丢归约掩码致 pad lane 写穿行
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / TE store 掩码重建
 - **原因行为**：store 掩码重建把 lane 形融合归约节点误判为外层标量而不加 r0_mask；R0_BLOCK=16 大于段长 14 时 pad lane 地址越过行边界。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：SAM 端到端 990 个 NaN（5×196+5×2）；内核级对拍 155,998 个错配，99.5% 在 col{0,1}；普通行被写入 0.00236（应 0.00028），全掩码行 pad 值 NaN 经 pass-1 maximum 扩散整行。
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：SAM 输出 990 个 NaN：5 行整行 196 全坏，5 行仅 col0/1 坏；内核级对拍 155,998 个错配、修复后 0；普通行最后两个位置被邻居覆盖（0.00236 而非 0.00028），全掩码行 pad NaN 经 maximum 扩散整行。
 - **改进措施**：检测 末维 196、含全掩码行的 softmax 输入（R0_BLOCK=16>14）编译后与 eager 对拍，检查相邻行 col 0/1 是否被改写或出 NaN；也可内核级按地址公式构造参考值；修复 MR https://gitcode.com/Ascend/pytorch/merge_requests/47195 （open，未核实是否合入）：在白名单构造处 triton.py:3662 把分解式含内层 lane 符号的融合节点纳入白名单（+11/-1）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5146
 
 ### INF-1671 `te_simplify_loops_nonadjacent_merge_rope_index` 图模式 simplify_loops 合并非相邻轴致 RoPE 索引错位
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / simplify_loops/reindex
 - **原因行为**：can_merge_dims 经 Max(1,e)->e 折叠放松后允许非相邻迭代轴合并，而 reindex() 按位置消费索引变量、只能表达相邻轴合并，索引变量被静默错绑。
@@ -6326,21 +6395,21 @@
 
 ### INF-1673 `te_int64_downcast_collapses_nondense_layout` int64 边界降档把非 dense 视图塌成 contiguous 致索引错
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / boundary downcast 降档
 - **原因行为**：kernel 参数边界把 *i64 降为 *i32 并用 Tensor.to(int32) 转换数据；重叠/非 dense 视图无法零拷贝被静默物化为 contiguous，stride 变化后仍按编译期旧 stride 寻址。
 - **影响对象**：数值结果；梯度（静默错误）
-- **影响详情**：Longformer 训练 accuracy 33.22（远超容差）；int64 索引 2,359,296 元素中 96% 错、max_abs 589,824（int32 版 0 错）；scatter 后 value.weight.grad max_abs=0.0043，12 层累计致精度失败。
+- **影响详情**：Longformer triton_experimental 训练 accuracy 33.22 远超容差；int64 索引 2359296 中 96% 错，最大值 589823（应 1179647），int32 版 0 错；scatter 后梯度最大偏差 0.0043，12 层累计精度失败。
 - **改进措施**：检测 对 as_strided 重叠视图 / gapped slice / broadcast 输入做 i64 索引生成，比较 compiled 与 eager 的 (out!=ref).sum()；或检查 downcast 转换缓冲的 stride 是否与源参数一致；修复 待定（issue closed，正文未给修复 PR）；期望 boundary downcast 的转换缓冲保持参数原始 stride，而不是塌缩为 contiguous
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/4701
 
 ### INF-1675 `te_reduction_inplace_reuse_cross_core_race` 归约 kernel 复用死输入 buffer 跨核竞态致偶发 NaN
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / TE decide_inplace_update
-- **原因行为**：decide_inplace_update 只校验索引等价、不看时序，把已死输入复用为 kernel 输出；统计循环与归一化循环在 48 核 group dispatch 下跨核交错，某核统计时另一核已改写数据。
+- **原因行为**：decide_inplace_update 只校验索引等价、不看时序，允许复用已死输入为输出；统计与归一化循环在 48 核 group dispatch 下跨核交错，某核统计时另一核可能已改写数据。
 - **影响对象**：数值结果（不可复现）
 - **影响详情**：Llama-2-7b 整模型偶发 NaN、位置每次不同；受影响 kernel 隔离重放 10 次逐位不一致，输出 absmax 放大约 300 倍。
 - **改进措施**：检测 对含 reduction 的融合 kernel 输出做同一输入重复重放（≥10 次）比逐位一致性，并检查 codegen 产物是否出现 mutated_arg_names=[in_out_ptr0] 且 num_reduction>0 的 buffer 复用；修复 关联 PR（正文只写"修复见关联 PR"，未给链接，未核实合入）：reduction 节点跳过 decide_inplace_update 的 in-place 复用决策
@@ -6348,7 +6417,7 @@
 
 ### INF-1683 `inductor_philox_replay_rng_stream_desync` 编译期 Philox 重放与 eager RNG 流不同步致 mask 错位
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / Inductor RNG codegen
 - **原因行为**：Inductor 编译期对 uniform/rrelu_with_noise 的 Philox 重放未与 NPUGeneratorImpl 状态推进对齐，compiled 与 eager 消耗不同步的 RNG 流，mask 错位。
@@ -6357,25 +6426,25 @@
 - **改进措施**：检测 同 seed 下 compiled 与 eager 逐位比对 dropout 族输出；或设 torch._inductor.config.fallback_random=True 复跑，若转为逐位一致即命中该缺口；修复 待定（issue open）：把 bernoulli 族的 unsafe_rng_fallbacks 推广到 uniform（含各 overload）与 rrelu_with_noise，或提供 graph-safe 的 PhiloxNpuState 重放使 codegen 与 eager 消耗同一 RNG 流
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5249
 
-### INF-1687 `te_mv_tail_program_segment_loss` TE 编译 aten.mv 尾部 program 段整段丢写致错值
+### INF-1685 `inductor_scalar_grid1d_48_program_race` 标量 Grid1D kernel 按 48 核发射致 loss 数据竞争
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
-- **原因对象**：编译器 / pytorch / TE mv/matmul fold
-- **原因行为**：3D×1D 经 _override_matmul_should_fold_for_npu 放宽为一律 fold 到 mv，TE 对 mv 的 tile 归约在高 pid program 段漏写，输出按 block 边界整段错。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：torch.mv：25×10 max_abs 3.69（前 10 行对、15/25 错）、16×8 4.06、32×10 7.0、100×10 9.1；fp32 正常应 <1e-5；跨种子稳定，opinfo matmul/rmatmul 4 例 15/25 元素失配。
-- **改进措施**：检测 逐 shape 扫描 torch.compile(torch.mv) 与 eager 的 max_abs，重点看 M≥16 且行数非 grid 整倍数的小 K 形状，错误集中在尾部行；3D×1D matmul 另跑 forward-only 图排除反向；修复 待定（issue closed）；方向：排查 TE 对 aten.mv reduction 的 program 发射边界，或对 rhs 为 1D 的 matvec 关闭 fold、回退 bmm/mv 原生路径
-- **来源**：https://gitcode.com/Ascend/pytorch/issues/5071
+- **原因对象**：编译器 / pytorch / Inductor launcher grid 计算
+- **原因行为**：零 free-x-node 的 xnumel=1 标量 kernel 未被按 xnumel 限制 grid_0，按 48 核发射；program_id 不参与寻址，48 个 program 同写 in_out_ptr0[0]。
+- **影响对象**：训练信号；数值结果（不可复现）
+- **影响详情**：DeBERTaV2/ALBERT/MobileBERT/RoBERTa QA 的 start/end logits、梯度与参数更新均通过精度检查，仅最终 loss 标量偏 3~6；关 ACLGraph 仍复现，呈非确定性竞争。
+- **改进措施**：检测 对 grid_type=Grid1D、npu_num_x_nodes=0、xnumel=1 的标量 kernel 检查实际 grid_0；或把 loss 标量与逐项指标分开比对，loss 单点偏差而其余全对即指向该路径；修复 待定（issue closed，正文只给期望行为）：非 reduction 的零/单 free-x-node Grid1D 应按 xnumel 计算 launch grid，xnumel=1 只启动一个 program
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/3812
 
 ### INF-1692 `te_argmax_looped_reduction_tile_local_index` 动态 shape argmax 返回 tile 内局部下标
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / pytorch / triton_helpers 双源归约
 - **原因行为**：looped reduction 的 index 累加器是循环携带的，喂给双源 tl.reduce 后本后端返回当前 lane 坐标而非累加器里的全局下标，每轮把下标重置为 tile 内偏移。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：argmax/argmin 及 torch.max(dim=)/min(dim=) 的 indices 被限制在 tile 长度内，与 eager 大面积不一致；归约轴不超过一个 tile 的静态 shape 正确，动态 shape 几乎必走 looped reduction。
+- **影响详情**：动态 shape 且归约轴长度超过单个 tile 时，需要 indices 的 argmax/argmin/max(dim=) 返回的下标被限制在 tile 长度内，与 eager 大面积不一致；归约轴不超过一个 tile 的静态 shape 不暴露。
 - **改进措施**：检测 动态 shape 下对归约轴做 argmax/argmin 并与 eager 比 indices 范围；看返回值是否全部落在 tile 长度内（静态小 shape 用例查不出来）；修复 dynamic_shape_opt 分支提交 afa0b99b4 改为两次单源归约（先求极值再求最小下标），并配 50a658b57 用内建 tl.max/tl.min 避开 tl.reduce 编译慢路径；两提交须一并合入，未核实是否已进主线
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/4108
 
@@ -7219,21 +7288,9 @@
 - **改进措施**：检测 sleep 前后记录选定参数值与确定性推理参考对比；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/18838 （已合入，跟踪 issue #19119 已 closed；发布版本未核实）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/19119
 
-### INF-1494 `op_plugin_paged_attention_splitfuse_v2_context_lens_graph` splitfuse_v2 context_lens 拷贝未入图致精度
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / pytorch / splitfuse_v2 context_lens
-- **原因行为**：context_lens 由 host 同步拷贝到 device 的动作没被图捕获；图模式复用已捕获的图时该输入不按预期刷新，attention 仍按旧 context_lens 计算。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：310P 上图模式调用 _npu_paged_attention_splitfuse_v2，context_lens 变化后输出仍按上一轮值计算，attention 结果与参考不一致；无报错、无 NaN。
-- **改进措施**：检测 图模式下连续两次以不同 context_lens 调用该接口，比对第二次输出是否跟随输入变化；与逐轮 eager 执行对照可发现差异；修复 issue 为 closed，正文只给现象，未给修复 PR 与具体修法（合入与发布状态未核实）
-- **来源**：https://gitcode.com/Ascend/op-plugin/issues/275
-- **关联**：var:INF-1371
-
 ### INF-1528 `torchnpu_fill_uninitialized_memory_not_honored` fill_uninitialized_memory 在 NPU 不填 NaN
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / pytorch / empty/resize_as 分配填充
 - **原因行为**：DeterministicGuard(fill_uninitialized_memory=True) 下 NPU 的 torch.empty 与编译后 resize_as 扩展区均未按 torch 契约填 NaN，返回未初始化数据。
@@ -7244,7 +7301,7 @@
 
 ### INF-1554 `vllm_ascend_310p_pooling_chunked_prefill_wrong_embedding` 310P pooling 分块 prefill 只池化部分隐状态致向量错
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / vllm / pooler chunked prefill 路径
 - **原因行为**：310P 上 --runner pooling 开启 chunked prefill 时，pooler 只对当前分块的、部分 hidden states 做池化；输入长度跨过 chunk 边界即触发，而不是用整段序列的隐状态。
@@ -7253,76 +7310,31 @@
 - **改进措施**：检测 同一长输入分别在有/无 chunked prefill 下取 embedding，与参考服务（同模型 T4 vLLM 或官方 API）算余弦相似度；同时比对 pooler 输入覆盖的 token 范围；修复 规避已验证：启动加 --no-enable-chunked-prefill（强制单次 prefill，pooler 能看到完整 hidden states）；issue open，未见修复 PR
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/17797
 
-### INF-1575 `ms_tensor_max_dim_graph_drops_indices` Tensor.max(dim) 图模式静默丢弃 indices
-
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / mindspore / Tensor.max/min 位置参数重载
-- **原因行为**：Cell 里用位置参数调 x.max(0)/x.min(0) 时，Graph 前端走到只返回值 Tensor 的重载，PyNative 返回 (values, indices)，indices 被静默丢弃。
-- **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：MindSpore 2.9.0/2.10.0 CPU：Graph 下 (max,min) 只剩两个 values（items=2），PyNative 每次归约应返回 (values, indices) 共 4 项。
-- **改进措施**：检测 同一 Cell 在 PyNative/Graph 下打印返回结构的 type、len 与每个元素的 dtype，检查 indices 的整数 dtype 是否还在；修复 待定（issue open；2.9.0 与 2.10.0 均复现）
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29596
-
-### INF-1577 `ms_dvm_frontend_boundary_missing_flush` DVM 融合在 frontend-only 边界漏 flush 致错值
-
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / mindspore / PyNative DVM 无图融合 flush
-- **原因行为**：old op_graph view、StopGradient 等 frontend-only 边界算子生成新 Tensor 但不触发 backend push/wait，pending 融合图未 flush，后续捕获当成新外部输入。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：Ascend 开 MS_DEV_PYNATIVE_FUSION_FLAGS=--opt_level=1 后，neg→mul→strided_slice→abs 链路结果与关融合不一致；表现为精度错误、偶发不稳定。
-- **改进措施**：检测 同一段代码开关 DVM 融合对比输出；在 view/StopGradient/Detach 边界后强制 flush 或同步，看差异是否消失；修复 待定（issue open，master 未修）；方向：frontend-only 边界生成新 Tensor 前 flush pending 融合图
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29227
-
-### INF-1579 `ms_dvm_ops_map_view_address_collision` view 算子共享 device_address 致融合取错输入
-
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / mindspore / DVM ops_map_ 地址键
-- **原因行为**：ops_map_ 以 device_address 裸指针为 key，slice/reshape 出的多个 view 共享同一地址却 shape 不同，后一个 view 命中前一个的 Load 节点。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：x1[10:18] reshape 成 (2,1,4) 与 x1[40:44] 的 (4,) 地址相同，AddExt 复用 (2,1,4) 的 Load，DVM 按错 shape 计算，输出错误。
-- **改进措施**：检测 对同一基张量切多个 slice/view 后混用，比较开关 DVM 融合的输出；或打印 ops_map_ 的 key 与命中的 Load shape；修复 待定（issue open，master）；方向：key 改为 TensorPtr/alias 标识或 (address, shape, stride)
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29175
-
-### INF-1581 `ms_dvm_input_cache_ignores_shape_override` 融合输入缓存忽略逻辑 shape 覆盖致广播错
-
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / mindspore / DVM Input 缓存复用
-- **原因行为**：Input(x, shape_override) 的缓存 key 只有 Tensor*，命中时不比较逻辑 shape；同一 tensor 先按 [1,C,1,1] 进融合，后续默认 Input(x) 复用了广播版 NDObject。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：BatchNormElemt 把 mean/invstd 以 [1,C,1,1,…] 送入，后续 Add(mean,delta) 期望 [C]，却拿到广播版输入，输出 shape 与基线不一致。
-- **改进措施**：检测 在 BatchNormElemt/BatchNormElemtGrad 后接同一 tensor 的默认输入算子，比较开关融合的 shape 与数值；方阵 MatMul transpose view 同类；修复 待定（issue open）；短期方案：调用 Input(...,shape) 时不读写 ops_map_ 缓存；MatMul 只在真正 transpose view 时传 shape override
-- **来源**：https://gitcode.com/mindspore/mindspore/issues/29281
-- **关联**：var:INF-1579
-
 ### INF-1584 `ms_dvm_flush_output_address_stomp` 融合 Flush 循环内释放输出地址致踩踏
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / mindspore / DVM Flush 输出地址
 - **原因行为**：Flush 在 for 循环内用局部 auto device_address = dev_addr.lock() 持有输出地址，循环结束即释放；下一轮或 Codegen 申请 workspace 时拿到同一地址，输出互相覆盖。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（不可复现）
 - **影响详情**：多输出或带 workspace 的融合算子（InplaceAddExt+MatMul，fp16，512x1024/512x448）在 --opt_level=1 --enable_ops=MatMul 下与标杆比对失败。
 - **改进措施**：检测 多输出/带 workspace 的融合算子逐输出与基线比对；打印 Flush 中每轮申请到的 device 地址看是否重复；修复 待定（issue open，master 与 r2.8 均存在）；方向：把 weak_ptr 提升出的 shared_ptr 移到循环外或按输出持有
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/28999
 
 ### INF-1590 `ms_aclnn_cache_optional_vector_hash_missing` ACLNN 缓存哈希漏 optional vector
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / mindspore / op_api_cache 复合类型哈希
 - **原因行为**：GatherInfo 对 pair<optional<vector<int64_t>>,bool> 没有语义哈希重载，退回对象内存拷贝，vector 的指针/size/capacity 相同即命中，元素值不参与 key。
-- **影响对象**：梯度；训练信号（静默错误）
+- **影响对象**：数值结果；梯度；训练信号（静默错误）
 - **影响详情**：HyperParallel DSA Indexer 变长 TND 训练：step142 indexer_loss 从 0.0206 涨到 111.3，step150 grad_norm 0.25→2232283，主 loss 一致。
 - **改进措施**：检测 对同一 aclnn 调用构造两份元素值不同但对象表示相同的 pair<optional<vector<int64_t>>,bool>，比较 AclnnHash；或对 actual-seq 做 A->B->A 回归看输出是否回到基线；修复 HyperParallel 侧临时规避 PR #1173（改回重新生成 executor 的路径，未核验细节）；MindSpore 侧待定，issue open 无修复 PR
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29610
 
 ### INF-1598 `runtime_external_event_wait_addr_zero_deadlock` 外部事件 wait 未 record 时写地址 0 致回放挂死
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / 通用 / capture_model 外部事件 wait
 - **原因行为**：外部事件 wait 的地址先被置 0，仅当 event 已 record 且未 reset 才回填；consumer 先于 producer record 执行时，这个 0 被原样写进 wait entry。
@@ -7333,30 +7345,52 @@
 
 ### INF-1600 `runtime_aclfloattofloat16_nan_inf_to_fp16max` aclFloatToFloat16 把 NaN/Inf 压成 FP16 最大值
 
-`故障` · `pending_audit` · `infra_off` · `no` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `no` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / 通用 / fp16_impl FloatToFp16
 - **原因行为**：FloatToFp16 把 eF>0x8F 的溢出/NaN/Inf 合并成同一分支，统一输出 eRet=0x1E、mRet=0x3FF 即 65504，没有按 eF==0xFF 区分 mF==0 的 Inf 与 mF!=0 的 NaN。
-- **影响对象**：数值结果（数值异常）
-- **影响详情**：950 平台上 aclFloatToFloat16(NaN/Inf) 返回 ±65504 而不是 NaN/Inf，NaN 不再向下传播、Inf 被压成有限值，下游数值看似正常；host 侧做 fp16 转换的路径都受影响，无告警。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：950 算力平台 host 侧调用 aclFloatToFloat16 且输入 NaN 或 ±Inf 时，返回 ±65504 而非 NaN/Inf；NaN 坏值变成看似正常的有限值，调试时 loss/输出与参考实现不一致；Inf 表示 mask/上界得到 65504 而非无穷。
 - **改进措施**：检测 对 NaN/Inf 调用 aclFloatToFloat16 后检查结果是否为 0x7E00/0x7C00；用 isfinite/isnan 断言而非数值比较；修复 issue 给出修复逻辑：eF==0xFF 时按 mF 是否为 0 分别返回 fp16 Inf（0x7C00）与 NaN（保留符号位与尾数），不再落入 FP16_MAX 分支；issue 已 closed，合入与发布未核实
 - **来源**：https://gitcode.com/cann/runtime/issues/790
 
 ### INF-1601 `ms_custom_v2_cache_reuse_accumulate_drift` v2 executor 缓存复用不清零致累加算子漂移
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / mindspore / CustomV2AclnnKernelMod 缓存
 - **原因行为**：v2 executor 缓存的 key 只含 shape 与标量值，命中后 Launch 只刷新 tensor 地址、不清输出缓冲，累加型 kernel 在复用缓冲上继续累加。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：MindSpore 2.10.0 + 910B3：同一 FusedDegree 实例连续 5 次调用 maxdiff=0/14/28…，缓冲回收后回到 0；新建实例首次调用正确，2.9.0 无此现象。
+- **影响详情**：MindSpore 2.10.0+Ascend 910B3+CANN 8.5.1 PYNATIVE，入度统计类累加 kernel 同一 op 实例连续调用 5 次，maxdiff 0/14/28 递增；缓冲回收后回 0，新建实例首次正确，2.9.0 无此问题。
 - **改进措施**：检测 同一自定义算子实例连续多次调用并逐次与参考实现比对 maxdiff；漂移随调用次数线性增长即为输出缓冲未清零；修复 待定（issue open）；方向：v2 路径 Launch 前清零输出，或显式声明 accumulate/inplace 语义
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29644
 - **关联**：var:INF-1590
 
+### INF-1602 `runtime_aicerr_meta_copied_zero_bytes` AIC Error 采集把 kernel 元数据拷成 0 字节
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：运行时/执行 / 通用 / kernel 元数据搜索与拷贝
+- **原因行为**：GetSearchPath 把 ASCEND_CACHE_PATH 放首位且递归搜索不排除转储输出目录；File::Copy 在源与目标为同一 inode 时先 O_TRUNC 清零再读，读到 0 字节仍返回 ADUMP_SUCCESS。
+- **影响对象**：指标/日志（静默错误）
+- **影响详情**：开启 AIC Error 采集且 dumpPath 与 ASCEND_CACHE_PATH 同目录，并在第二次及以后触发、转储目录已有副本时，转储出的 kernel *.json/*.o 全是 0 字节，msaicerr 解析失败、拿不到出错 kernel 信息；拷贝返回成功，日志无任何告警。
+- **改进措施**：检测 检查 {dump_path}/extra-info/data-dump/<devId>/ 下 *.json/*.o 大小是否为 0；或对比 kernel_meta 原件与转储副本；修复 issue 指出两处需改：搜索路径排除转储输出目录、File::Copy 增加源/目标同 inode 判断并返回错误；issue 已 closed，合入与发布未核实
+- **来源**：https://gitcode.com/cann/runtime/issues/916
+
+### INF-1603 `runtime_adump_shared_state_no_sync` adump 五处共享状态无同步致 dump 丢失或崩溃
+
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：运行时/执行 / 通用 / adump 配置/回调/索引共享态
+- **原因行为**：dumpConfigInfo_ 的读写落在两把不相交的锁、dumpInitNum_ 与 g_atomicIndex 裸自增、messageCallback_ 与 g_dynamicChunk 无锁读写，五处共享状态缺少互斥或原子保护。
+- **影响对象**：指标/日志；可用性/进度（静默错误）
+- **影响详情**：多线程或多流并发推理并开dump，或并发启停、运行期注册/注销回调、异常dump与进程收尾同时发生时，dump少条、元数据关联到错误算子，或收尾偶发崩在回调；单线程单流复跑通常正常且无错误日志。
+- **改进措施**：检测 并发抓取 dump 与 acldumpRegCallback/UnregCallback，核对 dump 条数与元数据索引是否唯一；TSAN/静态扫描查共享变量；修复 issue 建议给 dumpConfigInfo_ 统一锁、dumpInitNum_ 改原子、messageCallback_ 加锁读写、g_dynamicChunk 析构前先置标志、g_atomicIndex 改 fetch_add；issue 已 closed，合入与发布未核实
+- **来源**：https://gitcode.com/cann/runtime/issues/1003
+
 ### INF-1630 `mindformers_predict_cpu_infer_boost_gather_wrong_row` 自动开 infer_boost 致 CPU 推理 embedding 错行
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / mindspore / infer_boost host gather
 - **原因行为**：predict + Graph + device_target=CPU 时 build_context 自动把 Context 的 infer_boost 置 on，host 侧 gather 走 infer_boost 路径后结果错
@@ -7367,7 +7401,7 @@
 
 ### INF-1631 `triton_ascend_first_launch_drops_high_pid_programs` 首次启动丢失 pid≥group_tail 的 program
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / triton / 首次启动 program 落地
 - **原因行为**：Inductor triton_experimental 编出的 odometer 式归约核首次启动时 pid>=group_tail 的 program 全部没落地，其输出单元保持旧值；同进程重启同一二进制即写全，ttir 逐行正确。
@@ -7378,43 +7412,20 @@
 
 ### INF-1634 `triton_ascend_launcher_value_folded_arg_shift` launcher 打包被折叠参数致后续实参错位
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / triton / make_launcher 参数打包
 - **原因行为**：make_launcher 只按 signature 判断是否占位，而编译器把非常量却被 value-fold 的实参从二进制参数表删掉；两表不一致后，被折叠参数之后的每个实参整体前移 4 字节。
-- **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：sam：注入的 3 个 grid 参数错位，外层 trip 变 196×48×1=9408（应 48），原地 softmax 反复处理收敛到均匀（maxdiff 0.4946），32 个 encoder 块级联成 NaN，attention-prob rms_rel 51.96%。
+- **影响对象**：数值结果；输出内容（数值异常）
+- **影响详情**：sam：3 个注入 grid 参数错位，外层 trip 变 196×48×1=9408（应 48），原地 softmax 反复处理收敛到均匀，逐元素最大差约 0.49，后续 32 个 encoder 块级联成 NaN，attention probability 相对 rms 误差约 52%。
 - **改进措施**：检测 比对 launcher 打包的 slot 数与二进制实际参数个数（hermetic A/B 可直接调 make_launcher 检查是否多出字段）；修复 PR #2387 归一化 constants 键（到达时为 1-tuple）并在两处打包点跳过被折叠下标（open，未发布）
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/2407
 
-### INF-1637 `triton_ascend_runtime_fp16_bf16_scalar_arg_wrong` 运行期 fp16/bf16 标量实参传值错误
-
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / triton / 运行期标量实参传递
-- **原因行为**：显式声明为 fp16/bf16 的运行期标量实参被错误解释，kernel 内 .to(tl.float32) 后存出的值不等于传入值；fp32 标量对照正常，3.2.2 与 3.6.0 均复现。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：最小核只做 value.to(tl.float32) 再 store，传 1.5 得不到 1.5，fp32 对照正确；任何用半精度标量做 scale/eps 的 kernel 都会静默偏，无报错、无 NaN。
-- **改进措施**：检测 对 kernel 的每个半精度标量实参做恒等回读用例（store 后与 Python 侧值比较）；单测里补 fp16/bf16 标量签名；修复 规避=标量按 fp32 声明、kernel 内显式转型；无修复 PR（open）
-- **来源**：https://github.com/triton-lang/triton-ascend/issues/2364
-- **关联**：var:INF-1634
-
-### INF-1639 `mindformers_fused_fsdp_allgather_buffer_freed` 融合 all-gather 源 buffer 提前释放，重计算读到残参
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / mindspore / FSDP 融合 all-gather 拷贝
-- **原因行为**：handle.wait() 只等 all-gather 完成；split_with_sizes_copy 刚入队就 free_all_gather_output() 把 ag_output resize 成 0，拷贝源提前失效
-- **影响对象**：数值结果；训练信号（数值异常）
-- **影响详情**：replay 的 linear_qkv 输出与首次 forward 逐元素不同（diff_count 6301、max_abs≈3.1e38），差异经 K/V 传到 EP token 计数，最终报 Allocated size does not match required size
-- **改进措施**：检测 用 activation-checkpoint invocation id 逐层配对首次 forward 与 replay 的张量；检查 fused ag_output storage 的释放时机；修复 split_with_sizes_copy 完成前保持 ag_output 有效（stream event / 延迟回收 / 双 buffer）；A/B 中只保留 ag_output 后 936 个探针全一致（未核实合入）
-- **来源**：https://gitcode.com/mindspore/mindformers/issues/2488
-
 ### INF-1641 `mindformers_old_gate_aclnn_cache_queue_indexer_drift` ACLNN cache queue 致 DSA1 indexer loss 漂移
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
-- **原因对象**：运行时/执行 / mindspore / ACLNN cache queue 复用
+- **原因对象**：运行时/执行 / mindspore / ACLNN cache queue 配置
 - **原因行为**：旧 gate 62791fd0 在默认 aclnn_cache_queue_length 下 DSA1 的 indexer_loss/grad_norm 快速放大，置 queue length 0 后消失
 - **影响对象**：训练信号（静默错误）
 - **影响详情**：固定 step21 checkpoint 续训到 step70，indexer_loss 与 grad_norm 快速放大，主语言模型 loss 不受影响；换新 gate 9c330863 后默认配置即与关队列逐 step 一致
@@ -7423,11 +7434,11 @@
 
 ### INF-1662 `ms_aclnn_cache_vector_content_hash_miss` aclnn 缓存哈希漏 vector 元素值致 loss 暴涨
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / mindspore / op_api_cache 复合类型哈希
 - **原因行为**：op_api_cache 对 pair<vector<int64_t>,bool> 没有专门哈希重载，落入 MemcpyToBuf 只哈希 vector 的指针/size/capacity，actual_seq 的数值不进 key。
-- **影响对象**：训练信号；梯度（静默错误）
+- **影响对象**：数值结果；训练信号；梯度（静默错误）
 - **影响详情**：TND 训练 step380 后 indexer_loss/梯度偶发暴涨并随训练增长；关 aclnn 缓存（aclnn_cache_queue_length=0）异常完全消失，离线单算子复算正确。
 - **改进措施**：检测 构造两份元素值不同但对象表示相同的 pair<vector<int64_t>,bool> 比较 AclnnHash；或按 actual_seq 做 A→B→A 回归，看输出是否回到基线；修复 待定（issue open，无修复 PR）；规避：aclnn_cache_queue_length=0 关闭 aclnn 缓存后异常消失
 - **来源**：https://gitcode.com/mindspore/mindspore/issues/29506
@@ -7435,7 +7446,7 @@
 
 ### INF-1664 `ms_pynative_reducesum_stale_after_index_add` PyNative 下 index_add 后 ReduceSum 读到旧值
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / mindspore / PyNative index_add 数据依赖
 - **原因行为**：PyNative 中 index_add 与其后的 ReduceSum 之间缺少正确数据依赖，ReduceSum 读到 index_add 之前的输入缓冲。
@@ -7446,7 +7457,7 @@
 
 ### INF-1677 `npu_graph_replay_polluted_gather_index` NPUGraph 重放读到被复用内存的垃圾 gather 索引
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / pytorch / NPUGraph 捕获/重放内存池
 - **原因行为**：捕获期 kernel 用到的 aclnn workspace/池地址未纳入图内生命周期，重放间被复用回收；relaxed 捕获模式吞掉捕获期 device 错误，坏图留到首次 replay 才引爆。
@@ -7457,7 +7468,7 @@
 
 ### INF-1679 `event_wait_before_record_submit_race` Event.wait 早于 record 提交时未建流间依赖致脏读
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / pytorch / NPUEvent/StreamWaitEvent
 - **原因行为**：Host 侧 aclrtRecordEvent 仍在驱动缓冲队列、尚未提交到 Stream A 时，消费流已下发 aclrtStreamWaitEvent；Event 非 active，等待被当 no-op 放行，硬件级流间依赖未建立。
@@ -7468,7 +7479,7 @@
 
 ### INF-1681 `op_build_failure_poisons_process_npu_state` 算子建图失败后同进程 NPU 算子静默返回零/垃圾
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / pytorch / DynamicGRUV2 建图失败态
 - **原因行为**：fp32 DynamicGRUV2 因 DT_FLOAT 不支持、op store 无该算子而建图失败（EZ3002/500002），失败态未被清理且进程未按日志所述退出，同进程后续 NPU 算子返回值与 CPU 显著不一致。
@@ -7477,20 +7488,9 @@
 - **改进措施**：检测 捕获首次算子失败后在同进程跑 norm()、CrossEntropyLoss 与 CPU 同数据参照比较；重试同一算子后检查输出是否对输入翻倍不敏感；修复 待定（issue open，正文未给具体修复）；规避：算子致命失败后必须重启进程，不要用 try/except 重试掩盖
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/4738
 
-### INF-1685 `inductor_scalar_grid1d_48_program_race` 标量 Grid1D kernel 按 48 核发射致 loss 数据竞争
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：运行时/执行 / pytorch / Inductor launcher grid 计算
-- **原因行为**：零 free-x-node 的 xnumel=1 标量 kernel 未被按 xnumel 限制 grid_0，按 48 核发射；program_id 不参与寻址，48 个 program 同写 in_out_ptr0[0]。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：DeBERTaV2/ALBERT/MobileBERT/RoBERTa QA 的 start/end logits、梯度与参数更新均通过精度检查，仅最终 loss 标量偏 3~6；关 ACLGraph 仍复现，呈非确定性竞争。
-- **改进措施**：检测 对 grid_type=Grid1D、npu_num_x_nodes=0、xnumel=1 的标量 kernel 检查实际 grid_0；或把 loss 标量与逐项指标分开比对，loss 单点偏差而其余全对即指向该路径；修复 待定（issue closed，正文只给期望行为）：非 reduction 的零/单 free-x-node Grid1D 应按 xnumel 计算 launch grid，xnumel=1 只启动一个 program
-- **来源**：https://gitcode.com/Ascend/pytorch/issues/3812
-
 ### INF-1690 `fp64_silent_downcast_to_fp32` fp64 输入被静默降为 fp32 致校验与精度失败
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：运行时/执行 / pytorch / ToKernelNpu dtype 降级
 - **原因行为**：算子不支持 double 时 ToKernelNpu 只打印一条 Warning 就把输入 cast 为 float 执行，cholesky 等矩阵运算在 fp32 下完成，结果不再满足 fp64 语义。
@@ -7662,29 +7662,29 @@
 
 ### INF-1583 `hccl_nhr_broadcast_batchsr_tx_dst_slices_self` NHR broadcast 跨服务器 TX 目标片误指本地
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：集合通信 / 通用 / Broadcast NHR BatchSR 模板
 - **原因行为**：BatchSR 构造 TX 侧 SlicesList 时把 txSrcSlices 同时当作 src 与 dst、丢弃 txDstSlices，SendRecvWrite 把数据写回本地 buffer，远端目标 buffer 从未被写。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：跨服务器 NHR 拓扑上执行 broadcast（或走同一 BatchSR 的 allgather）时，远端 rank 收到未初始化数据，广播结果与 root 源 buffer 不一致；拷贝成功、无报错，单机/单服务器测试不暴露。
+- **影响详情**：跨服务器拓扑下用 NHR 算法执行 broadcast 或 allgather 时，部分非 root rank 拿到本地 buffer 旧值/未初始化值，而非 root 广播内容；接口返回成功、无错误日志，单机/单服务器测试正常，逐 rank 对比才发现。
 - **改进措施**：检测 多服务器 NHR 拓扑下 broadcast 后逐 rank 与 root 源 buffer 比对；单服务器用例覆盖不到；修复 issue 给出单行修复：ins_temp_broadcast_nhr.cc:419 改为 SlicesList txSlicesList(txSrcSlices, txDstSlices)；issue 已 closed，合入版本与发布状态未核实
 - **来源**：https://gitcode.com/cann/hccl/issues/315
 
 ### INF-1586 `hccl_v_collective_span_calc_element_vs_bytes` HCCL V 类算子跨度计算漏换算致注册偏小
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：集合通信 / 通用 / AllToAllV/AllGatherV 跨度计算
 - **原因行为**：AllToAllV 图模式 CalcInputOutputSize 把 displs+counts 当字节跨度、未乘 datatype size；AllGatherV 普通路径只累加 recvCounts、忽略 displs 空洞。
 - **影响对象**：数值结果；可用性/进度（静默错误）
-- **影响详情**：非 1 字节 dtype（如 FP32）下 param.inputSize/outputSize 只有真实跨度的 1/4 或更小，该值被当作图模式 buffer 注册长度与 DFX 输出尺寸，通信按字节写入超出注册范围的地址；参数校验通过、无告警。
+- **影响详情**：AllToAllV/AllGatherV图模式内存注册下，非1字节dtype或recvDispls非连续时，注册/DFX尺寸偏小；通信照常执行、接口不报错，可能写到注册范围之外或被踩踏，出现偶发错值/精度异常，无尺寸告警。
 - **改进措施**：检测 构造 displs 非连续或 dtype>1 字节的 V 类算子调用，打印 param.inputSize/outputSize 与 (displs+counts)*typeSize 对比；图模式注册长度与实际寻址长度对不上即为中招；修复 issue 建议 CalcInputOutputSize 增加 datatype/element size 参数按字节计算，AllGatherVOutPlace 改用 max((recvDispls[i]+recvCounts[i])*perDataSize) 并补加法/乘法溢出检查；两条 issue 均 closed，合入与发布未核实
 - **来源**：https://gitcode.com/cann/hccl/issues/680；https://gitcode.com/cann/hccl/issues/265
 
 ### INF-1589 `hccl_ccu_gettoken_swallow_result_uninit_token` CCU 取内存 token 吞错致未初始化 token 下发
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：集合通信 / 通用 / CCU GetToken 基类模板
 - **原因行为**：GetToken 对三条缓冲分支的 HcommCcuGetMemToken 返回的 CcuResult 一律不检查，无条件返回成功；取 token 失败时输出参数 token 不被写。
@@ -7693,9 +7693,9 @@
 - **改进措施**：检测 在 GetToken 三条分支注入失败返回，观察上层是否继续下发 task；检查 token 是否在使用前初始化；修复 issue 建议三条分支按 CcuResult 转 HCCL 错误码并 CHK_RET 返回（含 CCU_E_PARA/PTR/INTERNAL/NOT_SUPPORT/NOT_FOUND/UNAVAIL 与驱动错误）；issue 已 closed，合入与发布未核实
 - **来源**：https://gitcode.com/cann/hccl/issues/317
 
-### INF-1592 `hcomm_roce_cqe_owner_period_wrong_sq_deadlock` RoCE CQE owner 翻转周期算错致 SQ 满死锁
+### INF-1592 `hcomm_roce_cqe_owner_period_wrong_sq_deadlock` RoCE CQE owner 翻转周期算错致通信卡住
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：集合通信 / 通用 / Roce3GetOneCqe CQ 消费
 - **原因行为**：Roce3GetOneCqe 用 cqDepth+1024 作 owner bit 翻转周期与取模掩码；驱动把请求深度 31744 向上取整成 32768 后该值变 33792，不再是 2 的幂，掩码与周期同时失效。
@@ -7706,7 +7706,7 @@
 
 ### INF-1594 `hcomm_waitresponse_skip_datasize_header` 共享内存响应解析未跳过长度头致 payload 错位
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：集合通信 / 通用 / HcommWaitResponse 响应解析
 - **原因行为**：HcommWaitResponse 把读指针停在 8 字节 data size 头起点就直接 copy sizeByte 字节到 dst，未跳过 CTRL_HDR_DATA_SIZE_LEN，payload 整体后移 8 字节。
@@ -7717,7 +7717,7 @@
 
 ### INF-1596 `hcomm_roce_remote_device_memcount_wrong_field` RoCE 远端 device 内存计数写错字段致永不拷贝
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：集合通信 / 通用 / RoCE 远端通道资源填充
 - **原因行为**：channel_manager.cc:378 的第二个 GetIndOpRemoteMemDetails 把 DEVICE 内存数写进 remoteUserHostMemCount、覆盖 host 真实计数。
@@ -7864,7 +7864,7 @@
 
 ### INF-1617 `mindformers_tp_dedup_ckpt_dsa_shard_lost` TP 去冗余存盘丢 DSA 参数分片，重载首 loss 跳到 12.4
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：并行切分 / mindspore / DSA attention TP 布局登记
 - **原因行为**：DSA replicated-TP 分支只给 self_attention 装 PrepareModuleInputOutput，只变换激活、不登记 attention 参数的 TP Replicate 布局
@@ -7876,14 +7876,25 @@
 
 ### INF-1633 `mindformers_graph_gqa_tp_ulysses_cp_precision` GQA 下 tp>1 叠加 Ulysses CP 推理精度不一致
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：并行切分 / mindspore / Ulysses CP 与 GQA 头切分
 - **原因行为**：静态图并行下同时开 tp>1 与 Ulysses CP（cp_ds>1）且 kv_head_num < head_num 时推理精度不正确；issue 未给源码定位，只给可复现配置与版本二分
 - **影响对象**：输出内容（静默错误）
-- **影响详情**：qwen1_5 72B、seq_length 32768、do_sample=False 的 predict 输出与单卡不一致；同配置开关 ulysses 结果不同，MindSpore 2.4.0.B011 + CANN Milan_C18/20240710 组合失败
+- **影响详情**：静态图下 qwen1_5 72B、seq_length 32768、do_sample=False 在 8 卡 tp+Ulysses CP predict 输出与单卡不一致；开关 ulysses 结果不同，不报错、不 NaN。
 - **改进措施**：检测 GQA 模型（kv_head_num < head_num）在 tp>1 + cp>1 下跑 predict，与单卡或 tp1 结果逐 token 比对；修复 待定（issue closed，正文未给修复方式；二分显示 master_20240713153844 与 CANN 20240705 成功）
 - **来源**：https://gitcode.com/mindspore/mindformers/issues/179
+
+### INF-1639 `mindformers_fused_fsdp_allgather_buffer_freed` 融合 all-gather 源 buffer 提前释放，重计算读到残参
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：并行切分 / mindspore / FSDP 融合 all-gather 拷贝
+- **原因行为**：handle.wait() 只等 all-gather 完成；split_with_sizes_copy 刚入队就 free_all_gather_output() 把 ag_output resize 成 0，拷贝源提前失效
+- **影响对象**：数值结果；训练信号（报错）
+- **影响详情**：replay 的 linear_qkv 输出与首次 forward 逐元素不同（diff_count 6301、max_abs≈3.1e38），差异经 K/V 传到 EP token 计数，最终报 Allocated size does not match required size
+- **改进措施**：检测 用 activation-checkpoint invocation id 逐层配对首次 forward 与 replay 的张量；检查 fused ag_output storage 的释放时机；修复 split_with_sizes_copy 完成前保持 ag_output 有效（stream event / 延迟回收 / 双 buffer）；A/B 中只保留 ag_output 后 936 个探针全一致（未核实合入）
+- **来源**：https://gitcode.com/mindspore/mindformers/issues/2488
 
 ## KV缓存
 
@@ -11258,10 +11269,10 @@
 
 ### INF-1489 `vllm_ascend_pd_pp4_first_request_badcase_garbage` PD 分离 PP=4 首请求特定 prompt 输出乱码
 
-`故障` · `pending_audit` · `infra_off` · `config` · `speculative` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `speculative` · `NEW` · 发现 2026-10-20
 
-- **原因对象**：KV缓存 / vllm / ascend_direct 首请求 KV 传递
-- **原因行为**：PD 分离部署下首个 badcase 请求的上下文在 prefill（PP=4）交给 decode 时内容不正确；机制未定，PP=4 与「首请求」两个条件同时必要
+- **原因对象**：KV缓存 / vllm / PP或ascend_direct首请求链路
+- **原因行为**：在PD分离、Prefill PP=4、use_ascend_direct=true下，服务拉起后首个特定261-token prompt请求输出乱码；根因未定位
 - **影响对象**：输出内容；KV状态（静默错误）
 - **影响详情**：首请求返回与 prompt 无关的随机英文（'The is a simple command-line tool...'），finish=length；后续普通请求正常，继续发同一 badcase 仍乱码，先发普通请求即不再乱码
 - **改进措施**：检测 服务拉起后先发该 261-token prompt，核对 prompt_tokens=261/3 个 KV block 与返回文本；再对照「先发普通请求再发 badcase」是否复现；修复 待定（issue 未给修复 PR；已排除 MTP、prefix cache、reasoning parser、KV 清零、slot mapping、eager 六项）
@@ -11269,7 +11280,7 @@
 
 ### INF-1492 `op_plugin_kv_rmsnorm_rope_cache_v2_clone_graph_mode` KV cache 融合算子 clone 误用致图模式精度
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / pytorch / kv_rmsnorm_rope_cache_v2
 - **原因行为**：npu_kv_rmsnorm_rope_cache_v2 函数化实现用 k_cache.clone()/ckv_cache.clone() 当写回载体并作为输出返回，issue 判定 clone 用法有误；图模式下该算子因此有精度问题。
@@ -11280,29 +11291,29 @@
 
 ### INF-1544 `vllm_ascend_pd_dummy_batch_block_table_zeroed` PD dummy batch 清零 block_table 污染 KV 传输
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / execute_dummy_batch 元数据
 - **原因行为**：_dummy_run 的 dummy 分支直接把共享 block_table/slot_mapping 清零，覆盖 connector 要用的真实映射；dummy 的 DP all-reduce 又与 save_kv_layer 抢张量。
 - **影响对象**：KV状态；输出内容（静默错误）
-- **影响详情**：connector 按被清零的 block_table 读错 KV 位置；真实请求随后在 causal_conv1d_update_npu 触发 507014 aicore 超时（GDN/Mamba 状态已被 dummy 执行污染）。
+- **影响详情**：PD分离D节点启用execute_dummy_batch且用MooncakeLayerwiseConnector时，某些真实请求会拿到他人或无效的KV，输出错乱或直接卡在aicore超时，报507014；可崩在causal_conv1d_update_npu。
 - **改进措施**：检测 抓 execute_dummy_batch 前后 block_table/slot_mapping 的内容，确认 dummy 之后是否被 fill_(0)；对照关掉 dummy batch 或让 dummy 不写元数据时的 KV 传输结果；修复 待定（issue open，无修复 PR）；方向：dummy batch 必须屏蔽 KV 写入、用独立元数据缓冲，并把 save_kv_layer 与 DP all-reduce 串行化
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/10245
 
 ### INF-1545 `vllm_ascend_pd_swa_stale_block_nan` PD SWA 传输块裁剪顺序错致消费陈旧 KV 出 NaN
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / Mooncake PD block id 裁剪
 - **原因行为**：request_finished_all_groups() 先 SWA clip 再按 prompt 长度裁剪，_compute_transfer_block_ids() 不裁 SWA 组，尾部 clip 因此选中未写入的陈旧块。
 - **影响对象**：KV状态；隐状态（数值异常）
-- **影响详情**：陈旧 SWA 块 ID 作为 remote_block_ids 传给 D 端，npu_sparse_attn_sharedkv 消费脏块后第 0 层 attention 输出全 NaN，speculative 输出全 -1、请求卡住；并发请求才复现。
+- **影响详情**：陈旧 SWA 块 ID 作为 remote_block_ids 传给 D 端，npu_sparse_attn_sharedkv 消费脏块后第 0 层 attention 输出全 NaN，下游 speculative 输出可能全 -1，请求卡住；并发请求才复现。
 - **改进措施**：检测 对 SWA 组比对 prompt trim 与 SW clip 的先后顺序（prompt_len=129、block_size=128 时旧顺序得 [102,103]、正确应为 [100,101]）；dump 被消费块检查是否含 NaN/大 BF16 值；修复 待定（issue closed，正文说将为 main 与 releases/v0.20.2rc 提交 PR，未给编号）；修复：所有 KV 组先按 P 端实际 prompt 长度裁剪，再对 SWA 做窗口 clip
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/10253
 
 ### INF-1547 `vllm_ascend_async_sched_free_inflight_swa_block` async 调度提前释放仍在读的 SWA KV 块
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / recompute_scheduler
 - **原因行为**：_update_after_schedule() 在设备输出返回前就推高 num_computed_tokens，滑动窗口按乐观计数立刻把出窗整块还池；update_from_output 的提前退出路径也未结算在飞 token。
@@ -11314,36 +11325,47 @@
 
 ### INF-1555 `vllm_ascend_gdn_ragged_state_row_indexing` GDN 循环状态按 packed 偏移寻址致跨请求串扰
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / RGDR 状态行寻址
 - **原因行为**：metadata 保留 [B,K+1] 定宽状态表，调用方 flatten 后传入，kernel 却按 packed token 偏移寻址，正确行基址应是 request_index×(K+1)。
-- **影响对象**：跨请求/跨样本数据；输出内容（静默错误）
-- **影响详情**：MTP3 + 语法约束解码下各请求 verify 长度不同，短行请求读到邻居请求的状态行：结构化输出字段错、标点非法、重复、跑满 max_tokens；等长 [4,4] 对照通过。
+- **影响对象**：KV状态；跨请求/跨样本数据；输出内容（静默错误）
+- **影响详情**：Qwen3.5 开 MTP3 并发结构化输出时，若语法校验使 batch 内 verify 长度不同，产出畸形 JSON、错误字段、重复片段或跑满 max_tokens，服务不报错；等长 [4,4] 对照通过。
 - **改进措施**：检测 构造各请求 verify 长度不齐的 batch（如 accepted [4,1]、query 长度 [2,4]），用无权重算子复现器检查状态行是否按 request_index×(K+1) 寻址；等长 batch 做对照；修复 待定（issue open）；修复方向：保留每请求二维状态表并显式传 row stride，读写都用该 stride，并按状态行宽度校验 accepted_prev；release 侧 #17839 已修 910 族，#17856 报 310P 的 v310 算子未被覆盖
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/17837
 
 ### INF-1573 `cann_kv_rms_norm_rope_cache_regbase_cache_write_defects` KvRmsNormRopeCache regbase 越界写/错页/漏写
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / 通用 / KvRmsNormRopeCache 模板
 - **原因行为**：Norm 模式 B 维校验降级为 OP_LOGW；recompute 的 batch stride 用 seqLength；PA_BLK_NZ 用 index 位置当页号；NZ 半宽未按 dk0 对齐；index 无上界校验。
 - **影响对象**：KV状态（静默错误）
-- **影响详情**：Norm 模式 B=4、cache 第 0 轴为 1 时 4 个 batch 全写进同一 batch；PA_NZ+fp16+dk=16 时 k_cache 四页全零；index≥cache 行数时越界写 GM（aic error 507035）；全程返回 SUCCESS。
+- **影响详情**：Norm下cache B轴小于kv B时b=1/2/3写cache外；recompute且Skv≠Scache时batch1..3写进batch0段；NZ+fp16+dk=16时k_cache四页全零；index≥cache行数越界写GM；返回SUCCESS。
 - **改进措施**：检测 decode 形态（Skv=1、Scache=128）下构造 B≠cache 第 0 轴、PA_NZ + dk 非 2*dk0 倍数、index 越界三类用例，逐元素核对 cache 落点；修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/8690 （9 条缺陷全部修复，含 6 条新增 UT 与 950 上板改前/改后对照）；其中缺陷 4 改为在 recompute tiling 新增 dk%(2*dk0)==0 校验，会拒绝此前能跑但结果错的 shape
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/3750
 
-### INF-1591 `cann_recurrent_gated_delta_rule_fp32_state_copyout_sizeof` recurrent_gated_delta_rule state 拷贝错
+### INF-1626 `sgl_kernel_npu_ssm_state_pool_k_major_transposed` SSM 状态池按 K-major 索引读写转置
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
-- **原因对象**：KV缓存 / 通用 / rdv CopyOutState 拷贝长度
-- **原因行为**：arch35 CopyOutState 用 sizeof(outType)（bf16=2B）算 blockLen 与 srcStride，state 为 fp32 时字节数、步长都错；golden 对 fp32 state 未 clone。
+- **原因对象**：KV缓存 / sglang / fused_sigmoid_gating
+- **原因行为**：状态池实际是 [slots,HV,V,K]（V-major），kernel 载入与写回都用 o_k[:,None]*V + o_v[None,:]（K-major）；K==V==128 时不越界不报错，读写的都是 S.T。
 - **影响对象**：KV状态；数值结果（静默错误）
-- **影响详情**：rdv 参数集 74 例中 fp32-state 系列（param_combinations2/3）全部失败：Max-RelativeError 1.99999、超阈元素占比 1.92%（PctThd 0.50%）；bf16 state 用例正常；修复后 74 例全过。
-- **改进措施**：检测 state dtype=fp32 而输出为 bf16 的 rdv 用例（bash test_run.sh rdv），核对 state 逐行内容与 PctRlt 是否超 PctThd；修复 PR 9182 （blockLen/srcStride 改用 sizeof(stateType)；golden 的 initial_state 加 .clone() 避免原地污染）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/3945
+- **影响详情**：零初态时 output 正确，state 差 1.02，state^T 差 1.19e-07；随机初态后 output 相对误差 0.85，state^T 不再匹配。全程无报错、无 NaN。
+- **改进措施**：检测 对照时同时比较 state 与 state^T；用零初态隔离 store、随机初态再放开 load 的两次实验可区分读写腿；修复 issue 给出交换两项的补丁（o_v[None,:]*K + o_k[:,None]，load 与 store 各一处），未见修复 PR（open）
+- **来源**：https://github.com/sgl-project/sgl-kernel-npu/issues/640
+
+### INF-1640 `mindie_splitfuse_prefill_kv_early_into_decode_buffer` splitfuse 下 prefill 的 KV 过早写入 decode 侧缓冲
+
+`故障` · `active` · `infra_off` · `config` · `speculative` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：KV缓存 / 通用 / splitfuse state 传递
+- **原因行为**：prefill 算完即把新 KV 写入 decode 侧共享缓冲，未等 decode 处理完当前 batch，decode 下一轮调度读到半新 state 而冲突。
+- **影响对象**：KV状态；可用性/进度（挂起）
+- **影响详情**：splitfuse + 异步调度下 decode 阶段响应延迟从约 200ms 涨到 5s 以上，随后请求超时引起连锁挂死（A3 双机混布、中等压力）。
+- **改进措施**：检测 监控 decode stage 的 response 延迟分布（200ms→秒级的抬升是前兆）；对同类请求比对 prefill/decode 两侧 KV 内容与调度轮次的 snapshot 是否一致；修复 issue open；正文建议在 prefill→decode 的 state 传递处加 barrier/fence（SharedCacheBuffer release 路径 atomic_thread_fence(release)、acquire 路径 acquire fence），未核实是否落地
+- **来源**：https://gitcode.com/Ascend/MindIE-LLM/issues/676
 
 ## 调度/服务
 
@@ -12155,28 +12177,6 @@
 - **改进措施**：检测 对照带/不带 kv_transfer_params.prompt_token_ids 的渲染输出 token 序列（issue 附无 GPU 复现脚本）；修复 上游修复未见（issue open，经安全团队转常规）；规避：入口层（网关）拒绝非 P/D 部署的 kv_transfer_params 字段
 - **来源**：https://github.com/vllm-project/vllm/issues/62307
 
-### INF-1638 `mindie_recompute_maxoutputlen_iterative_subtract` 重计算用上次结果迭代扣减 maxOutputLen 致输出截断
-
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：调度/服务 / 通用 / 重计算 maxOutputLen 计算
-- **原因行为**：重计算路径算 maxOutputLen 时拿上一次的结果去算下一次的输出，形成迭代减法；多次触发重计算后 maxOutputLen 可能小于 0，再按这个值裁剪输出。
-- **影响对象**：输出内容（静默错误）
-- **影响详情**：多次重计算的请求输出被提前截断，精度测试与生成结果缺尾；过程不报错，只有对比完整输出或看截断长度才发现。
-- **改进措施**：检测 构造长输出 + 多次触发重计算的请求，比对实际返回 token 数与 max_tokens/剩余长度；在重计算分支打印每次的 maxOutputLen，观察是否单调递减到负数；修复 issue closed；正文只给出根因描述（maxOutputLen 迭代减法），未给修复 PR 与版本
-- **来源**：https://gitcode.com/Ascend/MindIE-LLM/issues/552
-
-### INF-1640 `mindie_splitfuse_prefill_kv_early_into_decode_buffer` splitfuse 下 prefill 的 KV 过早写入 decode 侧缓冲
-
-`故障` · `pending_audit` · `infra_off` · `config` · `speculative` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：调度/服务 / 通用 / splitfuse state 传递
-- **原因行为**：prefill 算完即把新 KV 写入 decode 侧共享缓冲，未等 decode 处理完当前 batch，decode 下一轮调度读到半新 state 而冲突。
-- **影响对象**：KV状态；可用性/进度（挂起）
-- **影响详情**：splitfuse + 异步调度下 decode 阶段响应延迟从约 200ms 涨到 5s 以上，随后请求超时引起连锁挂死（A3 双机混布、中等压力）。
-- **改进措施**：检测 监控 decode stage 的 response 延迟分布（200ms→秒级的抬升是前兆）；对同类请求比对 prefill/decode 两侧 KV 内容与调度轮次的 snapshot 是否一致；修复 issue open；正文建议在 prefill→decode 的 state 传递处加 barrier/fence（SharedCacheBuffer release 路径 atomic_thread_fence(release)、acquire 路径 acquire fence），未核实是否落地
-- **来源**：https://gitcode.com/Ascend/MindIE-LLM/issues/676
-
 ## 输出解析
 
 ### INF-0574 `vllm_qwen3_xml_tool_choice_required_silently_acts_as_auto` vLLM qwen3 parser 强制 tool_choice 被静默降级
@@ -12799,7 +12799,7 @@
 
 ### INF-1635 `mindie_tool_call_parser_arguments_type_and_dsml_prefix` tool-call 解析把 arguments 变字符串，不认无 DSML 标记
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：输出解析 / 通用 / tool-call 解析（非流式）
 - **原因行为**：非流式解析函数无法正确解析 arguments 的 type，统一表示成 string；且解析器只认 <|DSML|function_calls> 形式，QuaRot w8a8 权重输出的 <function_calls> 直接解析失败。
@@ -14179,18 +14179,18 @@
 
 ### INF-1546 `vllm_ascend_zero_draft_rng_advance` 零 draft 请求仍推进采样 RNG 致输出不可复现
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：解码/采样 / vllm / sample_recovered_tokens
 - **原因行为**：对每个请求先执行 temp_q.exponential_(generator) 再用 torch.where 丢掉，num_draft_tokens=0 的请求虽然不采用 temp_q，其 generator 状态已被一次整表抽样推进。
-- **影响对象**：输出分布；输出内容（不可复现）
+- **影响对象**：输出内容；输出分布（不可复现）
 - **影响详情**：同一 seed 下，某个请求在推测解码步里有没有 draft 会改变它后续的采样序列：零 draft 请求的随机流被多抽一次，输出与参考/重跑不一致。
 - **改进措施**：检测 对 num_draft_tokens=0 的请求在 sample_recovered_tokens 前后比对 generator 状态（或重放同一 seed 的采样序列）；#4587 之前的逐请求实现可作为语义参考；修复 待定（issue open）；修复：恢复逐请求判断，只有 num_draft_tokens[i]>0 时才调用 exponential_，并补零 draft 不推进 RNG 的回归测试
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/13608
 
 ### INF-1632 `mindie_sampler_apply_top_p_workspace_offset0` 采样 kernel 漏调 GetUserWorkspace，数据区压系统保留区
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：解码/采样 / 通用 / apply_top_k_top_p_custom
 - **原因行为**：kernel 把 softMaxGm 绑到原始 workspace 偏移 0，没调 GetUserWorkspace 跳过 host 预留的 16MB 系统保留区；于是数据区与 SyncAll 读写的系统区地址重叠。
@@ -14201,7 +14201,7 @@
 
 ### INF-1682 `ops_nn_apply_top_k_top_p_k_unclamped` ApplyTopKTopP 未钳制 k 致阈值下标越界
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：解码/采样 / 通用 / apply_top_k_top_p 阈值取值
 - **原因行为**：aclnn Check/tiling/kernel 都不校验文档要求的 k∈[1,vocab]；kernel 用 sortedValue[vocabSize-k] 取阈值，k>V 时下标为负，越界读且全程不报错。
@@ -15927,7 +15927,7 @@
 
 ### INF-1490 `op_plugin_310p_quant_gmm_dequant_intermittent_wrong` 310P 量化分组 matmul 反量化偶发错值
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / 310P 量化分组 matmul 反量化
 - **原因行为**：npu_quant_grouped_matmul_dequant 在 310P 上同输入多次调用结果时对时错：1000 轮循环里偶发命中错值，重跑同一组缓存输入又可能正确；正文未给出根因定位。
@@ -15938,7 +15938,7 @@
 
 ### INF-1525 `torchnpu_te_e8m0_ceil_log2_boundary` FP32→E8M0 用 ceil(log2) 致 2 的幂边界编码错
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / E8M0 指数编码
 - **原因行为**：FP32→E8M0 转换用 ceil(log2(x)) 求指数，log2 在 2 的整数次幂附近的浮点舍入会抹掉相邻 ULP 的边界差异，编码落到错误档位。
@@ -15949,7 +15949,7 @@
 
 ### INF-1526 `torchnpu_grouped_matmul_swiglu_quant_zero_rows_nan` FP8 swiglu 量化分组矩阵乘含 0 行出 NaN
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / swiglu_quant_v2 融合算子
 - **原因行为**：quant_dtype=float8_e4m3fn、dequant_dtype=float32 时，x 中存在 0 值行会使对应 output 变成 NaN，与三算子分解路径不等价。
@@ -15960,22 +15960,33 @@
 
 ### INF-1531 `ops_nn_groupnormsiluquant_int8_lsb_deviation` GroupNormSiluQuant 方差误差被量化放大
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / 通用 / GroupNormSiluQuant 量化输出
-- **原因行为**：窄方差分组归一化后量化：方差/rstd 的误差经归一化 scale 放大成整段 int8 码值偏移，tiling 与量化路径未对该值域做保护，报告未定位到具体代码行。
+- **原因行为**：GroupNormSiluQuant 中分组归一化的方差/rstd 偏差经 scale 变换落到 int8 码值，方差误差被量化放大，窄方差输入下最明显。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：1000 条全部执行成功，807 条（80.7%）判否：741 条 int8 主输出偏差中位 61 LSB、137 条整量程饱和、37 条 NPU 独有 NaN；通过组 int8 偏差恒为 0/1 LSB。
 - **改进措施**：检测 把通过组的 int8 偏差当对照（恒 0/1 LSB），再看失败组的偏差分布是否随窄方差输入成片抬到几十 LSB；NaN 用例单独计数。；修复 issue 6068 已 closed，正文未给修复 PR；改方差算法还是量化 scale 计算未核实。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6068
 - **关联**：var:INF-1529
 
+### INF-1588 `cann_moe_init_routing_v3_mxfp4_scale_row_stride_truncation` MoeInitRoutingV3 MXFP4 scale 行 stride 错
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：量化 / 通用 / moe_init_routing_v3 量化路径
+- **原因行为**：MXFP4 的 scale 每行字节数用 cols/32 整数除法算，cols 非 32 倍数时余数被丢、逐行搬运起点漂移；静态量化全载模板按全部源行分配 buffer 却逐行 Compute(1)，小 cols 时写越 buffer。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：cols 非 32 倍数时 scale 错位，量化输出精度固定在约 33%；小 cols 多核时 64B Store 对齐溢出 buffer、踩踏相邻 UB 触发 AIV error；另有 golden 量化判据问题。
+- **改进措施**：检测 quantMode=0/9/13 下取 cols 非 32 倍数（如 33/48/65）核对 scale 逐行落点与量化输出；小 cols、多核场景加 mssanitizer memcheck 查 UB 越界；修复 待定（issue closed，正文未附修复 PR；期望方向为 scale 行字节数改对齐上取整、量化输出改用 ULP 判据）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/5394
+
 ### INF-1595 `cann_grouped_matmul_swiglu_quant_a8w4_m1_quantscale_wrong` GroupedMatmulSwigluQuant A8W4 单 token 错值
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / 通用 / GMM SwiGLU A8W4 MSD 中段
-- **原因行为**：A8W4 MSD 中段把 int4×int4 反量化结果以 fp16 写 workspace（mmOutGM 为 half），随后 ×16 还原把表示误差放大 16 倍；标杆 int32 精确累加后转 fp32 乘 w_scale。
+- **原因行为**：高置信根因假设：A8W4 MSD 中段把 SetQuantVector 反量化结果直接以 fp16 写入 workspace，随后乘 16 做高低位还原，放大表示误差并经 xScale、SwiGLU、量化传播。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：M=1/E=1/K=64/N=64/NZ/per-channel 用例 outputScale 单元素 max_abs 565.52、阈 4.88e-4 超约 1.16e6 倍；output（int8）max_diff=127 达上限；正常返回。单例证据。
 - **改进措施**：检测 M=1 单 token decode 形态 + NZ 权重 + per-channel 的 A8W4 最小用例；同时看 output 与 outputScale（Q_scale=max(|S|)/127）两个输出，dump 中段 mmOut workspace 与标杆 int32→fp32 中间值比对；修复 待定（issue closed；H1 指向 mid 的 half workspace 与 tiling 的 DT_FLOAT16 C 输出需改更高精度，环境修复后需复跑圈定边界）
@@ -15983,7 +15994,7 @@
 
 ### INF-1608 `ms_quant_matmul_dtype_override_oob_read` quant_matmul dtype override 缺宽度校验致越界读
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `speculative` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `speculative` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / mindspore / aclnn QuantMatmul dtype
 - **原因行为**：GetQuantMatmulAclDtype 只把 override dtype 转成 aclDataType，不校验字节宽度；新路径按 override 重解释原 device buffer 而非 Cast 出新 tensor。
@@ -15994,7 +16005,7 @@
 
 ### INF-1614 `msmodelslim_layer_wise_calib_isinstance_always_false` 逐层校准 isinstance 条件恒假，校准被静默跳过
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / llm_ptq layer_wise_calib
 - **原因行为**：layer_wise_calib 用 and 连接两个 isinstance 判断，两个量化器类互不为子类，条件恒假，逐层校准循环体一次都不执行。
@@ -16005,18 +16016,18 @@
 
 ### INF-1616 `msmodelslim_scale_absmax_missing_zero_guard_nan` 量化 scale 缺零值防护，全零输入写入 NaN 权重
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / scale/absmax 计算（3 处）
 - **原因行为**：三处 scale/absmax 缺零值防护：MXFP4 dual_scale、flat_quant 激活侧、NF4 归一化；全零 block、通道或 token 时 0/0 得 NaN 并写进权重。
 - **影响对象**：模型权重；数值结果（数值异常）
-- **影响详情**：全零 block、全零通道或全零 token 处的 scale 为 NaN，NaN 直接写进量化后权重；量化命令成功退出、无报错，下游推理才出现 NaN 或乱码。
+- **影响详情**：全零 block、全零通道或全零 token（如 padding、全零激活 token）参与量化时，权重/激活被写成 NaN；量化命令正常结束、无报错或警告，权重文件照常导出，直到逐张量检查或下游推理才暴露为 NaN/Inf 与乱码。任意硬件。
 - **改进措施**：检测 量化产物导出后逐张量扫 NaN/Inf（mstools 查看权重）；或对全零 block/通道构造最小输入跑 scale 计算，同文件权重侧的 clamp(min=1e-5) 是正确写法参照；修复 issue closed；正文建议三处补 clamp(min=1e-5)（与 quantizer.py:281 权重侧一致），未核实修复 commit 与发布版本
 - **来源**：https://gitcode.com/Ascend/msmodelslim/issues/506
 
 ### INF-1618 `msmodelslim_kv_cache_field_silently_dropped_c8` KV Smooth 配置的 kv_cache 字段被静默丢弃，C8 未生效
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / linear_quant 处理器配置
 - **原因行为**：指南把 kv_cache 写在 linear_quant 下；该处理器配置类无此字段，也不禁止多余字段，pydantic 默认丢弃，C8 量化不执行。
@@ -16028,7 +16039,7 @@
 
 ### INF-1620 `msmodelslim_rmsnorm_semantics_mismatch_outlier_suppression` RMSNorm 语义与 Qwen3_5 不符，替换 norm 后精度异常
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / RMSNorm 语义（离群值抑制）
 - **原因行为**：modelslim 的 RMSNorm 用标准计算，与 Qwen3_5RMSNorm 语义不符；离群值抑制会替换 norm，替换后输出偏离原模型，子图融合的 scale/shift 也未同步。
@@ -16039,29 +16050,29 @@
 
 ### INF-1622 `msmodelslim_mxfp8_a5_nan_a3_ok` A5 上 MXFP8 权重量化产生 NaN/Inf，A3 同配置正常
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / MXFP8 权重量化（A5）
-- **原因行为**：同一 Qwen3.6-35B-A3B、同一 w8a8c8 配置，A5 上 MXFP8 权重量化出现大量 NaN/Inf，A3 正常；正文归因于机器/NPU 对 fp32 次正规数的处理差异，非必现。
+- **原因行为**：同一 Qwen3.6-35B-A3B、同一 w8a8c8 配置下，A5 上 MXFP8 权重量化出现大量 NaN/Inf，A3 正常；与机器/NPU 对 fp32 次正规数处理相关，部分机器必现。
 - **影响对象**：模型权重；输出内容（数值异常）
-- **影响详情**：A5 产出的量化权重含大量 NaN/Inf，据其部署的推理输出异常；量化命令正常退出，同模型同配置在 A3 上结果正常，需逐张量检查权重才发现。
+- **影响详情**：在 A5 上对 Qwen3.6-35B-A3B 做 MXFP8 的 w8a8c8 量化时，命令跑完无报错，导出权重含大量 NaN/Inf；用该权重起服务输出异常。同模型同配置在 A3 上正常。
 - **改进措施**：检测 量化产物导出后按张量扫 NaN/Inf；同模型同配置在 A3 与 A5 各跑一遍比对 qparam/quantize 结果（正文的预期行为就是两者应一致）；修复 issue closed；正文未给根因定位与修复 PR（只描述现象与机器相关性），修复版本未核实
 - **来源**：https://gitcode.com/Ascend/msmodelslim/issues/587
 
 ### INF-1624 `msmodelslim_oasq_smooth_scale_paren_error` OASQ 平滑 scale 括号错位，缩放系数偏离设计
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / OASQScaleCalculator
 - **原因行为**：OASQ 的 compute_smooth_scale 把变换套在整段比值上，而不是分别作用后相除，平滑系数偏离设计公式，低比特精度受损。
-- **影响对象**：模型权重；输出内容（质量退化）
+- **影响对象**：输出内容；模型权重（质量退化）
 - **影响详情**：W4A4/MXFP 等低比特量化（如 Wan2.2 DAOS 配方）拿到错误的平滑系数，量化权重精度受损；量化流程不报错，正文未给精度下降量级。
 - **改进措施**：检测 对已知输入手算 sqrt(w)/(sqrt(a)+ε) 与 log1p(w)/(log1p(a)+ε) 作为 golden，与 compute_smooth_scale 输出比对；端到端比对开启/关闭 oasq 两种情况下的量化精度；修复 issue closed；正文给出正确公式与涉及文件（msmodelslim/processor/anti_outlier/common/scale_computation.py），并指出 Wan2.2 适配器需实现 OASQInterface，未给 PR 与版本
 - **来源**：https://gitcode.com/Ascend/msmodelslim/issues/538
 
 ### INF-1627 `msmodelslim_quarot_optional_merge_last_wins` 多卡保存浅合并清空 optional，QuaRot 矩阵失联
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / pytorch / DistributedAscendV1Saver
 - **原因行为**：_merge_json_files 对顶层 optional 做浅 update，最后一个 rank 的空 optional 覆盖 rank0 写入的 quarot rotation_map；相对路径又按 rank_i 错位。
@@ -16072,7 +16083,7 @@
 
 ### INF-1680 `ops_nn_dequant_swiglu_quant_reducemax_mask` dequant_swiglu_quant 归约 mask 写死 64 跨行越界
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / 通用 / DynamicQuant 行 max 归约
 - **原因行为**：WholeReduceMax 的 mask 写死 64，UbFactorDimy<64（H=64→32）时每个 repeat 跨两行读并越界，行 max 取到 INT_MAX 级残留，scale 放大成 3e10 级。
@@ -16083,14 +16094,25 @@
 
 ### INF-1684 `ops_nn_fake_quant_affine_cachemask_int64_narrow` FakeQuantAffineCachemask 元素数截到 uint32
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：量化 / 通用 / tiling 整数窄化
 - **原因行为**：tiling 把 GetShapeSize()/GetDim(0) 的 int64_t 直接赋给 uint32_t totalLength/headNum，无上限校验；元素数超 2^32 时截断，kernel 只处理部分元素。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：910B/910_93：shape [1,16,24576,16384] FP16 约 12.9GB、6.4B 元素被截成 2.1B（丢 67%），尾部不写为未初始化，loopNum/remainNum 的多核分配也错乱；issue 未给实测输出。
+- **影响详情**：910B/910_93：元素数>2^32时触发；举例[1,16,24576,16384] FP16约12.9GB，6.4B元素截为2.1B、丢67%，仅处理部分元素，尾部未初始化，多核分配错乱，返回正常。
 - **改进措施**：检测 构造元素数超 2^32（如 [1,16,24576,16384] fp16）的输入，检查输出尾部是否保持预置值；同时核对 tiling 里 totalLength 的位宽。；修复 issue 2988 closed；正文给出改 uint64_t totalLength/headNum 并加上限校验、kernel 侧 quantMin/quantMax 保持 int64；未给 PR。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/2988
+
+### INF-1700 `indexer_quant_cache_mxfp4_odd_headdim` indexer_quant_cache MX-FP4 半字节错位
+
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：量化 / pytorch / indexer_quant_cache
+- **原因行为**：MX-FP4 每字节打包 2 个逻辑元素，headDim 为奇数时相邻行起点交替落在字节高/低 4 位；kernel 把 cache 声明为 int8_t，只能整字节 CopyOut，无法表达半字节偏移。
+- **影响对象**：KV状态；数值结果（静默错误）
+- **影响详情**：quantMode=3 且 cache.headDim=65 时 cache 输出精度仅 56.9%~62.5%（不同 stride 方案都到不了 100%），属系统性错位而非随机噪声；无报错，tiling 直接放行。
+- **改进措施**：检测 对 quantMode=3 构造奇数 headDim，逐元素比对 cache 量化结果与 golden；同时检查分页 view 的 row/block stride 奇偶；修复 在 host tiling（indexer_quant_cache_tiling_arch35.cpp）要求 quantMode=3 时 headDim 与分页 row/block stride 必为偶数，否则 GRAPH_FAILED（关联 MR，closed，未核实合入版本）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/4137
 
 ## 位置编码
 
@@ -17279,7 +17301,7 @@
 
 ### INF-1628 `mindformers_indexshare_key_dropped_layout_vs_megatron` IndexShare 旧键名静默丢弃且层布局与 Megatron 不一致
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：模型定义 / mindspore / ConfigConverter / DSA 层布局
 - **原因行为**：ConfigConverter 未映射键只记 warning，dsa_index_share_size 被丢弃、topk_freq 保持 1；skip_topk_offset 用 0-indexed，Megatron 1-indexed
@@ -17686,18 +17708,18 @@
 
 ### INF-1515 `torchnpu_legacy_load_npu_tensor_all_zero` legacy 格式载入 NPU 张量全零
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：权重/检查点 / pytorch / legacy storage 重建
 - **原因行为**：_rebuild_npu_tensor 在 rebuild 阶段就执行 .npu()，把尚未填充（全零）的 CPU staging storage 拷到新 NPU 存储，随后 _set_from_file 只填 staging。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：模型权重；数值结果（静默错误）
 - **影响详情**：2.7.1/2.8.0 保存的 legacy NPU 张量 load 后全零，CPU 张量与 zipfile 路径正常；插桩见 staging 与 NPU 存储 data_ptr 脱节。
 - **改进措施**：检测 legacy 保存→torch.load 后与保存前逐元素比对，并检查 device 与内部格式；对照 zipfile 路径；修复 修复 commit 2a6526530a（deferred fill：登记待填 tensor，load 完成后按 map_location 原地 copy_）与 MR https://gitcode.com/Ascend/pytorch/merge_requests/44575；issue closed，合入与发布状态未核实
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/4526
 
 ### INF-1615 `mindformers_graph_save_remove_redundancy_metadata_mismatch` Graph 平衡存盘 metadata 记录未落盘优化器状态
 
-`故障` · `pending_audit` · `infra_off` · `not_target` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `not_target` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：权重/检查点 / mindspore / checkpoint 平衡存盘元数据生成
 - **原因行为**：!8743/!8746 把 network 包成 list 的语句挪到 save_checkpoint 开头，Graph 模式把 [cell] 交给 get_strategy_metadata；各 rank 分发计划漏登记 Muon 状态
@@ -17708,30 +17730,30 @@
 
 ### INF-1619 `mindformers_load_balanced_resume_drops_optim_state` load_balanced 续训整份优化器状态未加载，loss 发散
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：权重/检查点 / mindspore / load_balanced 分片加载映射
 - **原因行为**：开启 checkpoint.load_balanced 时加载侧按均衡映射取分片，main_param/adam_m/adam_v 共 450 个参数未匹配装载，只在 load_param_into_net 的 WARNING 里被列出
 - **影响对象**：优化器状态；训练信号（静默错误）
-- **影响详情**：续训第 6 步 loss 与连续训练逐位相同，第 7 步起单调放大：+0.020613、+0.036746、+0.062435、+0.072463（step7–10）；remove_redundancy 取值无关，load_balanced=False 时差值全 0
+- **影响详情**：第5步存盘续训后，第6步loss与未中断相同（11.772970），第7步起较未中断偏高：11.786654、11.795470、11.748751、11.689173，差值从0.02涨到0.07；remove_redundancy取值不影响复现，load_balanced=False时差值全0。
 - **改进措施**：检测 续训与连续训练逐步比对 loss；检查 not loaded 的参数是否全部是 main_param.*/adam_m.*/adam_v.*；修复 待定（issue open；已定位到 mindformers/checkpoint/checkpoint.py，分片文件与 metadata 条目完整，属加载侧丢失）
 - **来源**：https://gitcode.com/mindspore/mindformers/issues/2522
 - **关联**：var:INF-1615
 
 ### INF-1621 `mindformers_hf_ckpt_master_weights_stale` 从 HF 检查点续训时 fp32 主权重未随模型参数刷新
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：权重/检查点 / mindspore / HF loader 主权重回填
 - **原因行为**：HF checkpoint 不含优化器状态，fp32 master weights 已在加载前按随机初始化建好；no_load_optim=False 时判定无需刷新，首次 optimizer.step() 用旧主权重覆盖已加载参数
-- **影响对象**：模型权重；训练信号（静默错误）
+- **影响对象**：优化器状态；模型权重；训练信号（静默错误）
 - **影响详情**：step1 loss 一致（11.818862），step2 从 11.710443 偏到 11.811662，之后与 no_load_optim=True 分叉；native 完整续训不出现，大规模训练下进一步表现为 OOM
 - **改进措施**：检测 同种子同数据跑 no_load_optim=True/False 两步 A/B，比较第一次 optimizer update 前后的 model/master weights；修复 分支 fix/hf-checkpoint-master-weight-sync：loader 返回是否真实加载优化器状态，全部本地 chunk 加载完后仅对未加载优化器状态的场景刷新一次 fp32 master weights（未核实合入）
 - **来源**：https://gitcode.com/mindspore/mindformers/issues/2457
 
 ### INF-1623 `mindformers_pynative_resume_gbs_scaled_zero_steps` 续训 global_batch_size 变化致 0 步静默退出
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：权重/检查点 / mindspore / 续训 global_step 缩放
 - **原因行为**：_load_checkpoint 按 ckpt_gbs/current_gbs 缩放 global_step，但 training.steps 不缩放，while step < max_steps 不再成立
@@ -17756,7 +17778,7 @@
 
 ### INF-1625 `mindformers_gbs_truncation_and_streaming_preconsume` GBS 不能整除 DP×local_batch 时梯度累积步数被静默截断
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：数据管线 / mindspore / GBS 与数据均衡校验
 - **原因行为**：只在静态 batch 分支校验 base_units > global_batch_size，不校验整除；GBS=10、DP=4、local_bs=2 时 base_units=8，10 // 8 把累积步数截成 1
@@ -17805,7 +17827,7 @@
 
 ### INF-1665 `ops_nn_loss_cross_core_merge_inf_to_nan` 三 loss 跨核合并把 inf 变 NaN 且 partials 越界读
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：损失计算 / 通用 / arch35 跨核合并与 partials
 - **原因行为**：arch35 跨核合并用标量 Kahan：p=±inf 时 comp=inf-inf=NaN，污染后续分片使 total 变 NaN；MultilabelMarginLoss 的 partials 按核数分配，合并却读满 64 车道而越界。
@@ -17813,17 +17835,6 @@
 - **影响详情**：950PR（arch35）+ CANN 9.2.0：reduction=sum/mean 且输入含 ±inf 时输出 NaN（应 inf），单核不复现、核数 1→2 即暴露；MultilabelMarginLoss 小核数下约 1/12 结果错。
 - **改进措施**：检测 sum/mean 归约输入里放 ±inf，与 usedCoreNum=1 的结果对比；单核通过不能当验收（缺陷在核数≥2 才出现）。；修复 issue 5484 closed；修复 PR https://gitcode.com/cann/ops-nn/pulls/9662 （合入状态未核实）。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/5484
-
-### INF-1667 `ops_nn_fused_cross_entropy_max_sum_subnormal_log_underflow` FusedCrossEntropyLoss 次正规 sum_exp 出 -inf
-
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：损失计算 / 通用 / arch35 Log 指令与 1/sum_exp
-- **原因行为**：ar.h:252 的 Log() 对 fp32 次正规数输入下溢成 -inf（等价 log(0)），1/sum_exp 上溢 inf；sum_exp<=1e-38 时 loss 全 -inf、softmax 溢出。
-- **影响对象**：数值结果（数值异常）
-- **影响详情**：950PR + CANN 9.2.0，ttk bt=8/v=8、sum_exp=1e-38：loss 8/8 全 -inf（golden 约 -83~-92），softmax 8/8 为 inf；1e-36/1e-37 通过，1e-39 起同样失败，aclnn 通路一致。
-- **改进措施**：检测 构造 sum_exp_logits∈(0,1.175e-38) 的用例跑 ttk kernel 模式比对 golden，检查 1e-37 与 1e-38 之间的阈值翻转。；修复 issue 6126 closed；正文只给疑似根因（Log 指令对次正规数下溢，建议在 910B 复核是否为硬件指令通用行为），未给修复 PR。
-- **来源**：https://gitcode.com/cann/ops-nn/issues/6126
 
 ## MoE路由
 
@@ -18073,21 +18084,32 @@
 - **改进措施**：检测 对比 op 容量与每 rank post-dispatch 负载分布（PR 含实测统计表）；修复 PR 自带一次性 warning（命名两个缓冲与 --max-num-batched-tokens 替代）；修复 PR #17343（open，2026-10-14 仍 open 未合并）：_fused_mc2_required_capacity() 按编译期配置推导 rank 不变下界，_fused_mc2_capacity()=max(configured, required)，同时用于 op max_output_size 与 P/PD-mixed peer buffer；规避=调大 mega_moe_max_tokens
 - **来源**：https://github.com/vllm-project/vllm-ascend/pull/17343
 
-### INF-1487 `op_plugin_moe_token_unpermute_grad_dtype_nan` moe_token_unpermute_grad dtype 推导致 nan
+### INF-1487 `op_plugin_moe_token_unpermute_grad_dtype_nan` npu_moe_token_unpermute_grad dtype 推导异常
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / pytorch / unpermute_grad dtype 推导
 - **原因行为**：grad_probs 的 dtype 推导依赖 grad_unpermuted_tokens 而非 probs；probs=fp32 与 grad_unpermuted_tokens=bf16 时 grad_probs 被推成 bf16。
-- **影响对象**：梯度（数值异常）
-- **影响详情**：混合精度下 grad_probs 的 dtype 与 probs 不一致，反向精度受损，严重时结果为 nan 并引发训练异常。
+- **影响对象**：梯度（静默错误）
+- **影响详情**：混合精度反向中 probs=fp32 且 grad_unpermuted_tokens=bf16 时，grad_probs 被推成 bf16，与 probs 不一致，降低梯度精度；后续与 fp32 参数/优化器状态结合可能产生 nan，严重时训练异常。dtype 一致不触发。
 - **改进措施**：检测 混合精度（probs=fp32、grad_unpermuted_tokens=bf16）下比对 grad_probs.dtype 与 probs.dtype，并检查是否出现 nan；修复 待定（issue closed，修复 PR 未在正文给出，合入与发布状态未核实）；方向：grad_probs 的 dtype 按 probs 推导
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/193
 - **关联**：var:INF-1503
 
+### INF-1499 `op_plugin_moe_finalize_routing_meta_scale_none_shape` finalize_routing meta 空 scale 推导错形状
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：MoE路由 / pytorch / moe_finalize_routing_meta
+- **原因行为**：scale 为空、expanded_permute_rows 为 (E,C,H) 时，meta 直接把输入形状 (E,C,H) 当输出返回，而实际算子输出是 (R,H)，meta 推导与真实输出不一致。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：空 scale 场景下 fake/meta 张量拿到 (E,C,H) 而非 (R,H)，图模式按错误形状分配与推导，下游 reshape/索引对不上；非空 scale 路径正常。
+- **改进措施**：检测 对 npu_moe_finalize_routing_meta 在 scale=None、expanded_permute_rows=(E,C,H) 下比对 meta 推导形状与实际算子输出形状；修复 issue 为 closed，正文未给修复 PR（合入与发布状态未核实）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/224
+
 ### INF-1543 `vllm_ascend_fusedmc2_pad_token_moe_routing` FusedMC2 未屏蔽 pad token 致专家容量溢出丢 token
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / vllm / FusedMC2 pad 屏蔽
 - **原因行为**：FusedMC2 在 pad 场景没有正确屏蔽 padding token，pad 参与 MoE routing 并集中打到少数专家，超出 fused dispatch/combine 的 max_output_size 容量。
@@ -18098,7 +18120,7 @@
 
 ### INF-1552 `vllm_ascend_mega_moe_max_tokens_silent_clip` MegaMoE 容量设 8192 静默裁剪真实专家路由
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / vllm / MegaMoE receiver 容量
 - **原因行为**：mega_moe_max_tokens 被显式设为 8192（该构建默认 65536），实际专家路由量超过 8192 时 fused-MoE receiver 静默裁剪真实请求的专家计算，不报错。
@@ -18109,18 +18131,18 @@
 
 ### INF-1567 `cann_moe_gating_top_k_sqrtsoftplus_overflow_tail_oob` MoeGatingTopK arch35 数值溢出与尾段越界读
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / 通用 / moe_gating_top_k arch35
-- **原因行为**：normType=2 用朴素 sqrt(ln(1+exp(x)))：x>88 时 exp 溢出为 Inf、x<-15 时被吸收为 1 输出 0；softmax 首趟行最大值无掩码全向量加载，尾块越界读。
+- **原因行为**：normType=2 SqrtSoftplus朴素：x>88溢出、x<-15吸收；without_group softmax pass1行最大值float无掩码加载，expertCountAlign%64==32时尾段越界读行外残留。
 - **影响对象**：数值结果（数值异常）
-- **影响详情**：Ascend950 arch35 上 L1 499/500、E2E 429/481 通过；normType=2 约 38 例 NaN/Inf 或相对误差 100%，约 11 例整行 NaN 且同一用例复跑时好时坏（非确定性）。
+- **影响详情**：Ascend950 arch35上，normType=2输入含较大正值时输出Inf/NaN，含较大负值时输出0且相对误差100%；约11例同输入复跑不一致，batch尾行或k边界行成片NaN，算子返回成功。修复前ACLNN 499/500、E2E 429/481通过。
 - **改进措施**：检测 ttk 跑 normType=2 的大正值/大负值用例与 expertCountAlign%64==32 的 k 边界用例，比对 NaN/Inf 位置并重复执行查非确定性；修复 待定（issue closed，正文未附修复 PR；其中 topk 并列值一例为 golden 比对误报，非算子缺陷）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5271
 
 ### INF-1570 `cann_moe_init_routing_int32_expertidx_fp32_sort_collision` MoeInitRouting 排序键转 fp32 致静默错序
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / 通用 / moe_init_routing 排序
 - **原因行为**：排序前把 int32 expertIdx Cast 到 float32 再 Muls(-1) 用硬件 Sort；float32 尾数仅 24 位，|V|≥2^24 的相邻整数舍入到同一键，偏序改变使排序结果与 int32 排序不一致。
@@ -18131,7 +18153,7 @@
 
 ### INF-1585 `cann_moe_gating_top_k_softmax_tie_index_mismatch` MoeGatingTopKSoftmax 等值 topK 索引错位
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / 通用 / gating_top_k_softmax topK
 - **原因行为**：gating 值域极小时 softmax 近均匀、概率经输出精度舍入后大量等值；kernel 的 topK 在等值处的选择与排序与标杆的稳定排序（等值按专家索引升序）不一致，选中值相同但索引归属不同。
@@ -18140,27 +18162,38 @@
 - **改进措施**：检测 gating 取 [0,0.001]~[0,0.01] 极小值域使 softmax 近均匀，比对 expertIdxOut；同时看 yOut 是否逐位一致以区分“索引口径”与“数值误差”；修复 待定（issue closed；需维护者明确等值时 topK 的 tie-break 口径，或让 kernel 与稳定排序一致）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5043
 
-### INF-1588 `cann_moe_init_routing_v3_mxfp4_scale_row_stride_truncation` MoeInitRoutingV3 MXFP4 scale 行 stride 错
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：MoE路由 / 通用 / moe_init_routing_v3 量化路径
-- **原因行为**：MXFP4 的 scale 每行字节数用 cols/32 整数除法算，cols 非 32 倍数时余数被丢、逐行搬运起点漂移；静态量化全载模板按全部源行分配 buffer 却逐行 Compute(1)，小 cols 时写越 buffer。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：cols 非 32 倍数时 scale 错位，量化输出精度固定在约 33%；小 cols 多核时 64B Store 对齐溢出 buffer、踩踏相邻 UB 触发 AIV error；另有 golden 量化判据问题。
-- **改进措施**：检测 quantMode=0/9/13 下取 cols 非 32 倍数（如 33/48/65）核对 scale 逐行落点与量化输出；小 cols、多核场景加 mssanitizer memcheck 查 UB 越界；修复 待定（issue closed，正文未附修复 PR；期望方向为 scale 行字节数改对齐上取整、量化输出改用 ULP 判据）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/5394
-
 ### INF-1636 `mindformers_hash_routing_oob_no_check` 哈希路由删越界校验，越界 token 静默走错专家
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / mindspore / TopKRouter._hash_routing
 - **原因行为**：PR !8691 为去掉 D2H host sync 删掉 max(flat_ids)>=actual_vocab_size 校验；index_select 越界在 Ascend 属未定义行为
-- **影响对象**：隐状态（静默错误）
+- **影响对象**：数值结果；隐状态（静默错误）
 - **影响详情**：input_ids 超过 actual_vocab_size（数据异常或 tokenizer 配置不匹配）时不报错，越界 token 静默拿到错误 expert 索引，路由错且无日志线索
 - **改进措施**：检测 host 侧抽样校验 max(input_ids) < actual_vocab_size；对哈希路由层记录 expert 分布与 tid2eid 命中范围；修复 待定（issue closed；期望在不重新引入 D2H 同步的前提下加防御性守卫并可观测）
 - **来源**：https://gitcode.com/mindspore/mindformers/issues/2516
+
+### INF-1642 `mindformers_moe_aux_loss_double_count_recompute` 重计算使 MoE load_balancing_loss 重复累加翻倍
+
+`故障` · `active` · `infra_off` · `not_target` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：MoE路由 / mindspore / aux loss tracker 累加
+- **原因行为**：MoE aux loss 在前向经 router._attach_and_log_aux_loss → save_to_aux_losses_tracker 累加进 tracker；反向重算前向时同一路径再累加一次，被重计算层数值翻倍
+- **影响对象**：指标/日志；训练信号（静默错误）
+- **影响详情**：4 卡 DSV3 小模型、seq 可被专家数整除时 load_balancing_loss 打印 ≈2.0（应≈1.0），关重计算约 1.1；force_expert_balance=True 时 dispatch 已 128/128/128 均衡，aux 仍打印不均衡值
+- **改进措施**：检测 同配置开/关 recompute 比对逐层 tracker 值与聚合 load_balancing_loss；force_expert_balance 下核对 aux 与 num_tokens_per_expert 是否一致；修复 PR !8415：重计算上下文内跳过 tracker 累加，force_balance 时用均衡后 selected_experts_indices 重建 routing_map；修复后 ≈1.2、主 loss 逐位不变
+- **来源**：https://gitcode.com/mindspore/mindformers/issues/2367
+
+### INF-1698 `moe_init_routing_quant_k_gt1_rowidx` MoeInitRoutingQuant K>1 行索引逆映射偏 1
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：MoE路由 / pytorch / MoeInitRoutingQuant
+- **原因行为**：K>1 时同一行号在 sortedRowIdx 中出现 K 次，基准用 stable argsort 加 last-write-wins，kernel 归并与 gather 的散写次序不同，逆映射偏 1。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：K>1 多专家路由输入下 158 条全失败，K=1 的 840 条通过；expandedRowIdxOut 158/158 失败、行索引整体差 1；expandedXOut 140/158 int8 错值，误差可达 149~255；expandedExpertIdxOut 0/158 失败。
+- **改进措施**：检测 用 numpy stable argsort 加散写实现基准，MD5 逐位比对 expandedRowIdxOut 与 expandedXOut，覆盖 K>1；修复 待定（issue 为缺陷报告，未见修复 PR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/5049
 
 ## 重计算/卸载
 
@@ -18220,6 +18253,17 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/56283
 - **关联**：var:vllm_hidden_states_kv_budget_overestimate_startup_rejection
+
+### INF-1638 `mindie_recompute_maxoutputlen_iterative_subtract` 重计算用上次结果迭代扣减 maxOutputLen 致输出截断
+
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：重计算/卸载 / 通用 / 重计算 maxOutputLen 计算
+- **原因行为**：重计算路径算 maxOutputLen 时拿上一次的结果去算下一次的输出，形成迭代减法；多次触发重计算后 maxOutputLen 可能小于 0，再按这个值裁剪输出。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：多次重计算的请求输出被提前截断，精度测试与生成结果缺尾；过程不报错，只有对比完整输出或看截断长度才发现。
+- **改进措施**：检测 构造长输出 + 多次触发重计算的请求，比对实际返回 token 数与 max_tokens/剩余长度；在重计算分支打印每次的 maxOutputLen，观察是否单调递减到负数；修复 issue closed；正文只给出根因描述（maxOutputLen 迭代减法），未给修复 PR 与版本
+- **来源**：https://gitcode.com/Ascend/MindIE-LLM/issues/552
 
 ## RL训练回路
 
@@ -18412,10 +18456,10 @@
 
 ### INF-1491 `msprobe_nan_check_nondeterministic_and_tensor_list_skipped` nan check 同数据结果不稳定且溢出未抛异常
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / nan check 溢出检测
-- **原因行为**：同一份 dump 两次检测 is_nan 在 0/1 之间跳变；配置 tensor_list 时 NanTest 因 SoC 校验失败被跳过，即使检出 is_nan:1 也不抛 Exception
+- **原因行为**：同一模型相同数据两次 nan check 溢出检测的 is_nan 结论不一致；配置 statistics.tensor_list 后 NanTest 采集失败被跳过，检出 is_nan:1 也不抛 Exception
 - **影响对象**：测试判定；指标/日志（不可复现）
 - **影响详情**：两份 dump.json 逐行 diff 只有 is_nan 1→0 不同；配置 tensor_list 后日志打印 overflow tensor collection failed（aclnnNanTest 失败）且 tensor collection will be skipped
 - **改进措施**：检测 对同一 dump 重跑 nan check 并比较 is_nan，或直接比对两次采集的 dump.json；配了 tensor_list 时检查日志是否出现 'tensor collection will be skipped'；修复 待定（issue 未给修复 PR；正文只给现象与日志）
@@ -18423,7 +18467,7 @@
 
 ### INF-1493 `msprobe_overflow_check_reports_no_anomaly_on_nan_loss` loss 已 NaN 时 overflow_check 报无异常节点
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / overflow_check 分析路径
 - **原因行为**：L1 statistics 采集时多 rank 打印 'The dump data(None) should be a dict'，overflow_check 仍判无异常节点、不生成分析文件
@@ -18434,10 +18478,10 @@
 
 ### INF-1495 `msprobe_aclgraph_statistics_int32_min_max_noninteger` ACLGraph 统计模式下 int32 的 Min/Max 出现小数
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / ACLGraph statistics 采集
-- **原因行为**：ACLGraph 图模式下 INT32/INT64 统计仍走 to(kFloat)+amin/amax，Host 侧读到的 Min/Max/Mean/Norm 带小数，形态像读了其他浮点张量的缓冲区
+- **原因行为**：ACLGraph 图模式 L1 statistics 采集下，部分 torch.int32/torch.int64 张量的 Min/Max/Mean/Norm 出现非整数小数
 - **影响对象**：指标/日志（静默错误）
 - **影响详情**：W8A8 Qwen2 真实请求 step0~7 的 dump.json 中 torch.int32 shape[1152] 记录 Max 0.458、Min -0.858、Mean 0.895；同批每条 step 的 216 条 int8 记录统计为 null，推理与 replay 均正常
 - **改进措施**：检测 采集后筛 dtype 为 torch.int32/int64 的记录，检查 Min/Max 是否为整数；与设备侧 [min,max,mean,norm] 对照区分设备算错还是 Host 读错；修复 待定（issue 只列四条初判方向：内部格式未归一化、ACLGraph 复用中间 buffer、payload 生命周期错位、Cast/reduction 异常；无修复 PR）
@@ -18445,7 +18489,7 @@
 
 ### INF-1497 `msprobe_graph_visualize_node_state_vs_detail_mismatch` 图可视化节点标记与详情数值不一致
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / graph_visualize 节点标记
 - **原因行为**：graph_visualize 只给人为注入误差的首个 MLP 节点标红，下游 decoder layer 输入统计已明显不同仍不标记；另一例手动取消并重建匹配后同一节点计算值与颜色都变了
@@ -18456,22 +18500,22 @@
 
 ### INF-1498 `msprobe_offline_model_compare_result_all_nan` 离线模型一键式比对结果全部为 NAN
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / offline_model 一键式比对
-- **原因行为**：compare -m offline_model 先用 atc 把 om 转 json 再按 net output 名映射两侧 dump；日志警告原名可能不正确，result.csv 每一行都是 NAN，比对实际未成立
-- **影响对象**：测试判定（静默错误）
+- **原因行为**：msprobe compare -m offline_model 比对后 result.csv 结果全部为 NAN，余弦相似度无值，日志出现 net output 原名 maybe not correct 的 WARNING。
+- **影响对象**：测试判定（数值异常）
 - **影响详情**：910B4 + CANN 8.3.RC1 把 fp32 onnx 经 atc 转 om 前后比对，result.csv 每行都是 NAN；日志仅有 net output 原名 'maybe not correct' 一条 WARNING
 - **改进措施**：检测 比对结果先看 Result/余弦列是否整列 NAN；日志里搜 'of net output maybe not correct'，命中即视为比对未配对而非精度差；修复 待定（issue 未给修复 PR，根因未确认）
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/49
 - **关联**：var:INF-1500
 
-### INF-1500 `msprobe_compare_gpu_side_matches_megatron_not_te` GPU 侧采集比对错位到 Megatron 同名函数
+### INF-1500 `msprobe_compare_gpu_side_matches_megatron_not_te` 比对工具将 GPU 侧模块匹配到 Megatron 对应函数取数
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / GPU 侧模块匹配
-- **原因行为**：GPU 侧模块实际执行 Transformer Engine 的对应函数，比对工具却取到 Megatron 对应函数的数值，两侧 shape 都对不上，模块级比对结论失真
+- **原因行为**：比对工具将 GPU 侧 Transformer Engine 对应函数匹配到 Megatron 对应函数取数
 - **影响对象**：测试判定（静默错误）
 - **影响详情**：openEuler + CANN 9.1.0 环境；模型侧加打印确认 GPU 与 NPU 权重一致，compare 仍报模块不一致，用户据此被引向排查 NPU 精度
 - **改进措施**：检测 比对前核对两侧命中的模块名与 shape 是否属于同一实现（TE vs Megatron）；shape 不一致的配对直接判为错位而非精度差；修复 待定（issue 未给修复 PR）
@@ -18479,45 +18523,45 @@
 
 ### INF-1502 `msprobe_alg_all_silently_drops_custom_algorithm` -alg all 静默丢弃自定义比对算法
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / algorithm_manager.py
-- **原因行为**：algorithm_manager.py 第 235 行去重误把 self.built_in_support_algorithm 写成 self.custom_support_algorithm，条件恒 False，自定义算法从未加入
-- **影响对象**：测试判定（静默错误）
+- **原因行为**：algorithm_manager.py 第235行去重检查变量名写错，使用 self.custom_support_algorithm，条件恒为 False，自定义算法从未被添加
+- **影响对象**：指标/日志；测试判定（静默错误）
 - **影响详情**：msaccucmp.py compare -alg all -c custom_algo 的输出表头只有 10 个内置算法、不含自定义算法，且无任何警告；指定具体算法名的场景不受影响
 - **改进措施**：检测 用 -alg all -c <自定义算法> 跑一次，检查表头是否含该算法列；对照 ALL_COMPARE_INDEX 与实际算法集合；修复 两行修改（issue 给出方案，未见 PR）：第 233 行改为 list(ConstManager.BUILT_IN_ALGORITHM) 避免 append 污染全局常量；第 235 行把 self.custom_support_algorithm 改为 self.built_in_support_algorithm
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/456
 
 ### INF-1504 `mssanitizer_memcheck_oob_and_free_false_positive` 内存检测在特殊指令与高阶 API 上成片误报越界
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / memcheck 指令地址/长度建模
-- **原因行为**：memcheck 依指令描述符推算访问区间：MOV_FP 的 memSize 溢出成极大值、ND2NZ 步长与 DataCopyPad compact 的地址换算、原子内建与高阶 API 内部缓冲长度都算错，合法访问被判越界或非法释放。
-- **影响对象**：测试判定；指标/日志（静默错误）
+- **原因行为**：memcheck 将合法访问误判为越界、非法读写或非法释放；MOV_FP 指令触发时工具内部 memSize 溢出成极大值，据此报 L0C 越界读。
+- **影响对象**：测试判定；指标/日志（报错）
 - **影响详情**：catlass/ops-nn/shmem/aclnn 融合与 mc2 算子在合法输入上稳定报 illegal read/write、非法释放或 out of bounds，按打印地址对 InitBuffer 空间并不越界；真越界被同批误报稀释，910B 与 910C 结论还不同。
 - **改进措施**：检测 把告警里的地址+size 与源码 InitBuffer/访问范围逐条核对，并用同算子换搬运方式（nd2nz→逐块拷贝、关 compact 模式）复测同一用例。；修复 待定（各 issue 均以“误报”闭环，未见公开修复 PR；#196/#207 为扫网专项，归因指向搬运指令地址模型）
 - **来源**：https://gitcode.com/Ascend/mssanitizer/issues/8；https://gitcode.com/Ascend/mssanitizer/issues/15；https://gitcode.com/Ascend/mssanitizer/issues/68；https://gitcode.com/Ascend/mssanitizer/issues/80；https://gitcode.com/Ascend/mssanitizer/issues/120；https://gitcode.com/Ascend/mssanitizer/issues/119；https://gitcode.com/Ascend/mssanitizer/issues/152；https://gitcode.com/Ascend/mssanitizer/issues/164；https://gitcode.com/Ascend/mssanitizer/issues/196；https://gitcode.com/Ascend/mssanitizer/issues/207
 
 ### INF-1505 `msprobe_int8_quant_output_skipped_or_binary_compared` int8 量化算子输出被比对跳过或误判 fail
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / INT_TYPE 与二进制比较
 - **原因行为**：core/common/const.py 的 INT_TYPE 不含 int8，比对按 not inexact 判 SKIP；放开类型后又沿用要求完全一致的 compare_bool_tensor，量化算子必判 fail
 - **影响对象**：测试判定（静默错误）
-- **影响详情**：npu_dynamic_quant、npu_rms_norm_dynamic_quant 的 int8 输出整行 SKIP，Message 为 'data type <class numpy.int8> not inexact'；改二进制比较后 error_rate 非 0，量化算子无法通过验证
+- **影响详情**：api_accuracy_checker 比对含 int8 输出的 NPU 量化算子时，结果为 SKIP，备注为 'data type numpy.int8 not inexact'；改严格二进制比较后 error_rate 非 0、全部 fail
 - **改进措施**：检测 比对结果里筛 Status=SKIP 且 Message 含 'not inexact' 的行，统计被跳过的 int8 输出算子数；不要以 SKIP 当通过；修复 待定（#190 只给出修复总结，未给 PR 编号；#260 提出 requantize_compare 容忍量化误差，属方案讨论）
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/190；https://gitcode.com/Ascend/msprobe/issues/260
 - **关联**：var:INF-1502
 
 ### INF-1507 `mssanitizer_initcheck_padding_segment_false_positive` 未初始化检测把搬运 padding 段与模板算子判成未初始化
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / initcheck 搬运数据段建模
-- **原因行为**：initcheck 把未写入的 padding 地址段当成真实数据访问，且对模板算子搬运与多核初始化建模不足：LOAD_L1_2D 加载 padding 段被判未初始化读，--block-id 单核运行时也报未初始化。
-- **影响对象**：测试判定；指标/日志（静默错误）
+- **原因行为**：initcheck 对搬运指令写入范围与 padding 段建模不足，将 LOAD_L1_2D 加载的 padding 段或单核执行不会走到的地址段判为未初始化。
+- **影响对象**：测试判定；指标/日志（报错）
 - **影响详情**：catlass 09_splitk_matmul、49_ascend950_flash_attention_infer 与 kv_rms_norm_rope_cache_story 在无未初始化数据的算子上稳定报未初始化，padding 段与单核 --block-id 场景最集中。
 - **改进措施**：检测 用同一算子分别带 --block-id 与不带、以及 -t memcheck 交叉验证：memcheck 无越界而 initcheck 报未初始化时优先怀疑 padding 段建模。；修复 待定（#209 为让检测工具识别搬运类指令 padding 数据段的需求，未见公开修复 PR）
 - **来源**：https://gitcode.com/Ascend/mssanitizer/issues/55；https://gitcode.com/Ascend/mssanitizer/issues/156；https://gitcode.com/Ascend/mssanitizer/issues/189；https://gitcode.com/Ascend/mssanitizer/issues/204；https://gitcode.com/Ascend/mssanitizer/issues/209；https://gitcode.com/Ascend/mssanitizer/issues/213
@@ -18525,18 +18569,18 @@
 
 ### INF-1508 `msprobe_verl_dump_json_empty_without_warning` verl 集成下 dump.json 为空且无告警
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / verl 里的 debugger 挂载
 - **原因行为**：在 verl 的 generate 外层对 rank0 做 debugger.start/stop 后，dump.json 只写元数据、data 为空对象，全程无告警
-- **影响对象**：测试判定；指标/日志（静默错误）
+- **影响对象**：指标/日志；测试判定（静默错误）
 - **影响详情**：A5 机器 vllm 单独采集正常、接入 verl 后 dump.json 为 {task:statistics, level:mix, framework:pytorch, dump_data_dir:null, data:{}}，无从比对
 - **改进措施**：检测 采集后检查 dump.json 的 data 是否为空对象、dump_data_dir 是否为 null；不要以「dump.json is at ...」日志当作采集成功；修复 待定（issue 未给修复 PR；正文只有用户改造的 verl 侧代码片段）
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/43
 
 ### INF-1509 `mssanitizer_address_space_model_miss` SIMT UB 范围与 L2 分配器未建模致越界漏报
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / UB 与 L2 分配器建模
 - **原因行为**：SIMT 场景把 UB 可访问范围按全量 UB 建模（实际由用户控制），越界落在未建模区间就不报；address_sanitizer 未 hook aclrtMallocCached，L2 分配对工具不可见。
@@ -18547,18 +18591,18 @@
 
 ### INF-1510 `mssanitizer_racecheck_id_and_sync_false_positive` 竞争与同步检测在 ID 越界、有同步场景误报
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / racecheck/synccheck 冲突判定
-- **原因行为**：竞争判定不建模同线程顺序、跨卡 barrier 与原子累加语义，set/wait_flag、DCCI、synccheck 桩在 event/flag id 超界后又不按硬件截断处理：有同步的访问被判 WAW/WAR，同步桩少一条时同样误报。
+- **原因行为**：竞争/同步判定未识别同线程顺序、跨卡barrier、原子累加、DCCI+SyncAll等同步语义；set/wait_flag桩event id超界未处理；synccheck未按硬件截断超范围AIV flag id；同步桩少一条时未正确识别
 - **影响对象**：测试判定；指标/日志（静默错误）
 - **影响详情**：同核同线程、带 cross-npu barrier 的两卡同址写、FixPipe 同址 AtomicAdd、DCCI+SyncAll 之后、纯 SIMT 原子/归约算子都稳定报竞争；synccheck 对 AIV flag id>15 报死锁而硬件截断后实际不死锁。
 - **改进措施**：检测 看到竞争告警先核对两侧是否有 SyncAll/跨卡 barrier/同一原子累加，并单开 --check-cross-npu-races 或 --check-dcci 复测；synccheck 报死锁时核对 AIV flag id 是否 >15。；修复 待定（各 issue 均以“误报”闭环；#168 提出核间同步 mode4 的 flag_id 合法性告警，方向是让工具按硬件截断语义处理，未见公开 PR）
 - **来源**：https://gitcode.com/Ascend/mssanitizer/issues/113；https://gitcode.com/Ascend/mssanitizer/issues/118；https://gitcode.com/Ascend/mssanitizer/issues/121；https://gitcode.com/Ascend/mssanitizer/issues/125；https://gitcode.com/Ascend/mssanitizer/issues/166；https://gitcode.com/Ascend/mssanitizer/issues/183；https://gitcode.com/Ascend/mssanitizer/issues/195；https://gitcode.com/Ascend/mssanitizer/issues/215；https://gitcode.com/Ascend/mssanitizer/issues/216
 
-### INF-1511 `mssanitizer_racecheck_miss_new_hw_and_compiler` 构造竞争场景在新硬件与新编译器上漏报
+### INF-1511 `mssanitizer_racecheck_miss_new_hw_and_compiler` 构造竞争用例在不同环境工具链上结论矛盾
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / racecheck 插桩覆盖
 - **原因行为**：同一份人为构造的 cross_pipe 竞争用例在 A5 上动态插桩正常却检不出竞争；950 上换 0307 版编译器由符合预期变为漏报；ctrl 寄存器未复位时静态与动态插桩结论互不相同。
@@ -18567,9 +18611,9 @@
 - **改进措施**：检测 在已知存在竞争的用例上做回归：同一算子在 A5/950 与各编译器版本、静态与动态插桩下各跑一次 racecheck，结论不一致即视为覆盖缺口。；修复 待定（三个 issue 均以“漏报/不一致”闭环，未见公开修复 PR 或根因说明）
 - **来源**：https://gitcode.com/Ascend/mssanitizer/issues/49；https://gitcode.com/Ascend/mssanitizer/issues/69；https://gitcode.com/Ascend/mssanitizer/issues/88
 
-### INF-1512 `mssanitizer_racecheck_nondeterministic_verdict` 竞争检测结论概率性出现：20 次执行 5 次误报
+### INF-1512 `mssanitizer_racecheck_nondeterministic_verdict` 竞争检测结论概率性出现：20次执行5次报UB_WAR
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / racecheck 地址解析/源码映射
 - **原因行为**：racecheck 对同一二进制同一输入的判定不稳定：20 次执行 5 次报 UB WAR（4 次 2 条、1 次 4 条），报的区间在 CCE 静态地址布局上并不重叠，疑为 VA 解析/配置解码/源码映射概率性出错。
@@ -18580,10 +18624,10 @@
 
 ### INF-1513 `mssanitizer_triton_operator_coverage_gap` Triton 算子检测双向失准：add 漏报、mix/vector 误报
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
-- **原因对象**：观测/评测 / triton / Triton 路径地址与 kernel 归属
-- **原因行为**：Triton/TTGIR 下发路径的地址与 kernel 归属建模不完整：add 用例越界未告警，mix、vector 与多 kernel 用例在 950POD 上报错或误报，tl.dot 与 rwkv6 cumsum 在合法访问上报越界。
+- **原因对象**：观测/评测 / triton / mssanitizer Triton 越界检测
+- **原因行为**：mssanitizer 对 Triton on Ascend 算子的越界检测结论基本不可用，无法区分真实越界还是工具未跟上 triton_ascend 下发方式。
 - **影响对象**：测试判定；指标/日志（静默错误）
 - **影响详情**：POD 上跑 triton add 无任何越界告警；同一套 out_of_bounds 用例除 cube 外 mix/vector/多 kernel 全部报错或误报；Ascend950PR 上 tl.dot 与 FLA cumsum 报 GM 写越界 size 4。
 - **改进措施**：检测 用同一份越界用例在 cube / vector / mix / 多 kernel 四类上分别跑 memcheck，统计漏报与误报方向；对照 triton_ascend 版本的 TTGIR 下发路径。；修复 待定（三个 issue 均以“误报/未检出”闭环，未见公开修复 PR；#145 的 mix/vector 报错与 #160 的漏报疑同源）
@@ -18591,29 +18635,29 @@
 
 ### INF-1514 `mssanitizer_instrumentation_changes_kernel_semantics` 插桩与桩函数改变算子执行语义致退出并漏检
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / 动态插桩/踩踏检测桩函数
-- **原因行为**：线程间踩踏检测把 __syncthreads() 放进桩函数，该指令在 divergence 代码中不合法且无法保证所有分支都走到；动态插桩还会扰动 L0A/L0B 与 LOAD2D 指令参数，插桩后算子不再等价于原算子。
-- **影响对象**：可用性/进度；测试判定（报错）
+- **原因行为**：插桩会改动被测算子：线程间踩踏检测桩函数插入 __syncthreads()，该指令受硬件约束不能在 divergence 代码中使用，且无法保证所有分支走到；动态插桩后的指令序列与原始算子不等价。
+- **影响对象**：测试判定；可用性/进度（报错）
 - **影响详情**：被检测算子插桩后异常退出且真实 GM 越界检不出；特定芯片动态插桩后功能正常却报 aic error（LOAD2D address overflow 等 8 类 errcode）——插桩后的执行不再等价于原算子。
 - **改进措施**：检测 同一算子分别在有/无插桩（关闭线程间踩踏检测、静态插桩对照）下执行，比对是否异常退出与 runtime 报错码；插桩后失败而裸跑正常即归为插桩副作用。；修复 待定（#17 方向是桩函数里不能用受 divergence 约束的同步指令；#35 未见公开修复 PR）
 - **来源**：https://gitcode.com/Ascend/mssanitizer/issues/17；https://gitcode.com/Ascend/mssanitizer/issues/35
 
 ### INF-1532 `ops_nn_groupnormswishgrad_golden_fp16_by_shape` SwishGrad 参考按元素数才升 fp32 致假失败
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / 通用 / ATK 参考执行器 dtype 提升
 - **原因行为**：参考执行器只有 count>1（4D 及以上）才把输入升 fp32；2D/3D 的 fp16/bf16 用例里参考按半精度算、内核按 fp32 算，两侧精度不同却被记成算子超差。
 - **影响对象**：测试判定（静默错误）
-- **影响详情**：125 条中 52 条判 accuracy False，其中 fp16 33 例（相对误差 0.002~0.018）、bf16 16 例（0.007~0.18）来自该 cast 条件；成对 3D/4D 用例（15/16、32/33、34/35）只有 3D 失败。
+- **影响详情**：125 条中 52 条 accuracy False；52 条被拆成四族，最大两族根因在参考侧：2D/3D 的 fp16/bf16 用例相对误差超阈（fp16 0.002~0.018，bf16 0.007~0.18）；成对 3D/4D 用例仅 3D 失败，4D 走 fp32 参考通过。
 - **改进措施**：检测 查参考执行器是否按 shape/元素数决定升精度；用同 shape 的 3D 与 4D 成对用例对照，只 3D 失败即说明是参考侧 dtype 而非算子。；修复 issue 6069 已 closed，正文未给参考执行器的修复 PR；报告另称 swishScale 在 tiling 按 float 读而 API 声明 double，未核实。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6069
 
 ### INF-1540 `ops_nn_ttk_golden_fp64_truncated_to_fp32` TTK golden 把 fp64 标杆截回 fp32
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / 通用 / 10 算子 TTK golden 参考实现
 - **原因行为**：golden 内部一律 astype(float32)，把 TTK Promote 送进来的 fp64 输入降为 fp32；同时次级输出硬编码 float32、忽略用例声明的 output_dtypes。
@@ -18624,7 +18668,7 @@
 
 ### INF-1541 `ops_nn_advance_step_st_golden_hardcoded_constants` AdvanceStep ST 参考返回硬编码常量
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / 通用 / advance_step ST executor
 - **原因行为**：ST executor 的 __call__ 读出 9 个入参后逐个覆盖成 4 个手写常量张量返回；同文件真正的 CPU golden Advance_step 全仓无人调用，参考值与输入无关。
@@ -18633,31 +18677,9 @@
 - **改进措施**：检测 grep 参考实现的调用点：golden 函数定义了却无人调用、__call__ 直接返回字面量张量，就说明用例发现不了该输出错误；改输入看参考值是否随之变化。；修复 issue 6349 open；修复方向是让 __call__ 调用本文件的 Advance_step 并删掉硬编码覆盖，未给 PR
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6349
 
-### INF-1602 `runtime_aicerr_meta_copied_zero_bytes` AIC Error 采集把 kernel 元数据拷成 0 字节
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：观测/评测 / 通用 / kernel 元数据搜索与拷贝
-- **原因行为**：GetSearchPath 把 ASCEND_CACHE_PATH 放首位且递归搜索不排除转储输出目录；File::Copy 在源与目标为同一 inode 时先 O_TRUNC 清零再读，读到 0 字节仍返回 ADUMP_SUCCESS。
-- **影响对象**：指标/日志（静默错误）
-- **影响详情**：开启 AIC Error 采集且 dumpPath 与 ASCEND_CACHE_PATH 同目录时，转储出的 kernel *.json/*.o 全是 0 字节，msaicerr 解析失败、拿不到出错 kernel 信息；拷贝返回成功，日志无任何告警。
-- **改进措施**：检测 检查 {dump_path}/extra-info/data-dump/<devId>/ 下 *.json/*.o 大小是否为 0；或对比 kernel_meta 原件与转储副本；修复 issue 指出两处需改：搜索路径排除转储输出目录、File::Copy 增加源/目标同 inode 判断并返回错误；issue 已 closed，合入与发布未核实
-- **来源**：https://gitcode.com/cann/runtime/issues/916
-
-### INF-1603 `runtime_adump_shared_state_no_sync` adump 五处共享状态无同步致 dump 丢失或崩溃
-
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：观测/评测 / 通用 / adump 配置/回调/索引共享态
-- **原因行为**：dumpConfigInfo_ 的读写落在两把不相交的锁、dumpInitNum_ 与 g_atomicIndex 裸自增、messageCallback_ 与 g_dynamicChunk 无锁读写，五处共享状态缺少互斥或原子保护。
-- **影响对象**：指标/日志；可用性/进度（不可复现）
-- **影响详情**：并发 dump/异常回调下 dump 数据静默丢失、g_atomicIndex 撞号使元数据关联到错误算子，adx_dump_record 线程可能调用已销毁的 std::function 而崩溃；多流/多线程时不可复现。
-- **改进措施**：检测 并发抓取 dump 与 acldumpRegCallback/UnregCallback，核对 dump 条数与元数据索引是否唯一；TSAN/静态扫描查共享变量；修复 issue 建议给 dumpConfigInfo_ 统一锁、dumpInitNum_ 改原子、messageCallback_ 加锁读写、g_dynamicChunk 析构前先置标志、g_atomicIndex 改 fetch_add；issue 已 closed，合入与发布未核实
-- **来源**：https://gitcode.com/cann/runtime/issues/1003
-
 ### INF-1629 `msmodelslim_tune_eval_satisfied_hardcoded_true` 调优评估 is_satisfied 硬编码 True，不达标也判通过
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / evaluate 评估服务
 - **原因行为**：evaluate() 不校验 accuracies 是否为空或数据集是否匹配，返回时又把 is_satisfied 硬编码为 True，忽略 is_demand_satisfied() 的判定。
@@ -18666,20 +18688,9 @@
 - **改进措施**：检测 审阅 EvaluateResult.is_satisfied 的来源而非只看日志；对 bencher 返回空结果、数据集错配两种异常各跑一次评估，检查是否仍返回 satisfied；修复 issue closed；正文给出三处修复（补空结果/数据集校验、按当前 expectation 比较精度、返回时调用 is_demand_satisfied），涉及 msmodelslim/infra/service_oriented_evaluate_service.py，未核实合入版本
 - **来源**：https://gitcode.com/Ascend/msmodelslim/issues/298
 
-### INF-1642 `mindformers_moe_aux_loss_double_count_recompute` 重计算使 MoE load_balancing_loss 重复累加翻倍
-
-`故障` · `pending_audit` · `infra_off` · `not_target` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：观测/评测 / mindspore / aux loss tracker 累加
-- **原因行为**：MoE aux loss 在前向经 router._attach_and_log_aux_loss → save_to_aux_losses_tracker 累加进 tracker；反向重算前向时同一路径再累加一次，被重计算层数值翻倍
-- **影响对象**：指标/日志；训练信号（静默错误）
-- **影响详情**：4 卡 DSV3 小模型、seq 可被专家数整除时 load_balancing_loss 打印 ≈2.0（应≈1.0），关重计算约 1.1；force_expert_balance=True 时 dispatch 已 128/128/128 均衡，aux 仍打印不均衡值
-- **改进措施**：检测 同配置开/关 recompute 比对逐层 tracker 值与聚合 load_balancing_loss；force_expert_balance 下核对 aux 与 num_tokens_per_expert 是否一致；修复 PR !8415：重计算上下文内跳过 tracker 累加，force_balance 时用均衡后 selected_experts_indices 重建 routing_map；修复后 ≈1.2、主 loss 逐位不变
-- **来源**：https://gitcode.com/mindspore/mindformers/issues/2367
-
 ### INF-1696 `npu_queue_can_exit_silent_noop_false_pass` NPU 队列 CAN_EXIT 后算子静默 no-op 致测试假通过
 
-`故障` · `pending_audit` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `other_stack` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / NPUQueue 状态机
 - **原因行为**：致命错误后 NPUQueue 进入 CAN_EXIT，Enqueue() 直接返回不执行，MakeSureQueueEmpty 在该状态下不抛异常，worker 继续跑后续用例并产出未初始化设备内存。
@@ -18690,18 +18701,18 @@
 
 ### INF-1708 `rope_golden_dtype_overflow_false_fail` RoPE golden 未对齐 kernel 溢出语义致误报
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / RoPE tests golden.py
 - **原因行为**：golden.py 在 ttk Promote 模式按提升后 dtype 计算且不回落到输出 dtype 值域，Enable 模式又在输入 dtype 内乘加（假溢出为 inf），与 kernel 的 fp32 计算加饱和语义失配。
-- **影响对象**：测试判定（静默错误）
+- **影响对象**：测试判定（报错）
 - **影响详情**：input_data_ranges 含 (65504,65504)、(3.4028235e38,3.4028235e38) 等极值用例时 golden 给有限值而 NPU 给 ±inf/nan（或相反），isclose 判 FAIL，本应 PASS 的用例被判失败。
 - **改进措施**：检测 对极值/大幅值用例同时用 kernel 与 golden 跑，判断失败是口径差异还是算子缺陷；比较输出 dtype 边界的溢出语义；修复 修 tests/assets/golden.py：按 kernel 的 fp32 内部计算、在写回输出 dtype 处按 IEEE754 饱和（issue closed，合入状态未核实）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/5027
 
 ### INF-1709 `blockattnres_golden_ftz_mismatch` BlockAttnRes golden 未模拟 FP32 FTZ 致误判
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：观测/评测 / pytorch / BlockAttnRes golden
 - **原因行为**：CPU golden 未模拟 Ascend 950 默认的 FP32 FTZ，Update 的 Phase2OneVL 归一化顺序也与 TwoVL/Generic 不同，极端输入下正负零/Inf/NaN/有穷值的分类与 NPU 不同。
@@ -18768,17 +18779,6 @@
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/huggingface/transformers/pull/47712
 - **关联**：var:INF-1118
-
-### INF-1524 `torchnpu_set_float32_matmul_precision_silent_noop` matmul_precision/TF32 开关在 NPU 静默不生效
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：配置/参数 / pytorch / matmul_precision 开关
-- **原因行为**：NPU 无 TF32 张量核，set_float32_matmul_precision 与 backends.cuda.matmul.allow_tf32 被静默接受，既不改 kernel 选择也不给 warning。
-- **影响对象**：性能/资源（静默错误）
-- **影响详情**：highest/high/medium 三档 matmul 结果逐位相同（torch.equal 为 True），allow_tf32 在 NPU 默认 True；用户据此得出的性能/精度结论失真。
-- **改进措施**：检测 同一 fp32 matmul 在三档 precision 下比较 torch.equal 与耗时；从 CUDA 迁入的代码尤其要看；修复 待定（issue closed，正文未给修复 PR；期望设置时给 warning 说明 NPU 无 TF32，或文档写明这些 CUDA 专有开关的行为）
-- **来源**：https://gitcode.com/Ascend/pytorch/issues/5108
 
 ## 构建/发布
 

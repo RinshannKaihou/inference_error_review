@@ -4,7 +4,7 @@ slug: inductor_philox_replay_rng_stream_desync
 aliases: []
 title: 编译期 Philox 重放与 eager RNG 流不同步致 mask 错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

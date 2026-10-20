@@ -4,7 +4,7 @@ slug: vllm_ascend_pd_swa_stale_block_nan
 aliases: []
 title: PD SWA 传输块裁剪顺序错致消费陈旧 KV 出 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 隐状态
-  detail: 陈旧 SWA 块 ID 作为 remote_block_ids 传给 D 端，npu_sparse_attn_sharedkv 消费脏块后第 0 层 attention 输出全 NaN，speculative 输出全 -1、请求卡住；并发请求才复现。
+  detail: 陈旧 SWA 块 ID 作为 remote_block_ids 传给 D 端，npu_sparse_attn_sharedkv 消费脏块后第 0 层 attention 输出全 NaN，下游 speculative 输出可能全 -1，请求卡住；并发请求才复现。
   visibility: 数值异常
 mitigation:
   detect: 对 SWA 组比对 prompt trim 与 SW clip 的先后顺序（prompt_len=129、block_size=128 时旧顺序得 [102,103]、正确应为 [100,101]）；dump 被消费块检查是否含 NaN/大 BF16 值
@@ -48,3 +48,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

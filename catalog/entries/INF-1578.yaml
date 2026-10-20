@@ -4,7 +4,7 @@ slug: cann_kv_rms_norm_rope_cache_recompute_dv_single_block_uninit_sum
 aliases: []
 title: KvRmsNormRopeCache dv 单块时 Σx² 未计算
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: bf16、dk=32768/dv=512 实测 c_kv 1024/1024 元素错、整体放大 228 倍（max_rel 229.36）；修复后 max_abs 0.0039。算子返回 SUCCESS、无报错，且无 YAML 用例覆盖该路径。
+  detail: bf16、dk=32768/dv=512 实测 c_kv 1024/1024 元素错、放大约200多倍（max_rel 229.36）；修复后 max_abs 0.0039。算子返回成功、不报错，也没有用例覆盖该路径。
   visibility: 静默错误
 mitigation:
   detect: 构造 dk 超大 + dv 小（或 dv 恰整除 ubFactor）使 recompute 模板的 dv 只占一个 UB 块，dump c_kv 与 numpy 的 x/sqrt(mean(x^2)+eps)*gamma 比对
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

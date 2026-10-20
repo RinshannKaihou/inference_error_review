@@ -4,10 +4,10 @@ slug: mindformers_moe_aux_loss_double_count_recompute
 aliases: []
 title: 重计算使 MoE load_balancing_loss 重复累加翻倍
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 观测/评测
+  - subsystem: MoE路由
     stack: mindspore
     component: aux loss tracker 累加
   behavior: MoE aux loss 在前向经 router._attach_and_log_aux_loss → save_to_aux_losses_tracker 累加进 tracker；反向重算前向时同一路径再累加一次，被重计算层数值翻倍
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 观测/评测
+        to: MoE路由
+    uncertain:
+    - detail

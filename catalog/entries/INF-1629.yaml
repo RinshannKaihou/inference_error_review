@@ -4,7 +4,7 @@ slug: msmodelslim_tune_eval_satisfied_hardcoded_true
 aliases: []
 title: 调优评估 is_satisfied 硬编码 True，不达标也判通过
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

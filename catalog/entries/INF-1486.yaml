@@ -4,7 +4,7 @@ slug: op_plugin_fp32_sdpa_non4_dim_fa_path_mismatch
 aliases: []
 title: fp32 且 D 非 4 倍数走 FA 致精度不齐
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -52,3 +52,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - behavior

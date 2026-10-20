@@ -4,13 +4,13 @@ slug: te_reduction_inplace_reuse_cross_core_race
 aliases: []
 title: 归约 kernel 复用死输入 buffer 跨核竞态致偶发 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: pytorch
     component: TE decide_inplace_update
-  behavior: decide_inplace_update 只校验索引等价、不看时序，把已死输入复用为 kernel 输出；统计循环与归一化循环在 48 核 group dispatch 下跨核交错，某核统计时另一核已改写数据。
+  behavior: decide_inplace_update 只校验索引等价、不看时序，允许复用已死输入为输出；统计与归一化循环在 48 核 group dispatch 下跨核交错，某核统计时另一核可能已改写数据。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - visibility

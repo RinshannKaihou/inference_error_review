@@ -4,7 +4,7 @@ slug: msprobe_verl_dump_json_empty_without_warning
 aliases: []
 title: verl 集成下 dump.json 为空且无告警
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -13,8 +13,8 @@ cause:
   behavior: 在 verl 的 generate 外层对 rank0 做 debugger.start/stop 后，dump.json 只写元数据、data 为空对象，全程无告警
 effect:
   objects:
-  - 测试判定
   - 指标/日志
+  - 测试判定
   detail: A5 机器 vllm 单独采集正常、接入 verl 后 dump.json 为 {task:statistics, level:mix, framework:pytorch, dump_data_dir:null, data:{}}，无从比对
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 测试判定
+        to: 指标/日志

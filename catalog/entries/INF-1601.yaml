@@ -4,7 +4,7 @@ slug: ms_custom_v2_cache_reuse_accumulate_drift
 aliases: []
 title: v2 executor 缓存复用不清零致累加算子漂移
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: MindSpore 2.10.0 + 910B3：同一 FusedDegree 实例连续 5 次调用 maxdiff=0/14/28…，缓冲回收后回到 0；新建实例首次调用正确，2.9.0 无此现象。
+  detail: MindSpore 2.10.0+Ascend 910B3+CANN 8.5.1 PYNATIVE，入度统计类累加 kernel 同一 op 实例连续调用 5 次，maxdiff 0/14/28 递增；缓冲回收后回 0，新建实例首次正确，2.9.0 无此问题。
   visibility: 静默错误
 mitigation:
   detect: 同一自定义算子实例连续多次调用并逐次与参考实现比对 maxdiff；漂移随调用次数线性增长即为输出缓冲未清零
@@ -52,3 +52,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

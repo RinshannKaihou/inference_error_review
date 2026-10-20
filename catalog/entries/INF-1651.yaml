@@ -4,13 +4,13 @@ slug: ms_select_const_fold_broadcast_shape_loss
 aliases: []
 title: 常量折叠的 select 广播后形状与数值被破坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: mindspore
     component: Graph Const 常量折叠 select
-  behavior: 前端常量折叠对需要广播的 ops.select 不做广播推导，把 (2,3) 的输出缩成 (1,3)，并把 -0.0、NaN 一并写成 0.0。
+  behavior: GRAPH_MODE 下 ops.select 输入为闭包常量且需广播时，前端 evaluator 错误收缩输出 shape，并把 -0.0 与 NaN 改写为 0.0。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

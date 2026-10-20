@@ -4,7 +4,7 @@ slug: ops_nn_rrelu_with_noise_dim_limit_25
 aliases: []
 title: RReluWithNoise 26~32 维输入静默输出全零
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 910B + CANN 9.2.0、torch_npu 2.12.0.rc1：32 维输入 30 次重复全部输出全 0 且无报错（期望 [-0.25,-0.125,0,0.5,1,-0.5,2,-0.75]）；≤25 维 30 次全对；33 维正常报 161002。
+  detail: 910B+CANN9.2.0、torch_npu2.12.0.rc1：32维输入30次全输出0且无报错（期望[-0.25,-0.125,0,0.5,1,-0.5,2,-0.75]）；≤25维30次全对；33维正常报AclNN_Parameter_Error(EZ1001)。
   visibility: 静默错误
 mitigation:
   detect: 用 26~32 维输入调用并与 ≤25 维同数据对照；输出全 0 且无报错即为命中，注意入参校验不会拦。
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - title
+    - behavior

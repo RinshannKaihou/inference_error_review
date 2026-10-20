@@ -4,13 +4,13 @@ slug: ms_pynative_lora_zero_b_grad_wrong
 aliases: []
 title: PyNative 链式 matmul 在 B=0 时算错 LoRA 梯度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: mindspore
     component: PyNative 自动微分 VJP
-  behavior: PyNative 反向对 x@A^T@B^T 这条链在 B 全零时算错两个 adapter 的梯度：grad_A 非零、grad_B 为 0，等于把反向链路剪错。
+  behavior: PyNative+Ascend 910B2、bf16、基座+adapter 残差与延迟初始化的完整模型中，B 全零的 x@A^T@B^T 链式 matmul 反向算错 adapter 梯度：grad_A 非零、grad_B 为 0。
 effect:
   objects:
   - 梯度
@@ -42,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

@@ -4,7 +4,7 @@ slug: op_build_failure_poisons_process_npu_state
 aliases: []
 title: 算子建图失败后同进程 NPU 算子静默返回零/垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - subsystem
+    - behavior

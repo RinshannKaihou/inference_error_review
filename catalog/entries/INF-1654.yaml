@@ -4,10 +4,10 @@ slug: ms_matmul_empty_graph_scalar
 aliases: []
 title: 零尺寸 matmul 在图模式返回标量 0.0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: mindspore
     component: Graph/JIT matmul 空张量推导
   behavior: Graph/JIT 的 matmul 形状推导对含 0 维的输入退化成标量输出，没有按 (0,3)@(3,2)→(0,2) 的矩阵乘法规则给出空矩阵。
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核

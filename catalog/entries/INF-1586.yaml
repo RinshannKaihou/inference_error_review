@@ -4,7 +4,7 @@ slug: hccl_v_collective_span_calc_element_vs_bytes
 aliases: []
 title: HCCL V 类算子跨度计算漏换算致注册偏小
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: 非 1 字节 dtype（如 FP32）下 param.inputSize/outputSize 只有真实跨度的 1/4 或更小，该值被当作图模式 buffer 注册长度与 DFX 输出尺寸，通信按字节写入超出注册范围的地址；参数校验通过、无告警。
+  detail: AllToAllV/AllGatherV图模式内存注册下，非1字节dtype或recvDispls非连续时，注册/DFX尺寸偏小；通信照常执行、接口不报错，可能写到注册范围之外或被踩踏，出现偶发错值/精度异常，无尺寸告警。
   visibility: 静默错误
 mitigation:
   detect: 构造 displs 非连续或 dtype>1 字节的 V 类算子调用，打印 param.inputSize/outputSize 与 (displs+counts)*typeSize 对比；图模式注册长度与实际寻址长度对不上即为中招
@@ -45,3 +45,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

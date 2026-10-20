@@ -4,10 +4,10 @@ slug: runtime_adump_shared_state_no_sync
 aliases: []
 title: adump 五处共享状态无同步致 dump 丢失或崩溃
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 观测/评测
+  - subsystem: 运行时/执行
     stack: 通用
     component: adump 配置/回调/索引共享态
   behavior: dumpConfigInfo_ 的读写落在两把不相交的锁、dumpInitNum_ 与 g_atomicIndex 裸自增、messageCallback_ 与 g_dynamicChunk 无锁读写，五处共享状态缺少互斥或原子保护。
@@ -15,8 +15,8 @@ effect:
   objects:
   - 指标/日志
   - 可用性/进度
-  detail: 并发 dump/异常回调下 dump 数据静默丢失、g_atomicIndex 撞号使元数据关联到错误算子，adx_dump_record 线程可能调用已销毁的 std::function 而崩溃；多流/多线程时不可复现。
-  visibility: 不可复现
+  detail: 多线程或多流并发推理并开dump，或并发启停、运行期注册/注销回调、异常dump与进程收尾同时发生时，dump少条、元数据关联到错误算子，或收尾偶发崩在回调；单线程单流复跑通常正常且无错误日志。
+  visibility: 静默错误
 mitigation:
   detect: 并发抓取 dump 与 acldumpRegCallback/UnregCallback，核对 dump 条数与元数据索引是否唯一；TSAN/静态扫描查共享变量
   fix: issue 建议给 dumpConfigInfo_ 统一锁、dumpInitNum_ 改原子、messageCallback_ 加锁读写、g_dynamicChunk 析构前先置标志、g_atomicIndex 改 fetch_add；issue 已 closed，合入与发布未核实
@@ -43,3 +43,25 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 观测/评测
+        to: 运行时/执行
+      visibility:
+        from: 不可复现
+        to: 静默错误
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

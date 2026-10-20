@@ -4,7 +4,7 @@ slug: all_gather_matmul_uint32_offset_overflow
 aliases: []
 title: AllGatherMatmul 偏移 uint32 相乘溢出截断
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 输入 shape 的 MN 超过 uint32 最大值（4.29e9）时算子结果精度异常、无报错；报告者由代码检视定位到中间结果按 uint32 相乘截断，并建议排查其它大 shape 相乘处。
+  detail: 输入 shape 的 M*N 超过 uint32 最大值（4.29e9）的 all_gather_matmul_v2 AIV 中，shape 校验通过、执行不报错不崩，输出数值整体错位；缩小到 uint32 范围内恢复正常，常规尺寸回归长期不可见。
   visibility: 静默错误
 mitigation:
   detect: 对超大 MN 的 shape 做定点对比测试；静态检查 kernel 中 32 位乘法的上界
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

@@ -4,7 +4,7 @@ slug: vllm_ascend_pd_dummy_batch_block_table_zeroed
 aliases: []
 title: PD dummy batch 清零 block_table 污染 KV 传输
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 输出内容
-  detail: connector 按被清零的 block_table 读错 KV 位置；真实请求随后在 causal_conv1d_update_npu 触发 507014 aicore 超时（GDN/Mamba 状态已被 dummy 执行污染）。
+  detail: PD分离D节点启用execute_dummy_batch且用MooncakeLayerwiseConnector时，某些真实请求会拿到他人或无效的KV，输出错乱或直接卡在aicore超时，报507014；可崩在causal_conv1d_update_npu。
   visibility: 静默错误
 mitigation:
   detect: 抓 execute_dummy_batch 前后 block_table/slot_mapping 的内容，确认 dummy 之后是否被 fill_(0)；对照关掉 dummy batch 或让 dummy 不写元数据时的 KV 传输结果
@@ -43,3 +43,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: ms_msa_pta_systematic_loss_offset
 aliases: []
 title: MSA 与 PTA 同配置训练 loss 稳定偏低数个百分点
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -16,7 +16,7 @@ effect:
   - 训练信号
   - 训练轨迹
   detail: CogVideoX-5B TP4：MSA loss 比 PTA 低 1.72%–1.79%（10 轮）与 4.58%（2 轮）；InternVL3 低 1.62%–1.94%（5 轮），方向从不翻转。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 同权重同种子双框架跑同一步数比较 loss 相对差；差异稳定、单向、随变异配置不变时可判为框架级偏移而非配置错误
   fix: 待定（issue open）；已排除种子/Dropout/loss scale/权重/配置，FlashAttention 无法禁用（PTA 侧禁用即崩溃），未给出修复
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    uncertain:
+    - subsystem

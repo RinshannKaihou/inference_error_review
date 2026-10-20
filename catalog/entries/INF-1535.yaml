@@ -4,7 +4,7 @@ slug: ops_nn_cross_entropy_extreme_logits_cancellation
 aliases: []
 title: CrossEntropyLoss 极端 FP32 logits 出 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 训练信号
-  detail: 整行 -FLT_MAX 与 [0,-FLT_MAX,1] 两类用例上，修复前 log-softmax 出现 NaN 或错误值；修复后 Exp 前下限钳到 -87.0f、log-prob 改用 (input−rowMax)−logExpSum，新增回归用例通过。
+  detail: CrossEntropyLoss 使用含 -FLT_MAX 的 FP32 logits 时，部分 masked（如 [0,-FLT_MAX,1]）或整行 -FLT_MAX 会使损失/逐 token log-prob 出现 NaN 或明显错误值；正常量级 logits 下正常。
   visibility: 数值异常
 mitigation:
   detect: 构造含 torch.finfo(float32).min 的行与整行 -FLT_MAX 的输入，检查输出是否 NaN 或与 log_softmax 参考不符；常规值域用例发现不了。
@@ -48,3 +48,19 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem
+    - effect

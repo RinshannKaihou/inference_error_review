@@ -4,10 +4,10 @@ slug: op_plugin_moe_finalize_routing_meta_scale_none_shape
 aliases: []
 title: finalize_routing meta 空 scale 推导错形状
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: MoE路由
     stack: pytorch
     component: moe_finalize_routing_meta
   behavior: scale 为空、expanded_permute_rows 为 (E,C,H) 时，meta 直接把输入形状 (E,C,H) 当输出返回，而实际算子输出是 (R,H)，meta 推导与真实输出不一致。
@@ -47,3 +47,20 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: MoE路由
+    issue_unfixed:
+    - detail

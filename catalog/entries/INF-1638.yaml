@@ -4,10 +4,10 @@ slug: mindie_recompute_maxoutputlen_iterative_subtract
 aliases: []
 title: 重计算用上次结果迭代扣减 maxOutputLen 致输出截断
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: 重计算/卸载
     stack: 通用
     component: 重计算 maxOutputLen 计算
   behavior: 重计算路径算 maxOutputLen 时拿上一次的结果去算下一次的输出，形成迭代减法；多次触发重计算后 maxOutputLen 可能小于 0，再按这个值裁剪输出。
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: 重计算/卸载

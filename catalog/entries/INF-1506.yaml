@@ -4,7 +4,7 @@ slug: op_plugin_layer_norm_empty_input_mean_rstd_shape
 aliases: []
 title: layer_norm 空输入 mean/rstd 返回错形状
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 输入含 0 维时 native_layer_norm 的 mean/rstd 返回 (0,) 而非 (0,1,1)，下游按 keepdim 形状取用即错位；非空输入正常，无报错无 NaN。
+  detail: Ascend950+对应CANN下，torch.native_layer_norm 空输入（M<=0，如[0,3,4]/[3,4]）前向不报错、输出为空，但 mean/rstd 返回一维{0}而非PyTorch参考实现[0,1,1]；下游按keepdim取用会错位，非空输入正常。
   visibility: 静默错误
 mitigation:
   detect: 构造 shape [0,3,4]、normalized_shape=[3,4] 的空输入调 torch.native_layer_norm，检查 mean/rstd 的 shape 是否为 keepdim 形式
@@ -52,3 +52,12 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

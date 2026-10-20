@@ -4,13 +4,13 @@ slug: torchnpu_gated_delta_rule_multitoken_device_degrade
 aliases: []
 title: 多 token 调用致设备对该算子路径持久降级
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: npu_recurrent_gated
-  behavior: actual_seq_lengths 元素 >1 且 state 缓存 slot 不足时，算子在多 token 路径上疑似越界写，此后该算子多 token 路径在整卡上永久失败。
+  behavior: 传入单序列多 token（actual_seq_lengths 元素>1）且 state 缓存 slot 数不足时，该算子多 token 路径失败。
 effect:
   objects:
   - 可用性/进度
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    issue_unfixed:
+    - component
+    uncertain:
+    - subsystem

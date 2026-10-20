@@ -4,13 +4,13 @@ slug: mssanitizer_triton_operator_coverage_gap
 aliases: []
 title: Triton 算子检测双向失准：add 漏报、mix/vector 误报
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: triton
-    component: Triton 路径地址与 kernel 归属
-  behavior: Triton/TTGIR 下发路径的地址与 kernel 归属建模不完整：add 用例越界未告警，mix、vector 与多 kernel 用例在 950POD 上报错或误报，tl.dot 与 rwkv6 cumsum 在合法访问上报越界。
+    component: mssanitizer Triton 越界检测
+  behavior: mssanitizer 对 Triton on Ascend 算子的越界检测结论基本不可用，无法区分真实越界还是工具未跟上 triton_ascend 下发方式。
 effect:
   objects:
   - 测试判定
@@ -47,3 +47,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - component
+    uncertain:
+    - kind
+    - detail

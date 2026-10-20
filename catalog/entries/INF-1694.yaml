@@ -4,18 +4,18 @@ slug: flexattention_uneven_causal_kv_tail_grad_uninit
 aliases: []
 title: FlexAttention 不等长 causal 反向 KV 尾部梯度未初始化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: FlexAttention 反向模板
-  behavior: 反向模板直接写入 empty_strided 分配的 dK/dV；Q_LEN<KV_LEN 时没有 query 访问的 KV 尾部 block 既无写入也无预清零，梯度保留未初始化内存。
+  behavior: triton_experimental FlexAttention causal 反向且 Q_LEN<KV_LEN 时，反向模板直接写入 empty_strided 分配的 dK/dV，无 query 覆盖的 KV 尾部未被可靠写入。
 effect:
   objects:
   - 梯度
   detail: Q_LEN=384、KV_LEN=512 时 KV[384:512] 的 dK/dV 数值不确定；修复（预清零 dV、按 block 有无 query 决定是否置零 dK 并跳过 dV 写回）后 FlexAttention 专项测试 11 passed。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 不等长 causal（Q_LEN<KV_LEN）反向，检查 KV 尾部未被 query 覆盖区间（如 [384:512]）的 dK/dV 是否随分配历史变化；重复跑同一输入比梯度是否一致
   fix: MR https://gitcode.com/Ascend/pytorch/merge_requests/46746 （未核实是否合入）：lowering 阶段预清零 dV，模板跟踪 KV block 是否存在 query block，无则 dK 置零并跳过 dV 写回，并补不等长 causal 反向回归测试
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    rewritten:
+    - behavior

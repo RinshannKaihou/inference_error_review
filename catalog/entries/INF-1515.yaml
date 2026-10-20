@@ -4,7 +4,7 @@ slug: torchnpu_legacy_load_npu_tensor_all_zero
 aliases: []
 title: legacy 格式载入 NPU 张量全零
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -13,6 +13,7 @@ cause:
   behavior: _rebuild_npu_tensor 在 rebuild 阶段就执行 .npu()，把尚未填充（全零）的 CPU staging storage 拷到新 NPU 存储，随后 _set_from_file 只填 staging。
 effect:
   objects:
+  - 模型权重
   - 数值结果
   detail: 2.7.1/2.8.0 保存的 legacy NPU 张量 load 后全零，CPU 张量与 zipfile 路径正常；插桩见 staging 与 NPU 存储 data_ptr 脱节。
   visibility: 静默错误
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 模型权重
+    uncertain:
+    - detail

@@ -4,19 +4,19 @@ slug: mssanitizer_memcheck_oob_and_free_false_positive
 aliases: []
 title: 内存检测在特殊指令与高阶 API 上成片误报越界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: memcheck 指令地址/长度建模
-  behavior: memcheck 依指令描述符推算访问区间：MOV_FP 的 memSize 溢出成极大值、ND2NZ 步长与 DataCopyPad compact 的地址换算、原子内建与高阶 API 内部缓冲长度都算错，合法访问被判越界或非法释放。
+  behavior: memcheck 将合法访问误判为越界、非法读写或非法释放；MOV_FP 指令触发时工具内部 memSize 溢出成极大值，据此报 L0C 越界读。
 effect:
   objects:
   - 测试判定
   - 指标/日志
   detail: catlass/ops-nn/shmem/aclnn 融合与 mc2 算子在合法输入上稳定报 illegal read/write、非法释放或 out of bounds，按打印地址对 InitBuffer 空间并不越界；真越界被同批误报稀释，910B 与 910C 结论还不同。
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: 把告警里的地址+size 与源码 InitBuffer/访问范围逐条核对，并用同算子换搬运方式（nd2nz→逐块拷贝、关 compact 模式）复测同一用例。
   fix: 待定（各 issue 均以“误报”闭环，未见公开修复 PR；#196/#207 为扫网专项，归因指向搬运指令地址模型）
@@ -66,3 +66,22 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 报错
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

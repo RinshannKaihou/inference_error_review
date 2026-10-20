@@ -4,10 +4,10 @@ slug: cann_recurrent_gated_delta_rule_fp32_state_copyout_sizeof
 aliases: []
 title: recurrent_gated_delta_rule state 拷贝错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 算子/内核
     stack: 通用
     component: rdv CopyOutState 拷贝长度
   behavior: arch35 CopyOutState 用 sizeof(outType)（bf16=2B）算 blockLen 与 srcStride，state 为 fp32 时字节数、步长都错；golden 对 fp32 state 未 clone。
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 数值结果
-  detail: rdv 参数集 74 例中 fp32-state 系列（param_combinations2/3）全部失败：Max-RelativeError 1.99999、超阈元素占比 1.92%（PctThd 0.50%）；bf16 state 用例正常；修复后 74 例全过。
+  detail: state为fp32且输出为bf16时，rdv 74参数组合的fp32-state系列（param_combinations2/3）精度校验失败：PctThd 99.50%、PctRlt 1.920128%、Max-RelativeError 1.9999902；bf16 state正常。
   visibility: 静默错误
 mitigation:
   detect: state dtype=fp32 而输出为 bf16 的 rdv 用例（bash test_run.sh rdv），核对 state 逐行内容与 PctRlt 是否超 PctThd
@@ -43,3 +43,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 算子/内核
+    rewritten:
+    - detail
+    uncertain:
+    - effect

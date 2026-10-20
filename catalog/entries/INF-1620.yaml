@@ -4,7 +4,7 @@ slug: msmodelslim_rmsnorm_semantics_mismatch_outlier_suppression
 aliases: []
 title: RMSNorm 语义与 Qwen3_5 不符，替换 norm 后精度异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - effect
+    - behavior

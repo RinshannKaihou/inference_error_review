@@ -4,10 +4,10 @@ slug: cann_moe_init_routing_v3_mxfp4_scale_row_stride_truncation
 aliases: []
 title: MoeInitRoutingV3 MXFP4 scale 行 stride 错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: MoE路由
+  - subsystem: 量化
     stack: 通用
     component: moe_init_routing_v3 量化路径
   behavior: MXFP4 的 scale 每行字节数用 cols/32 整数除法算，cols 非 32 倍数时余数被丢、逐行搬运起点漂移；静态量化全载模板按全部源行分配 buffer 却逐行 Compute(1)，小 cols 时写越 buffer。
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: MoE路由
+        to: 量化
+    issue_unfixed:
+    - behavior

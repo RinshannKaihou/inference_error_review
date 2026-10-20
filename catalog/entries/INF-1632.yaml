@@ -4,7 +4,7 @@ slug: mindie_sampler_apply_top_p_workspace_offset0
 aliases: []
 title: 采样 kernel 漏调 GetUserWorkspace，数据区压系统保留区
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

@@ -4,10 +4,10 @@ slug: mindformers_fused_fsdp_allgather_buffer_freed
 aliases: []
 title: 融合 all-gather 源 buffer 提前释放，重计算读到残参
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 并行切分
     stack: mindspore
     component: FSDP 融合 all-gather 拷贝
   behavior: handle.wait() 只等 all-gather 完成；split_with_sizes_copy 刚入队就 free_all_gather_output() 把 ag_output resize 成 0，拷贝源提前失效
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 训练信号
   detail: replay 的 linear_qkv 输出与首次 forward 逐元素不同（diff_count 6301、max_abs≈3.1e38），差异经 K/V 传到 EP token 计数，最终报 Allocated size does not match required size
-  visibility: 数值异常
+  visibility: 报错
 mitigation:
   detect: 用 activation-checkpoint invocation id 逐层配对首次 forward 与 replay 的张量；检查 fused ag_output storage 的释放时机
   fix: split_with_sizes_copy 完成前保持 ag_output 有效（stream event / 延迟回收 / 双 buffer）；A/B 中只保留 ag_output 后 936 个探针全一致（未核实合入）
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 并行切分
+      visibility:
+        from: 数值异常
+        to: 报错

@@ -4,7 +4,7 @@ slug: op_plugin_a3_bf16_exponential_tail_missing_sampling_degenerate
 aliases: []
 title: A3 bf16 exponential_ 尾部缺失致采样退化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,9 +13,10 @@ cause:
   behavior: A3（非 950）路径先在 bf16 目标张量上 uniform_(0,1) 再算 -log(1-u)/lambd，随机源与变换都落在 bf16 粒度，尾部小值缺失。
 effect:
   objects:
+  - 数值结果
   - 输出分布
   detail: bf16 最小值约 3.9e-3、2 万样本仅约 128 个唯一值；exponential race 采样 top1 命中率接近 1.0，退化近似 greedy；fp32 与 CPU bf16 正常。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: A3 上 torch.empty(..., dtype=bfloat16).exponential_() 后看最小值与唯一值个数，与 NPU fp32 / CPU bf16 对照
   fix: issue 建议用 fp32 临时张量生成 uniform 并计算后再 cast 回 bf16，或下沉到分布正确的底层 exponential 随机算子；修复未核实（issue open）
@@ -42,3 +43,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出分布
+        to: 数值结果
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    uncertain:
+    - behavior

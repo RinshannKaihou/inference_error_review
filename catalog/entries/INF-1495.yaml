@@ -4,13 +4,13 @@ slug: msprobe_aclgraph_statistics_int32_min_max_noninteger
 aliases: []
 title: ACLGraph 统计模式下 int32 的 Min/Max 出现小数
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: ACLGraph statistics 采集
-  behavior: ACLGraph 图模式下 INT32/INT64 统计仍走 to(kFloat)+amin/amax，Host 侧读到的 Min/Max/Mean/Norm 带小数，形态像读了其他浮点张量的缓冲区
+  behavior: ACLGraph 图模式 L1 statistics 采集下，部分 torch.int32/torch.int64 张量的 Min/Max/Mean/Norm 出现非整数小数
 effect:
   objects:
   - 指标/日志
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

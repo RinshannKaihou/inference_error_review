@@ -4,7 +4,7 @@ slug: te_argmax_looped_reduction_tile_local_index
 aliases: []
 title: 动态 shape argmax 返回 tile 内局部下标
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: argmax/argmin 及 torch.max(dim=)/min(dim=) 的 indices 被限制在 tile 长度内，与 eager 大面积不一致；归约轴不超过一个 tile 的静态 shape 正确，动态 shape 几乎必走 looped reduction。
+  detail: 动态 shape 且归约轴长度超过单个 tile 时，需要 indices 的 argmax/argmin/max(dim=) 返回的下标被限制在 tile 长度内，与 eager 大面积不一致；归约轴不超过一个 tile 的静态 shape 不暴露。
   visibility: 静默错误
 mitigation:
   detect: 动态 shape 下对归约轴做 argmax/argmin 并与 eager 比 indices 范围；看返回值是否全部落在 tile 长度内（静态小 shape 用例查不出来）
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

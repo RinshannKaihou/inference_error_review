@@ -4,7 +4,7 @@ slug: mindformers_hash_routing_oob_no_check
 aliases: []
 title: 哈希路由删越界校验，越界 token 静默走错专家
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -13,6 +13,7 @@ cause:
   behavior: PR !8691 为去掉 D2H host sync 删掉 max(flat_ids)>=actual_vocab_size 校验；index_select 越界在 Ascend 属未定义行为
 effect:
   objects:
+  - 数值结果
   - 隐状态
   detail: input_ids 超过 actual_vocab_size（数据异常或 tokenizer 配置不匹配）时不报错，越界 token 静默拿到错误 expert 索引，路由错且无日志线索
   visibility: 静默错误
@@ -42,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果

@@ -4,7 +4,7 @@ slug: vllm_ascend_fia_bool_mask_ignored_past_512
 aliases: []
 title: FIA bool atten_mask 在 512 之后被静默忽略
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

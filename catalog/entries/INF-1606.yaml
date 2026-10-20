@@ -4,7 +4,7 @@ slug: torchair_axis_align_transpose_semantics_lost
 aliases: []
 title: 轴对齐调轴使中间张量 store/load 索引序错乱
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 打开 gelu decompose 后编译含 transpose 的模型（LayerNorm(23)+transpose(0,1)+matmul）时，图模式输出与 eager 明显偏差；不报错、不 NaN，只能靠 allclose 逐元素对比发现。
+  detail: 打开 gelu decompose 后，用 ascendc 编译含 transpose 且后接布局敏感算子的模型时，图模式输出与 eager 对不上；数值偏差稳定存在但不夸张，不报错、不 NaN，形状正确，只有 allclose 或下游 loss 异常才会发现。
   visibility: 静默错误
 mitigation:
   detect: 对该类模型同时跑 eager 与 npu_backend=ascendc，比较 max_err；关闭 gelu decompose 可作对照
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

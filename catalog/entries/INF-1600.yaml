@@ -4,7 +4,7 @@ slug: runtime_aclfloattofloat16_nan_inf_to_fp16max
 aliases: []
 title: aclFloatToFloat16 把 NaN/Inf 压成 FP16 最大值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 950 平台上 aclFloatToFloat16(NaN/Inf) 返回 ±65504 而不是 NaN/Inf，NaN 不再向下传播、Inf 被压成有限值，下游数值看似正常；host 侧做 fp16 转换的路径都受影响，无告警。
-  visibility: 数值异常
+  detail: 950 算力平台 host 侧调用 aclFloatToFloat16 且输入 NaN 或 ±Inf 时，返回 ±65504 而非 NaN/Inf；NaN 坏值变成看似正常的有限值，调试时 loss/输出与参考实现不一致；Inf 表示 mask/上界得到 65504 而非无穷。
+  visibility: 静默错误
 mitigation:
   detect: 对 NaN/Inf 调用 aclFloatToFloat16 后检查结果是否为 0x7E00/0x7C00；用 isfinite/isnan 断言而非数值比较
   fix: issue 给出修复逻辑：eF==0xFF 时按 mF 是否为 0 分别返回 fp16 Inf（0x7C00）与 NaN（保留符号位与尾数），不再落入 FP16_MAX 分支；issue 已 closed，合入与发布未核实
@@ -42,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 数值异常
+        to: 静默错误
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

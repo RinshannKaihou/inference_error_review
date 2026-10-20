@@ -4,7 +4,7 @@ slug: cann_moe_token_unpermute_ep_grad_prob_slot_lost
 aliases: []
 title: MoeTokenUnpermuteWithEpGrad 非零梯度槽丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   - 数值结果
-  detail: 1000 例中 941 例失败（94.1%）；probsGradOut 933 例错，866 例大值域相对误差恰为 1.0（唯一非零槽位输出 0），绝对/相对最大误差位置无一例相同；permutedTokensGradOut 932 例错，最大相对误差 1061；n=1 或输入全零时全通过。
+  detail: 1000例执行成功，59通过941失败（94.1%）。probsGradOut应有一个非零槽位，实测丢失：866例大值域最大相对误差为1.0；或错位：绝对/相对最大误差位置899例全不同。permutedTokensGradOut最大相对误差1061.19、最大绝对误差659.78。n=1或全零通过
   visibility: 静默错误
 mitigation:
   detect: probs 非 None、tokens×topk>1 且 grad/permutedTokens 非零的用例，检查 probsGradOut 是否恰有一个非零槽位、位置是否与 sortedIndices∩rangeOptional 一致
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

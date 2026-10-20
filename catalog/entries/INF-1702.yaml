@@ -4,13 +4,13 @@ slug: rope_grad_fp16_half_d66_nan
 aliases: []
 title: RoPE Grad fp16 half D=66 反向出 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: RoPE Grad kernel
-  behavior: fp16、mode=0（rotate_half_grad）、cos/sin 为 11SD 广播、D=66 非对齐（PAD 路径）时，特定 (B,N) 组合下 dcosOut/dsinOut 产生 NaN/Inf，dxOut 不受影响。
+  behavior: fp16、mode=0 half、D=66 且 cos/sin 为 11SD 广播的特定 (B,N) 组合下，dcosOut/dsinOut 出现 NaN/Inf，dxOut 正常。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - subsystem
+    - effect

@@ -4,17 +4,17 @@ slug: runtime_aicerr_meta_copied_zero_bytes
 aliases: []
 title: AIC Error 采集把 kernel 元数据拷成 0 字节
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 观测/评测
+  - subsystem: 运行时/执行
     stack: 通用
     component: kernel 元数据搜索与拷贝
   behavior: GetSearchPath 把 ASCEND_CACHE_PATH 放首位且递归搜索不排除转储输出目录；File::Copy 在源与目标为同一 inode 时先 O_TRUNC 清零再读，读到 0 字节仍返回 ADUMP_SUCCESS。
 effect:
   objects:
   - 指标/日志
-  detail: 开启 AIC Error 采集且 dumpPath 与 ASCEND_CACHE_PATH 同目录时，转储出的 kernel *.json/*.o 全是 0 字节，msaicerr 解析失败、拿不到出错 kernel 信息；拷贝返回成功，日志无任何告警。
+  detail: 开启 AIC Error 采集且 dumpPath 与 ASCEND_CACHE_PATH 同目录，并在第二次及以后触发、转储目录已有副本时，转储出的 kernel *.json/*.o 全是 0 字节，msaicerr 解析失败、拿不到出错 kernel 信息；拷贝返回成功，日志无任何告警。
   visibility: 静默错误
 mitigation:
   detect: 检查 {dump_path}/extra-info/data-dump/<devId>/ 下 *.json/*.o 大小是否为 0；或对比 kernel_meta 原件与转储副本
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 观测/评测
+        to: 运行时/执行
+    rewritten:
+    - detail

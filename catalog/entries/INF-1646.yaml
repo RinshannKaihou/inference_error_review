@@ -4,7 +4,7 @@ slug: triton_ascend_block_k256_bias_add_dropped_rows
 aliases: []
 title: BLOCK_K=256 特化丢弃 bias 加法前四行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 40 行独立最小核（tl.dot+scale+to(bf16)+bias add）复现：BLOCK_K=256 时每 tile 前 4 行等于没加 bias，BLOCK_K=128 零失败；无报错，只有逐元素对比可见。
+  detail: 910B3+CANN8.5.0，40行独立最小核复现：BLOCK_K=256、bf16输出、1D bias广播加法时，每tile前4行像没加bias而非随机噪声；无报错无NaN，某些token位置系统性偏低、精度指标小幅下降；BLOCK_K=128正常，易被当成autotune选参问题。
   visibility: 静默错误
 mitigation:
   detect: 同一 kernel 在 BLOCK_K=128/256 两档分别跑逐元素对比；matmul+bias 类输出改 autotune 前先做固定 BLOCK_K 回归
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: triton_ascend_gather_load_reuses_first_value
 aliases: []
 title: gather 载入基址变化却读回同一值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -52,3 +52,12 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    issue_unfixed:
+    - detail

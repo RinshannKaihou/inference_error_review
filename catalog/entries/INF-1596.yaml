@@ -4,7 +4,7 @@ slug: hcomm_roce_remote_device_memcount_wrong_field
 aliases: []
 title: RoCE 远端 device 内存计数写错字段致永不拷贝
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    issue_unfixed:
+    - detail

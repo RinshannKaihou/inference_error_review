@@ -4,17 +4,17 @@ slug: mssanitizer_instrumentation_changes_kernel_semantics
 aliases: []
 title: 插桩与桩函数改变算子执行语义致退出并漏检
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: 动态插桩/踩踏检测桩函数
-  behavior: 线程间踩踏检测把 __syncthreads() 放进桩函数，该指令在 divergence 代码中不合法且无法保证所有分支都走到；动态插桩还会扰动 L0A/L0B 与 LOAD2D 指令参数，插桩后算子不再等价于原算子。
+  behavior: 插桩会改动被测算子：线程间踩踏检测桩函数插入 __syncthreads()，该指令受硬件约束不能在 divergence 代码中使用，且无法保证所有分支走到；动态插桩后的指令序列与原始算子不等价。
 effect:
   objects:
-  - 可用性/进度
   - 测试判定
+  - 可用性/进度
   detail: 被检测算子插桩后异常退出且真实 GM 越界检不出；特定芯片动态插桩后功能正常却报 aic error（LOAD2D address overflow 等 8 类 errcode）——插桩后的执行不再等价于原算子。
   visibility: 报错
 mitigation:
@@ -45,3 +45,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 可用性/进度
+        to: 测试判定
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

@@ -4,7 +4,7 @@ slug: mindformers_tp_dedup_ckpt_dsa_shard_lost
 aliases: []
 title: TP 去冗余存盘丢 DSA 参数分片，重载首 loss 跳到 12.4
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -53,3 +53,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - visibility

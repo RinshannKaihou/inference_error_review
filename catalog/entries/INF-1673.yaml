@@ -4,7 +4,7 @@ slug: te_int64_downcast_collapses_nondense_layout
 aliases: []
 title: int64 边界降档把非 dense 视图塌成 contiguous 致索引错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 梯度
-  detail: Longformer 训练 accuracy 33.22（远超容差）；int64 索引 2,359,296 元素中 96% 错、max_abs 589,824（int32 版 0 错）；scatter 后 value.weight.grad max_abs=0.0043，12 层累计致精度失败。
+  detail: Longformer triton_experimental 训练 accuracy 33.22 远超容差；int64 索引 2359296 中 96% 错，最大值 589823（应 1179647），int32 版 0 错；scatter 后梯度最大偏差 0.0043，12 层累计精度失败。
   visibility: 静默错误
 mitigation:
   detect: 对 as_strided 重叠视图 / gapped slice / broadcast 输入做 i64 索引生成，比较 compiled 与 eager 的 (out!=ref).sum()；或检查 downcast 转换缓冲的 stride 是否与源参数一致
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

@@ -4,13 +4,13 @@ slug: ops_nn_groupnormsiluv2_near_constant_variance
 aliases: []
 title: GroupNormSiluV2 近常数输入 rstd 偏离标杆
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: 通用
     component: GroupNormSiluV2 方差计算
-  behavior: 内核在 fp32 标量算 var=E[x²]−E[x]²，输入围绕 ±1、宽≤0.002 时两项相消只剩噪声；标杆在 float64 按离差平方和定义式计算，rstd 与主输出因此偏离（机制与 GroupNorm 同族）。
+  behavior: 内核在 fp32 标量用 E[x²]−E[x]²+eps 计算 rstd，输入围绕 ±1、宽≤0.002 时相减噪声与真方差同量级；与 float64 离差平方和标杆口径不同。
 effect:
   objects:
   - 数值结果
@@ -49,3 +49,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

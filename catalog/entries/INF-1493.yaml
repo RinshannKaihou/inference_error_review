@@ -4,7 +4,7 @@ slug: msprobe_overflow_check_reports_no_anomaly_on_nan_loss
 aliases: []
 title: loss 已 NaN 时 overflow_check 报无异常节点
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -43,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3

@@ -4,7 +4,7 @@ slug: mindformers_hf_ckpt_master_weights_stale
 aliases: []
 title: 从 HF 检查点续训时 fp32 主权重未随模型参数刷新
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -13,6 +13,7 @@ cause:
   behavior: HF checkpoint 不含优化器状态，fp32 master weights 已在加载前按随机初始化建好；no_load_optim=False 时判定无需刷新，首次 optimizer.step() 用旧主权重覆盖已加载参数
 effect:
   objects:
+  - 优化器状态
   - 模型权重
   - 训练信号
   detail: step1 loss 一致（11.818862），step2 从 11.710443 偏到 11.811662，之后与 no_load_optim=True 分叉；native 完整续训不出现，大规模训练下进一步表现为 OOM
@@ -43,3 +44,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 模型权重
+        to: 优化器状态
+    issue_unfixed:
+    - detail

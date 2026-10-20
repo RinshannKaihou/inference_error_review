@@ -4,12 +4,12 @@ slug: mindformers_old_gate_aclnn_cache_queue_indexer_drift
 aliases: []
 title: ACLNN cache queue 致 DSA1 indexer loss 漂移
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: mindspore
-    component: ACLNN cache queue 复用
+    component: ACLNN cache queue 配置
   behavior: 旧 gate 62791fd0 在默认 aclnn_cache_queue_length 下 DSA1 的 indexer_loss/grad_norm 快速放大，置 queue length 0 后消失
 effect:
   objects:
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - component
+    uncertain:
+    - visibility
+    - behavior

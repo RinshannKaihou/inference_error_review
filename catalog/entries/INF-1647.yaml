@@ -4,7 +4,7 @@ slug: triton_ascend_same_program_reload_corrupted
 aliases: []
 title: 同 program store 后重读返回损坏值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 输出分布
   detail: FlagGems top-k 带 renormalize：sum_err 1.61e10、ref_err 3.18e9、repeat_diff 3.05e9，ids 仍全对；0 次重读时 2.38e-07，1 次重读即坏，重读越多越差。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 对“同一 program 内写后重读”的 kernel 做重复运行比较（repeat_diff）与只读回第 N 个值的消融；把归一化拆成第二 kernel 作对照
   fix: 规避=把依赖刚写入值的计算拆到第二个 kernel（issue 内已验证 repeat_diff=0）；根因落在 backend/triton-adapter-opt/bishengir/runtime 尚未定论（closed）
@@ -48,3 +48,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    issue_unfixed:
+    - detail

@@ -4,19 +4,19 @@ slug: mssanitizer_initcheck_padding_segment_false_positive
 aliases: []
 title: 未初始化检测把搬运 padding 段与模板算子判成未初始化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: initcheck 搬运数据段建模
-  behavior: initcheck 把未写入的 padding 地址段当成真实数据访问，且对模板算子搬运与多核初始化建模不足：LOAD_L1_2D 加载 padding 段被判未初始化读，--block-id 单核运行时也报未初始化。
+  behavior: initcheck 对搬运指令写入范围与 padding 段建模不足，将 LOAD_L1_2D 加载的 padding 段或单核执行不会走到的地址段判为未初始化。
 effect:
   objects:
   - 测试判定
   - 指标/日志
   detail: catlass 09_splitk_matmul、49_ascend950_flash_attention_infer 与 kv_rms_norm_rope_cache_story 在无未初始化数据的算子上稳定报未初始化，padding 段与单核 --block-id 场景最集中。
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: 用同一算子分别带 --block-id 与不带、以及 -t memcheck 交叉验证：memcheck 无越界而 initcheck 报未初始化时优先怀疑 padding 段建模。
   fix: 待定（#209 为让检测工具识别搬运类指令 padding 数据段的需求，未见公开修复 PR）
@@ -63,3 +63,22 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 报错
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

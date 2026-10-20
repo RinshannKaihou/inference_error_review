@@ -4,7 +4,7 @@ slug: cann_causal_conv1d_non_contiguous_offset_and_inplace_loss
 aliases: []
 title: causal_conv1d 非连续张量写错位与原地丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

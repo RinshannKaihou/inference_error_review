@@ -4,13 +4,13 @@ slug: mssanitizer_racecheck_id_and_sync_false_positive
 aliases: []
 title: 竞争与同步检测在 ID 越界、有同步场景误报
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: racecheck/synccheck 冲突判定
-  behavior: 竞争判定不建模同线程顺序、跨卡 barrier 与原子累加语义，set/wait_flag、DCCI、synccheck 桩在 event/flag id 超界后又不按硬件截断处理：有同步的访问被判 WAW/WAR，同步桩少一条时同样误报。
+  behavior: 竞争/同步判定未识别同线程顺序、跨卡barrier、原子累加、DCCI+SyncAll等同步语义；set/wait_flag桩event id超界未处理；synccheck未按硬件截断超范围AIV flag id；同步桩少一条时未正确识别
 effect:
   objects:
   - 测试判定
@@ -59,3 +59,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - visibility

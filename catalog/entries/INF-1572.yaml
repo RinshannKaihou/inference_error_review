@@ -2,15 +2,15 @@ id: INF-1572
 legacy_ids: []
 slug: ms_batchnorm_inference_uninitialized_output
 aliases: []
-title: 推理态 BatchNorm 第二输出返回未初始化值
+title: CPU PyNative推理态BatchNorm第二输出疑似未初始化内存
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: mindspore
     component: CPU BatchNorm 推理态
-  behavior: is_training=False 时 BatchNorm 前向不写第二个输出（batch mean），PyNative 把未初始化显存当结果返回，Graph 返回确定的 0。
+  behavior: CPU 上 is_training=False 的 BatchNorm 第二个输出（batch mean）在 PyNative 与 GRAPH_MODE 下不一致，报告者判断 PyNative 返回疑似未初始化内存。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - title
+    uncertain:
+    - visibility

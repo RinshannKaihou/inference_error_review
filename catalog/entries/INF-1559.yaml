@@ -4,7 +4,7 @@ slug: ops_math_fill_diagonal_v2_sparse_uint64_underflow
 aliases: []
 title: fill_diagonal_v2 sparse 对齐回退下溢漏写对角
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

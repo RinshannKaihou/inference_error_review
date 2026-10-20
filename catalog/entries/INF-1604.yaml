@@ -4,7 +4,7 @@ slug: torchair_autotune_shallow_copy_writes_through_input
 aliases: []
 title: TopN autotune 计时写穿真实输入致精度异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: TORCHINDUCTOR_NPU_EXT_AUTOTUNE_TOPN>1 且融合 kernel 含原地算子时，autotune 结束后真实输入已被污染，正式执行读到错误数据、精度异常；各候选还在被改写的输入上计时，选优也不可信。
+  detail: TORCHINDUCTOR_NPU_EXT_AUTOTUNE_TOPN>1 且选中候选 kernel 含原地写输入（in-place）行为时，autotune 结束后真实输入已被污染，正式执行读到错误数据、精度异常；各候选还在被改写的输入上计时，选优不可信。
   visibility: 静默错误
 mitigation:
   detect: 对比 TORCHINDUCTOR_NPU_EXT_AUTOTUNE_TOPN=1 与 >1 的输出；或 autotune 前后对输入做 clone 比对
@@ -46,3 +46,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

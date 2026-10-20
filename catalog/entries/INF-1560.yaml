@@ -4,7 +4,7 @@ slug: ops_math_stft_mte3_workspace_race_zero_frames
 aliases: []
 title: STFT 写 workspace 缺 MTE3 同步致输出帧偶现为 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

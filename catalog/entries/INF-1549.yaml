@@ -4,19 +4,19 @@ slug: vllm_ascend_compiled_moe_final_reduce_frozen
 aliases: []
 title: 编译图冻结 MoE 最终归约判断致重复或漏归约
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: vllm
     component: MoERunner 归约决策
-  behavior: _maybe_reduce_final_output 在 fused MoE 算子边界外求值，按首次 trace 的通信方式固化（ALLGATHER 需外层 all-reduce，MC2/ALLTOALL 已归约），换方式不重 trace。
+  behavior: _maybe_reduce_final_output 在 fused MoE 边界外求值；ALLGATHER 且无序列并行需外层 TP all-reduce，MC2/ALLTOALL 已归约，换方式不重 trace。
 effect:
   objects:
   - 数值结果
   - 输出内容
-  detail: GLM-5.2 SFA/DSpark PD + FULL_DECODE_ONLY 编译执行下，同一张图可能重复归约或漏掉必需的 all-reduce，造成严重精度损失；报告同时给出 SFA PROLOG_V3 回退与 DSpark 查询批截断两个独立运行期假设。
-  visibility: 静默错误
+  detail: GLM-5.2 DSpark 推测解码+PD serving 的 FULL_DECODE_ONLY 编译执行中，trace 与运行期 MoE 通信方式不一致（ALLGATHER vs MC2/ALLTOALL）时，可能重复归约或漏掉必需归约，造成严重精度损失。
+  visibility: 质量退化
 mitigation:
   detect: 用 make_fx 抓 MoE 图后在切换通信方式（ALLGATHER↔MC2/ALLTOALL）下重放，比对输出是否被重复归约或未归约；另按 attention state 构造 DecodeOnly/ChunkedPrefill/PrefillCacheHit 覆盖 SFA 分支
   fix: '待定（issue closed）；参考草稿 PR #16482（作者声明仅供参照、非最终方案），MoE 部分与 #16455/#16459/#16476 重叠，SFA 与 DSpark 改动可独立评审'
@@ -43,3 +43,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化
+    rewritten:
+    - behavior
+    - detail
+    uncertain:
+    - subsystem

@@ -4,7 +4,7 @@ slug: mindformers_graph_save_remove_redundancy_metadata_mismatch
 aliases: []
 title: Graph 平衡存盘 metadata 记录未落盘优化器状态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -48,3 +48,20 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility
+    - title

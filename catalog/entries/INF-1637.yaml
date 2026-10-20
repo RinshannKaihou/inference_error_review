@@ -4,10 +4,10 @@ slug: triton_ascend_runtime_fp16_bf16_scalar_arg_wrong
 aliases: []
 title: 运行期 fp16/bf16 标量实参传值错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 编译器
     stack: triton
     component: 运行期标量实参传递
   behavior: 显式声明为 fp16/bf16 的运行期标量实参被错误解释，kernel 内 .to(tl.float32) 后存出的值不等于传入值；fp32 标量对照正常，3.2.2 与 3.6.0 均复现。
@@ -52,3 +52,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 编译器

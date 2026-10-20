@@ -4,13 +4,13 @@ slug: ops_nn_groupnormsiluquant_int8_lsb_deviation
 aliases: []
 title: GroupNormSiluQuant 方差误差被量化放大
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: 通用
     component: GroupNormSiluQuant 量化输出
-  behavior: 窄方差分组归一化后量化：方差/rstd 的误差经归一化 scale 放大成整段 int8 码值偏移，tiling 与量化路径未对该值域做保护，报告未定位到具体代码行。
+  behavior: GroupNormSiluQuant 中分组归一化的方差/rstd 偏差经 scale 变换落到 int8 码值，方差误差被量化放大，窄方差输入下最明显。
 effect:
   objects:
   - 数值结果
@@ -52,3 +52,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    uncertain:
+    - visibility

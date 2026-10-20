@@ -4,7 +4,7 @@ slug: cann_kv_rms_norm_rope_cache_regbase_cache_write_defects
 aliases: []
 title: KvRmsNormRopeCache regbase 越界写/错页/漏写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - KV状态
-  detail: Norm 模式 B=4、cache 第 0 轴为 1 时 4 个 batch 全写进同一 batch；PA_NZ+fp16+dk=16 时 k_cache 四页全零；index≥cache 行数时越界写 GM（aic error 507035）；全程返回 SUCCESS。
+  detail: Norm下cache B轴小于kv B时b=1/2/3写cache外；recompute且Skv≠Scache时batch1..3写进batch0段；NZ+fp16+dk=16时k_cache四页全零；index≥cache行数越界写GM；返回SUCCESS。
   visibility: 静默错误
 mitigation:
   detect: decode 形态（Skv=1、Scache=128）下构造 B≠cache 第 0 轴、PA_NZ + dk 非 2*dk0 倍数、index 越界三类用例，逐元素核对 cache 落点
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

@@ -4,7 +4,7 @@ slug: vllm_ascend_qwen3vl_long_image_nan_kv_pollution
 aliases: []
 title: Qwen3-VL 长文加图触发 NaN 并永久污染 KV cache
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - effect

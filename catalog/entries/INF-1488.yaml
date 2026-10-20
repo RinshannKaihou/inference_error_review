@@ -4,17 +4,17 @@ slug: msprobe_located_relu_head_overhead_template_memory_stomp
 aliases: []
 title: relu 极致头开销模板寄存器未重置致内存踩踏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: relu 极致头开销模板
-  behavior: relu 等算子采用极致头开销（head-overhead）模板实现，寄存器重置操作缺失，写越界踩踏相邻内存，污染其他张量并让 loss 变 nan
+  behavior: relu 等算子采用极致头开销（head-overhead）模板，模板里寄存器重置操作缺失，导致内存踩踏，越界写污染不属于该算子的显存
 effect:
   objects:
-  - 数值结果
   - 训练信号
+  - 数值结果
   detail: loss 直接变为 nan；接入 msprobe 采集后现象消失，故障只在未插桩的裸环境出现，用户换环境验证时无法复现
   visibility: 数值异常
 mitigation:
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 数值结果
+        to: 训练信号
+    rewritten:
+    - behavior

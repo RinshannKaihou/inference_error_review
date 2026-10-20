@@ -4,7 +4,7 @@ slug: hccl_nhr_broadcast_batchsr_tx_dst_slices_self
 aliases: []
 title: NHR broadcast 跨服务器 TX 目标片误指本地
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 跨服务器 NHR 拓扑上执行 broadcast（或走同一 BatchSR 的 allgather）时，远端 rank 收到未初始化数据，广播结果与 root 源 buffer 不一致；拷贝成功、无报错，单机/单服务器测试不暴露。
+  detail: 跨服务器拓扑下用 NHR 算法执行 broadcast 或 allgather 时，部分非 root rank 拿到本地 buffer 旧值/未初始化值，而非 root 广播内容；接口返回成功、无错误日志，单机/单服务器测试正常，逐 rank 对比才发现。
   visibility: 静默错误
 mitigation:
   detect: 多服务器 NHR 拓扑下 broadcast 后逐 rank 与 root 源 buffer 比对；单服务器用例覆盖不到
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

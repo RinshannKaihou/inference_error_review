@@ -4,7 +4,7 @@ slug: ops_nn_fake_quant_affine_cachemask_int64_narrow
 aliases: []
 title: FakeQuantAffineCachemask 元素数截到 uint32
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 910B/910_93：shape [1,16,24576,16384] FP16 约 12.9GB、6.4B 元素被截成 2.1B（丢 67%），尾部不写为未初始化，loopNum/remainNum 的多核分配也错乱；issue 未给实测输出。
+  detail: 910B/910_93：元素数>2^32时触发；举例[1,16,24576,16384] FP16约12.9GB，6.4B元素截为2.1B、丢67%，仅处理部分元素，尾部未初始化，多核分配错乱，返回正常。
   visibility: 静默错误
 mitigation:
   detect: 构造元素数超 2^32（如 [1,16,24576,16384] fp16）的输入，检查输出尾部是否保持预置值；同时核对 tiling 里 totalLength 的位宽。
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

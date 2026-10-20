@@ -4,7 +4,7 @@ slug: ops_math_expint_arch35_exp_overflow_nan
 aliases: []
 title: expint 大输入 exp 上溢与对齐区未初始化致 inf/NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -44,3 +44,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

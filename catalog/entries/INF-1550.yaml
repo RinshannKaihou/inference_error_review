@@ -4,7 +4,7 @@ slug: vllm_ascend_dispatch_ffn_combine_w8a8_k_stride
 aliases: []
 title: fused_mc2 W8A8 MoE 工作区按 K 定宽致 N>K 错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 输出内容
-  detail: N 略大于 K（K=2048、N=3072）时每个 MoE 层静默覆盖，首 token 起整段乱码；N≫K（K=256、N=1536）时写出工作区触发 AI Core invalid GM address 崩溃。修复后同一形状相对误差由约 1 降到 4e-3。
+  detail: enable_fused_mc2=1的W8A8 MoE在N>K时：加载正常但首token起乱码，图与eager均复现；N远大于K触发AI Core invalid GM address崩溃。bf16权重、关闭开关或N≤K正常。
   visibility: 静默错误
 mitigation:
   detect: 算子级用 M=128、K=2048、N=3072(k2=1536)、E=40、topk=7 的 W8A8 入参与反量化参考比相对误差；端到端只翻转 enable_fused_mc2 做 A/B
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem
+    - visibility

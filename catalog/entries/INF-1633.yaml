@@ -4,7 +4,7 @@ slug: mindformers_graph_gqa_tp_ulysses_cp_precision
 aliases: []
 title: GQA 下 tp>1 叠加 Ulysses CP 推理精度不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: qwen1_5 72B、seq_length 32768、do_sample=False 的 predict 输出与单卡不一致；同配置开关 ulysses 结果不同，MindSpore 2.4.0.B011 + CANN Milan_C18/20240710 组合失败
+  detail: 静态图下 qwen1_5 72B、seq_length 32768、do_sample=False 在 8 卡 tp+Ulysses CP predict 输出与单卡不一致；开关 ulysses 结果不同，不报错、不 NaN。
   visibility: 静默错误
 mitigation:
   detect: GQA 模型（kv_head_num < head_num）在 tp>1 + cp>1 下跑 predict，与单卡或 tp1 结果逐 token 比对
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

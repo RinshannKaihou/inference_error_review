@@ -4,7 +4,7 @@ slug: gmm_finalize_routing_negative_rowindex_atomicadd
 aliases: []
 title: GMMFinalizeRouting 未校验 rowIndex
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: rowIndex=-1 时 GetWS/Launch 均返回 SUCCESS，直到 Sync 才报 507057；rowIndex=1000000 时报 507015；合法 rowIndex=0 正常。越界 AtomicAdd 发生在报错之前，可写坏其它 token 的行。
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: 对 rowIndex 注入 -1 与 >=tokens 的值，确认 GetWorkspace/Launch 是否拒绝；用 memcheck 观察越界写
   fix: 待定（issue 为 P-011 防御性契约缺陷报告，未见修复 PR）
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 报错
+    uncertain:
+    - title

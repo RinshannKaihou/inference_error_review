@@ -4,13 +4,13 @@ slug: mhc_pre_backward_uint64_trunc_uninit_mask
 aliases: []
 title: MhcPreBackward 偏移截断与未初始化 MaskReg
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: pytorch
     component: MhcPreBackward kernel
-  behavior: 偏移量 D_/N_/nD_ 为 uint64_t 却传给只接受 uint32_t 的 AscendC 接口而被截断；Duplicate 用的 maskPre/maskPost/maskComb 未初始化即当掩码，两处都使结果偶发偏差。
+  behavior: uint64_t的D_/N_/fusionSize_/nD_传给仅支持uint32_t的部分AscendC API参数时被截断致偏移量算错；三处Duplicate的maskPre/maskPost/maskComb未初始化即当作掩码。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

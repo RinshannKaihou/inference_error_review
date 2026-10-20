@@ -4,7 +4,7 @@ slug: ops_math_cdist_grad_exp_log_pow_precision
 aliases: []
 title: cdist_grad 以 exp(log) 近似 pow 致梯度精度劣化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 梯度
   detail: p=2.6133、float32 走 NORM_MODE_LARGE_P 分支时 NPU 均方根误差 3.91e-4，GPU A100 为 8.40e-5，劣化约 4.65 倍，ATK 双标杆精度（比例阈值 2.0）不达标
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 对 p 落在 (0,2) 与 (>2) 两段的 fp32 反向用例（如 p=2.6133）与 aten._cdist_backward 比均方根误差比值（阈值 2.0），golden 用 CPU fp64
   fix: issue 给方案（closed）：改用 Vec::Power（DOUBLE_FLOAT_TECH，约 1 ULP）替代 exp/log，保留 ratio+mask 结构以保证 cdist==0 时不产生 0/0=NaN（合入状态未核实）
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误

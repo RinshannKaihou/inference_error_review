@@ -4,7 +4,7 @@ slug: op_plugin_add_rms_norm_fused_vs_unfused_mismatch
 aliases: []
 title: add_rms_norm 融合与分离路径结果不齐
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -52,3 +52,10 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

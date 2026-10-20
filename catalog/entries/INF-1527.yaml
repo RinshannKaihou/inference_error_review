@@ -4,7 +4,7 @@ slug: ops_nn_addrelu_bf16_tail_block_out_of_range
 aliases: []
 title: AddRelu 尾维非对齐输出越出值域上界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 1000 条用例 290 条精度不通过（29%），含整型逐位不等 134 条、NPU 侧独有 NaN/Inf 78 条；127 条同输入稳定失败，720 条里 185 条（25.7%）两轮判定翻转。
+  detail: 尾维非对齐且值域±100时，round-3 1000条执行成功但290条accuracy False：整型torch.equal失败87条、NPU输出含nan/inf 78条、无error_info的二进制不一致47条、浮点误差超阈78条；720条同输入两轮185条翻转、127条两轮都失败。
   visibility: 静默错误
 mitigation:
   detect: 同输入连续两轮逐 bit 比对并复跑：720 条里 185 条判定在两轮间翻转是主要特征；只看单轮通过率会低估。
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - visibility
+    - behavior

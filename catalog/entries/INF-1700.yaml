@@ -4,17 +4,17 @@ slug: indexer_quant_cache_mxfp4_odd_headdim
 aliases: []
 title: indexer_quant_cache MX-FP4 半字节错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: pytorch
     component: indexer_quant_cache
   behavior: MX-FP4 每字节打包 2 个逻辑元素，headDim 为奇数时相邻行起点交替落在字节高/低 4 位；kernel 把 cache 声明为 int8_t，只能整字节 CopyOut，无法表达半字节偏移。
 effect:
   objects:
-  - 数值结果
   - KV状态
+  - 数值结果
   detail: quantMode=3 且 cache.headDim=65 时 cache 输出精度仅 56.9%~62.5%（不同 stride 方案都到不了 100%），属系统性错位而非随机噪声；无报错，tiling 直接放行。
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+      effect:
+        from: 数值结果
+        to: KV状态

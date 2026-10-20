@@ -4,7 +4,7 @@ slug: ms_aclnn_cache_optional_vector_hash_missing
 aliases: []
 title: ACLNN 缓存哈希漏 optional vector
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -13,6 +13,7 @@ cause:
   behavior: GatherInfo 对 pair<optional<vector<int64_t>>,bool> 没有语义哈希重载，退回对象内存拷贝，vector 的指针/size/capacity 相同即命中，元素值不参与 key。
 effect:
   objects:
+  - 数值结果
   - 梯度
   - 训练信号
   detail: HyperParallel DSA Indexer 变长 TND 训练：step142 indexer_loss 从 0.0206 涨到 111.3，step150 grad_norm 0.25→2232283，主 loss 一致。
@@ -48,3 +49,21 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 梯度
+        to: 数值结果
+    uncertain:
+    - visibility
+    - behavior

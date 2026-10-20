@@ -4,13 +4,13 @@ slug: ms_leaky_relu_alpha_float32_rounding
 aliases: []
 title: float64 输入下 leaky_relu 的 alpha 先按 f32 舍入
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: mindspore
     component: leaky_relu alpha 标量转换
-  behavior: float64 输入配 Python 浮点 alpha 时，alpha 先被转成 float32 再扩展到 float64 参与计算，双精度路径被单精度常数污染。
+  behavior: CPU 后端 PyNative 与 Graph 下，float64 输入且非精确 Python 浮点 alpha（0.2）时，alpha 先转 float32 再扩展到 float64 参与计算。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

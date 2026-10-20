@@ -4,7 +4,7 @@ slug: ops_nn_conv3d_bp_filter_winograd_resident_uninit
 aliases: []
 title: Winograd 驻留切分错位读到未初始化 workspace
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: fp32 cout=192/cin=448/pad(1,0) 用例中 64 个完整 co 通道（[48-63]/[96-127]/[160-175]）读到未初始化数据，占 33.3% 元素，本机 NaN、fuzz 环境为 0；错误通道与缺口区间逐一吻合。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: fp32 winograd 路径上核对输出通道分组是否整段为 0 或 NaN；用 TTK 复现用例比对，tiling_key 不变说明修的是块边界而非路径选择。
   fix: 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/11267 （closed）：运行时分块大小自 IterateAll 透传至驻留任务切分，块宽不足驻留长度时整块驻留只产生 1 个任务
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常

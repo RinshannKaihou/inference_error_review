@@ -4,10 +4,10 @@ slug: ms_softmax_const_fold_exp_overflow_nan
 aliases: []
 title: 常量折叠的 softmax 用朴素 exp 溢出成 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: mindspore
     component: Graph Const 常量折叠 softmax
   behavior: 前端常量折叠对 ops.softmax 用朴素 np.exp 实现且不先减行最大值，大幅值常量输入在编译期 exp 溢出，输出 nan 而运行时路径正确。
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核
+    uncertain:
+    - behavior

@@ -4,7 +4,7 @@ slug: qfa_mxfp8_simd_scalar_param_lost
 aliases: []
 title: QFA MXFP8 FD 标量传参丢失致 LSE 为 inf
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,8 @@ cause:
   behavior: 第 15 个运行时标量 minCheckValue 在每个 AIV 首次 VF 调用时丢失并被污染为 0.0，Compare EQ(0,0) 误命中，Select 输出 3e+99 使 LSE 为 inf。
 effect:
   objects:
-  - 输出分布
   - 数值结果
+  - 输出分布
   detail: TEST1_WK（B=6 GQA、PA BnNBsD、mask_mode=3、p_scale=8、enable_lse=True）下仅 flat=16020/16083 两点 LSE 为 3e+99（溢出为 inf），期望约 8.58，其余 19842 点与 attention 输出全对。
   visibility: 数值异常
 mitigation:
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出分布
+        to: 数值结果
+    issue_unfixed:
+    - behavior

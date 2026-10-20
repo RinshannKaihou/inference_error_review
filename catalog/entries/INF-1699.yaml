@@ -4,7 +4,7 @@ slug: mhc_pre_sinkhorn_backward_output_never_written
 aliases: []
 title: MhcPreSinkhornBackward 输出 grad_x 全程未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,9 @@ cause:
   behavior: kernel 未执行 grad_x 写路径：initcheck 事件流显示输出 buffer MALLOC 后零写、无 MMAD、无 UB 到 GM 写指令，仅 host LOAD 读，输出保持未初始化值。
 effect:
   objects:
+  - 梯度
   - 数值结果
-  detail: grad_x 静默返回全 0，example 对输出无校验故不报错；该算子是同批 169 条 initcheck 告警中唯一确认的输出未写真缺陷，其余为 host 漏填或读自身 workspace 未初始化区。
+  detail: 调用成功且无报错，grad_x 全 0；example 不校验输出，训练中该路梯度恒为 0、参数不更新。不开 sanitizer 同样全 0；开 initcheck 或加非零断言可发现未写输出。
   visibility: 静默错误
 mitigation:
   detect: 开启 sanitizer 插桩跑 mssanitizer -t initcheck，逐算子核对输出 buffer 是否有写者；对输出加非零断言
@@ -42,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度
+    rewritten:
+    - detail

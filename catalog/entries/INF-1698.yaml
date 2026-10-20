@@ -4,17 +4,17 @@ slug: moe_init_routing_quant_k_gt1_rowidx
 aliases: []
 title: MoeInitRoutingQuant K>1 行索引逆映射偏 1
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: MoE路由
     stack: pytorch
     component: MoeInitRoutingQuant
   behavior: K>1 时同一行号在 sortedRowIdx 中出现 K 次，基准用 stable argsort 加 last-write-wins，kernel 归并与 gather 的散写次序不同，逆映射偏 1。
 effect:
   objects:
   - 数值结果
-  detail: K>1 的 158 条用例全失败（K=1 的 840 条全通过）：expandedRowIdxOut max_diff 1.0（137 例）；连带 expandedXOut 140 例 int8 错值 max_diff 149~255；expandedExpertIdxOut 逐位一致。
+  detail: K>1 多专家路由输入下 158 条全失败，K=1 的 840 条通过；expandedRowIdxOut 158/158 失败、行索引整体差 1；expandedXOut 140/158 int8 错值，误差可达 149~255；expandedExpertIdxOut 0/158 失败。
   visibility: 静默错误
 mitigation:
   detect: 用 numpy stable argsort 加散写实现基准，MD5 逐位比对 expandedRowIdxOut 与 expandedXOut，覆盖 K>1
@@ -42,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: MoE路由
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

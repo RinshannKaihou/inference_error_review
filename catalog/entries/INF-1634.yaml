@@ -4,7 +4,7 @@ slug: triton_ascend_launcher_value_folded_arg_shift
 aliases: []
 title: launcher 打包被折叠参数致后续实参错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -15,8 +15,8 @@ effect:
   objects:
   - 数值结果
   - 输出内容
-  detail: sam：注入的 3 个 grid 参数错位，外层 trip 变 196×48×1=9408（应 48），原地 softmax 反复处理收敛到均匀（maxdiff 0.4946），32 个 encoder 块级联成 NaN，attention-prob rms_rel 51.96%。
-  visibility: 静默错误
+  detail: sam：3 个注入 grid 参数错位，外层 trip 变 196×48×1=9408（应 48），原地 softmax 反复处理收敛到均匀，逐元素最大差约 0.49，后续 32 个 encoder 块级联成 NaN，attention probability 相对 rms 误差约 52%。
+  visibility: 数值异常
 mitigation:
   detect: 比对 launcher 打包的 slot 数与二进制实际参数个数（hermetic A/B 可直接调 make_launcher 检查是否多出字段）
   fix: 'PR #2387 归一化 constants 键（到达时为 1-tuple）并在两处打包点跳过被折叠下标（open，未发布）'
@@ -48,3 +48,22 @@ migration:
   - date: '2026-10-20'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

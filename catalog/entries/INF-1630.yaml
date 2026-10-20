@@ -4,7 +4,7 @@ slug: mindformers_predict_cpu_infer_boost_gather_wrong_row
 aliases: []
 title: 自动开 infer_boost 致 CPU 推理 embedding 错行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - subsystem
+    - behavior

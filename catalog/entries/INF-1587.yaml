@@ -4,7 +4,7 @@ slug: ms_masked_fill_backward_nan_mask_leak
 aliases: []
 title: MaskedFill 反向乘法掩码在 NaN/Inf 下漏梯度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

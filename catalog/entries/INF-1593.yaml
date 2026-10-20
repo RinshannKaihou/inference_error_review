@@ -4,7 +4,7 @@ slug: cann_sparse_flash_mla_grad_meta_int32_softmax_norm_dtype
 aliases: []
 title: sparse_flash_mla_grad Meta 推导 int32 错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,8 @@ cause:
   behavior: Meta 用 sparse_indices.dtype（int32）创建 ori/cmp_softmax_l1_norm，FakeTensor 与 torch.compile 据此把两个 float32 输出推成 int32。
 effect:
   objects:
-  - 数值结果
   - 训练信号
+  - 数值结果
   detail: torchtitan DeepSeek-V4 SMLA 整网 torch.compile 下 dsa_indexer_aux_loss/mean 从 4.58e-4 变为 -4.51e10；只改 Meta 输出 dtype、kernel 不动即恢复 4.58e-4。
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 训练信号

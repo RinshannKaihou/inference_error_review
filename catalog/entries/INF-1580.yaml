@@ -4,17 +4,17 @@ slug: cann_fused_floyd_attention_s2_block_rescale_exp_overflow
 aliases: []
 title: FusedFloydAttention K>1024 分块重缩放溢出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: 通用
     component: S2 分块 softmax 重缩放
-  behavior: K>1024 沿 S2 分块，后续块以更新模式调 SoftmaxFlashV2，用 exp(max_old-max_new) 重缩放已累计概率；scale=1.0、|输入|≥5 时该因子超 88.7 溢出为 Inf 并污染概率 P。
+  behavior: K>1024 分块重缩放中，D=64/N=16/M=128、scale=1.0、|输入|≥5 且 fp16/bf16 时，两块行内 max 差极易超 ln(FLT_MAX)≈88.7，重缩放因子溢出为 +Inf 污染 P。
 effect:
   objects:
   - 数值结果
-  detail: K=2048/D=64/N=16/M=128/scale=1.0 的 4 例（fp16/bf16 × 两值域）attentionOut 误差比例超阈 33~27829 倍，NPU 对 golden 最大相对误差 1.3e5~6.7e5；仅 D=32、M=256、N=32 或 K≤1024 时通过。
+  detail: K=2048/D=64/N=16/M=128/scale=1.0、|输入|≥5 的 4 例 fp16/bf16 attentionOut NPU 对 golden 最大相对误差 132890~673722，双标杆误差比例超阈几十到几万倍；D=32/M=256/N=32 或 K≤1024 通过。
   visibility: 静默错误
 mitigation:
   detect: K∈(1024,2048]、D=64、N=16、M=128、scale=1.0、|输入|≥5 的网格用例；dump 块间 max 差与重缩放因子，确认 exp 参数是否超 88.7
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-20
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - detail
