@@ -4,19 +4,19 @@ slug: aclgraph_replay_sync_timeout_misreported_as_oom
 aliases: []
 title: aclgraph 回放 sync 超时被包成 OOM 误导排障
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: vllm
     component: ACLGraphWrapper.__call__
-  behavior: 回放前调 current_stream().synchronize() 没有任何异常处理，ACL 107020/107027 的 RuntimeError 原样上抛，被上游按消息内容包装成 torch.OutOfMemoryError
+  behavior: 回放前调 current_stream().synchronize() 阻塞，驱动超时后抛含 synchronize 与 107020 的 torch.OutOfMemoryError，被上游按消息包装为 OOM。
 effect:
   objects:
-  - 指标/日志
   - 可用性/进度
+  - 指标/日志
   detail: 请求阻塞 1866 s 后才返回 HTTP 500 并触发 EngineDead；日志给出 --gpu-memory-utilization/--max-model-len 等显存建议，真实根因（207001 分配失败）在半小时前的 worker 日志里
-  visibility: 报错
+  visibility: 挂起
 mitigation:
   detect: 看首个错误码而不是最后一个：worker 日志里先出现 207001 Memory_Allocation_Failure；若只看到 107020 且带 synchronize 字样，不要按 OOM 调参
   fix: issue 描述中已有草稿 PR（fix/replay-synchronize-stream-resource-error，未合入，未核实）；修复点在 ACLGraphWrapper.__call__ 捕获 RuntimeError 并按 107020/107027 + synchron 字样重抛为非 OOM 信息
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 指标/日志
+        to: 可用性/进度
+      visibility:
+        from: 报错
+        to: 挂起
+    rewritten:
+    - behavior

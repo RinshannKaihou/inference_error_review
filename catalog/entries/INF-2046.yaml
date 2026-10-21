@@ -4,19 +4,19 @@ slug: vllm_ascend_tl_where_oob_cu_minus_one
 aliases: []
 title: tl.where 两支均求值致 cu[-1] 越界读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 解码/采样
     stack: vllm
     component: reject_sample Triton 采样核
   behavior: tl.where 是选择指令不是控制流，两支都会被求值：条件包住的 tl.load(cu_ptr+offset-1) 在 lane0 仍发出 base-4 的读事务，越界值随后才被丢弃
 effect:
   objects:
-  - 输出内容
   - 可用性/进度
+  - 输出内容
   detail: 8 机 PD 生产、温度 0 全 greedy 批次下每次 launch 都越界读；地址落在未映射页时报 507035 MTE illegal GM，fault 地址 0x40003ffffffc 恰为 cu 基址-4，其余时候静默读相邻内存
-  visibility: 不可复现
+  visibility: 报错
 mitigation:
   detect: 单算子把 cu 张量放到分配起始（边界放置）复现；审计所有 tl.where(cond,0,tl.load(p+idx-1)) 写法，看偏移是否夹到 0 或用 masked load 的 other
   fix: '已修：vllm-ascend PR #16222、#16215 修正 reject_sample.py 的 rejection_greedy_sample_triton、rejection_random_sample_kernel、expand_kernel、sample_recovered_tokens_kernel（未核实发布版本）'
@@ -43,3 +43,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 解码/采样
+      effect:
+        from: 输出内容
+        to: 可用性/进度
+      visibility:
+        from: 不可复现
+        to: 报错

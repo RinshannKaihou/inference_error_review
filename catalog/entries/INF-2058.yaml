@@ -2,9 +2,9 @@ id: INF-2058
 legacy_ids: []
 slug: vllm_ascend_layerwise_kv_event_reorder_garbled
 aliases: []
-title: Layerwise KV 传输 event 乱序致偶发乱码
+title: Layerwise KV 传输偶发乱码，疑 event 同步乱序
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - title
+    uncertain:
+    - effect
+    - detail

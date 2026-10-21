@@ -4,7 +4,7 @@ slug: msprobe_sglang_pd_instrumentation_blocks_server_info
 aliases: []
 title: msprobe 插桩后 sglang PD 的 server_info 接口卡住
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -42,3 +42,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

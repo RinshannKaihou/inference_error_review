@@ -4,7 +4,7 @@ slug: vllm_ascend_dsa_cp_full_graph_replay_stale_metadata
 aliases: []
 title: DSA-CP 全图重放不等元数据拷贝致 DSV4 答错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -16,7 +16,7 @@ effect:
   - 输出内容
   - 输出分布
   detail: 同一请求先在 32 并发跑过、再以 1/4 批重放同一 decode 图后，GPQA-Diamond 解析答案与 raw completion 明显不同；关图重放或开 DSpark 即恢复。
-  visibility: 不可复现
+  visibility: 质量退化
 mitigation:
   detect: 按 32→1/4 批序切换请求复用同一 decode 图，比对 GPQA 解析答案与 raw completion；检查重放前 CP 元数据 H2D 拷贝是否存在事件依赖
   fix: issue 提议：两处 CP 元数据拷贝改为同步、稀疏索引刷新到模型固定地址缓冲、FULL 图捕获时保证压缩组存在，并补 in-place 刷新单测（closed，未见合并记录）
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 质量退化

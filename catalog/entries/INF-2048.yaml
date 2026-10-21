@@ -4,7 +4,7 @@ slug: hccl_ccu_alltoall_mask_shift_overflow
 aliases: []
 title: CCU alltoall 同步掩码位移溢出截断
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: 单层 mesh1d 子通信域 rankSize≥16 时 allBit 截断、≥32 时移位 UB；ParseKernelArg 空实现不校验，alltoall 选择器对单层 mesh1d 不查 userRankSize 上限，仓内未确证实际触发
-  visibility: 静默错误
+  detail: 单层 mesh1d 子通信域 alltoall/alltoallv rankSize>16 时，同步掩码只覆盖低位 rank，部分 rank 到达事件不被等待，集合通信可能提前返回或后续步骤挂住；≤16 rank 读不到异常。报告自述 rankSize≥32 仓内未确证实际发生，属防御性缺失。
+  visibility: 挂起
 mitigation:
   detect: 静态检查 (1<<rankSize) 类掩码构造：确认移位字面量位宽与目标容器宽度，核对 rankSize 上界校验是否存在
   fix: 待定（issue closed，未见 MR）：掩码改用 uint64_t/1ULL 构造并按 rankSize 校验，或在 ParseKernelArg 补上界检查
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 挂起
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: quantize_add_layer_norm_arch35_int8_bitwise_mismatch
 aliases: []
 title: quantize_add_layer_norm INT8 逐 bit 差
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 189 条用例中 22 条 INT8 输出未过 binary_equal（黑盒 17/177、白盒 5/12）；每个 shape 约 1~4/768 个元素不一致，最差一条 99.16% 一致；无 memory OOB、无报错
+  detail: 22条INT8未过binary_equal（黑盒17/177、白盒5/12），无memory OOB；FP16/D=768无zero_points每条约1/768元素不一致，BF16/D=128有zero_points约1/128不一致，BF16/D=768约3~4/768，一条99.16%元素一致
   visibility: 静默错误
 mitigation:
   detect: 对每个 shape 统计 INT8 输出与 golden 的逐 bit 不一致元素占比；注意同时看输出 1 的浮点残差会掩盖输出 0 的失败
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior

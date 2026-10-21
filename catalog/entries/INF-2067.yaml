@@ -4,10 +4,10 @@ slug: vllm_ascend_mega_moe_max_tokens_default_overflow
 aliases: []
 title: mega_moe_max_tokens 默认值小于实际接收量致 507057
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 配置/参数
+  - subsystem: MoE路由
     stack: cann
     component: mega_moe_max_tokens 默认值
   behavior: 该参数作为每 rank 最大接收 token 数参与 HCCL 对称内存握手；默认 6144，而 8192 token/step × topk16 ÷ EP16 恰为每 rank 8192，窗口溢出后集合通信状态被破坏。
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 配置/参数
+        to: MoE路由

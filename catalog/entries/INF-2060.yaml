@@ -4,13 +4,13 @@ slug: vllm_ascend_mooncake_kv_break_garbled
 aliases: []
 title: Mooncake KV 链路在 100 并发下断开致 D 节点乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 集合通信
     stack: vllm
     component: MooncakeConnector KV 传输
-  behavior: PD 分离 2P1D 下并发升到 100 时 mooncake 连接断开，D 节点取到不完整 KV；plog 在首个出错节点报 rtMemcpy 107030（capture mode 不支持该操作），P 侧 3s 超时改 10s 仍超时。
+  behavior: PD 分离 2P1D 下并发升到 100 时 mooncake 连接断开；plog 首个出错节点报 rtMemcpy 107030（capture mode 不支持该操作），P 侧 3s 超时改 10s 仍超时。
 effect:
   objects:
   - 输出内容
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 集合通信
+    rewritten:
+    - behavior
+    uncertain:
+    - title

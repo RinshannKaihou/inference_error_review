@@ -4,7 +4,7 @@ slug: ops_nn_dynamic_block_quant_infershape_wrong_dim
 aliases: []
 title: dynamic_block_quant 形状推导读错维度索引
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 性能/资源
-  detail: scale 张量按错误尺寸推导并分配，dim0<dim2 时缓冲区不足可越界写；Host InferShape 直接返回成功，无任何校验拦截，错误形状继续传给图规划与输出分配
+  detail: 3维输入调用 aclnnDynamicBlockQuant 且 dim0≠dim2 时，接口正常返回、量化也能跑完，scale 最后一维偏小，部分 block 的 scale 无真实数据；dim0<dim2 时存在 scale 缓冲区尾部越界写风险，表现为精度异常或偶发内存破坏而非报错。
   visibility: 静默错误
 mitigation:
   detect: 对 3 维输入且 dim0≠dim2 的 case 检查 InferShape 输出的 scale 形状是否为 CeilDiv(dim2,colBlockSize)；与 CPU/参考实现比对
@@ -43,3 +43,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

@@ -4,17 +4,17 @@ slug: vllm_ascend_stream_ignores_eos_mtp
 aliases: []
 title: 流式请求忽略 EOS 生成到 max_tokens 才停
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
     stack: vllm
     component: 流式输出 EOS 停止判定
-  behavior: 开启 deepseek_mtp 投机解码后，流式请求的输出路径没有把 EOS 停止信号传播下去，采样一直跑到 max_tokens；同一 prompt 的非流式路径在同一位置正常 stop。
+  behavior: 流式请求不识别 EOS，持续生成到 max_tokens。
 effect:
   objects:
   - 输出内容
-  detail: DeepSeek-V4-Pro W4A8：stream=false 输出 703 token、finish_reason=stop；stream=true 输出满 4096 token、finish_reason=length，服务不报错。Flash W8A8 同配置未复现。
+  detail: vllm-ascend，DeepSeek-V4-Pro W4A8+deepseek_mtp：stream=false 约703、finish_reason=stop；stream=true 同 prompt 满4096、finish_reason=length，不报错；不同输入长度均可复现。
   visibility: 静默错误
 mitigation:
   detect: 同一 prompt 分别用 stream=false/true 各跑一次，比对 completion_tokens 与 finish_reason 是否一致
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - detail
+    uncertain:
+    - subsystem

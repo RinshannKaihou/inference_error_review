@@ -4,7 +4,7 @@ slug: vllm_ascend_dflash_share_lm_head_acceptance_collapse
 aliases: []
 title: DFlash 草稿 lm_head 被 target 覆盖致接受率跌至 1.7%
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -13,8 +13,8 @@ cause:
   behavior: _maybe_share_lm_head 无条件把 draft 的 lm_head 换成 target 的 lm_head；RedHat DFlash 草稿用专门的 32000 行 lm_head，替换后 logits 映射到错误词表。
 effect:
   objects:
-  - 输出分布
   - 性能/资源
+  - 输出分布
   detail: mean accept length 从 3.3/3.8 掉到 1.02，整体接受率 25%→1.7%，verifier 几乎拒绝所有提案；输出内容仍正确，只有投机收益消失、TTFT 与生成时延恶化。
   visibility: 性能退化
 mitigation:
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出分布
+        to: 性能/资源
+    uncertain:
+    - detail

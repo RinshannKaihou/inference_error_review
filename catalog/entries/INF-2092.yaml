@@ -4,7 +4,7 @@ slug: kv_offload_partial_load_reported_success
 aliases: []
 title: KV offload 部分加载仍报 SUCCESS 致跨 rank 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 可用性/进度
-  detail: '各 rank 的 KV 命中块数不一致却都标记成功；fail 策略下请求以 HTTP 500 结束并伴随首 token 超时，日志抛 ValueError: Counters can only be incremented by non-negative amounts'
+  detail: 开启 KV offloading 且 kv_load_failure_policy=fail 的多机 PD 分离 TP16 场景下，个别请求首 token 超时并返回 HTTP 500，失败路径记录 metrics 时抛 ValueError。
   visibility: 静默错误
 mitigation:
   detect: 按请求聚合各 rank 的 success_blocks/total_blocks_num 与 status，status 全 SUCCESS 但块数不一致即命中；再核对失败路径是否二次抛 metrics 异常
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - effect
+    - visibility
+    - behavior

@@ -4,17 +4,17 @@ slug: pta_mlir_gelu_backward_nan_loss
 aliases: []
 title: mlir 后端 gelu 反向融合 kernel 错值致 loss 变 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: pytorch
     component: mlir/akg 后端融合 kernel
-  behavior: torch.compile 走 mlir/akg 后端时，融合 kernel mlir_fused_gelu_gelu_backward_view_17 输出与 eager 不符，最大绝对误差 3.4e10，loss 第3步起 NaN。
+  behavior: torch.compile 走 mlir/akg 后端反传时，mlir_fused_gelu_gelu_backward_view_17 输出与 eager 不符，绝对误差随步数逐步放大。
 effect:
   objects:
-  - 梯度
   - 数值结果
+  - 梯度
   detail: beit_base_patch16_224：eager 每步 loss 约 -0.56 正常；compile 第 3 步起全 nan。CHECK ACCURACY FAILED 均指向 mlir_fused_gelu_gelu_backward_view_17，最大绝对误差 3.4e10。
   visibility: 数值异常
 mitigation:
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 梯度
+        to: 数值结果
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

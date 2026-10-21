@@ -4,17 +4,17 @@ slug: cann_quantize_add_layer_norm_950_fullload_deviation
 aliases: []
 title: QuantizeAddLayerNorm 950 输出偏差 128~255
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: quantize_add_layer_norm
   behavior: 950/arch35 实现在 key=8012 的多行 Full-load 路径上，y（INT8 量化输出）与冻结 Golden 最大绝对差 128~255；部分差异可由参考多做一次 dtype 回转解释，根因未定。
 effect:
   objects:
   - 数值结果
-  detail: 1218 条上板比较 282 条未过：13 条多行 Full-load 大偏差（y 差 128~255），255 条 y 差 ±1，20 条残差 x 不符（设备按 (x2+bias)+x1、Golden 按 (x1+x2)+bias）。
+  detail: 1218条上板比较282条未过：13条多行Full-load大偏差（y差128~255），255条y差±1，20条x差异中FP32代表例设备x逐位等于(x2+bias)+x1，Golden为(x1+x2)+bias。
   visibility: 静默错误
 mitigation:
   detect: 按 TSE 黑盒 L1/L2、STDesign 用例与冻结 Golden 回归，按 key=8012 路径、dtype、scale 值域分组统计最大绝对差与不一致元素数
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+    rewritten:
+    - detail

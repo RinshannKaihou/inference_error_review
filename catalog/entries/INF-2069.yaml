@@ -4,7 +4,7 @@ slug: vllm_ascend_dsv4_compressor_varlen_basesize_kv_drift
 aliases: []
 title: DSV4 compressor 变长批尺寸不复位致压缩 KV 漂移
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -16,7 +16,7 @@ effect:
   - KV状态
   - 输出分布
   detail: 同一请求单独 prefill 与混在变长批中 prefill，compressor 输出的 compressed_kv 有 3 个 bf16 元素不同、最大绝对差 4.88e-4；差异写入压缩 KV 后传导到后续 attention 与 logits。
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 同一请求分别在单请求与变长混批下 prefill，逐元素比对 compressor 输出的 compressed_kv，并对比首 token 与 logprob
   fix: issue 给出改法：去掉等长门控、按批内最大 used 长度计算候选 base size；报告者离线回放与 TP16DP2EP 实权重 smoke 已验证一致（issue open，未核实是否合并）
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误
+    uncertain:
+    - subsystem

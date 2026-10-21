@@ -4,13 +4,13 @@ slug: vllm_ascend_glm53_mtp_kda_state_misplace
 aliases: []
 title: GLM-5.3 MTP 验证步 KDA 状态错位致乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
     stack: vllm
     component: KDA conv/recurrent 状态
-  behavior: causal_conv1d_update 的 varlen 分支对多 token 序列错排 conv-state 列；KDA 循环核 IS_SPEC_DECODING 分支把非首序列的状态写进错误槽位（NaN），验证步 logits 退化
+  behavior: causal_conv1d_update varlen 分支错排多 token 序列 conv-state 列；KDA 循环核 IS_SPEC_DECODING 分支对非首序列寻址错误 state 槽位并写成 NaN
 effect:
   objects:
   - 输出内容
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

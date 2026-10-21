@@ -4,7 +4,7 @@ slug: vllm_ascend_repetition_penalty_ignores_output_ids
 aliases: []
 title: NPU runner 未回填已生成 token 致重复惩罚失效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: repetition_penalty=2 时生成结果仍大量重复同一段内容；把 sampler 里的 output_token_ids 打出来全是 -1；同样配置换 GPUModelRunner 正常
-  visibility: 质量退化
+  detail: V1 引擎 NPU 解码路径下设置 repetition_penalty=2 等重复惩罚时，生成仍大量重复同一段内容；日志无告警，采样参数看似生效；打印 output_token_ids 全为 -1。
+  visibility: 静默错误
 mitigation:
   detect: 对同一 prompt 分别用 repetition_penalty=1.0 与 2 跑一次比较重复率，或在 sampler 内打印 sampling_metadata.output_token_ids 是否仍为 -1
   fix: issue 未附修复 PR（open，状态未核实）；按报告者对比，把 GPUModelRunner 的 update_async_output_token_ids 调用补进 NPUModelRunner._sample 即可
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    rewritten:
+    - detail
+    uncertain:
+    - effect

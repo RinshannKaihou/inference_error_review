@@ -4,7 +4,7 @@ slug: vllm_ascend_mla_preprocess_msprof_shape_na
 aliases: []
 title: 自定义 handler 下发算子使 msprof 采不到 shape
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 指标/日志
-  detail: GLM5-W8A8 decode profiling 中 mla_preprocess_0_mix_aic 出现 2028 次、均值约 103us，但拿不到 shape/op state，无法按 shape 归因也无法核对下发参数；同流的 RmsNorm、MatMulCommon 都有 shape。
+  detail: decode profiling 时，kernel_details 中 mla_preprocess_0_mix_aic 出现2028次、均值约103us、cube利用率约98%，但shape/OP State为N/A；无法确认batch/seq组合或按shape聚合。
   visibility: 静默错误
 mitigation:
   detect: 导出 kernel_details.csv，检查自定义 handler 下发的算子行是否有 Input/Output Shapes 与 OP State
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

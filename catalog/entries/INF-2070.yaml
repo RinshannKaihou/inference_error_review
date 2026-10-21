@@ -4,7 +4,7 @@ slug: torch_npu_inductor_mlir_resnet18_wrong_output
 aliases: []
 title: Inductor MLIR 后端编译 ResNet18 静默输出错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: FP32 ResNet18 上 999/1000 元素超出 rtol=1e-4/atol=1e-5，max_abs=2.4768；换输入后 1000/1000 超差、max_abs=1.28；同环境 DVM 与 Triton 后端 max_abs ≤1.5e-06
+  detail: MLIR 后端编译 FP32 ResNet18 时输出与 eager 999/1000 元素不符；五轮独立编译 max_abs 在 2.48~4.20 波动，换输入仍全错；同环境 DVM 或默认 Triton 后端 max_abs ≤1.5e-06。
   visibility: 静默错误
 mitigation:
   detect: 对同一权重分别跑 eager 与 compiled 输出并做 assert_close；监控编译后 max_abs 而不是只看编译是否成功
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

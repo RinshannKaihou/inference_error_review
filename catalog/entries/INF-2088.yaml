@@ -4,7 +4,7 @@ slug: torch_npu_inductor_mlir_resnet50_wrong_output
 aliases: []
 title: Inductor-MLIR ResNet50 输出错 max|Δ|35.9
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    issue_unfixed:
+    - detail

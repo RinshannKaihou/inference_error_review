@@ -4,7 +4,7 @@ slug: cann_exp_segsum_grad_tiling_corenum_oob_arch22
 aliases: []
 title: exp_segsum_grad tiling 未截核数越界写 910B
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: 910B 的 AIV 核数可达 64+，此时 Tiling 阶段越界写 host 数组、破坏相邻 tiling 数据，可能生成错误 tiling 或 host core dump；arch35 已有截断保护，arch22 没有。
+  detail: Ascend 910B（AIV核数>50）上，exp_segsum_grad反向tiling在batches与核数组合使needCoreNum>50时，可能把batchStart/batchEnd写到数组外，表现为偶发tiling参数异常、算子输出错乱或host侧core dump。
   visibility: 静默错误
 mitigation:
   detect: 在 910B（AIV>50）上跑 exp_segsum_grad 的 Host Tiling UT 或 ASan 构建，检查 GetNeedCoreNum 返回值是否超过 MAX_CORE_CONT=50
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - visibility

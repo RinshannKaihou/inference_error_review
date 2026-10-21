@@ -4,13 +4,13 @@ slug: cann_floor_div_int32_divisor_off_by_one
 aliases: []
 title: int32 floor_div 特定除数结果差一
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: floor_div int32（910B2）
-  behavior: 分母为 949、969 等特定整数时，int32 floor_div 对一部分被除数返回与数学结果相差 1 的商；误差只出现在这些除数上，与输入规模无关
+  behavior: int32 floor_div 除以 949、969 等特定整数时，少数元素得到比正确值小 1 的商。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
