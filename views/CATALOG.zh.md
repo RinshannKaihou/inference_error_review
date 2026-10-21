@@ -3,14 +3,14 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1842 条；状态：active 1816、pending_audit 26
+共 1842 条；状态：active 1842
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 515 |
+| 算子/内核 | 516 |
 | 编译器 | 115 |
-| 运行时/执行 | 108 |
+| 运行时/执行 | 109 |
 | 集合通信 | 24 |
 | 并行切分 | 17 |
 | KV缓存 | 315 |
@@ -20,13 +20,13 @@
 | 量化 | 171 |
 | 位置编码 | 39 |
 | 分词/模板 | 29 |
-| 模型定义 | 44 |
+| 模型定义 | 43 |
 | 权重/检查点 | 42 |
 | 数据管线 | 2 |
 | 优化器 | 2 |
 | 损失计算 | 2 |
 | MoE路由 | 34 |
-| 重计算/卸载 | 8 |
+| 重计算/卸载 | 7 |
 | RL训练回路 | 1 |
 | 观测/评测 | 42 |
 | 配置/参数 | 5 |
@@ -6023,7 +6023,7 @@
 
 ### INF-1822 `vllm_ascend_gdn_recompute_w_u_unwritten_outputs` GDN recompute_w_u 首启漏写输出致首个请求全 NaN
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / vllm / recompute_w_u 内核
 - **原因行为**：wy_fast.py 的 recompute_w_u_fwd_kernel 在进程首次真实 prefill 时漏写 u/w 输出的部分元素；输出由 empty_like 分配，残留未初始化内存。
@@ -6034,7 +6034,7 @@
 
 ### INF-1823 `dispatch_ffn_combine_w4a8_rowsrc_offset_wrong` w4a8 dispatch_ffn_combine 后续 rank 偏移错误
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / cann / DispatchAndCombine AIV 偏移
 - **原因行为**：rowSrc 用 prevSum 累加本 AIV 收到的各 rank tokens，正确值为 preSumBeforeRank(dstEpIdx*expertPerRank+groupIdx)，故除首个接收 rank 外偏移全错。
@@ -6045,35 +6045,46 @@
 
 ### INF-1824 `vllm_ascend_vision_encoder_fia_uniform_average` 视觉编码器 FIA 无 mask 时输出退化为均匀平均
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / vllm / AscendMMEncoderAttention
-- **原因行为**：TND 布局、sparse_mode=0 且不传 mask 调用 npu_fused_infer_attention_score 时，算子返回逐 token 的 V 均值，softmax 未参与。
+- **原因行为**：TND 布局、sparse_mode=0 且不传 attention mask 调用 npu_fused_infer_attention_score 时，算子返回 uniform-average，视觉编码器注意力失效。
 - **影响对象**：数值结果；隐状态（静默错误）
-- **影响详情**：对 fp32 参考误差约 3.1（fp16 应为约 3e-3），单序列与多图输入都错；每个 ViT 层注意力都退化成均值，图片请求能跑完但视觉特征失效。
+- **影响详情**：带图请求不报错、正常返回文本，但细节问答、OCR、图表理解明显答错，多图或多帧更差；同图在 GPU 后端能答对。最小复现下与 fp32 torch.softmax 参考误差约 3.1（fp16 正常约 3e-3），单序列与多图输入一致；LLM decode 路径不受影响。
 - **改进措施**：检测 用独立小脚本比对该算子在 TND+sparse_mode=0+无 mask 下的输出与 fp32 参考；或逐层比对 ViT 注意力输出是否等于 V 的均值。；修复 待定（issue 2026-08-06 open）：给该调用显式 mask / 改用 sparse_mode=3 或分页模式。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/13699
 - **关联**：var:INF-1548
 
 ### INF-1835 `vllm_ascend_dflash_verify_fia_causal_grouping` DFlash 验证折叠 query 共享 causal 长度致错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / vllm / FIA 验证步元数据分组
 - **原因行为**：验证步把每条序列 16 个 query 折叠进一次 npu_fused_infer_attention_score 调用时，按 batch 行分组而不维护逐 query 的 causal KV 长度，不同 KV 范围 query 被并组
-- **影响对象**：隐状态；输出内容（静默错误）
-- **影响详情**：Qwen3-8B BF16 贪心 + 前缀缓存 + DFlash（block 16）下，投机输出与 target-only 参考在特定位置分叉（某请求第 401 token 处出现 8 vs 868 token 观察差）；改 query 分组边界即令 bf16 输出漂移
+- **影响对象**：数值结果；隐状态；输出内容（静默错误）
+- **影响详情**：贪心采样 + 前缀缓存 + DFlash（block 16）下，投机输出与 target-only 基线在特定位置分叉（某请求第 401 位置出现 8-token 与 868-token 观察事件差）；改 query 分组边界即产生 bf16 漂移，服务无报错、无 NaN
 - **改进措施**：检测 同输入贪心分别跑 target-only 与 DFlash 投机，逐 token 比对；出现分叉即验证步 attention 元数据有问题；修复 待定；报告者在 #17519 提出修复方向，等维护者确认 FIA 元数据契约（open）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/17520
 
+### INF-1838 `vllm_ascend_sliding_window_dual_fia_path_divergence` sliding_window 令同请求走两套 FIA 致 temp=0 结果分叉
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+
+- **原因对象**：算子/内核 / vllm / sliding_window 分支
+- **原因行为**：带 sliding_window 时同一模型按 batch 状态走两种 FIA 调用（BSH 无 mask vs TND causal sparse_mode=3），数学等价但非位对齐。
+- **影响对象**：输出分布；输出内容（不可复现）
+- **影响详情**：每次调用约 1 个 bf16 ulp（层 23 实测 2^-12）的差异经残差流放大（层 61 达 4.0），在 top-2 logprob 恰好相等的 tie 点翻转 argmax，于是 temperature=0 的相同请求并发时分叉。
+- **改进措施**：检测 同 prompt 并发 8/16 条 temperature=0 请求比对输出；比对两种 FIA 调用形态下同 token 的注意力输出。；修复 已验证规避：从 config.json 去掉 sliding_window（窗口实际从未截断）；根因修复待定（issue 2026-09-16 open）。
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/16704
+
 ### INF-1839 `vllm_ascend_pa_batch_pad_over_8k_dp_mix` DP 混布下 attention pad 超 8K 使 PA 算子未执行出随机值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / vllm / attention 元数据 pad
 - **原因行为**：多 DP 混布时 num_input_tokens 取 max_num_tokens_across_dp，使 decode 输入 pad 过 8K，超 PA 算子 batchsize 上限，PTA 报错只进 atb log
 - **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：pad 后 attention 算子实际未执行（PTA 报错仅在 atb log，服务不挂），attention out 大概率是随机数值，输出精度异常；所有请求都在 decode、chunk size 小于 8K 时正常
+- **影响详情**：attention out 大概率为随机数值，本 DP decode 请求输出精度异常、回答跑偏甚至乱码；服务不挂、请求均返回 200，INFO 级别日志看不到报错，仅 atb log 里有 PA 算子的 PTA 报错。触发面：DP 混布+跨 DP >8K prefill+本 DP 全 decode
 - **改进措施**：检测 检查 atb log 中 PA 算子的 PTA 报错；对比本 DP 单独跑与跨 DP 混跑时 decode 输出；修复 待定；修复应避免按 max_num_tokens_across_dp pad 到超过 PA 算子 batchsize 上限（issue closed，未见 PR 链接）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/4803
 
@@ -7354,7 +7365,7 @@
 
 ### INF-1832 `vllm_ascend_aot_cache_key_ignores_custom_op_selection` AOT 编译缓存键漏 enable_custom_op 致复用错图
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：编译器 / vllm / AOT 缓存键
 - **原因行为**：AOT 缓存键只由 env hash、compute_hash、版本+函数位置组成，决定 trace 到哪些 Ascend 内核的 enable_custom_op() 既不在键里，加载时也没有校验。
@@ -8569,6 +8580,17 @@
 - **改进措施**：检测 同一长请求分别在 D 侧 GE 图模式与 eager 下跑，比对 32768 token 前后的输出；修复 待定（正文未给根因与修复）；规避：D 侧退回 eager 模式
 - **来源**：https://gitcode.com/cann/ge/issues/189
 
+### INF-1837 `vllm_ascend_dsa_hadamard_zero_after_sleep_wake` sleep/wake_up 后 DSA Hadamard 变全零致错算
+
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：运行时/执行 / vllm / DSAMetadataBuilder 张量恢复
+- **原因行为**：DSAMetadataBuilder 把 DSA 稀疏 attention 的 Hadamard 矩阵以设备张量常驻，sleep(level=1)/wake_up() 后它未被恢复而是全零，仍喂给 attention kernel
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：休眠唤醒后 DSA 稀疏 attention 用全零 Hadamard 变换计算，attention 输出错误，模型回答质量下降；进程不重启、不报错，唤醒后的服务继续正常返回
+- **改进措施**：检测 sleep/wake_up 前后 dump AscendDSAMetadataBuilder.hadamard 并检查是否全零；或对比唤醒前后同一请求输出；修复 待定（issue closed，未见修复 PR 链接）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/10684
+
 ## 集合通信
 
 ### INF-0103 `ttmetal_all_broadcast_writer_accessor_cross_buffer_space` all_broadcast 输出 accessor 误用输入 buffer
@@ -8831,11 +8853,11 @@
 
 ### INF-1840 `vllm_ascend_allreduce_nondet_moe_gate_topk` allreduce 非确定性致 MoE topk 专家选择抖动约 1% 坏例
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：集合通信 / vllm / allreduce 非确定性
 - **原因行为**：allreduce 输出偶发异常波动并传导到融合算子 moe_gate_topk，专家选择随之抖动；把 topk 拆成小算子后坏例概率显著下降，开 HCCL_DETERMINISTIC=true 后 3000+ 坏例不再复现（此前 5%）
-- **影响对象**：输出内容；输出分布（质量退化）
+- **影响对象**：输出内容；输出分布（不可复现）
 - **影响详情**：复杂编码/agent 任务中约 1% 概率出现精度类坏例：toolcall 与 think 标签丢失、重复输出、指令遵从下降；首 token 后 logits 偶发 0.5~1 的显著波动
 - **改进措施**：检测 开启 HCCL_DETERMINISTIC=true 复跑坏例集：坏例消失即可判定为非确定性通信；或对比 moe_gate_topk 前后 logits 波动；修复 待定；规避手段是 export HCCL_DETERMINISTIC=true（报告者实测 3000+ 坏例 0 复现），代价是明显性能损失
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/8359
@@ -9012,21 +9034,21 @@
 
 ### INF-1830 `vllm_ascend_vl_text_only_skips_first_sp_allgather` VL 模型纯文本模式下首层漏做 SP AllGather
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：并行切分 / vllm / SP AllGather 判断
 - **原因行为**：apply_impl 用 layer==0 and is_vl_model() 静态跳过 AllGather；纯文本模式（--language-model-only）下首层输入已被 ReduceScatter。
-- **影响对象**：隐状态；数值结果（静默错误）
+- **影响对象**：隐状态；数值结果（质量退化）
 - **影响详情**：首层 attention 的列并行投影吃到的是按 TP 切分的残缺输入，第一层输出即偏离；Qwen3.5 与 MiniMax-M3 都复现，非模型特定。幅度报告未量化。
 - **改进措施**：检测 开 FlashComm1/SP 后用 --language-model-only 跑 VL 模型，逐步比对首层输入是否已 shard；对照关闭 SP 的输出。；修复 待定（issue 2026-08-17 open）：首层是否需要 AllGather 应看运行期输入来源，而不是 is_vl_model() 的静态判断。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/14410
 
 ### INF-1836 `vllm_ascend_pcp_without_ep_accuracy_drop` 开 PCP 不开 EP 时 DeepSeek-V3.2 精度从 94 掉到 73
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：并行切分 / vllm / PCP 与 MoE 专家并行组合
-- **原因行为**：PCP 开启而 --enable-expert-parallel 关闭时，MoE 专家的 TP 切分与 PCP 的上下文切分组合下归约/分派结果不正确；报告未给源码定位。
+- **原因行为**：DeepSeek-V3.2 在 PCP 开启且未加 --enable-expert-parallel 时精度明显下降，同一配置加上该开关后精度恢复；报告未给源码级定位，机制细节待定。
 - **影响对象**：输出内容；隐状态（质量退化）
 - **影响详情**：不出现乱码，只是推理质量下降：同一精度数据集开 EP 得 94 分、不开得 73 分；GSM8K 式算术题会算错（28 答成 24）。
 - **改进措施**：检测 在 PCP 配置下同时跑开/关 EP 的精度基线；盯分数差异而非是否报错。；修复 待定（issue 2026-04-22 open）：规避为 PCP 与 --enable-expert-parallel 同时开启。
@@ -12516,7 +12538,7 @@
 
 ### INF-1817 `ascend_sleep_mode_kv_pool_tags_persistent_metadata` 睡眠丢弃 KV 池误删常驻元数据致唤醒后错值
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / NPUWorker kv_cache 内存池
 - **原因行为**：initialize_kv_cache 整段被包进可丢弃 kv_cache 池，attention metadata、block table 与 graph 常量继承 kv_cache 标签，level-1 sleep 释放存储、地址不变。
@@ -12527,7 +12549,7 @@
 
 ### INF-1819 `ascendstore_partial_store_parent_hash_wrong` 部分块已存时 parent_block_hash 错误致命中恒为一块
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / AscendStore 块哈希链
 - **原因行为**：KV 池中已存在部分块、只上传缺失块时，AscendStore 为这些缺失块算出错误的 parent_block_hash，新块接不到已有前缀链上，Conductor 匹配到第一个已有块后即断开。
@@ -12538,7 +12560,7 @@
 
 ### INF-1821 `ascendstore_tp_mismatch_transfer_unreachable` KV 池重构后 TP 不对等传输路径不可达致前缀命中为 0
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / AscendStore TP 不对等传输
 - **原因行为**：#11444 重构 KV 池初始化与传输线程构造后，Sending/RecvingThread 不再收到 TP 不对等 worker，start_load_kv 也不走 _load_kv_tp_mismatch，分条 I/O 不可达。
@@ -12549,7 +12571,7 @@
 
 ### INF-1826 `vllm_ascend_mooncake_timeout_dirty_kv` PD 分离 KV 超时强释放后 D 端拉到脏 KV 乱码
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：KV缓存 / vllm / MooncakeConnector 超时强释放
 - **原因行为**：P 端延迟释放 block 后超时把该物理块强制还池，未等 D 端拉取完成；块随即被别的请求复用写入，D 端仍按原请求描述拉取，读到他人的 KV
@@ -12560,18 +12582,18 @@
 
 ### INF-1834 `vllm_ascend_kv_offload_copy_thread_dies_silently` KV offload 拷贝线程遇异常即静默死亡致后续传输停摆
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：KV缓存 / vllm / NPUDmaCopyBackend
 - **原因行为**：copy_backend.py:103-124 的 _copy_loop 在 daemon 线程里无异常处理；copy_blocks、wait_event 或解包抛异常即线程退出，append 不执行。
-- **影响对象**：KV状态；可用性/进度（挂起）
+- **影响对象**：可用性/进度；KV状态（挂起）
 - **影响详情**：之后所有 offload/load 传输都无人处理：等待该 event 的请求挂住或读到未完成的搬移结果，offload 静默失效而服务不报错。
 - **改进措施**：检测 监控 _copy_loop 线程存活与队列积压；对 events_list 中未完成 event 计数。；修复 待定（issue 2026-10-06 open）：循环体内加 try/except 并把异常上报，勿让线程静默退出。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/17932
 
 ### INF-1842 `vllm_ascend_pd_blocksize_config_mismatch` P/D 两端 block size 配置不一致致 KV 传输错位乱码
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：KV缓存 / vllm / MooncakeHybrid 块对齐
 - **原因行为**：官方 DeepSeek-V4-Pro A2 部署文档的 Prefill 侧默认命令不带 block size，Decode 侧默认带 block size；两端按不同块粒度组织 KV，传输后布局与接收端预期不一致
@@ -13403,12 +13425,12 @@
 
 ### INF-1828 `vllm_ascend_pd_proxy_recompute_rebuilds_from_text` PD 代理用解析文本重建重算请求致历史污染
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：调度/服务 / vllm / recompute 调度与代理
 - **原因行为**：调度器返回 new_token_ids=[] 与 stop_reason="recomputed" 丢弃历史，代理只累加解析 content 后用 messages[0][content]=prompt+文本 重建。
 - **影响对象**：输出内容；跨请求/跨样本数据（静默错误）
-- **影响详情**：重算请求不再从原 token 历史续写：重新分词后 token 序列不同，reasoning_content 与 tool_calls 被丢弃或与另一次生成的输出拼接，对话历史被静默改写。
+- **影响详情**：decode 侧开启 recompute_scheduler_enable 且经示例代理重试时，重算请求不再从原 token 历史续写：重新分词改变 token 序列，reasoning_content、tool_calls 丢失，重算前那次生成的输出与新一次生成拼接在一起。
 - **改进措施**：检测 开 recompute_scheduler_enable 后对比重算请求的 token 历史与实际下发文本；检查响应里 reasoning 流是否缺失。；修复 待定（issue 2026-08-04 open）：应从 output_token_ids 续写，而不是从解析文本重建 message。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/13466
 
@@ -15447,18 +15469,18 @@
 
 ### INF-1829 `vllm_ascend_random_sample_cross_stream_tensor_reuse` 随机采样张量跨流无 record_stream 被提前复用
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：解码/采样 / vllm / random_sample 跨流生命周期
 - **原因行为**：random_sample 在 global_stream 上分配并填充指数分布 q，消费流只 wait_stream 就 probs.div_(q)，未对 q 调 record_stream、释放前也不等消费流，分配器看不到跨流生命周期
-- **影响对象**：输出分布；输出内容（不可复现）
+- **影响对象**：输出内容；输出分布（不可复现）
 - **影响详情**：temperature>0 的随机采样路径上，高并发/大分配压力下 q 的存储可能在消费流读完前被复用：出现超出正常随机性的采样结果与乱码、eager 高并发精度下降、同输入同种子不可复现；贪心不经过该路径
 - **改进措施**：检测 高并发同种子重跑对比采样结果；或对 random_sample 的 q 加 record_stream 后跑同一压测看乱码是否消失；修复 对 q 调用 q.record_stream(torch.npu.current_stream())，并在释放前让分配流反向等待消费流；上游 main 与 v0.18.0 均保留该实现，未核实修复 PR
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/13673
 
 ### INF-1831 `vllm_ascend_reduce_sample_mixed_batch_greedy_index` 混批贪心请求在 reduce_sample 下返回候选位置而非词表 ID
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：解码/采样 / vllm / rejection_sampler 候选重排
 - **原因行为**：开启 enable_reduce_sample 后，混合批（贪心+随机）经 apply_sampling_constraints 返回重排后的 scores 与候选词表索引，但贪心分支仍用原词表分片解释列位置，没做候选到词表的映射
@@ -15469,7 +15491,7 @@
 
 ### INF-1833 `vllm_ascend_v2_rejection_sampler_u_zero` v2 拒绝采样硬编码 u=0 致随机采样恒接受草稿
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：解码/采样 / vllm / v2 rejection_sampler
 - **原因行为**：v2 投机解码的拒绝采样把概率检验的均匀随机数硬编码为 u=0.0，log(u)=-inf 使 target_log_prob > log(u)+draft_log_prob 恒成立，草稿永不被拒
@@ -17828,7 +17850,7 @@
 
 ### INF-1818 `vllm_ascend_mrope_half_rotation_hardcoded` mrope 路径硬编码 half 旋转致 GPT-J 模型位置错
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：位置编码 / vllm / AscendMRotaryEmbedding
 - **原因行为**：forward_oot 在 mrope_section=[16,24,24] 时无条件调用 npu_mrope(rotary_mode="half")，忽略 is_neox_style，GPT-J 模型也按 Neox 半分割配对。
@@ -17839,18 +17861,18 @@
 
 ### INF-1820 `vllm_ascend_triton_rope_breaks_qk_norm` Triton rope 路径破坏 Q/K 范数致 draft 接纳率掉半
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：位置编码 / vllm / Triton rope 分发路径
 - **原因行为**：分发路径在 bf16、NeoX、head_dim=rotary_dim=192 的 DSpark draft 形状下返回不保范数的 Q/K；改调 forward_native 即正确。
-- **影响对象**：数值结果；输出分布（质量退化）
+- **影响对象**：数值结果；输出分布（静默错误）
 - **影响详情**：GLM-5.2 DSpark 推测解码在 A3 上在线接纳长度从约 5.4–5.5 掉到 3.0–3.1，输出质量随之下降；无报错、无数值异常。
 - **改进措施**：检测 对同一 rotary 对象分别跑分发路径与 forward_native，比较 Q/K 的逐元素范数；盯在线 accept_len 指标。；修复 待定（issue 2026-07-23 closed，修复 PR 未在正文给出）：短期把该形状切到 forward_native。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/12723
 
 ### INF-1841 `vllm_ascend_rotary_triton_vs_ascend_branch_repeat` rotary 走 Triton 分支结果与 AscendC 不一致
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：位置编码 / vllm / rotary_embedding.py 实现分支
 - **原因行为**：rotary_embedding.py 按环境里装的是 triton 还是 triton-ascend 走不同实现分支；镜像默认两者共存时落到 Triton 分支，该分支与 Ascend C 实现在同一输入上结果不一致
@@ -18665,17 +18687,6 @@
 - **影响详情**：12 层 freq4 offset1：本实现 FFSSSFSSSFSS、Megatron FSSSFSSSFSSS；层数 4~78 × freq 2~8 × offset 0~5 共 175 组里 135 组逐层不同；配置照常启动、IndexShare 实际未开启且无报错
 - **改进措施**：检测 打印实际 dsa_index_topk_freq 与每层 is_index_leader 布局，与 Megatron is_dsa_skip_topk_layer 逐层对比；修复 待定（issue 关联 PR 未在正文给出；待修项：旧键映射、1-indexed offset、键名统一、num_layers 整除限制、pipeline chunk 校验、负 offset 校验）
 - **来源**：https://gitcode.com/mindspore/mindformers/issues/2594
-
-### INF-1838 `vllm_ascend_sliding_window_dual_fia_path_divergence` sliding_window 令同请求走两套 FIA 致 temp=0 结果分叉
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
-
-- **原因对象**：模型定义 / vllm / sliding_window 分支
-- **原因行为**：带 sliding_window 时同一模型按 batch 状态走两种 FIA 调用（BSH 无 mask vs TND causal sparse_mode=3），数学等价但非位对齐。
-- **影响对象**：输出分布；输出内容（不可复现）
-- **影响详情**：每次调用约 1 个 bf16 ulp（层 23 实测 2^-12）的差异经残差流放大（层 61 达 4.0），在 top-2 logprob 恰好相等的 tie 点翻转 argmax，于是 temperature=0 的相同请求并发时分叉。
-- **改进措施**：检测 同 prompt 并发 8/16 条 temperature=0 请求比对输出；比对两种 FIA 调用形态下同 token 的注意力输出。；修复 已验证规避：从 config.json 去掉 sliding_window（窗口实际从未截断）；根因修复待定（issue 2026-09-16 open）。
-- **来源**：https://github.com/vllm-project/vllm-ascend/issues/16704
 
 ## 权重/检查点
 
@@ -19597,7 +19608,7 @@
 
 ### INF-1825 `routed_experts_capture_silently_all_zero` routed-expert 捕获静默失效返回全零专家选择
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：MoE路由 / vllm / fused_moe 专家捕获
 - **原因行为**：fused_moe 的 get_current_vllm_config() 抛 config 未设置异常，except 把 _vllm_config 置 None 后静默跳过专家捕获；补齐上下文后 layer 又缺 layer_id。
@@ -19678,7 +19689,7 @@
 
 ### INF-1827 `prefetch_offloader_slot_ownership_ring` prefetch offloader 非整除环复用槽位致 logprob 偏移
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：重计算/卸载 / vllm / prefetch offloader 槽位
 - **原因行为**：槽位按 slot=module_index%prefetch_step 分配，refill 目标按 (index+prefetch_step)%M 选；M%prefetch_step!=0 时不同槽，refill 覆盖未执行模块的缓冲。
@@ -19686,17 +19697,6 @@
 - **影响详情**：910B2C Qwen3-0.6B eager、group=8/num_in_group=1/step=2（M=3）：32/256 负载 token id 不一致、chosen-token logprob 最大差 1.70258；1024/256 负载差 0.00917。
 - **改进措施**：检测 对同一请求跑 baseline 与开启 prefetch offload 两路，逐 token 比对 id 与 chosen-token logprob；或直接断言 refill 目标槽位等于刚释放的槽位；修复 候选修复（issue 内已实现并验证）：next_index 与当前 index 不同槽时改选 index%prefetch_step；vllm-ascend 8f8c56f/vllm 967c5c3 上 token 与 logprob 与 baseline 完全一致，issue open 未合入
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/10932
-
-### INF-1837 `vllm_ascend_dsa_hadamard_zero_after_sleep_wake` sleep/wake_up 后 DSA Hadamard 变全零致错算
-
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
-
-- **原因对象**：重计算/卸载 / vllm / DSAMetadataBuilder 张量恢复
-- **原因行为**：DSAMetadataBuilder 把 DSA 稀疏 attention 的 Hadamard 矩阵以设备张量常驻，sleep(level=1)/wake_up() 后它未被恢复而是全零，仍喂给 attention kernel
-- **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：休眠唤醒后 DSA 稀疏 attention 用全零 Hadamard 变换计算，attention 输出错误，模型回答质量下降；进程不重启、不报错，唤醒后的服务继续正常返回
-- **改进措施**：检测 sleep/wake_up 前后 dump AscendDSAMetadataBuilder.hadamard 并检查是否全零；或对比唤醒前后同一请求输出；修复 待定（issue closed，未见修复 PR 链接）
-- **来源**：https://github.com/vllm-project/vllm-ascend/issues/10684
 
 ## RL训练回路
 

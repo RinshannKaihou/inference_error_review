@@ -4,7 +4,7 @@ slug: vllm_ascend_kv_offload_copy_thread_dies_silently
 aliases: []
 title: KV offload 拷贝线程遇异常即静默死亡致后续传输停摆
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,8 +13,8 @@ cause:
   behavior: copy_backend.py:103-124 的 _copy_loop 在 daemon 线程里无异常处理；copy_blocks、wait_event 或解包抛异常即线程退出，append 不执行。
 effect:
   objects:
-  - KV状态
   - 可用性/进度
+  - KV状态
   detail: 之后所有 offload/load 传输都无人处理：等待该 event 的请求挂住或读到未完成的搬移结果，offload 静默失效而服务不报错。
   visibility: 挂起
 mitigation:
@@ -43,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: KV状态
+        to: 可用性/进度

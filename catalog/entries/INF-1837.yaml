@@ -4,10 +4,10 @@ slug: vllm_ascend_dsa_hadamard_zero_after_sleep_wake
 aliases: []
 title: sleep/wake_up 后 DSA Hadamard 变全零致错算
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 重计算/卸载
+  - subsystem: 运行时/执行
     stack: vllm
     component: DSAMetadataBuilder 张量恢复
   behavior: DSAMetadataBuilder 把 DSA 稀疏 attention 的 Hadamard 矩阵以设备张量常驻，sleep(level=1)/wake_up() 后它未被恢复而是全零，仍喂给 attention kernel
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 重计算/卸载
+        to: 运行时/执行
+    uncertain:
+    - visibility

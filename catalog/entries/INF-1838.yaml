@@ -4,10 +4,10 @@ slug: vllm_ascend_sliding_window_dual_fia_path_divergence
 aliases: []
 title: sliding_window 令同请求走两套 FIA 致 temp=0 结果分叉
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 模型定义
+  - subsystem: 算子/内核
     stack: vllm
     component: sliding_window 分支
   behavior: 带 sliding_window 时同一模型按 batch 状态走两种 FIA 调用（BSH 无 mask vs TND causal sparse_mode=3），数学等价但非位对齐。
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 模型定义
+        to: 算子/内核
+    uncertain:
+    - effect

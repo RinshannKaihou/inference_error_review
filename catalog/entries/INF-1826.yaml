@@ -4,7 +4,7 @@ slug: vllm_ascend_mooncake_timeout_dirty_kv
 aliases: []
 title: PD 分离 KV 超时强释放后 D 端拉到脏 KV 乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

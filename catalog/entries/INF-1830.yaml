@@ -4,7 +4,7 @@ slug: vllm_ascend_vl_text_only_skips_first_sp_allgather
 aliases: []
 title: VL 模型纯文本模式下首层漏做 SP AllGather
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -16,7 +16,7 @@ effect:
   - 隐状态
   - 数值结果
   detail: 首层 attention 的列并行投影吃到的是按 TP 切分的残缺输入，第一层输出即偏离；Qwen3.5 与 MiniMax-M3 都复现，非模型特定。幅度报告未量化。
-  visibility: 静默错误
+  visibility: 质量退化
 mitigation:
   detect: 开 FlashComm1/SP 后用 --language-model-only 跑 VL 模型，逐步比对首层输入是否已 shard；对照关闭 SP 的输出。
   fix: 待定（issue 2026-08-17 open）：首层是否需要 AllGather 应看运行期输入来源，而不是 is_vl_model() 的静态判断。
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化

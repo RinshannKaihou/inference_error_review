@@ -4,7 +4,7 @@ slug: vllm_ascend_reduce_sample_mixed_batch_greedy_index
 aliases: []
 title: 混批贪心请求在 reduce_sample 下返回候选位置而非词表 ID
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    uncertain:
+    - component

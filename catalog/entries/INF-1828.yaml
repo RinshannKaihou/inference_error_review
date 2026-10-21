@@ -4,7 +4,7 @@ slug: vllm_ascend_pd_proxy_recompute_rebuilds_from_text
 aliases: []
 title: PD 代理用解析文本重建重算请求致历史污染
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   - 跨请求/跨样本数据
-  detail: 重算请求不再从原 token 历史续写：重新分词后 token 序列不同，reasoning_content 与 tool_calls 被丢弃或与另一次生成的输出拼接，对话历史被静默改写。
+  detail: decode 侧开启 recompute_scheduler_enable 且经示例代理重试时，重算请求不再从原 token 历史续写：重新分词改变 token 序列，reasoning_content、tool_calls 丢失，重算前那次生成的输出与新一次生成拼接在一起。
   visibility: 静默错误
 mitigation:
   detect: 开 recompute_scheduler_enable 后对比重算请求的 token 历史与实际下发文本；检查响应里 reasoning 流是否缺失。
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail

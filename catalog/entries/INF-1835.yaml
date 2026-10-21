@@ -4,7 +4,7 @@ slug: vllm_ascend_dflash_verify_fia_causal_grouping
 aliases: []
 title: DFlash 验证折叠 query 共享 causal 长度致错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,9 +13,10 @@ cause:
   behavior: 验证步把每条序列 16 个 query 折叠进一次 npu_fused_infer_attention_score 调用时，按 batch 行分组而不维护逐 query 的 causal KV 长度，不同 KV 范围 query 被并组
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 输出内容
-  detail: Qwen3-8B BF16 贪心 + 前缀缓存 + DFlash（block 16）下，投机输出与 target-only 参考在特定位置分叉（某请求第 401 token 处出现 8 vs 868 token 观察差）；改 query 分组边界即令 bf16 输出漂移
+  detail: 贪心采样 + 前缀缓存 + DFlash（block 16）下，投机输出与 target-only 基线在特定位置分叉（某请求第 401 位置出现 8-token 与 868-token 观察事件差）；改 query 分组边界即产生 bf16 漂移，服务无报错、无 NaN
   visibility: 静默错误
 mitigation:
   detect: 同输入贪心分别跑 target-only 与 DFlash 投机，逐 token 比对；出现分叉即验证步 attention 元数据有问题
@@ -43,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: vllm_ascend_aot_cache_key_ignores_custom_op_selection
 aliases: []
 title: AOT 编译缓存键漏 enable_custom_op 致复用错图
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -43,3 +43,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []

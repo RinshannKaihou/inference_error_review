@@ -4,7 +4,7 @@ slug: vllm_ascend_triton_rope_breaks_qk_norm
 aliases: []
 title: Triton rope 路径破坏 Q/K 范数致 draft 接纳率掉半
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 位置编码
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 输出分布
   detail: GLM-5.2 DSpark 推测解码在 A3 上在线接纳长度从约 5.4–5.5 掉到 3.0–3.1，输出质量随之下降；无报错、无数值异常。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 对同一 rotary 对象分别跑分发路径与 forward_native，比较 Q/K 的逐元素范数；盯在线 accept_len 指标。
   fix: 待定（issue 2026-07-23 closed，修复 PR 未在正文给出）：短期把该形状切到 forward_native。
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    uncertain:
+    - title

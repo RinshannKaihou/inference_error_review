@@ -4,7 +4,7 @@ slug: prefetch_offloader_slot_ownership_ring
 aliases: []
 title: prefetch offloader 非整除环复用槽位致 logprob 偏移
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 重计算/卸载
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

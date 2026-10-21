@@ -4,13 +4,13 @@ slug: vllm_ascend_pcp_without_ep_accuracy_drop
 aliases: []
 title: 开 PCP 不开 EP 时 DeepSeek-V3.2 精度从 94 掉到 73
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
     stack: vllm
     component: PCP 与 MoE 专家并行组合
-  behavior: PCP 开启而 --enable-expert-parallel 关闭时，MoE 专家的 TP 切分与 PCP 的上下文切分组合下归约/分派结果不正确；报告未给源码定位。
+  behavior: DeepSeek-V3.2 在 PCP 开启且未加 --enable-expert-parallel 时精度明显下降，同一配置加上该开关后精度恢复；报告未给源码级定位，机制细节待定。
 effect:
   objects:
   - 输出内容
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior

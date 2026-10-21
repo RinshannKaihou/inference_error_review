@@ -4,18 +4,18 @@ slug: vllm_ascend_vision_encoder_fia_uniform_average
 aliases: []
 title: 视觉编码器 FIA 无 mask 时输出退化为均匀平均
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: vllm
     component: AscendMMEncoderAttention
-  behavior: TND 布局、sparse_mode=0 且不传 mask 调用 npu_fused_infer_attention_score 时，算子返回逐 token 的 V 均值，softmax 未参与。
+  behavior: TND 布局、sparse_mode=0 且不传 attention mask 调用 npu_fused_infer_attention_score 时，算子返回 uniform-average，视觉编码器注意力失效。
 effect:
   objects:
   - 数值结果
   - 隐状态
-  detail: 对 fp32 参考误差约 3.1（fp16 应为约 3e-3），单序列与多图输入都错；每个 ViT 层注意力都退化成均值，图片请求能跑完但视觉特征失效。
+  detail: 带图请求不报错、正常返回文本，但细节问答、OCR、图表理解明显答错，多图或多帧更差；同图在 GPU 后端能答对。最小复现下与 fp32 torch.softmax 参考误差约 3.1（fp16 正常约 3e-3），单序列与多图输入一致；LLM decode 路径不受影响。
   visibility: 静默错误
 mitigation:
   detect: 用独立小脚本比对该算子在 TND+sparse_mode=0+无 mask 下的输出与 fp32 参考；或逐层比对 ViT 注意力输出是否等于 V 的均值。
@@ -50,3 +50,17 @@ migration:
   - date: '2026-10-21'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    - detail

@@ -4,7 +4,7 @@ slug: vllm_ascend_pa_batch_pad_over_8k_dp_mix
 aliases: []
 title: DP 混布下 attention pad 超 8K 使 PA 算子未执行出随机值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 输出内容
-  detail: pad 后 attention 算子实际未执行（PTA 报错仅在 atb log，服务不挂），attention out 大概率是随机数值，输出精度异常；所有请求都在 decode、chunk size 小于 8K 时正常
+  detail: attention out 大概率为随机数值，本 DP decode 请求输出精度异常、回答跑偏甚至乱码；服务不挂、请求均返回 200，INFO 级别日志看不到报错，仅 atb log 里有 PA 算子的 PTA 报错。触发面：DP 混布+跨 DP >8K prefill+本 DP 全 decode
   visibility: 静默错误
 mitigation:
   detect: 检查 atb log 中 PA 算子的 PTA 报错；对比本 DP 单独跑与跨 DP 混跑时 decode 输出
@@ -43,3 +43,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

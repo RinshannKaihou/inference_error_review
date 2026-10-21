@@ -4,7 +4,7 @@ slug: vllm_ascend_random_sample_cross_stream_tensor_reuse
 aliases: []
 title: 随机采样张量跨流无 record_stream 被提前复用
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -13,8 +13,8 @@ cause:
   behavior: random_sample 在 global_stream 上分配并填充指数分布 q，消费流只 wait_stream 就 probs.div_(q)，未对 q 调 record_stream、释放前也不等消费流，分配器看不到跨流生命周期
 effect:
   objects:
-  - 输出分布
   - 输出内容
+  - 输出分布
   detail: temperature>0 的随机采样路径上，高并发/大分配压力下 q 的存储可能在消费流读完前被复用：出现超出正常随机性的采样结果与乱码、eager 高并发精度下降、同输入同种子不可复现；贪心不经过该路径
   visibility: 不可复现
 mitigation:
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 输出分布
+        to: 输出内容

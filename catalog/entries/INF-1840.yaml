@@ -4,7 +4,7 @@ slug: vllm_ascend_allreduce_nondet_moe_gate_topk
 aliases: []
 title: allreduce 非确定性致 MoE topk 专家选择抖动约 1% 坏例
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -16,7 +16,7 @@ effect:
   - 输出内容
   - 输出分布
   detail: 复杂编码/agent 任务中约 1% 概率出现精度类坏例：toolcall 与 think 标签丢失、重复输出、指令遵从下降；首 token 后 logits 偶发 0.5~1 的显著波动
-  visibility: 质量退化
+  visibility: 不可复现
 mitigation:
   detect: 开启 HCCL_DETERMINISTIC=true 复跑坏例集：坏例消失即可判定为非确定性通信；或对比 moe_gate_topk 前后 logits 波动
   fix: 待定；规避手段是 export HCCL_DETERMINISTIC=true（报告者实测 3000+ 坏例 0 复现），代价是明显性能损失
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 不可复现
+    uncertain:
+    - effect
