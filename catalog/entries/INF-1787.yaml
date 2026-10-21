@@ -39,6 +39,8 @@ original:
   behavior: 在 vllm-ascend 上配置 EPLB expert_map_record_path 开 recording 模式后，服务表面正常运行，但专家负载记录与规划从第一轮之后就全部失效：首轮权重迁移发起后再无人等待完成，后续所有更新请求被 on-going 日志拒绝，一次运行可累计 84 个计划而实际执行 0 个；记录导出的专家分布图基于从未落地的布局，用它决策后续动态迁移会错。
   trigger_surface: vllm-ascend + EPLB + expert_map_record_path（recording 模式）
   discovery: 2026-10-20 每日扫描
+  notes:
+  - '2026-10-21 回访 2026-10-21：PR #19288 仍 open（u2026-10-21T10:37 有更新），未合入。'
 migration:
   method: scan
   scanned: '2026-10-20'
@@ -60,3 +62,7 @@ migration:
     uncertain:
     - effect
     - behavior
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - original.notes

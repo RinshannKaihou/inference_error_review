@@ -39,6 +39,8 @@ original:
   behavior: 在昇腾图模式推理里调用 flash_attention_score 并指定更高精度的 out_dtype 时，返回的输出并未按请求的精度给出，而是按内部较低精度产出：调用方以为拿到的是请求 dtype 的结果，实际精度更低，误差随下游计算放大；单算子（非图）路径正常。无报错。
   trigger_surface: CANN 图模式推理 + flash_attention_score + 显式 out_dtype
   discovery: 2026-10-20 每日扫描
+  notes:
+  - 2026-10-21 回访 2026-10-21：修复 MR !14243 仍 open（u2026-10-21T08:49 有更新），未合入未发布。
 migration:
   method: scan
   scanned: '2026-10-20'
@@ -55,3 +57,7 @@ migration:
     - glm-5.3
     uncertain:
     - behavior
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - original.notes

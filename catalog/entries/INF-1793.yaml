@@ -41,6 +41,8 @@ original:
   behavior: 3D BatchNorm 训练 reduce 在含 FLT_MAX 量级正负相消输入时，中间 FP32 部分和先行溢出且无法恢复：真实有限的和被算成 inf/nan（9 个错误非有限通道实测），下游梯度随之报废；修复后有界累加恢复精确和，普通输入行为不变。GPU 参考实现可算出正确有限值。
   trigger_surface: Ascend950PR + BN3DTrainingReduce + FP32/BF16 + 大幅值抵消输入
   discovery: 2026-10-20 每日扫描
+  notes:
+  - '2026-10-21 回访 2026-10-21：issue #6955 仍 open（u2026-10-21T09:16 更新，标题改为''修复 BN3D 累加溢出及图路径并完善三算子 golden''），修复发布状态未核实。'
 migration:
   method: scan
   scanned: '2026-10-20'
@@ -55,3 +57,7 @@ migration:
     - MiniMax-M3
     - hy3
     - glm-5.3
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - original.notes

@@ -46,6 +46,7 @@ original:
   - 2026-10-17 回访 2026-10-17：triton-ascend#2531 open（10-15T08:44Z 更新，批次无评论内容可读）；状态无实质变化。
   - 2026-10-19 回访 2026-10-19：#2531 仍 open（u2026-10-19T01:45），正文无修复进展；机制描述维持
   - 2026-10-20 回访 2026-10-20：#2531 仍 open（u2026-10-19T01:45 后无更新，正文无修复进展）
+  - 2026-10-21 轮巡 2026-10-21：triton-ascend#2531 仍 open，无进展（批次快照）。
 migration:
   method: scan
   scanned: '2026-10-14'
@@ -76,5 +77,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-10-20'
+    fields:
+    - original.notes
+  - date: '2026-10-21'
     fields:
     - original.notes
