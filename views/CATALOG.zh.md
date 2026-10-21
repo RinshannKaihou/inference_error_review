@@ -3,19 +3,19 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2092 条；状态：active 2045、pending_audit 47
+共 2097 条；状态：active 2045、pending_audit 52
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
 | 算子/内核 | 574 |
 | 编译器 | 137 |
-| 运行时/执行 | 131 |
-| 集合通信 | 34 |
+| 运行时/执行 | 132 |
+| 集合通信 | 35 |
 | 并行切分 | 26 |
-| KV缓存 | 342 |
+| KV缓存 | 344 |
 | 调度/服务 | 85 |
-| 输出解析 | 65 |
+| 输出解析 | 66 |
 | 解码/采样 | 147 |
 | 量化 | 186 |
 | 位置编码 | 40 |
@@ -9714,6 +9714,17 @@
 - **改进措施**：检测 看首个错误码而不是最后一个：worker 日志里先出现 207001 Memory_Allocation_Failure；若只看到 107020 且带 synchronize 字样，不要按 OOM 调参；修复 issue 描述中已有草稿 PR（fix/replay-synchronize-stream-resource-error，未合入，未核实）；修复点在 ACLGraphWrapper.__call__ 捕获 RuntimeError 并按 107020/107027 + synchron 字样重抛为非 OOM 信息
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/13218
 
+### INF-2094 `vllm_ascend_310p_kv_budget_double_deduct_other_process_hbm` 310P KV 预算重复扣除他进程 HBM 致容量塌陷
+
+`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：运行时/执行 / vllm / NPUWorker310 显存预算
+- **原因行为**：310P 专用 determine_available_memory() 用 total-free 取设备全局占用，再从本实例 KV 预算里扣一次，其他进程已占的 HBM 因此被重复扣除。
+- **影响对象**：性能/资源（静默错误）
+- **影响详情**：43.24 GiB 设备上已有 19 GiB 他进程占用时，gpu_memory_utilization=0.5 只分到 0.09 GiB KV Cache，4096 上下文启动失败；提到 0.52 也只有 0.57 GiB，他进程一波动即再次失败。
+- **改进措施**：检测 同卡留他进程占用后看启动日志的 requested_memory、non_kv_cache_memory 与最终 available_kv_cache_memory_bytes，KV 容量应约等于（预算-本实例 non-KV）/2；修复 issue 给出改法：310P 分支改为 (requested_memory - profile_result.non_kv_cache_memory)//2；#7308/#7372/#7427 为前序，未见对应 PR（issue closed，未核实是否已合入）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/14004
+
 ## 集合通信
 
 ### INF-0103 `ttmetal_all_broadcast_writer_accessor_cross_buffer_space` all_broadcast 输出 accessor 误用输入 buffer
@@ -10094,6 +10105,17 @@
 - **影响详情**：第二个 dlopen 句柄覆盖第一个且不 dlclose、子初始化重复执行；static g_*Supported 并发写属 C++ UB，能力探测结果可能被后写者覆盖，通信库初始化出现不可复现差异。隔离模型 1000/1000 次触发。
 - **改进措施**：检测 多线程用 barrier 同时首次调用 HcommDlInit/HcommDeviceDlInit，统计 dlopen 次数与句柄是否泄漏、g_*Supported 是否被重复写；目标机可用 TSan；修复 issue 给出双检锁方案（std::mutex + std::atomic，参照同文件 GetHcommVersion 的 HcommVersionCache，commit 3aa49851 已修同模式）；本 issue 的两个函数尚未修（closed）
 - **来源**：https://gitcode.com/cann/hccl/issues/292
+
+### INF-2095 `vllm_ascend_pd_multi_pp_zmq_port_base_mismatch` PD 多机 PP 的 ZMQ 端口基址错算致 KV 传不到
+
+`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：集合通信 / vllm / mooncake_connector 端口映射
+- **原因行为**：D 侧 _get_remote_ranks_for_req 用 P0 的 kv_port 当所有 PP rank 的 base port 再加 rank 偏移；PP2/PP3 在 P1 上、base 为 31113，端口因此偏 -1。
+- **影响对象**：可用性/进度；KV状态（挂起）
+- **影响详情**：P1 只监听 31129-31144，D 侧连 31128 反复 Receive timeout，KV load 失败的请求被弃；P 节点 KV cache 涨到 100%，bench 跑到 100 多条请求后彻底卡死，737 次成功传输掩盖了 21 次失败。
+- **改进措施**：检测 核对各 P 节点 ZMQ 实际监听端口范围与 D 侧日志中的 remote handshake port，或统计 Receive request timeout 的目标端口是否集中在同一端口；修复 issue 只做根因定位，未给 PR；规避是让各 P 节点使用同一 kv_port 基址（issue closed，修复未核实）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/11343
 
 ## 并行切分
 
@@ -14232,6 +14254,28 @@
 - **改进措施**：检测 按请求聚合各 rank 的 success_blocks/total_blocks_num 与 status，status 全 SUCCESS 但块数不一致即命中；再核对失败路径是否二次抛 metrics 异常；修复 issue 未附修复 PR（closed，修复状态未核实）；期望 fail 策略下请求干净失败、失败路径不再抛二级异常
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/7871
 
+### INF-2093 `vllm_ascend_prefix_cache_with_mtp_token_corruption` prefix caching 与 MTP 同开致输出 token 崩坏
+
+`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：KV缓存 / vllm / prefix cache 与 MTP 路径
+- **原因行为**：GDN 混合架构模型上 --enable-prefix-caching 与 qwen3_5_mtp 投机解码同开时，前缀块复用与 MTP 解码路径组合出错，输出被 token 级改写；具体出错代码未定位（待定）。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：服务加载无报错、MTP 接受率仍 70%~100%，但短文本出现复读插入与错字（通义千问→通义谦）、长文本数字量词错乱；去掉 --enable-prefix-caching 后同一请求恢复正常。
+- **改进措施**：检测 同一请求分别在开/关 --enable-prefix-caching 下比对输出文本与 token id，并确认 MTP 接受率是否仍正常；修复 issue 只给规避：关闭 --enable-prefix-caching；无修复 PR（issue open，未核实）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/17338
+
+### INF-2097 `mooncake_v1_kv_registration_from_logical_views` Mooncake V1 按逻辑视图注册 KV 区间而非物理基址
+
+`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：KV缓存 / vllm / MooncakeConnector 注册区间
+- **原因行为**：_get_registered_kv_tensor_buffers() 遍历 kv_cache_tensors 并按 shared_by 解析层名，从最小逻辑张量地址起按描述符长度注册，没有回到物理分配的对齐基址。
+- **影响对象**：KV状态（静默错误）
+- **影响详情**：混合/Mamba/MTP 布局下同一分配被多个逻辑视图暴露（含对齐 padding 后的视图）时，注册的可能只是视图地址、同一 backing 被注册多次、或描述符长度被套到独立分配上，Mooncake 发布的范围与实际归属不符并多占注册条目。
+- **改进措施**：检测 打印每个 kv_cache_tensors 视图的地址与长度，与恢复出的对齐基址比对：同一 backing 应只在基址注册一次，独立分配应保持分离；修复 issue 给出注册契约（按物理分配对齐基址、合并 aliases、独立存储分开、不用 shared_by 决定归属）；回归用例在 PR #15878 中被 skip，生产修复未随之提交（issue open）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/16632
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -15926,6 +15970,17 @@
 - **影响详情**：tool_choice=required + stream=true 只收到 CoT、无 tool_calls；同一请求 stream=false 或去掉 --async-scheduling 都能返回 CoT 与 Tool Call
 - **改进措施**：检测 固定 prompt + tools，做 async-scheduling 开/关 × stream 开/关 四组对照，检查响应的 tool_calls 字段是否为空；修复 issue 未附修复 PR（closed，修复状态未核实）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/5683
+
+### INF-2096 `vllm_openai_chat_empty_tool_calls_array` 聊天响应带空 tool_calls 数组致 SDK 误判工具轮
+
+`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：输出解析 / vllm / chat completion 序列化
+- **原因行为**：响应序列化把没有工具调用的消息写成 tool_calls: []（而非 null），流式 delta 也带空数组；客户端按 message.tool_calls is not None 判定这是工具调用轮。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：DeepSeek V4 工具调用第二轮（工具结果回传后）正文正常、finish_reason=stop，但 tool_calls 为空数组；OpenAI SDK 客户端据此继续工具循环并 IndexError。上游 vLLM 已由 #44105 修复。
+- **改进措施**：检测 检查 chat completion 的 message.tool_calls 是 null 还是 []，流式响应检查 delta.tool_calls 是否被省略；修复 vllm-ascend 侧建议 monkey patch 去掉空 tool_calls 数组；上游修复 https://github.com/vllm-project/vllm/pull/44105（issue closed，未核实 vllm-ascend 是否已消费该修复）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/9790
 
 ## 解码/采样
 
