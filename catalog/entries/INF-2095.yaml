@@ -4,10 +4,10 @@ slug: vllm_ascend_pd_multi_pp_zmq_port_base_mismatch
 aliases: []
 title: PD 多机 PP 的 ZMQ 端口基址错算致 KV 传不到
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 集合通信
+  - subsystem: KV缓存
     stack: vllm
     component: mooncake_connector 端口映射
   behavior: D 侧 _get_remote_ranks_for_req 用 P0 的 kv_port 当所有 PP rank 的 base port 再加 rank 偏移；PP2/PP3 在 P1 上、base 为 31113，端口因此偏 -1。
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   - KV状态
-  detail: P1 只监听 31129-31144，D 侧连 31128 反复 Receive timeout，KV load 失败的请求被弃；P 节点 KV cache 涨到 100%，bench 跑到 100 多条请求后彻底卡死，737 次成功传输掩盖了 21 次失败。
+  detail: PD分离多节点PP且kv_port随NODE_RANK递增时，P1只监听31129-31144；D侧连31128出现21次Receive timeout，31128无监听，请求被判KV load失败；P节点KV cache涨到100%，bench 100多条后卡死。
   visibility: 挂起
 mitigation:
   detect: 核对各 P 节点 ZMQ 实际监听端口范围与 D 侧日志中的 remote handshake port，或统计 Receive request timeout 的目标端口是否集中在同一端口
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 集合通信
+        to: KV缓存
+    rewritten:
+    - detail

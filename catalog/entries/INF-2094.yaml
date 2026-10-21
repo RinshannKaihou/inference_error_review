@@ -4,10 +4,10 @@ slug: vllm_ascend_310p_kv_budget_double_deduct_other_process_hbm
 aliases: []
 title: 310P KV 预算重复扣除他进程 HBM 致容量塌陷
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: KV缓存
     stack: vllm
     component: NPUWorker310 显存预算
   behavior: 310P 专用 determine_available_memory() 用 total-free 取设备全局占用，再从本实例 KV 预算里扣一次，其他进程已占的 HBM 因此被重复扣除。
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: KV缓存
+    uncertain:
+    - visibility

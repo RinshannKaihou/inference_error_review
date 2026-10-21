@@ -4,10 +4,10 @@ slug: vllm_openai_chat_empty_tool_calls_array
 aliases: []
 title: 聊天响应带空 tool_calls 数组致 SDK 误判工具轮
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 输出解析
+  - subsystem: 调度/服务
     stack: vllm
     component: chat completion 序列化
   behavior: '响应序列化把没有工具调用的消息写成 tool_calls: []（而非 null），流式 delta 也带空数组；客户端按 message.tool_calls is not None 判定这是工具调用轮。'
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 输出解析
+        to: 调度/服务
+    uncertain:
+    - behavior
