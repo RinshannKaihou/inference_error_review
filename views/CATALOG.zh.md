@@ -5859,9 +5859,9 @@
 `故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-20
 
 - **原因对象**：算子/内核 / tt-metal / concat 搬运与空输入分支
-- **原因行为**：两个缺陷：(1) 行主序窄张量（8/24 元素宽）a 在 L1、b 在 DRAM、输出 L1 时返回错值，其余放置组合正确；(2) 拼接维为空的输入在列表中时返回形状正确但数据错误，行主序末维非 32 倍数时直接 SIGFPE 杀进程（机制
+- **原因行为**：三缺陷面：①bf16 宽 8/24 且 a=L1、b=DRAM、输出 L1 时 dim=-2 拼接错值；②拼接维空输入在前形状对数据错，末维非 32 倍数时 SIGFPE；③sub_core_grids 混合布局大片错值，换序反被校验拒绝
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：WH n150：(1,1,288,8) bf16 L1+DRAM→L1 错；373 个含空输入调用 36 错值+20 SIGFPE、36 个无空输入对照全对；同现象 61535（sub_core_grids 混合布局 32/436 调用错）与 61625（L1+DRAM→L1）分立报告
+- **影响详情**：n150：行主序 bf16 宽 8/24，L1+DRAM→L1 错；373 个含空输入调用 36 错值+20 SIGFPE、36 个无空对照全对；61535（sub_core_grids 混合布局 436 调用 32 错）与 61625 分立报告
 - **改进措施**：检测 与 torch.cat 逐元素比对；空输入+窄行主序场景留意进程 SIGFPE；修复 待定（三 issue 均 open）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/61625；https://github.com/tenstorrent/tt-metal/issues/61543；https://github.com/tenstorrent/tt-metal/issues/61535
 
@@ -7854,7 +7854,7 @@
 - **原因对象**：编译器 / cann / conv infershape 与 DW 融合
 - **原因行为**：conv infershape 与 DW 融合 pass 9 处缺陷：groups==0+unknownShape 时两道门均漏、ic==kc*groups 恰好通过时 kn%groups 除零 UB；属性指针未判空；校验失败反返回通过
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：按触发条件构造即复现：groups=0+动态 filter N=-1+x C=0 → kn%groups 除零 UB；DepthwiseConv2D filter 由 AscendWeightQuant 产出且上游 origin format 非 HWCN/NCHW → desc 已改 Reshap
+- **影响详情**：conv 类算子在动态 shape 且 groups=0、量化权重上游格式非标、dilations 缺失、非 4D filter 等构造下静默错值：布局错位进 kernel、bias 校验跳过、实现模式退化、shape 推导错，无 ERROR 日志，部分触发为崩溃/UB
 - **改进措施**：检测 对融合前后图做等价性校验/输出与 eager 对照；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12390 （open：静态扫描+人工逐条溯源确认 9 处；opgraph 1218 UT 过、depthwise 68/68、ophost 8530 过；未发布）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6961；https://gitcode.com/cann/ops-nn/merge_requests/12390
 
@@ -8229,7 +8229,7 @@
 - **原因对象**：编译器 / torch_npu / Inductor MLIR 后端
 - **原因行为**：Inductor 的 MLIR 后端编译 ResNet50 后输出与 eager 完全不同（max|Δ|=35.94），同机同输入下 Triton/DVM 后端只差 3.8e-5；偏差只出现在 MLIR 编译路径。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：allclose(atol=rtol=1e-3) 失败，max|Δ|=3.594e+01，输出完全不可用；稳态只有 1.101x 加速，说明错误在 MLIR lowering/融合而非调度。
+- **影响详情**：allclose(atol=0.001, rtol=0.001) 失败，max|Δ|=3.594e+01，输出数值完全不对；同机 Triton/DVM 仅 3.815e-05，偏差只出现在 MLIR 编译路径；Eager 13.79ms、稳态 12.53ms，仅 1.101x
 - **改进措施**：检测 同一 ResNet50 输入分别跑 eager、Triton、DVM、MLIR 四个后端并比对 max|Δ|；MLIR 与其余三个不一致即命中；修复 待定（issue 只把 resnet18 max_abs≈2.48、resnet50≈8.58、mobilenet_v2 NaN 归为同类，怀疑 BatchNorm 折叠/MaxPool 转换/内存布局语义丢失；open）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5241
 
@@ -9589,7 +9589,7 @@
 - **原因对象**：运行时/执行 / torch_npu / NPUWorkspaceAllocator
 - **原因行为**：allocated_ptrs（.cpp:549 的 flat_hash_map）无同步保护；replace_allocated_ptr 在 DeviceWS 锁释放后才跑，与 free、empty_cache 并发读写
 - **影响对象**：数值结果（不可复现）
-- **影响详情**：多线程 malloc∥free 时 find/erase/operator[] 可能撞上 rehash，取到错误 device 或漏记指针，workspace 被释放到别的设备、偶发越界写；无报错，按线程时序随机出现。empty_cache 的 clear 还会清掉所有 device 的条目
+- **影响详情**：多线程 malloc/free 时 find/erase/operator[] 无锁访问 allocated_ptrs（类无 mutex），取到错误 device 或漏记指针，workspace 被释放到错误设备、偶发越界写；无报错、随机复现
 - **改进措施**：检测 多线程反复 malloc/free workspace 张量并穿插 empty_cache，用 TSan 或指针表长度断言观察 find/erase 与 clear 的交叉；修复 待定（issue 给出方案：在 replace_allocated_ptr、get_allocated_device、empty_cache 的 clear 内部加锁，不能在外层 malloc/free 整体持锁以免 std::mutex 重入死锁；empty_cache 改为只清对应 device）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5092
 
@@ -10316,7 +10316,7 @@
 - **原因对象**：并行切分 / mindformers / _local_head_slice 坐标换算
 - **原因行为**：_local_head_slice 返回的已是 TP 局部 head 坐标，代码仍减 max_logits_val 的全局 TP 基址；tp4 时 rank2/3 得到越界空切片，本卡 max_logits 恒为全 0
 - **影响对象**：可用性/进度；训练信号（挂起）
-- **影响详情**：8 卡 tp4+ulysses CP2 训练第 1 步后死锁，部分卡 AICore 100%、其余空转且不报错；max-logit dump rank0/1 各 4 行、rank2~7 为 0 行；tp2 时负索引回绕碰巧正确，现有用例全过
+- **影响详情**：8 卡 tp4 + ulysses CP 训练第 1 步后死锁，部分卡 AICore 100%、其余空转不报错；max-logit dump rank0/1 各 4 行、rank2~7 为 0 行；换 tp2 或关 qk_clip 则完全正常
 - **改进措施**：检测 对比各 rank 的 max-logit dump 行数与全 0 层比例，或断言每个 rank 都有非零 max_logits；单卡 tp1 与 tp4 同权重对拍；修复 issue 给根因与代码定位，未附 PR；相邻 #2379 修的是“从不 rebase”，与本条“rebase 用错坐标系”机制不同（closed，修复未核实）
 - **来源**：https://gitcode.com/mindspore/mindformers/issues/2571
 
@@ -10371,7 +10371,7 @@
 - **原因对象**：并行切分 / vllm / enable_dsa_cp（自动开 SP）
 - **原因行为**：enable_dsa_cp 在 A2 上打开后（日志 Auto-enabling SP）greedy 解码退化成重复循环；关 dsa_cp 且不开 dspark 也退化，只有关 dsa_cp 并开 dspark 正常，未定位根因
 - **影响对象**：输出内容（质量退化）
-- **影响详情**：temperature=0、prompt 你好：开 dsa_cp 输出 “, like, and, and, and…” 重复；block 32 无 dspark 输出 “ to the 2c (??) (??)…”。thinking 默认开时 reasoning 是通顺但跑题的英文，掩盖退化。
+- **影响详情**：贪心解码下开 dsa_cp 输出 ", like, and, and, and…" 重复；block 32 无投机输出 " to the 2c (??) (??)…"；thinking 开启时表现为通顺但跑题的英文 reasoning，掩盖退化
 - **改进措施**：检测 temperature=0 + 短 prompt（thinking=false，5 token）+ 逐项关特性（dsa_cp / dspark / block_size）对照，直接看是否重复坍塌；thinking 模式下的通顺跑题文本会掩盖问题；修复 待定（issue open）：报告给出的可用配置是关 dsa_cp 并开 dspark、num_speculative_tokens=7
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/17616
 
@@ -14151,7 +14151,7 @@
 - **原因对象**：KV缓存 / vllm / Mooncake 跨 TP 组映射
 - **原因行为**：FullAttentionSpec.num_kv_heads 是每 rank 局部头数，连接器当全局头数算远端拉取数；P TP8/D TP2 两侧得 1 次与 2 次，decode 从错误 prefill rank 组读 DFlash KV
 - **影响对象**：KV状态；可用性/进度（报错）
-- **影响详情**：Kimi K2.7 W4A8+DFlash、32 卡、P DP2×TP8 / D DP8×TP2：长上下文请求在 ADXL/HCCL 报 HcclBatchGet result=4；失败传输固定 6156 个描述符（513 block×6 层×K/V），同请求主模型 MLA KV 传输正常
+- **影响详情**：Kimi K2.7 W4A8+DFlash、32 卡、P DP2×TP8 / D DP8×TP2：长上下文请求周期性失败，decode 侧报 HcclBatchGet result=4、proxy 返回 5xx；同请求主模型 MLA KV 传输成功，仅 DFlash 那组 KV 拿不到。
 - **改进措施**：检测 打印序列化的 FullAttentionSpec.num_kv_heads 与模型全局头数、本侧 TP，比较 P/D 两侧推导出的拉取次数；不一致即命中；修复 待定（issue closed，未见修复 PR/MR）：用局部头数乘本侧 TP 还原全局头数后再算 num_d_block_heads/num_p_block_heads
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/11885
 
@@ -14226,7 +14226,7 @@
 `故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：KV缓存 / vllm / prefix cache 与 MTP 路径
-- **原因行为**：GDN 混合架构模型上 --enable-prefix-caching 与 qwen3_5_mtp 投机解码同开时，前缀块复用与 MTP 解码路径组合出错，输出被 token 级改写；具体出错代码未定位（待定）。
+- **原因行为**：GDN 混合架构上 --enable-prefix-caching 与 qwen3_5_mtp 投机解码同开时输出 token 级崩坏；具体出错代码未定位（待定）。
 - **影响对象**：输出内容（静默错误）
 - **影响详情**：服务加载无报错、MTP 接受率仍 70%~100%，但短文本出现复读插入与错字（通义千问→通义谦）、长文本数字量词错乱；去掉 --enable-prefix-caching 后同一请求恢复正常。
 - **改进措施**：检测 同一请求分别在开/关 --enable-prefix-caching 下比对输出文本与 token id，并确认 MTP 接受率是否仍正常；修复 issue 只给规避：关闭 --enable-prefix-caching；无修复 PR（issue open，未核实）
@@ -15923,7 +15923,7 @@
 - **原因对象**：输出解析 / vllm / GLM5 流式 tool parser
 - **原因行为**：stream=True 时增量解析在 function name 还没收齐就下发首个 chunk，客户端拿到的是函数名前缀；同一请求 stream=False 走完整解析，名字正确
 - **影响对象**：输出内容（静默错误）
-- **影响详情**：GLM-5 流式响应里 tool_calls[0].function.name 为 get（应为 get_weather），arguments {"location":"Beijing"} 完整正确；HTTP 200，调用方按截断的名字派发到不存在的工具
+- **影响详情**：GLM-5 stream=True 时 function.name 被截断成 get（应为 get_weather），参数完整；stream=False 时名字正确，客户端按截断名找不到工具
 - **改进措施**：检测 同一工具调用请求分别用 stream=True/False 发一遍，比对 function.name 是否一致；名字较长的工具（get_weather 这类）最容易暴露；修复 待定（issue closed，未见 MR）：规避是 stream=False，或在客户端按完整工具名重新匹配前缀
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/8154
 
@@ -17391,7 +17391,7 @@
 - **原因对象**：解码/采样 / vllm / v2 rejection_sampler
 - **原因行为**：v2 投机解码的拒绝采样把概率检验的均匀随机数硬编码为 u=0.0，log(u)=-inf 使 target_log_prob > log(u)+draft_log_prob 恒成立，草稿永不被拒
 - **影响对象**：输出分布；输出内容（质量退化）
-- **影响详情**：所有 temperature>0 的投机解码请求退化为无条件接受全部草稿 token，拒绝采样等于空操作，输出质量与分布贴近贪心接受，不再是目标模型分布；贪心路径不受影响
+- **影响详情**：temperature>0 的投机解码请求草稿 token 全被接受、拒绝采样不生效：长文本用词发散、指令遵从下降；服务不报错，仅接受率异常高
 - **改进措施**：检测 统计非贪心投机请求的草稿接受率，接近 100% 即异常；或用同一 seed 比较投机与非投机输出的分布；修复 待定；报告者建议改用同文件 line 71 已验证的 NPU 写法 gumbel_seed = tl.randint(seed, pos); r = tl.rand(gumbel_seed, block) 得到 u∈(0,1]（open，未核实 PR）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/13730
 
@@ -17611,7 +17611,7 @@
 - **原因对象**：解码/采样 / vllm / DeepSeek MTP + FA 并发路径
 - **原因行为**：W8A8 + deepseek_mtp 推测解码与并发请求叠加时，输出流里被插入 <｜begin of sentence｜> 并立刻 finish_reason=stop；报告未定位源码，关闭 MTP 后 100% 不复现
 - **影响对象**：输出内容（静默错误）
-- **影响详情**：并发下响应被 BOS token 截断、内容不完整且全程无报错；单请求正常，关 MTP 时 100% 稳定，开启 MTP 后频繁出现
+- **影响详情**：并发下偶发响应被 BOS token 截断、内容不完整且无报错（接口 200、无错误日志）；单请求正常，关 MTP 时 100% 稳定
 - **改进措施**：检测 同一 prompt 做单请求/并发两组对照，比较是否出现 BOS token 与提前 stop；同时开关 MTP 交叉验证；修复 issue 未附修复 PR（closed，修复状态未核实）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/9170
 
@@ -22823,7 +22823,7 @@
 `故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：观测/评测 / vllm / prompt token 来源计数
-- **原因行为**：开 index cache 后前缀复用 token 可能大于本轮新 prompt token，增量算成负值，counter.inc(负数) 触发 prometheus 客户端校验异常，回调线程随之退出
+- **原因行为**：开 index cache 后前缀复用 token 可能大于本轮新 prompt token，增量算成负值，counter 的 inc(增量) 收到负值触发 prometheus 客户端校验异常，之后 counter 不再增长、服务不再回包
 - **影响对象**：可用性/进度；指标/日志（挂起）
 - **影响详情**：v0.18.0 + GLM5.1-w4a8 A3 PD 1P1D 现网压测约 10 分钟后请求不再返回；async_llm 的 record() 抛异常，指标停更但进程不退出
 - **改进措施**：检测 监控 counter_prompt_tokens_by_source 的增量是否出现负值；对 metrics record() 包异常计数并在请求回调链路加超时告警；修复 待定（issue closed，正文未给修复 PR 编号）
@@ -23588,6 +23588,6 @@
 - **原因对象**：待定 / vllm / gpt-oss-120b BF16 TP8
 - **原因行为**：gpt-oss-120b BF16 在 TP8 + enforce-eager 下贪心解码输出与问题无关的英文词串；报告只给一条 curl 与返回体，未给机制定位
 - **影响对象**：输出内容（静默错误）
-- **影响详情**：prompt “你是谁”、temperature=0 返回 “fracture soli Silk grandfather Vic Clip patches Bound Babe manoe SequZEN…” 等无语义词串，finish_reason=length；服务不报错。
+- **影响详情**：prompt“你是谁”、temperature=0 返回 50 个无关联英文单词串（非中文也非正常续写），finish_reason=length；HTTP 200、无异常日志，只能肉眼发现。
 - **改进措施**：检测 TP8 + enforce-eager 拉起 BF16 gpt-oss-120b，用 temperature=0 单问句看输出是否为词串；再与 TP1 或默认配置对照；修复 待定（issue closed，正文无修复与规避说明）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/8463

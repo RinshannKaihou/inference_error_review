@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 可用性/进度
-  detail: Kimi K2.7 W4A8+DFlash、32 卡、P DP2×TP8 / D DP8×TP2：长上下文请求在 ADXL/HCCL 报 HcclBatchGet result=4；失败传输固定 6156 个描述符（513 block×6 层×K/V），同请求主模型 MLA KV 传输正常
+  detail: Kimi K2.7 W4A8+DFlash、32 卡、P DP2×TP8 / D DP8×TP2：长上下文请求周期性失败，decode 侧报 HcclBatchGet result=4、proxy 返回 5xx；同请求主模型 MLA KV 传输成功，仅 DFlash 那组 KV 拿不到。
   visibility: 报错
 mitigation:
   detect: 打印序列化的 FullAttentionSpec.num_kv_heads 与模型全局头数、本侧 TP，比较 P/D 两侧推导出的拉取次数；不一致即命中
@@ -40,6 +40,8 @@ original:
   behavior: PD 分离服务里短请求正常，长上下文请求周期性失败：decode 侧日志报 HcclBatchGet result=4，proxy 返回 5xx；同一请求的主模型 MLA KV 传输成功，只有 DFlash 那组 KV 拿不到。调 chunk 大小、重试、改 KV 生命周期都不改变失败模式。
   trigger_surface: MooncakeConnectorV1 + DFlash 分片 FullAttentionSpec + prefill TP≠decode TP
   discovery: 2026-10-21 tail_3 顺序深读（历史索引回填，issue created < 2026-10-07）
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（6156描述符与ADXL/HCCL为原文所无）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -57,3 +59,8 @@ migration:
     - detail
     uncertain:
     - effect
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes

@@ -10,7 +10,7 @@ cause:
   - subsystem: KV缓存
     stack: vllm
     component: prefix cache 与 MTP 路径
-  behavior: GDN 混合架构模型上 --enable-prefix-caching 与 qwen3_5_mtp 投机解码同开时，前缀块复用与 MTP 解码路径组合出错，输出被 token 级改写；具体出错代码未定位（待定）。
+  behavior: GDN 混合架构上 --enable-prefix-caching 与 qwen3_5_mtp 投机解码同开时输出 token 级崩坏；具体出错代码未定位（待定）。
 effect:
   objects:
   - 输出内容
@@ -39,6 +39,8 @@ original:
   behavior: 服务能正常加载并返回 200，日志里没有任何报错或警告，MTP 投机解码的接受率指标也正常（70%~100%），但回答内容在 token 级崩坏：问「请介绍一下你自己」时思考段出现「请介绍一下你自己介绍」的复读插入，正文写出「我是通义谦」，长文本里数字量词错乱（500 字写成 50 字、5000 字），图片/视频用例同样出现错字与破碎复述。把 --enable-prefix-caching 去掉后同样的请求全部恢复正常，接受率升到 90% 以上，加速效果也正常。
   trigger_surface: 310P（Atlas 300I Duo）上的 GDN 混合架构 w8a8 模型 + 前缀缓存与 MTP 投机解码同时开启
   discovery: 2026-10-21 第三轮顺序扫描（final_tail，issue created < 2026-10-07）
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（原文因果落点待定，未说复用路径组合出错）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -54,3 +56,11 @@ migration:
     - qwen3.8-max
     issue_unfixed:
     - behavior
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - cause.behavior
+    - original.notes
+  - date: '2026-10-21'
+    fields:
+    - cause.behavior

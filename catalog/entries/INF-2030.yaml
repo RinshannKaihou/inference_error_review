@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: prompt “你是谁”、temperature=0 返回 “fracture soli Silk grandfather Vic Clip patches Bound Babe manoe SequZEN…” 等无语义词串，finish_reason=length；服务不报错。
+  detail: prompt“你是谁”、temperature=0 返回 50 个无关联英文单词串（非中文也非正常续写），finish_reason=length；HTTP 200、无异常日志，只能肉眼发现。
   visibility: 静默错误
 mitigation:
   detect: TP8 + enforce-eager 拉起 BF16 gpt-oss-120b，用 temperature=0 单问句看输出是否为词串；再与 TP1 或默认配置对照
@@ -39,6 +39,8 @@ original:
   behavior: 同一个权重在 NPU 上贪心解码直接吐英文单词串，既不是中文也不是正常续写；HTTP 200、无异常日志，只有肉眼看返回内容才能发现。TP8 与 eager 是本例的固定条件。
   trigger_surface: gpt-oss-120b BF16 + TP8 + enforce-eager
   discovery: 2026-10-21 历史索引回填（issue created < 2026-10-07）
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（具体乱码词串原文未给出）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -58,3 +60,8 @@ migration:
         to: 待定
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes

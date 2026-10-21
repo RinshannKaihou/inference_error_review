@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: GLM-5 流式响应里 tool_calls[0].function.name 为 get（应为 get_weather），arguments {"location":"Beijing"} 完整正确；HTTP 200，调用方按截断的名字派发到不存在的工具
+  detail: GLM-5 stream=True 时 function.name 被截断成 get（应为 get_weather），参数完整；stream=False 时名字正确，客户端按截断名找不到工具
   visibility: 静默错误
 mitigation:
   detect: 同一工具调用请求分别用 stream=True/False 发一遍，比对 function.name 是否一致；名字较长的工具（get_weather 这类）最容易暴露
@@ -39,6 +39,8 @@ original:
   behavior: 用流式接口接 agent 时，工具调用看起来成功了，但 function.name 变成 “get” 这样的前缀，客户端按名字找不到工具，要么报未知工具要么把参数喂给错的处理函数；非流式一调就正常，所以很容易被当成客户端 bug。
   trigger_surface: stream=True + GLM-5 tool call（函数名跨 chunk）
   discovery: 2026-10-21 系统扫描 sweep_5（顺序深读）
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（原文未提 HTTP 200）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -54,3 +56,8 @@ migration:
     - qwen3.8-max
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes

@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出分布
   - 输出内容
-  detail: 所有 temperature>0 的投机解码请求退化为无条件接受全部草稿 token，拒绝采样等于空操作，输出质量与分布贴近贪心接受，不再是目标模型分布；贪心路径不受影响
+  detail: temperature>0 的投机解码请求草稿 token 全被接受、拒绝采样不生效：长文本用词发散、指令遵从下降；服务不报错，仅接受率异常高
   visibility: 质量退化
 mitigation:
   detect: 统计非贪心投机请求的草稿接受率，接近 100% 即异常；或用同一 seed 比较投机与非投机输出的分布
@@ -40,6 +40,8 @@ original:
   behavior: 非贪心（temperature>0）的投机解码请求在 NPU 上输出质量明显低于同参数的非投机推理：草稿 token 全被接受、拒绝采样不生效，长文本上表现为用词发散、指令遵从下降；服务不报错，指标上只看到接受率异常高。
   trigger_surface: v2 speculator 投机解码 + temperature>0
   discovery: 2026-10-21 历史索引回填（issue created < 2026-10-07）
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（『贴近贪心接受』原文未述）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -52,3 +54,8 @@ migration:
     panel: []
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes

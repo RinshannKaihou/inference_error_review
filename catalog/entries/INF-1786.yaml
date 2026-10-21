@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 按触发条件构造即复现：groups=0+动态 filter N=-1+x C=0 → kn%groups 除零 UB；DepthwiseConv2D filter 由 AscendWeightQuant 产出且上游 origin format 非 HWCN/NCHW → desc 已改 Reshap
+  detail: conv 类算子在动态 shape 且 groups=0、量化权重上游格式非标、dilations 缺失、非 4D filter 等构造下静默错值：布局错位进 kernel、bias 校验跳过、实现模式退化、shape 推导错，无 ERROR 日志，部分触发为崩溃/UB
   visibility: 静默错误
 mitigation:
   detect: 对融合前后图做等价性校验/输出与 eager 对照
@@ -41,6 +41,8 @@ original:
   behavior: 昇腾图模式下 conv 类算子在特定构造（动态 shape 且 groups=0、权重经量化算子产出且上游格式非标、dilations 属性缺失、非 4D filter 等）会静默产出错误结果：布局错位的数据直接进 kernel、bias 校验被跳过、融合出的 Conv2D 实现模式退化、输出 shape 推导错误，全程无 ERROR 日志；部分触发条件（groups=0、空指针）则表现为崩溃或 UB。同一修复 MR 覆盖全部 9 处。
   trigger_surface: CANN 图模式 + conv 公共 InferShape（多算子复用）+ 3 个 Depthwise 融合 pass + 各构造条件
   discovery: 2026-10-20 每日扫描
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（原文无N=-1+x等细节，系静态扫描非复现）
 migration:
   method: scan
   scanned: '2026-10-20'
@@ -64,3 +66,8 @@ migration:
     - subsystem
     - effect
     - visibility
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes

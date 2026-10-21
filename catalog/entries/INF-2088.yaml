@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: allclose(atol=rtol=1e-3) 失败，max|Δ|=3.594e+01，输出完全不可用；稳态只有 1.101x 加速，说明错误在 MLIR lowering/融合而非调度。
+  detail: allclose(atol=0.001, rtol=0.001) 失败，max|Δ|=3.594e+01，输出数值完全不对；同机 Triton/DVM 仅 3.815e-05，偏差只出现在 MLIR 编译路径；Eager 13.79ms、稳态 12.53ms，仅 1.101x
   visibility: 静默错误
 mitigation:
   detect: 同一 ResNet50 输入分别跑 eager、Triton、DVM、MLIR 四个后端并比对 max|Δ|；MLIR 与其余三个不一致即命中
@@ -39,6 +39,8 @@ original:
   behavior: 在 950 上用 torch.compile 选 MLIR 后端跑 ResNet50，进程不报错、不崩，输出张量数值却完全不对（与 eager 最大差 35.94，同机 Triton/DVM 只差 3.8e-5）；除非与参考逐元素比对，否则看不出问题，直接上线就是错误推理。
   trigger_surface: torch_npu + Inductor MLIR 后端 + ResNet50 类含 BatchNorm/MaxPool 的 CNN
   discovery: 2026-10-21 第三轮顺序扫描（tail_2，issue created < 2026-10-07）
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（原文未把1.101x与错误定位因果关联，无『而非调度』）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -51,3 +53,8 @@ migration:
     panel: []
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes

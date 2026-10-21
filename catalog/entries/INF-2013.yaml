@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 多线程 malloc∥free 时 find/erase/operator[] 可能撞上 rehash，取到错误 device 或漏记指针，workspace 被释放到别的设备、偶发越界写；无报错，按线程时序随机出现。empty_cache 的 clear 还会清掉所有 device 的条目
+  detail: 多线程 malloc/free 时 find/erase/operator[] 无锁访问 allocated_ptrs（类无 mutex），取到错误 device 或漏记指针，workspace 被释放到错误设备、偶发越界写；无报错、随机复现
   visibility: 不可复现
 mitigation:
   detect: 多线程反复 malloc/free workspace 张量并穿插 empty_cache，用 TSan 或指针表长度断言观察 find/erase 与 clear 的交叉
@@ -39,6 +39,8 @@ original:
   behavior: 多线程推理或训练里 workspace 张量频繁分配释放时，偶尔出现释放到错误设备、后续算子读到别的流的 workspace 或直接越界写，表现为随机的结果不对或偶发 crash；重跑同样的负载未必复现，日志里也没有相关报错，很难和分配器联系起来。
   trigger_surface: torch_npu NPUWorkspaceAllocator + 多线程 malloc/free + empty_cache
   discovery: 2026-10-21 系统扫描 sweep_5（顺序深读）
+  notes:
+  - 2026-10-21 opus-5.5 复核重写（原文未提 rehash，机制细节无据）
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -51,3 +53,11 @@ migration:
     panel: []
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
+    - original.notes
+  - date: '2026-10-21'
+    fields:
+    - effect.detail
