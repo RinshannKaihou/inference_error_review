@@ -4,10 +4,10 @@ slug: vllm_ascend_950pr_prob_empty_output
 aliases: []
 title: 950PR 多并发概率性返回空输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: KV缓存
     stack: vllm
     component: 并发批处理与请求生命周期
   behavior: GSM8K/GPQA 多并发评测时部分请求返回空字符串，单并发不复现；950PR 上开 USE_MULTI_BLOCK_POOL 与 USE_MULTI_GROUPS_KV_CACHE 的部署概率出现
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: KV缓存
+    uncertain:
+    - visibility

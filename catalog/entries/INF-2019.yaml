@@ -4,7 +4,7 @@ slug: full_decode_only_tp2_first_generate_garbage
 aliases: []
 title: FULL_DECODE_ONLY+tp=2 首次离线 generate 输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - visibility

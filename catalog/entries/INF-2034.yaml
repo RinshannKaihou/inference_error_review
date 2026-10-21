@@ -4,15 +4,16 @@ slug: chamfer_distance_grad_index_bounds_missing
 aliases: []
 title: chamfer 反向 aclnn 缺索引边界校验致静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: chamfer_distance_grad
-  behavior: host 只校验 null 与 dtype，不做索引范围检查；device 侧直接按 idx1 索引，idx1==num 仍走通并算出与合法路径不同的梯度，只有 idx1=-1 会在同步时报 507035
+  behavior: aclnnChamferDistanceBackward host 侧只校验空指针与 dtype，未校验 idx1/idx2 是否落在 [0, num)，device 内核直接以 idx1 作索引。
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: idx1=2（==num）时 aclnnChamferDistanceBackward 返回 SUCCESS，梯度与合法用例不同；idx1=-1 时异步下发被接受，sync 报 507035，exit 42
   visibility: 静默错误
@@ -42,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度
+    rewritten:
+    - behavior

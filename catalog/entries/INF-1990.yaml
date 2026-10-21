@@ -4,17 +4,17 @@ slug: vllm_ascend_sparse_sfa_c8_first_request_garbage
 aliases: []
 title: 开 sparse_sfa_c8 首个请求输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: vllm
     component: 稀疏 SFA C8 注意力路径
-  behavior: P/D 两端都开 enable_sparse_sfa_c8 后，服务启动后的第一次请求返回乱码，第二次起恢复正常；同一镜像关掉该开关问答正常
+  behavior: 开启 sfa c8 时，服务启动后首个请求返回乱码，第二次请求恢复正常。
 effect:
   objects:
   - 输出内容
-  detail: 0.23.0rc1 + GLM-5.2 + memcache 四机 PD 部署，首个 curl 回答是乱码；#15927 另报 c8_enable_reshape_optim=false 时问答正常
+  detail: '#12905：0.23.0rc1+GLM-5.2+memcache，P/D 开 enable_sparse_sfa_c8，首个 curl 乱码、第二次恢复正常；#15927：四机 PD 分离，开 sfa c8 首乱码，c8_enable_reshape_optim=false 正常。'
   visibility: 静默错误
 mitigation:
   detect: 启动后先发一条预热请求并把首响应与第二次响应比对；对首请求单独做正则/困惑度检查，或直接禁用该开关做 A/B
@@ -44,3 +44,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - detail

@@ -4,10 +4,10 @@ slug: npu_grouped_matmul_a8w4_nz_output_mismatch
 aliases: []
 title: A8W4 开 NZ 时 npu_grouped_matmul 输出偏离
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: torch_npu
     component: npu_grouped_matmul A8W4
   behavior: W4A8 场景在 A2（910B）开启 NZ 格式后 grouped_matmul 的输出与 golden 不对齐，同用例在 A3 上通过，指向 910B 的 NZ 输出路径；报告者未定位到具体代码
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化

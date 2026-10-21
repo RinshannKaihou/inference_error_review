@@ -4,13 +4,13 @@ slug: all_gather_matmul_v2_subbyte_dtype_size_zero
 aliases: []
 title: 子字节 dtype 下 CheckHCCLSize 算成 0 字节拦截失效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: all_gather_matmul_v2
-  behavior: GetSizeByDataType 对 4bit 类型返回 1004，走 else 分支时 (1004-1000)/8 整数除法截断为 0，sizeOfSingleM 与 sizeOfSplitM 全为 0，两道 256MB 拦截恒为假
+  behavior: GetSizeByDataType对子字节类型返回1000+bit数，DT_INT4为1004；CheckHCCLSize判断<1000为假后算(1004-1000)/8=0，sizeOfSingleM为0，两道256MB预拦截恒为假
 effect:
   objects:
   - 可用性/进度
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

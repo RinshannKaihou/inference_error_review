@@ -4,7 +4,7 @@ slug: hcomm_check_channel_param_missing_index
 aliases: []
 title: CheckChannelParam 漏下标只校验第 0 个通道
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: channelNum>1 时非 0 号通道的超限 memHandleNum/notifyNum、空 memHandles 直达后续资源申请与数组访问；报告为静态审查（基线 1f7e0221a），未给实测崩溃样本
-  visibility: 静默错误
+  detail: channelNum>1 时非 0 号通道的超限 memHandleNum/notifyNum、空 memHandles 不会返回 HCCL_E_PARA，会继续进入资源申请与数组访问，可能造成越界读或空指针解引用。
+  visibility: 报错
 mitigation:
   detect: 在 CheckChannelParam 范围内 grep 'channelDesc->' 应为 0 命中；构造 channelNum>1 且第 1 个元素 memHandleNum 超限/指针为空的用例，断言返回 HCCL_E_PARA
   fix: 建议循环体内统一补 [index]（共 7 行 8 处）；issue 未附 MR，未核实是否已修
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 报错
+    rewritten:
+    - detail

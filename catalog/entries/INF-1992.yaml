@@ -4,10 +4,10 @@ slug: vllm_ascend_glm51_mixed_len_dp_precision
 aliases: []
 title: 双 DP 长短请求同刻并发致精度异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: KV缓存
     stack: vllm
     component: DP 并发与 mooncake KV 传输
   behavior: 两个 DP 同一时刻各有一个长请求和一个短请求时，多次请求后大概率出现精度问题；日志没有 mooncake transfer 失败，重发同一请求即恢复
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: KV缓存
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - visibility

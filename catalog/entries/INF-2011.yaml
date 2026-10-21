@@ -4,7 +4,7 @@ slug: ops_nn_scatter_elements_v2_small_mode_no_index_check
 aliases: []
 title: scatter_elements_v2 SMALL_MODE 不校验索引范围
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 910B3 + CANN 9.1.0-beta.3：self 4x4 全 1、index[0][0]=-1 时 aclnnScatter 返回 SUCCESS 但输出被写坏，-1000000 触发设备异常 507035；PyTorch Tensor.scatter 对两者都直接报索引越界
+  detail: 910B3+CANN9.1.0-beta.3：self4x4全1，index[0][0]为-1/4时aclnnScatter返回SUCCESS并写坏输出；-1000000触发设备异常507035。PyTorch Tensor.scatter要求索引落在[0,self.size(dim)-1]。
   visibility: 静默错误
 mitigation:
   detect: 对 aclnnScatter 传 index[0][0]=-1 与 -1000000（其余为合法对角），比对返回码与输出；两条路径（ProcessSmall / ProcessScatter）都要试
@@ -49,3 +49,12 @@ migration:
   - date: '2026-10-21'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

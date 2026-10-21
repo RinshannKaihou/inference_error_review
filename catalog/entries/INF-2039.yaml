@@ -4,7 +4,7 @@ slug: vllm_ascend_memcache_put_rank_desync_engine_exit
 aliases: []
 title: MemCache 单 rank put 慢或失败致 TP 失步退出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: 注入单 rank 220s put 延迟后：T+102s PLOG 报 STUCK，T+218s EI0002/507001，T+230s EngineDeadError、4 个 Prefill API 全挂；单 rank 立即返回 -1 时请求仍 200，错误被吞
+  detail: 单TP rank put慢或失败：注入220s延迟并返回-7后，T+102s STUCK，T+218s EI0002/507001，T+230s EngineDeadError、4个Prefill API全部退出；put返回-1时请求仍200，保存失败被完全吞掉。
   visibility: 挂起
 mitigation:
   detect: 统计每个 TP rank 的 batch_put_from_layers 返回码与耗时；对 put 加超时和 TP 内失败共识，检查 save 完成后各 rank 的集合通信序号是否一致
@@ -46,3 +46,20 @@ migration:
   - date: '2026-10-21'
     fields:
     - effect.objects
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

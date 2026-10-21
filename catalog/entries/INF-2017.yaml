@@ -4,7 +4,7 @@ slug: dsa_cp_workspace_lifetime_race_async_scheduling
 aliases: []
 title: DSA-CP 去同步后 ACLNN workspace 生命周期竞态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: DeepSeek-V4-Flash W8A8、3500 输入/1 输出、并发 100 时约 9 个请求成功后某 worker 报 UB/GM 越界与 aclrtAllocatorGetByStream failed，随后 HCCL 看门狗终止、未完成请求返回 500
+  detail: DeepSeek-V4服务在DSA上下文并行、异步调度、TASK_QUEUE_ENABLE=1、Fused MC2全开，3500输入/1输出、并发100压测时，前几个请求正常，约第9个后某worker抛UB/GM越界和分配器stream非法，随后HCCL看门狗终止、剩余请求全500。
   visibility: 不可复现
 mitigation:
   detect: 同时开异步调度、TASK_QUEUE_ENABLE=1、Fused MC2 + DSA 上下文并行，跑高并发短输出负载，观察 aclrtAllocatorGetByStream / UB-GM 越界与看门狗终止；也可用 A/B（保留/移除同步气泡）对比
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

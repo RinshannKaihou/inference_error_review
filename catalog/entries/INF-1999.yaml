@@ -4,7 +4,7 @@ slug: ops_nn_scatter_nd_update_arch32_no_per_dim_bounds
 aliases: []
 title: scatter_nd_update arch32 越界索引致别名错写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 910B3 + CANN 9.1.0-beta.3：var[2,3]、indices=[[0,3]]、updates=[999] 时 aclnn 返回 SUCCESS，实际把 var[1,0] 改成 999；[[0,-1]] 也不拒绝；合法 [[0,1]] 正常（exit 42）。
+  detail: 910B3+CANN9.1.0-beta.3，aclnnScatterNdUpdate arch32：var[2,3] 传 [[0,3]] 或 [[0,-1]] 均 SUCCESS；[[0,3]] 写到 var[1,0]，退出码42；负索引不拒绝，另一合法元素被静默改写为 updates 的值。
   visibility: 静默错误
 mitigation:
   detect: 用逐维越界（dim1 size=3 传 3）和负索引各调一次 aclnnScatterNdUpdate，断言参数错误；再与 torch 语义对拍，检查非目标元素是否被改
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: ops_nn_fake_quant_cachemask_copyout_overrun
 aliases: []
 title: fake_quant 对齐 CopyOut 写穿通道边界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 910B3 + CANN 9.1.0-beta.3：out[0]=7.0 正确，但张量尾后 4 个 canary 由 123456 变 0.0、mask 尾后 0xAB 被改；多通道时污染下一通道，接口仍返回 SUCCESS
+  detail: 910B3 + CANN 9.1.0-beta.3：out[0]=7.0 正确，但尾后 canary 由 123456 变 0.0、mask 由 0xAB 变 0；多通道时污染下一通道，接口仍返回 SUCCESS
   visibility: 静默错误
 mitigation:
   detect: 输出与 mask 尾部预填 canary（123456 / 0xAB），numel 取 32B 对齐且整除 tileLength 的长度跑 aclnnFakeQuantPerChannelAffineCachemask
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: attention_update_empty_tensor_zero_block_div_zero
 aliases: []
 title: AttentionUpdate 空 Tensor 出零 block 并除零
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: legacy 路径 blockDims=0 时仍做 totalLength % blockDims 与除法，UBSan 报除零；函数仍返回 GRAPH_SUCCESS 并把 block 数置 0
 effect:
   objects:
+  - 数值结果
   - 可用性/进度
   detail: lse=[0]、localOut=[0,128]、updateType=0、sp=1 的空序列输入下 Host tiling 返回成功却给出 blockNum=0 的不可执行配置；文档声明支持空 Tensor，totalLength=128 时正常得 blockDims=40
   visibility: 静默错误
@@ -42,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 可用性/进度
+        to: 数值结果

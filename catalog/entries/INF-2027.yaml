@@ -4,18 +4,18 @@ slug: vllm_ascend_flashcomm1_mtp_high_concurrency_garbled
 aliases: []
 title: FlashComm1 叠加 MTP 高并发偶发乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
     stack: vllm
-    component: FC1 all-gather 融合
+    component: FC1 与 MTP 叠加路径
   behavior: FlashComm1 与 MTP 投机解码同时开启时，高并发下偶发输出乱码；单独关掉 FC1 或 MTP 任一项都不复现，说明缺陷在两者交互的通信/投机路径上，原文未定位到具体代码
 effect:
   objects:
   - 输出内容
   detail: Qwen3.5-397B-A17B W8A8、TP=16、1024 并发 OCRbench：部分请求首个 token 正常，随后整段变成 "sp sp | sp" 一类乱码；不是所有请求都中，无异常日志
-  visibility: 质量退化
+  visibility: 不可复现
 mitigation:
   detect: 同一压测分别跑 (FC1+MTP)、(仅 FC1)、(仅 MTP) 三组，比较乱码请求比例；只在两者同开时出现即命中
   fix: 待定（issue closed，未见 MR）：规避是关掉 VLLM_ASCEND_ENABLE_FLASHCOMM1 或不用 MTP
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 不可复现
+    rewritten:
+    - component
+    uncertain:
+    - subsystem

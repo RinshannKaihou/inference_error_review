@@ -4,17 +4,17 @@ slug: streaming_tool_parser_leaks_internal_tags
 aliases: []
 title: 流式工具调用把内部标记泄漏进输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 输出解析
     stack: vllm
     component: GLM 流式解析器
-  behavior: 流式增量在 chunk 边界未 hold-back 与剥离 reasoning/工具标记，<think>、<tool_call>/<arg_key>/<arg_value> 随 content 直接下发，个别情况拼进工具名与参数
+  behavior: 本应留在模型管线内部的 reasoning/工具标记出现在对外增量里，并可混入工具名或参数。
 effect:
   objects:
   - 输出内容
-  detail: HTTP 200 且表面正常，正文带 </think>、整段 <tool_call>…</tool_call>，或工具名被写成 Grep-n</arg_key><arg_value>true</arg_value>；下游展示或解析工具调用即失败
+  detail: GLM-5.1 W4A8 流式且带 tools 时，HTTP 多为 200、响应表面正常；正文夹带 </think>、<tool_call> 等内部标记，有时整块替代正常 tool_calls；工具名可被污染，按 JSON 解析 tool_calls 会拿到非法函数名或空参数。
   visibility: 静默错误
 mitigation:
   detect: 对流式 + tools 请求逐 delta 检查是否出现 <think>/<tool_call>/<arg_key>/<arg_value>；用严格 JSON 解析器校验 tool_calls 的 name 与 arguments
@@ -42,3 +42,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
+    - detail

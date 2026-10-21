@@ -4,7 +4,7 @@ slug: vllm_free_kv_cache_block_queue_negative_blocks_race
 aliases: []
 title: FreeKVCacheBlockQueue 多连接器下负块数竞态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - KV状态
-  detail: 表现为仍在使用的 block 被当成空闲块复用或同一 block 重复入队，后续请求读写到错位 KV，输出错乱或串到别人的前缀；报错形态不固定，dsv4 高负载下更容易撞上
+  detail: 长时间跑 PD 分离或多 connector 服务且前缀缓存频繁命中时，偶发返回错乱文本、答非所问，或请求前缀像别人的内容；重启能好一阵，KV 命中率越高越容易出现；日志无明确报错，只能从 block 复用异常反推；dsv4 负载下复现概率相对较高。
   visibility: 静默错误
 mitigation:
   detect: 同时挂多个 KV connector 并压前缀缓存命中率，检查 FreeKVCacheBlockQueue 的 num_new_blocks 是否为负、free block 数是否与在用请求对不上
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

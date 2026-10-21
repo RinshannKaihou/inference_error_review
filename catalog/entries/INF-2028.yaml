@@ -4,7 +4,7 @@ slug: vllm_ascend_dsa_cp_a2_greedy_degenerate_repetition
 aliases: []
 title: A2 开 DSA-CP 后 greedy 解码退化为重复循环
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: temperature=0、prompt 你好：开 dsa_cp 输出 “, like, and, and, and…” 重复；block 32 无 dspark 输出 “ to the 2c (??) (??)…”。thinking 默认开时 reasoning 是通顺但跑题的英文，掩盖退化。
-  visibility: 静默错误
+  visibility: 质量退化
 mitigation:
   detect: temperature=0 + 短 prompt（thinking=false，5 token）+ 逐项关特性（dsa_cp / dspark / block_size）对照，直接看是否重复坍塌；thinking 模式下的通顺跑题文本会掩盖问题
   fix: 待定（issue open）：报告给出的可用配置是关 dsa_cp 并开 dspark、num_speculative_tokens=7
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化
+    issue_unfixed:
+    - detail
+    uncertain:
+    - subsystem

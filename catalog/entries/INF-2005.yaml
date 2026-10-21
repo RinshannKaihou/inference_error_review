@@ -4,7 +4,7 @@ slug: circular_pad_oneside_pad_skips_bound_check
 aliases: []
 title: circular_pad 单侧 padding=0 跳过越界校验返回错误环绕
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

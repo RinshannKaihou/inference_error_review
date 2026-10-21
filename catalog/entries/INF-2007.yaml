@@ -4,17 +4,17 @@ slug: ops_nn_add_layer_norm_quant_uninit_members
 aliases: []
 title: add_layer_norm_quant kernel 成员未初始化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: add_layer_norm_quant
   behavior: base.h 与子类的 numCore、eps、isXOut、gmOffset_、scales1Exist 等成员无默认值；InitBaseParams 提前返回或分支跳过时，分核数、尾块长度、scale 存在性按垃圾值参与运算
 effect:
   objects:
   - 数值结果
-  detail: 全芯片 kernel 侧：初始化路径未覆盖时用未初始化值决定分核数与尾块裁剪、miss 掉 scale 分支，输出整块错位或漏做量化；无报错、无 NaN，只有数值不对
+  detail: 跑 add_layer_norm_quant，尤其带 smooth scale 或 per-channel 量化路径时，偶发整块输出不对、某些通道像没做量化；重跑或换 shape 有时正常；日志无 error 也无 NaN，只能靠与 PyTorch 对拍发现。
   visibility: 静默错误
 mitigation:
   detect: 在 InitBaseParams 的提前返回/分支路径上打印 numCore、numLastDim、eps、gmOffset_，或把成员默认值改成哨兵值后跑不同 shape 的 add_layer_norm_quant 用例
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+    rewritten:
+    - detail

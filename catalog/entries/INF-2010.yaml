@@ -4,13 +4,13 @@ slug: vllm_ascend_fullgraph_chunked_prefill_accuracy_collapse
 aliases: []
 title: FULL_DECODE_ONLY+chunked 精度 96→57
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: vllm
     component: FULL_DECODE_ONLY+chunked
-  behavior: Qwen3-30B-A3B 在 dp4 + max-num-seqs 512 下同时开 FULL_DECODE_ONLY 与 enable_chunked_prefill，gsm8k 精度从 96.13 掉到 56.71；未给源码级定位
+  behavior: Qwen3-30B-A3B在dp4、max-num-seqs 512下同时启用FULL_DECODE_ONLY与enable_chunked_prefill时，gsm8k推理结果异常；未定位到具体pass或kernel。
 effect:
   objects:
   - 输出内容
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

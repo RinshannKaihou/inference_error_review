@@ -4,7 +4,7 @@ slug: a3_sparse_attn_sharedkv_cfa_mte_out_of_range
 aliases: []
 title: A3 CFA 路径 SparseAttnSharedkv MTE 地址越界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 可用性/进度
-  detail: A3 + DSV4-Flash W8A8 + DSpark + FULL_DECODE_ONLY，Decode DP14/device14/stream46/AIV15 报 0x800000 MTE 越界，2 秒后 Python 见 507057、EngineCore 退出；两节点同指纹，重启恢复
+  detail: A3+DSV4-Flash W8A8+DSpark+FULL_DECODE_ONLY，DP14/device14/stream46/AIV15 报 0x800000 MTE 越界；dump 后 Python 见 507057，EngineCore/DP API 退出；两节点同指纹，无需复位板卡可恢复
   visibility: 报错
 mitigation:
   detect: 比对 exception dump 的 workspace 大小反推 CFA 实现代际（0x2180000 对应 mBase=64）；按 kernel hash + device/stream/AIV 归并首错，区分首错与后续 507057
@@ -55,3 +55,12 @@ migration:
   - date: '2026-10-21'
     fields:
     - effect.detail
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: dsv4_dspark_compressor_state_tail_only_save
 aliases: []
 title: 大投机深度下 compressor 只存尾窗状态致输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 输出内容
-  detail: DeepSeek-V4-Flash-w8a8-mtp、num_speculative_tokens=7、do_sample=false 时，《滕王阁序》8192 token 输出中段起退化为 2. 与符号堆叠的乱码，模型随后自称输入有乱码
+  detail: DeepSeek-V4-Flash w8a8+MTP/DSpark 大投机深度、长输出且 do_sample=false 时，默写《滕王阁序》前几段正常，中段起输出 2.、/w 与成串星号标点堆叠，后称输入并非完整原文且含杂梳理乱码；投机深度小不明显，越长越明显。
   visibility: 质量退化
 mitigation:
   detect: 对同一 prompt 用不同 num_speculative_tokens 做确定性解码比对（do_sample=false），检查长输出中段是否出现符号/数字重复；对比 compressor 写回的 kvState/scoreState block 数
@@ -47,3 +47,15 @@ migration:
   - date: '2026-10-21'
     fields:
     - effect.detail
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
