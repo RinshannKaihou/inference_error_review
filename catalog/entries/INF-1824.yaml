@@ -36,6 +36,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1548
+pattern: PAT-INF-0182
 original:
   mechanism: AscendMMEncoderAttention 用 torch_npu.npu_fused_infer_attention_score 跑视觉编码器注意力，参数是 input_layout="TND"、sparse_mode=0，并且完全不传 attention mask。报告的最小复现（无需加载模型，H=16、D=128、T=2048 的 fp16 随机张量）显示该组合下算子返回 uniform-average：输出与 fp32 torch.softmax 参考的误差约 3.1，而 fp16 正常应为 ~3e-3，单序列与多序列（多图）输入一致。LLM decode 路径不受影响，因为它用 sparse_mode=3 加显式 mask 或分页模式，这也说明问题出在这种「无 mask + sparse_mode=0」的调用形态而非算子整体。issue 本身即标注为静默数值错误（图片请求能跑但注意力失效），2026-08-06 提交、open；本库 INF-1548 记录的是同一算子在 bool mask 形状 [1,1,1,S] 下 512 之后被忽略的另一种触发，报告者亦视其为同族。
   source: 2026-08-06 GitHub vllm-project/vllm-ascend issue https://github.com/vllm-project/vllm-ascend/issues/13699 （open）
@@ -45,3 +46,7 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - pattern
