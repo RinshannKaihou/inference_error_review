@@ -4,7 +4,7 @@ slug: ge_graph_mode_long_context_repetition
 aliases: []
 title: GE 图模式长上下文到 32768 后输出复读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: GLM5 长请求（prompt_tokens 32466）在 32768 之前输出正常，之后整段复读并到 finish_reason=length；无报错，D 侧改 eager 后同一请求精度正常。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 同一长请求分别在 D 侧 GE 图模式与 eager 下跑，比对 32768 token 前后的输出
   fix: 待定（正文未给根因与修复）；规避：D 侧退回 eager 模式
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    uncertain:
+    - subsystem

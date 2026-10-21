@@ -4,7 +4,7 @@ slug: ops_math_cdist_grad_nan_boundary
 aliases: []
 title: cdist_grad 边界 NaN 处理错误（已修）
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: cdist_grad 在边界场景（零距离/重合点等）的 NaN 处理逻辑错误；修复 MR 6518「修复cdist_grad边界场景下nan值处理逻辑」（merged 2026-10-20，正文细节以 MR diff 为准）
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: '边界输入下梯度出现错误 NaN（或应 NaN 处未 NaN）；同仓 issue #3677（CdistGrad NaN 处理逻辑）此前留观——正文为空模板无法判定，本轮以修复 MR merged 为证据收录（量级细节未逐行核实）'
   visibility: 数值异常
@@ -44,3 +45,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度

@@ -4,7 +4,7 @@ slug: ops_math_inplace_uniform_nan_inf_endpoints
 aliases: []
 title: aclnnInplaceUniform NaN/±inf 端点静默全 NaN/i
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: A2/A3 实测：from 或 to=NaN 输出 64/64 全 NaN；from=-inf 输出全 NaN；to=+inf 输出全 inf；两段式接口全部返回 ACLNN_SUCCESS；文档契约明确 NaN/±inf 违反约束应返回 161002
-  visibility: 静默错误
+  detail: A2（910B2，CANN 9.2.0 两段式直调）：from/to=NaN 与 from=-inf → 64/64 全 NaN 且两段返回 0；to=+inf → 64/64 全 inf；A3 复现 NaN 两条。契约：from<=to、NaN/±inf 超范围，from>to 应返 161002
+  visibility: 数值异常
 mitigation:
   detect: 对输出做 NaN/Inf 扫描；调用栈无 161002 而输出全 NaN 是特征
   fix: 待定（建议 !(from<=to)||!isfinite 双条件拒绝；issue open）
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail

@@ -4,17 +4,17 @@ slug: tt_metal_typecast_u32_upper_range_collapse
 aliases: []
 title: ttnn.typecast fp32→uint32 上半区间塌缩 2^31
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: tt-metal
-    component: calculate_typecast_fp32_t
+    component: ckernel_sfpu_typecast.h
   behavior: fp32→uint32 转换的尾数提取路径按 biased-exponent 移位结果门控 lane（exp-=32…CC_LT0），[2^31,2^32) 区间的指数档被排除在正确路径外，结果恒为 2^31
 effect:
   objects:
   - 数值结果
-  detail: WH/BH 主线（u32 函数 d9c2c92d→HEAD 字节相同）：[2^31,2^32) 内 192/192 与 960/960 随机可精确表示 f32 全部返回 2147483648（占目标 dtype 一半寻址范围）；<2^31 全对；bf16 输入同样塌缩；inf/nan 亦返回 2^3
+  detail: WH/BH SFPU：ttnn.typecast fp32/bf16→uint32，输入 ∈[2^31,2^32) 时全部返回 2147483648（192/192、960/960 随机可精确表示 f32 全错）；<2^31 全对；bf16 同样塌缩；inf、nan 亦返回 2^31
   visibility: 静默错误
 mitigation:
   detect: 对 ≥2^31 的输入抽查转换结果
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - component
+    - detail

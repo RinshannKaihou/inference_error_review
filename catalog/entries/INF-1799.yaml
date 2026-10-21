@@ -4,7 +4,7 @@ slug: cann_ge_acl_mslite_conv2d_fp32_bias_cast_fp16
 aliases: []
 title: mslite/ACL 构图把 conv2d 的 fp32 bias 转 fp16
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 300I Duo 上 Torch 前向可复现 fp32 输出，同模型走 ACL 转 mindir 后 PreRunAfterOptimizeAfterStage1 阶段的 GE 图里 conv2d 三个输入全为 fp16，需要高精度的模型输出掉精度且无任何报错
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: dump PreRunAfterOptimizeAfterStage1 阶段的 GE 图，核对 conv2d 各输入 dtype 与 Torch 前向是否一致
   fix: 待定（issue 为咨询性质已 closed，正文未给出做转换的 pass 名称与保留 bias fp32 的开关）
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误

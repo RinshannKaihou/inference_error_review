@@ -4,13 +4,13 @@ slug: ascend_pytorch_nd_tile_rsplit_noncontig_wrong
 aliases: []
 title: torch_npu ND tile rsplit 非连续输入静默算错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: torch_npu
     component: npu_rsplit_partial 代码生成
-  behavior: prefer_nd_tiling+tile_reductions 开启的 ND tile 归约走 rsplit 多核路径时，非连续输入（如 permute 后）下工作区按 rsplit_id 开槽/合并内核读回与实际切分或 stride 不
+  behavior: prefer_nd_tiling/tile_reductions 开启后，ND tile 归约走 rsplit 多核路径时对非连续输入（permute 后）静默算错，torch.compile 不报错、与 eager 不一致；断点尚未定位
 effect:
   objects:
   - 数值结果
@@ -48,3 +48,12 @@ migration:
   - date: '2026-10-20'
     fields:
     - effect.detail
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior

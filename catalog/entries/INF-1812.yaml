@@ -4,7 +4,7 @@ slug: online_offline_precision_mode_default_mismatch
 aliases: []
 title: 在线离线默认精度模式不一致致 OM 数值偏差
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 同一模型同一输入：在线 HF+TorchAir 与 ONNXRuntime 正常，ONNX→ATC→OM 离线结果明显偏差，RMSNorm 等敏感子图整段异常；默认值差异不在任何用户可见提示里。
+  detail: 离线 ATC→OM 未显式配置精度/实现模式、模型含 RMSNorm 等敏感子图时：同一模型同一输入，在线 HF+TorchAir 与 ONNXRuntime 正常，离线 OM 明显偏差、整段推理异常；逐层 probe 后定位为离线默认精度/实现模式与在线不同，用户很难想到两者默认策略不一致。
   visibility: 静默错误
 mitigation:
   detect: 同一模型分别跑在线 TorchAir 与离线 OM，逐层比对；核对 atc 的 precision_mode / op_select_implmode 是否与在线一致
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

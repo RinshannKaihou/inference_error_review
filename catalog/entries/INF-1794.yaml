@@ -4,7 +4,7 @@ slug: ops_math_pad_backward_empty_input_uninit
 aliases: []
 title: pad 反向/UnfoldGrad 空输入不写非空出参
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: 空 tensor 输入（S2=0 等）配非空出参时 kernel 早退返回 ACLNN_SUCCESS 但不写非空输出——出参保留未初始化内存内容；修复补齐早退路径的输出初始化
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: '下游读到显存残留值（内容随历史分配变化、不可复现）；issue #3553（10-13 创建，本轮修复 MR merged 状态复核收录）；修复 MR 6509 已 merged（修复后早退路径初始化输出）'
   visibility: 不可复现
@@ -50,3 +51,18 @@ migration:
   - date: '2026-10-20'
     fields:
     - relations
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度

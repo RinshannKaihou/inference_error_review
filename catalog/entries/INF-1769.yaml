@@ -4,7 +4,7 @@ slug: triton_ascend_num_stages_state_store_misched
 aliases: []
 title: triton-ascend num_stages>1 流水错调度携带态存储
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: Mamba-2 SSD _state_passing_fwd/_bwd_kernel（num_stages=3 autotune 配置）约 25–46% 新进程产出位相同的错误输出（rel diff ~1e-3 vs 参考 ~4e-7）；前向反向同中；钉 num_stages=1 后 16/16 进
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 同脚本多进程重跑并与纯 torch 参考对比；坏进程输出位级稳定（编译期调度决定）是特征签名
   fix: 规避：检测 torch_npu 时为 state-passing autotune 配置钉 num_stages=1（state-spaces/mamba#1063 已带；GPU/ROCm 调度不受影响）；上游修复未见（open）
@@ -44,3 +44,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误
+    uncertain:
+    - behavior

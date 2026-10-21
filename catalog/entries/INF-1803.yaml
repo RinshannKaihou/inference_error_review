@@ -4,7 +4,7 @@ slug: cann_ge_custom_op_tiling_so_skipped_without_opsproto
 aliases: []
 title: 缺 opsproto 时 GE 跳过 custom 包 tiling so
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -13,9 +13,10 @@ cause:
   behavior: custom 算子包没有 infershape.cpp 时不会生成 cust_opsproto_rt2.0.so，GE 因此跳过该包的 tiling so 加载并改用 legacy tiling so，定制 tiling 逻辑静默不生效
 effect:
   objects:
+  - 性能/资源
   - 数值结果
   detail: 910B 上 custom 包无 infershape.cpp 时必现：aclnn 接口允许没有 infershape，但 tiling 改由 legacy so 生成而非定制实现，编译与执行都不报错，tiling 分核策略与预期不符
-  visibility: 静默错误
+  visibility: 性能退化
 mitigation:
   detect: 检查 custom 包目录下是否存在 cust_opsproto_rt2.0.so，并确认 tiling 实际加载的是哪个 so
   fix: 待定（issue closed，正文未给修复 PR；报告者建议改为按 ophost 对应的 so 判断）
@@ -42,3 +43,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      effect:
+        from: 数值结果
+        to: 性能/资源
+      visibility:
+        from: 静默错误
+        to: 性能退化
+    uncertain:
+    - behavior

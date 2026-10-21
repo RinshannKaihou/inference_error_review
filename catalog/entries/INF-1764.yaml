@@ -4,17 +4,17 @@ slug: vllm_rocm_attn_triton_fallback_layouts_wrong
 aliases: []
 title: vLLM ROCm_ATTN Triton fallback 布局错值/崩卡
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: vllm
-    component: ROCN_ATTN Triton fallback
+    component: vLLM ROCM_ATTN 注意力后端
   behavior: RDNA 上仅 head 128/block 16/GQA 3–16 走 HIP kernel，其余布局走 Triton fallback，部分布局解码读 cache 错误且偶发 GPU fault
 effect:
   objects:
   - 数值结果
-  detail: 12,389 批 A/B 中 635 批错输出（误差 0.02–0.57，正确应 <0.02+0.02|ref|）、119 次 GPU fault；错误集中在 block 32/64/528 与 head 96/192/256；TRITON_ATTN 同输入 14,608 批全对
+  detail: RDNA+默认 ROCM_ATTN，head≥96/block≠16（含 hybrid block 528）或 MHA head192/256：12,389 批解码中 635 批静默错值（误差0.02–0.57）、119 次 GPU fault；TRITON_ATTN 同输入 14,608 批全对
   visibility: 静默错误
 mitigation:
   detect: 对 default 后端与 TRITON_ATTN 做 A/B logits/attention 比对
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - component
+    - detail
+    issue_unfixed:
+    - behavior

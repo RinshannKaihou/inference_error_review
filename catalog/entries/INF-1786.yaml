@@ -4,13 +4,13 @@ slug: ops_nn_conv_infershape_dw_fusion_nine_defects
 aliases: []
 title: CANN conv InferShape 与 DW 融合 pass 9 缺陷
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: cann
     component: conv infershape 与 DW 融合
-  behavior: 9 处静态确认缺陷：CheckConvGroups 动态 shape 下 groups==0 两道门均漏过致 kn%groups 除零 UB；GetConvDilations/ReportInputWithPadError 属性缺失时空指针
+  behavior: conv infershape 与 DW 融合 pass 9 处缺陷：groups==0+unknownShape 时两道门均漏、ic==kc*groups 恰好通过时 kn%groups 除零 UB；属性指针未判空；校验失败反返回通过
 effect:
   objects:
   - 数值结果
@@ -44,3 +44,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    rewritten:
+    - behavior
+    issue_unfixed:
+    - detail
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility

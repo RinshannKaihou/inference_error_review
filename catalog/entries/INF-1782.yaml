@@ -4,10 +4,10 @@ slug: vllm_f32_triton_tf32_default_mismatch
 aliases: []
 title: vLLM float32 模型 Triton kernel 默认 TF32 降精
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 量化
+  - subsystem: 算子/内核
     stack: vllm
     component: 三个 Triton kernel 的 tl.dot
   behavior: 三个 Triton kernel 的 float32 tl.dot 未设 input_precision，NVIDIA 上 Triton 默认 TF32（10 位尾数）；与 vLLM 自身 VLLM_FLOAT32_MATMUL_PRECI
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 固定种子复现：每 kernel 输出对 fp64 参考偏差约 1.5e-2×输出 RMS（IEEE 路径与 torch fp32 约 1e-5）；dtype=float32 服务（默认选 TRITON_ATTN）201 token prompt logprobs 默认 vs TRITON_F32_D
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 与 TRITON_F32_DEFAULT=ieee 对照跑同请求比 logprobs
   fix: 规避：环境变量 TRITON_F32_DEFAULT=ieee（同 kernel 即恢复 ~1e-5）；代码修复 PR 未见（待定）
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: 量化
+        to: 算子/内核
+      visibility:
+        from: 质量退化
+        to: 静默错误

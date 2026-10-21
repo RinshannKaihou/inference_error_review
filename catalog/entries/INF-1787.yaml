@@ -4,10 +4,10 @@ slug: vllm_eplb_record_mode_silent_stall
 aliases: []
 title: vllm-ascend EPLB record 模式静默失效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: MoE路由
     stack: vllm
     component: EplbUpdator/Worker record
   behavior: forward_before 不检查 record path 就生成并启动 D2D 专家权重迁移（loader 进入 TRANSFERRING），而 forward_end 在 record path 下跳过 update_expert_m
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: MoE路由
+    uncertain:
+    - effect
+    - behavior

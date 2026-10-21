@@ -4,7 +4,7 @@ slug: cann_ge_atc_reducemax_output_shape_not_reduced
 aliases: []
 title: onnx→om 后 ReduceMax 输出 shape 未规约
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    issue_unfixed:
+    - behavior
+    - detail

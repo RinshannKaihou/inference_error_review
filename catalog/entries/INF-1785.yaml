@@ -4,7 +4,7 @@ slug: ascend_pytorch_mimalloc_d2h_zero_pages
 aliases: []
 title: torch_npu D2H 后 Host 整页归零（mimalloc）
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -13,9 +13,10 @@ cause:
   behavior: PyTorch 2.10 起 ARM 默认 mimalloc，释放路径对 Host 内存打 MADV_FREE（LazyFree）；CANN 侧重新使用这些 Host 内存做 D2H 时未执行 mark dirty，LazyFree 标记残
 effect:
   objects:
+  - 数值结果
   - 跨请求/跨样本数据
   detail: A3+CANN 9.0.0：训练/推理无报错，内存压力较大时偶发精度尖刺；D2H 拷贝后 Host 侧出现大量 0 值，数量为页大小整数倍、变 0 区间按页对齐整页为 0；权重被读为 0 值
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 对 D2H 后 Host 缓冲做页粒度校验/抽查；内存压力下偶发是特征
   fix: 方案一：回退 ARM 默认 mimalloc 配置（改 PyTorch 原生取消 ARM 默认）；方案二：驱动层进程粒度开关 + torch_npu 感知 mimalloc 版本经环境变量透传 RTS 同步/异步路径防护（issue 给出两方案，落地状态未核实）
@@ -44,3 +45,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: 数值结果
+      visibility:
+        from: 不可复现
+        to: 静默错误

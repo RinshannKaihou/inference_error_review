@@ -4,10 +4,10 @@ slug: triton_sort_topk_not_permutation_negzero_nan
 aliases: []
 title: tl.sort/topk 对 ±0/NaN 行非排列（复制丢元）
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: triton
     component: _compare_and_swap 比较器
   behavior: 每对元素各自独立决定换与否：左侧用 x>y、右侧用 not(y>x)，两比较在互不为大于时（±0 混合或 NaN）都为 false，两侧不一致导致左元素保留、右元素取左值
@@ -42,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核

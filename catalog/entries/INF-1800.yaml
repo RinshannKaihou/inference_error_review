@@ -4,7 +4,7 @@ slug: cann_ge_maskedscatter_tiling_prepare_not_dispatched
 aliases: []
 title: MaskedScatter 漏调 TilingPrepare 致核数取错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 910A 上带 MaskedScatter 的用例精度比对不通过，编译与执行都不报错；tiling 日志里只看到进入 Tiling4MaskedScatter，core_num 与实际核数不一致，补调 TilingPrepare4MaskedScatter 后用例精度通过
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 打开 tiling 日志核对是否进入 TilingPrepare4MaskedScatter，并比对 tiling 下发的 core_num
   fix: 待定（issue closed，正文只给出补调 TilingPrepare4MaskedScatter 后精度通过，未给修复 PR）
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    issue_unfixed:
+    - behavior

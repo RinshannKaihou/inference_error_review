@@ -4,12 +4,12 @@ slug: tt_metal_deepseek_b1_matmul_k8192_tail_drop
 aliases: []
 title: BH DeepSeek B1 matmul K=8192 丢弃尾 K tile
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: tt-metal
-    component: deepseek_v3_b1 Matmul K=8
+    component: deepseek_v3_b1 单核 Matmul
   behavior: K=8192 时单核 Matmul 不使用激活的第 8176–8191 列（最后一个 K tile），仅尾 16 列非零的激活输出全零；K=8160 正确（机制定位未给出）
 effect:
   objects:
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - component

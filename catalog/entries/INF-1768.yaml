@@ -4,17 +4,17 @@ slug: ops_transformer_fia_v4_tnd_numkv_zero_garbage
 aliases: []
 title: FIA V4 TND 缺省 numKVHeads=0 静默全零/垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: FIA V4 TND 通路
-  behavior: TND 布局下 numKeyValueHeads 取默认 0 时不按 key/value 的 N 轴归一（BNSD 布局逐位正确），静默产出全 0 或未初始化显存内容；该值在 TND 通路还完全无校验（不整除/越界均不报错被截断）
+  behavior: TND 布局下 numKeyValueHeads 缺省/0（文档定义 0=key/value 头数等于 query）时静默返回错误结果；该参数在 TND 通路无校验，不整除与大于 numQueryHeads 均放行；BNSD 布局逐位正确
 effect:
   objects:
   - 数值结果
-  detail: 910B2+CANN 9.2.0 实测：TND 缺省/显式 0 输出与参考 max diff 5.01（MHA 全 0 8192/8192；变长两 batch 96.9% 零；GQA 64:8 全 0 524288/524288；GQA N8 KV1 maxabs 4.30 未初始化）；固定输入重复
+  detail: 910B2+CANN 9.2.0，TND+numKVHeads 缺省/0 时无报错静默出错：MHA 8192/8192、GQA 524288/524288、变长 96.9% 全零，GQA N8 KV1 未初始化显存 maxabs 4.30；同输入重复调用两形态交替；显式传实际头数或 BNSD 则正确
   visibility: 静默错误
 mitigation:
   detect: 与 fp32 参考实现做 sha1 指纹/max diff 比对；输出全 0 或 ±512 量级垃圾为特征
@@ -42,3 +42,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - behavior
+    - detail

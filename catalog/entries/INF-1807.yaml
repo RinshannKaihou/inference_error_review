@@ -4,7 +4,7 @@ slug: tiling_buildrtensor_uninit_tensordata_size
 aliases: []
 title: Tiling 上下文未初始化 TensorData 大小
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 算子在 tiling 里用 GetSize()/GetTensorData().GetSize() 判断输入输出大小时拿到 0，与 GeTensorDesc 记录的真实大小不一致，走错数据大小分支；所有形态可构造 DT 复现。
+  detail: 算子 tiling 按 0 字节判断输入输出，tilingdata 与实际张量大小脱节，编译与执行阶段均不报错；复用 BuildWithInputConstSuccess 的图构造可复现。触发面为所有经 TilingContextBuilder 构造 tiling 上下文的算子 tiling。
   visibility: 静默错误
 mitigation:
   detect: 在 tiling 回调里打印 tiling_context->GetInputTensor(i)->GetSize()，与 GeTensorDesc 的 tensor size 对比
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

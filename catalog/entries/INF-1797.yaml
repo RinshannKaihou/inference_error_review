@@ -4,18 +4,18 @@ slug: cann_ge_matmul_constfold_transpose_blocks_fusion
 aliases: []
 title: GE 常量折叠转置后 MatMul 与 eager 不再 bit 一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: cann
-    component: 常量折叠与 TensorMove 融合 pass
+    component: GE 常量折叠与后续融合 pass
   behavior: torch.compile 后 GE 把右矩阵 Transpose 的输出常量折叠成 Const，融合 pass 的入参类型校验因此失败、融合未开启，MatMul 的右矩阵路径与 eager 不同，编译后精度下降
 effect:
   objects:
   - 数值结果
-  detail: 最小用例 nn.Linear 加 view 即可复现：eager 下右矩阵在线转置，compile 后走常量折叠路径，两者结果不再 bit 一致、compile 版本精度更低；netron 打开 OM 首个 GE 图可见该 Transpose 输出已是 Const
-  visibility: 质量退化
+  detail: CANN 8.3.RC1.alpha003+torch 2.7.1 下 torch.compile/TorchAir 构图：同一 nn.Linear 最小用例 eager 与 compile 结果不一致、compile 精度更低；真实模型 q/k/v_proj 加 view 场景观察到同样现象。
+  visibility: 静默错误
 mitigation:
   detect: 对比 eager 与 compile 的中间结果，检查 OM 首个 GE 图中 Transpose 输出是否被折叠为 Const
   fix: 待定（issue closed，正文未给出修复 PR；报告者要求两条路径 bit 一致）
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    rewritten:
+    - component
+    - detail

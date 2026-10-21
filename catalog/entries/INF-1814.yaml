@@ -4,7 +4,7 @@ slug: ge_data_dump_bool_compare_nan
 aliases: []
 title: data dump 比较不支持 bool 致结果恒为 NAN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 测试判定
-  detail: 用 dump 定位 GE 图模式与 eager 精度不一致时，bool 类型算子的输入输出比较结果显示 NAN，这一层算子无法核对，只能跳过或换 dtype 规避。
-  visibility: 静默错误
+  detail: 在某 NPU 上定位 GE 图模式与 eager 模式精度不一致时，用 data dump 逐层比对算子输入输出，数值型 tensor 能给出比较结果，dtype 为 bool 的 tensor 比较结果一律显示 NAN，该层无法判断输入输出是否一致，只能绕过。
+  visibility: 数值异常
 mitigation:
   detect: 对 bool dtype 的 dump tensor 做一次比较，确认是否返回 NAN 而非通过/失败结论
   fix: 待定（需求：比较支持 bool 类型；issue closed，正文未给实现或 PR）
@@ -42,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail
+    uncertain:
+    - effect

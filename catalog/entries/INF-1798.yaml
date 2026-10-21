@@ -4,18 +4,18 @@ slug: cann_ge_air_export_missing_contiguous_conversion
 aliases: []
 title: air 离线图丢 contiguous 转换，余弦仅 0.65
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: cann
     component: TorchAir air 导出/静态图构图
-  behavior: 转静态图时 GE 没有像 torch.compile 那样自动插入 .contiguous 转换，online air 与 atc 导出的 om 在算子顺序和首个 transpose 的输入上都不同，同一模块离线推理精度大幅偏离
+  behavior: 转成静态图后，torch.compile 内部原本会做的 .contiguous 转换不再发生，tensormove 与 transpose 的执行顺序和输入被换掉，并非某个算子算错
 effect:
   objects:
   - 数值结果
   detail: 只做减均值除方差的模块：torchair online 与 pytorch 完全对齐，torchair.dynamo_export 出 air 再用 atc 出 om 后余弦相似度只有 0.65；逐个算子 dump io 可见 om 先做 tensormove、online 先做 transpose
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 同一模块分别跑 online torchair 与离线 air/om，逐算子 dump io 比对顺序与输入
   fix: 待定（issue closed，正文未给出修复 PR；规避方式是留在 online 链路）
@@ -42,3 +42,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    rewritten:
+    - behavior

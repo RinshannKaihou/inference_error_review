@@ -4,7 +4,7 @@ slug: tt_metal_embedding_llk_boundary_family
 aliases: []
 title: tt-metal SFPU 边界族：celu/i1/ldexp/silu 错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: WH n150 shipped/BH：celu(x=-100,alpha=-1) 返回 +1.0（torch -inf）；i1(±1000/100) 返回 ±1.15e37（torch ±inf），88.5~91.9 全钉常数；ldexp(inf,-0.00037)=3.3895e+38、ldexp
+  detail: shipped 复现：celu(x=-100,alpha=-1)=+1.0（torch -inf，WH/BH 一致）；i1(|x|>88.5) 均返回 ±1.15e37；bf16 ldexp(inf,-0.00037)=3.38953e+38；Quasar silu(-inf)=NaN（应 0）。
   visibility: 静默错误
 mitigation:
   detect: 边界值探针（±inf、负 alpha、88~92 区间）对照 torch
@@ -48,3 +48,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-20'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    rewritten:
+    - detail

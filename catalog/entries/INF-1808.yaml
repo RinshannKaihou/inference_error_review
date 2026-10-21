@@ -4,10 +4,10 @@ slug: transpose_shape_check_returns_success
 aliases: []
 title: 转置 shape 校验失败仍返回成功并产出数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: cann
     component: TransposeWithShapeCheck
   behavior: TransposeWithShapeCheck 发现目标 shape 与 permutation 推导结果不一致时只打 ACL_ERROR_GE_SHAPE_INVALID 日志、不返回错误，继续转置并返回 SUCCESS。
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel: []
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核

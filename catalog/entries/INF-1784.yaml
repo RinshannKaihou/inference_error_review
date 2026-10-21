@@ -4,7 +4,7 @@ slug: tt_metal_data_movement_dtype_grid_family
 aliases: []
 title: ttnn 搬运/转换族：typecast/embedding/divide 等
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -58,3 +58,16 @@ migration:
   - date: '2026-10-20'
     fields:
     - effect.detail
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - qwen3.8-max
+    - kimi-k3
+    - doubao-seed-2.1-pro
+    panel:
+    - deepseek-v4-pro
+    - MiniMax-M3
+    - hy3
+    - glm-5.3
+    issue_unfixed:
+    - detail
