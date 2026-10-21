@@ -33,6 +33,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/4456
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0187
 original:
   mechanism: cann/ops-nn issue 4456（2026-07-30，closed）：Ascend910B3、CANN 9.1.0-beta.3、ops-nn HEAD acfc1342574ce6631d66b5e2e6dfdd00d878ce21，用 build.sh --pkg --soc=ascend910b --ops=gather_elements_v2 编译并安装到 vendors/cann_scan_repro_nn 的自定义算子包（非 built-in）。index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h 中 T_IDX xGatherPos = idxLocal.GetValue(idxPos); uint64_t xDataOffset = xBaseOffset + xGatherPos * this->xPostDim_ + idxPostPos; T_X xValue = this->xGm_[xDataOffset].GetValue(0);——xGatherPos 使用前没有 [0, gatherDim) 检查，负值转无符号后变成巨大偏移，属 OOB GM 读或回绕。实测 self=[[0,1],[2,3],[4,5],[6,7]] fp32、dim=0：index[0][0]=-1 时 GetWorkspaceSize/Gather/Sync 全返回 0（SUCCESS）、out[0][0]=6.0（把 -1 当最后一行）；index[0][0]=-1000000 时同样全 SUCCESS、out[0][0]=0.0（未校验的越界读垃圾值）；本机 PyTorch 对 -1 与 -1000000 均拒绝（index is out of bounds for dimension 0 with size 4）。作者用三条证据确认跑的是源码内核：产物 .o 的 md5 与 vendor 安装目录同名 .o 一致、与 opp/built-in 同名文件不一致；source set_env.bash 后 ASCEND_CUSTOM_OPP_PATH 指向 vendor；临时移走 built-in 的 gather_elements_v2 内核目录后同一用例仍复现。
   source: 2026-07-30 GitCode cann/ops-nn issue https://gitcode.com/cann/ops-nn/issues/4456 （closed）
@@ -55,3 +56,7 @@ migration:
     - glm-5.3
     uncertain:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - pattern
