@@ -45,16 +45,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalog_tool as T  # noqa: E402
 
 API = "https://st8tp3ajl0df3n8b8l8qu.apigateway-cn-beijing.volceapi.com/v1/chat/completions"
-BASE = ("qwen3.8-max", "kimi-k3", "doubao-seed-2.1-pro")
-PANEL = ("deepseek-v4-pro", "MiniMax-M3", "hy3", "glm-5.3")
-FIXER, VERIFIERS = "qwen3.8-max", ("kimi-k3", "doubao-seed-2.1-pro")
-MODEL_OPTS = {"kimi-k3": {"temperature": 1.0}, "doubao-seed-2.1-pro": {"reasoning_effort": "low"}}
+BASE = ("glm-5.3-flash", "deepseek-v4.1-flash", "qwen3.8-flash")
+PANEL = ("kimi-k3", "glm-5.3", "qwen3.8-max")
+FIXER, VERIFIERS = "qwen3.8-max", ("kimi-k3", "glm-5.3")
+MODEL_OPTS = {"kimi-k3": {"temperature": 1.0}}
 TEXT_FIELDS = ("title", "component", "behavior", "detail")
 CAT_FIELDS = ("kind", "subsystem", "effect", "visibility")
 PROBLEMS = ("unsupported", "contradicts", "overstated", "missing_condition", "mixed")
 LABELS_ZH = {"meta": "元数据", "mechanism": "机制", "source": "来源", "behavior": "行为效应", "trigger_surface": "触发面",
              "signature": "隐藏态签名", "repro": "复现方式", "discovery": "发现来源", "notes": "回访"}
-QUORUM_BASE, QUORUM_PANEL, MAJ, FINAL = 2, 5, 2 / 3, ("unanimous", "panel7")
+QUORUM_BASE, QUORUM_PANEL, MAJ, FINAL = 2, 4, 2 / 3, ("unanimous", "panel6")
 
 
 # ---------------------------------------------------------------- prompts
@@ -169,7 +169,7 @@ def decide_cat(vals, panel):
     top, k = Counter(vals).most_common(1)[0]
     n = len(vals)
     if panel:
-        return top, "panel7" if n >= QUORUM_PANEL and k / n >= MAJ else "uncertain"
+        return top, "panel6" if n >= QUORUM_PANEL and k / n >= MAJ else "uncertain"
     return top, "uncertain" if n < QUORUM_BASE else ("unanimous" if k == n else "split")
 
 
@@ -180,7 +180,7 @@ def decide_bin(vals, panel):
     t, n = sum(vals), len(vals)
     final = t > n - t
     if panel:
-        return final, "panel7" if n >= QUORUM_PANEL and max(t, n - t) / n >= MAJ else "uncertain"
+        return final, "panel6" if n >= QUORUM_PANEL and max(t, n - t) / n >= MAJ else "uncertain"
     return final, "uncertain" if n < QUORUM_BASE else ("unanimous" if t in (0, n) else "split")
 
 
