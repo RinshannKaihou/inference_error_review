@@ -37,6 +37,7 @@ evidence:
 - url: https://gitcode.com/Ascend/torchair/pull/3761
   kind: gitcode_pr
 relations: []
+pattern: PAT-INF-0184
 original:
   mechanism: 'torchair 的 experimental/_inductor_npu_ext/python/inductor_npu_ext/compiler/_autotune.py 在 profiler 计时阶段，c_args = [_to_ctypes_arg(arg) for arg in args]，而 _to_ctypes_arg 返回 c_void_p(arg.data_ptr())，随后逐个候选执行 wrapper_func(*c_args, c_void_p(0), kernel_key)。list(args) 只是浅拷贝：列表是新的，张量仍指向同一块显存。当候选 kernel 为原地算子（in-place 修改输入）时，计时过程中会写穿调用方真实输入缓冲区：(1) autotune 结束后真实输入已被污染，后续正式执行读到错误数据，表现为精度异常；(2) 计时循环在已被修改的数据上重复执行，各候选的对比数据不一致，选优结论也不可信。同类保护在编译期 real run 已存在——cpp_wrapper.py 对 mutated_inputs 使用 clone_preserve_strides——但 autotune 计时路径遗漏了。修复方案为计时阶段给所有 Tensor 输入建私有副本（clone_preserve_strides，保留 stride/内存布局），每轮计时前从留底副本恢复，非 Tensor 参数仍按原 ABI 传递。关联 PR：master #3760、26.2.0 #3761。'
   source: 2026-09-23 GitCode Ascend/torchair issue https://gitcode.com/Ascend/torchair/issues/833 （closed，关联 PR https://gitcode.com/Ascend/torchair/pull/3760 、https://gitcode.com/Ascend/torchair/pull/3761 ）
@@ -59,3 +60,7 @@ migration:
     - glm-5.3
     rewritten:
     - detail
+  updates:
+  - date: '2026-10-21'
+    fields:
+    - pattern
