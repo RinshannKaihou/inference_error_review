@@ -4,7 +4,7 @@ slug: aclrt_batch_api_num_silent_narrowing
 aliases: []
 title: aclrt 批量接口 num 窄化后静默只处理前几项
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -48,3 +48,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

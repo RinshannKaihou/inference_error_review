@@ -4,7 +4,7 @@ slug: mindspore_fmod_int32_graph_to_float64
 aliases: []
 title: fmod 整型输入在 GRAPH 下被提升为 Float64
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: '[-7,-1,1,7] 对 [3,2,2,3] 求余：PyNative 得 Int32 [-1 -1 1 1]，GRAPH 得 Float64 [-1. -1. 1. 1.]；下游按整型做索引或位运算的代码在 jit 下拿到浮点张量'
+  detail: '[-7,-1,1,7] 对 [3,2,2,3] 求余：PyNative 得 Int32 [-1 -1 1 1]，GRAPH(@jit) 得 Float64 [-1. -1. 1. 1.]；靠 dtype 分支、pack 成整型 buffer 或当索引处才会出错'
   visibility: 静默错误
 mitigation:
   detect: 同一函数在 PYNATIVE_MODE 与 GRAPH_MODE 下分别打印 asnumpy().dtype，把 dtype 一致性纳入算子回归
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

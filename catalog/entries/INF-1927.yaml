@@ -2,15 +2,15 @@ id: INF-1927
 legacy_ids: []
 slug: vllm_ascend_megamoe_sym_buffer_garbled
 aliases: []
-title: MegaMoe 融合 MC2 缓冲不足致全量请求乱码
+title: MegaMoe 融合 MC2 启用后请求乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: vllm
     component: MegaMoe 融合 MC2 缓冲
-  behavior: 融合 MC2 把 MoE 通信与计算合并,sym-buffer 按 mega_moe_max_tokens 申请,8192 远低于 512×64×16×14=458752 的安全上界,代码注释写明溢出会精度退化
+  behavior: MegaMoe 融合 MC2 疑似缓冲区溢出；mega_moe_max_tokens=8192 相对 458752 的安全上界低约 56 倍，代码注释称溢出会精度退化，且怀疑不止缓冲区溢出。
 effect:
   objects:
   - 输出内容
@@ -43,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - title

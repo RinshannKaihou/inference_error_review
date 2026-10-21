@@ -4,13 +4,13 @@ slug: swiglu_quant_v2_nz_a8w4_shape_infer_wrong
 aliases: []
 title: swiglu_quant_v2 在 NZ+A8W4 下形状推导错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: swiglu_quant_v2 形状推导
-  behavior: weight 先 npu_format_cast 成 NZ（29）再按 A8W4 打包调用时，npu_grouped_matmul_swiglu_quant_v2 推导出的输出 shape 与打包后的 N 不符。
+  behavior: int8 weight 先按 N 维两两打包成 quint4x2 再 npu_format_cast 成 NZ（29）后，npu_grouped_matmul_swiglu_quant_v2 的两个输出 shape 推导不正确。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化
+    rewritten:
+    - behavior

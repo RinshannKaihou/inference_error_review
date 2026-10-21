@@ -4,18 +4,18 @@ slug: glm52_w4a8c8_mtp_long_ctx_repetition
 aliases: []
 title: GLM-5.2 W4A8C8 开 MTP 长上下文间歇复读不停
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
     stack: vllm
-    component: MTP 推测解码接受路径
+    component: MTP 推测解码
   behavior: 长上下文工具请求 + MTP 推测解码下 token 流进入周期性复读，引擎不产生终止符；parser 报出的残缺工具参数只是下游症状。
 effect:
   objects:
   - 输出内容
   detail: 两次压测分别 9/1000、3/300 请求复读（约 0.9–1%），周期 8 或 768 token；HTTP 200 持续吐 SSE 但无 finish_reason/[DONE]；temperature=0 时 0/300。
-  visibility: 不可复现
+  visibility: 质量退化
 mitigation:
   detect: 开 return_token_ids 抓原始 output.token_ids，检测周期 ≤64 的重复模式（max_pattern_size=64/min_pattern_size=8/min_count=4 可检出全部 3 个失败流）
   fix: '待定（issue open；#13865 的接受计数修复已在现场版本里仍复现，parser 侧 #45915/#46351 也不能覆盖）'
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 质量退化
+    rewritten:
+    - component

@@ -4,7 +4,7 @@ slug: torchair_isfinite_missing_converter_silent_symshape
 aliases: []
 title: isfinite 缺 converter 致符号形状静默降级
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -13,9 +13,10 @@ cause:
   behavior: aten/ 目录下缺 isfinite.py，符号形状推导按 _CONVERTERS 分发调用 aten.isfinite.default 查不到注册项，异常被 silent 降级函数吞成 warning。
 effect:
   objects:
+  - 可用性/进度
   - 数值结果
   detail: dynamic shapes 下图模式对 isfinite 的符号形状推导缺失，伴随 evaluate_expr(8*Max(1, s67) > 8) 求值失败（reshape 硬编码形状与动态维冲突），只在 warning 级别暴露。
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: dynamic shapes 图模式下对含 aten.isfinite 的图开 TORCH_LOGS 看是否有符号形状推导 warning；检查 ge_converter/aten 下是否存在 isfinite.py
   fix: 待定（issue open；报告建议照 aten/isinf.py 新建 ge_converter/aten/isfinite.py 调 ge.IsFinite，该目录由 pkgutil 自动发现，无需额外注册）
@@ -42,3 +43,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 可用性/进度
+      visibility:
+        from: 静默错误
+        to: 报错
+    uncertain:
+    - detail

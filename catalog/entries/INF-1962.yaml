@@ -4,7 +4,7 @@ slug: ngram_spec_decode_garbage_output
 aliases: []
 title: ngram 推测解码输出与 prompt 无关的杂串
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: prompt '123412'、temperature=0、max_tokens=12 时输出「34这条路的长度是1000米…forbidden, 123oud, 1AMENT, 1itol」这类杂串。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: short prompt + temperature=0 跑 ngram 推测，与非推测输出逐 token 比对；出现与 prompt 无关的 token 即命中
   fix: 'vllm-ascend PR #4090（已合入：Fix ngram precision issue and open e2e ngram test）'
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误

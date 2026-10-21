@@ -4,7 +4,7 @@ slug: glm51_w4a8_mc2_cann9_all_bang
 aliases: []
 title: W4A8 开 MC2 在 CANN 9.0 上返回全感叹号
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: GLM-5.1-w4a8 开 MC2、CANN 9.0 镜像时回复全是感叹号，同环境 w8a8 正常拉起；换 commit 后 w4a8 可用但 w8a8 精度又坏（#9554）。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 同一权重在 w4a8/w8a8 两种量化与开/关 MC2 两组配置下各发一条请求，比对是否出现整段感叹号或符号
   fix: 待定（issue 以 stale 关闭；维护者建议把两个 commit 的 dispatchFFNcombine 改动 diff 后合并到同一分支）
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    uncertain:
+    - effect

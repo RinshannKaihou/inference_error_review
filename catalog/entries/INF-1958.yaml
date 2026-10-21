@@ -4,13 +4,13 @@ slug: stop_token_ids_out_of_range_unvalidated
 aliases: []
 title: 越界 stop_token_ids 直下设备，9.0 静默脏 logits
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
     stack: vllm
     component: stop_token_ids 范围校验
-  behavior: _verify_common 只校验类型不校验词表范围（logit_bias/allowed_token_ids 都有），越界 id 被当 logits 索引进设备侧采样。
+  behavior: _verify_common 只校验 stop_token_ids 是否 int，不校验词表范围；越界 id 仅在 proxy 注入 min_tokens=1 或用户自带 min_tokens>0 而走设备侧时被当 logits 索引。
 effect:
   objects:
   - 输出分布
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    uncertain:
+    - effect
+    - visibility

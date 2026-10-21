@@ -4,13 +4,13 @@ slug: glm45_dp_ep_allgather_moe_comm_wrong
 aliases: []
 title: DP+EP 下 allgather MoE 通信方法实现错误致输出混乱
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
     stack: vllm
     component: allgather moe_comm_method
-  behavior: 开启 EP 时 allgather 版 moe_comm_method 实现有误，专家分发的 token 与结果合并不匹配；只开 TP 不走这条路径。
+  behavior: 开启 EP 时 allgather moe_comm_method 实现错误；纯 TP 路径不受影响。
 effect:
   objects:
   - 输出内容
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

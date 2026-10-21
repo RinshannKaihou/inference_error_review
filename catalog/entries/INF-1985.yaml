@@ -4,7 +4,7 @@ slug: scatter_pa_kv_cache_slot_upper_bound_missing
 aliases: []
 title: ScatterPaKvCache normal 路径缺 slot 上界校验
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - KV状态
-  detail: slotMapping=100（容量 32 槽）时 GetWS/Launch/Sync 全 SUCCESS，scatter 写到块外；arch22 路径与 arch35 行为不一致
+  detail: slotMapping 超出 [0, num_blocks*block_size-1]（如容量32槽时 slot=100）调用 aclnnScatterPaKvCache，GetWS/Launch/Sync 全 SUCCESS，实际写到块外。
   visibility: 静默错误
 mitigation:
   detect: 用 slot >= num_blocks*block_size 的 slotMapping 调 aclnnScatterPaKvCache，断言参数错误；比对 arch35 与 arch22 是否都拒绝
@@ -49,3 +49,12 @@ migration:
   - date: '2026-10-21'
     fields:
     - pattern
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

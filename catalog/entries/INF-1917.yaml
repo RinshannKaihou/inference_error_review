@@ -4,7 +4,7 @@ slug: vllm_ascend_glm5next_kpool_tail_pad_slot_mapping_mtp
 aliases: []
 title: MTP drafter 的 KPool tail 槽位被整表填成 PAD
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -16,7 +16,7 @@ effect:
   - KV状态
   - 输出分布
   detail: GLM-5-Next MTP 的 tail 组走 per-group 路径只拿到 PAD_SLOT_ID，tail KV 写入落到填充槽；nightly test_glm5next_tail_slot_mapping_triton 4/4 失败，27 个槽位里 8 个变 PAD
-  visibility: 静默错误
+  visibility: 质量退化
 mitigation:
   detect: 跑 tests/e2e/nightly/single_node/ops/singlecard_ops/triton/test_glm5next_tail_slot_mapping_triton.py；或对 GLM-5-Next MTP 的 tail 组比对 per-group 与融合路径算出的 slot_mapping
   fix: issue open，无修复 PR；方向是让短路只对真正忽略 slot_mapping 的 circular spec（DSV4.1 CircularBufferSpec）生效，不要用 is_circular 这个宽谓词
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化

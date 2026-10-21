@@ -4,7 +4,7 @@ slug: torchair_regional_reduce_overhead_memreuse_wrong
 aliases: []
 title: regional_compile 内存复用开启后精度错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: CANN_1015 + torch 2.6.0 + torch_npu 2.6.0.post3.dev20251028（arm）：开内存复用的输出与关闭时不一致，报告只给打屏数值、未给误差量级。
+  detail: regional_compile+mode=reduce-overhead 的多 region 图下，同一模型同一组输入开启内存复用后输出与关闭时不一致，首几个元素明显不同；关闭内存复用恢复，编译执行不报错且形状一致。
   visibility: 静默错误
 mitigation:
   detect: 同一模型在 regional_compile + reduce-overhead 下开关内存复用各跑一次，逐元素比对输出；先排除模型本身非确定性
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - title

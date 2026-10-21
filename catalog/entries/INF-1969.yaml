@@ -4,7 +4,7 @@ slug: npugraph_ex_graph_break_precision_regress
 aliases: []
 title: npugraph_ex 断图后输出精度异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: CANN 20260330 构建 + torch_npu 26.0.0-20260326-07：加 print 断图后结果与 eager 不一致，去掉断图或回退前一日构建即正常，报告未给误差量级。
+  detail: CANN 20260330_000324630_newest、torch_npu 26.0.0-20260326-07：加 print 断图后结果与 eager 不一致，去掉断图或回退 26.0.0-20260325-19 即正常。
   visibility: 静默错误
 mitigation:
   detect: 同脚本加/不加 print 各跑一次并逐元素比对；用相邻两天的 torch_npu 构建做二分，确认断图路径是否引入差异
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

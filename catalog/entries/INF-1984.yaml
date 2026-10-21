@@ -4,7 +4,7 @@ slug: expint_clamp_dead_branch_saturate
 aliases: []
 title: expint 钳位后比较 +inf 成死分支，大值恒返 Ei(88)
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

@@ -4,7 +4,7 @@ slug: triton_exp_outer_rsplit_oob_grad
 aliases: []
 title: OUTER split-reduction 越界写致梯度错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -16,7 +16,7 @@ effect:
   - 梯度
   - 数值结果
   detail: hf_Bert fp32 训练：前向输出仍正确，首步梯度已大量失配，第 3 步 loss 突变、第 4 步起 NaN；同模型 eager 训练正常。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: 跑原生 TorchBench BERT 系列 FP32 训练 accuracy（hf_Bert），对比 eager 的 prediction/loss/梯度/参数更新；前向对得上但梯度整体失配是特征
   fix: 待定（issue 已 closed，正文只给三条期望行为，未给修复 PR）
@@ -43,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常

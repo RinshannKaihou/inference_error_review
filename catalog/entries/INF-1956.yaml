@@ -4,13 +4,13 @@ slug: layerwise_recv_counter_hardcoded_zero
 aliases: []
 title: Layerwise 完成计数硬编码 0，无法判断 KV 是否生效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: vllm
     component: layerwise KV 接收计数日志
-  behavior: Decoder 侧「Number of completed KV cache recv requests」被硬编码打印 0，真实完成数没接进来；只有 DP0 的相关日志能反映接收。
+  behavior: Decoder 侧「Number of completed KV cache recv requests」被硬编码打印为 0，不反映实际接收；需查看 DP1 的 receive requests 日志。
 effect:
   objects:
   - 指标/日志
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

@@ -4,17 +4,17 @@ slug: msprobe_backward_empty_for_autograd_function
 aliases: []
 title: autograd.Function 子类反向 L1 采集无数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
-    component: msprobe L1 dump 反向 hook
+    component: msprobe L1 采集
   behavior: L1 采集对 autograd.Function 子类只采到 forward 内的 torch api，backward 里的 grad_output.t().mm(input) 等调用一条都采不到，也不提示该层反向未被覆盖
 effect:
   objects:
   - 指标/日志
-  detail: dump 里该层反向段为空、forward 段正常，使用者无法从产物判断反向是否采到；示例 CustomLinearFunction 在 GPU + torch_npu 上必现
+  detail: msprobe L1 采集自定义 autograd.Function 子类时，dump 中 forward 段有数据、反向段为空且不提示漏采；按层逐条检查才发现缺了一段。GPU+torch_npu 示例中出现。
   visibility: 静默错误
 mitigation:
   detect: 采集后按层核对 forward/backward 两段是否都有算子记录，对缺失反向的层改用 module 级或 tensor 级补采
@@ -42,3 +42,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - component
+    - detail

@@ -4,10 +4,10 @@ slug: msmodelslim_quant_artifact_generation_config
 aliases: []
 title: 量化产物 generation_config 覆盖采样致输出退化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: 量化
     stack: pytorch
     component: 量化产物 generation_config
   behavior: msmodelslim 26.1.0 保存量化权重时原样带出含 top_k=2、top_p=0.6、temperature=0.8、do_sample 的 generation_config.json，vLLM 启动时用它覆盖默认采样参数
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: 量化

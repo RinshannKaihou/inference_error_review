@@ -4,13 +4,13 @@ slug: mindspore_grad_in_jit_returns_empty_tuple
 aliases: []
 title: jit 内调用 ms.grad 静默返回空 tuple
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: mindspore
     component: jit 内嵌套 grad 的反向图
-  behavior: 把 ms.grad 包在 @ms.jit 里时 GRAPH 模式不构建反向图，直接返回 () 而不是梯度张量；同一函数在 PyNative 返回 [2. 4. 6]，全程无报错
+  behavior: GRAPH 模式下把 ms.grad 嵌套进 @ms.jit 时返回空 tuple 而非梯度张量；同一嵌套求导在 PyNative 下正常。
 effect:
   objects:
   - 梯度
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

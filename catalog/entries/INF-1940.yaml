@@ -4,13 +4,13 @@ slug: msprobe_statistics_null_for_fp16_tensors
 aliases: []
 title: 统计量采集对部分 fp16 张量输出 null
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
     stack: pytorch
     component: msprobe statistics 采集
-  behavior: 图模式 cudagraph FULL_DECODE_ONLY 下 statistics 模式对部分 fp16 张量的 Max/Min/Mean/Norm 全写 null，同 dtype 其他张量正常，日志把原因统一归为低精度
+  behavior: FULL_DECODE_ONLY 图模式 statistics 采集时，部分 fp16 张量 Max/Min/Mean/Norm 为 null，同 dtype 其他张量正常，日志仅提示 Invalid statistics detected
 effect:
   objects:
   - 指标/日志
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

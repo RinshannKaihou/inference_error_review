@@ -4,17 +4,17 @@ slug: vllm_ascend_dsv4_block_size_silent_override
 aliases: []
 title: DSv4 混合 KV 管理静默把 block-size 改成 32
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 配置/参数
+  - subsystem: KV缓存
     stack: vllm
     component: block-size 传播（hybrid KV）
   behavior: DSv4 传 --block-size 128 且未关 hybrid KV manager 时,CompressorStateCache 经 core.py 的 min() 把 block_size 静默改成 32,只打一条 warning
 effect:
   objects:
   - 性能/资源
-  detail: 用户以为按 128 的块粒度分配 KV,实际按 32 运行;块大小变化影响前缀缓存命中与调度粒度,不报错,只能靠 warning 或打印配置发现
+  detail: 用户以为按 128 的块粒度分配 KV，实际按 32 运行；块大小变化影响前缀缓存命中与调度粒度，服务不报错，只有翻日志才能看到一行 warning。
   visibility: 静默错误
 mitigation:
   detect: 启动后打印 cache_config.block_size 与 CLI 传入值比对,或用 --no-disable-hybrid-kv-cache-manager 与关闭该 manager 两组配置做对照
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 配置/参数
+        to: KV缓存
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: vllm_ascend_glm52_mtp_shared_index_state_unexposed
 aliases: []
 title: GLM-5.2 MTP 共享 index 状态未暴露致草稿读错行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出分布
   - 输出内容
-  detail: index_share_for_mtp_iteration 在 Ascend 上不生效：draft step 1+ 读到未按请求对齐的共享 top-k 行，草稿 token 质量退化；PR 15754/14451/15759 按主线与两条 release 分支修复
+  detail: 'GLM-5.2 MTP 且 index_share_for_mtp_iteration 时，Ascend 上 draft step 1+ 读到未按请求对齐的共享 top-k 行，草稿 token 质量退化；已由 PR #15754/#14451/#15759 修复。'
   visibility: 质量退化
 mitigation:
   detect: 开 index_share_for_mtp_iteration 的 GLM-5.2 MTP 服务，比对 draft 接受率与关掉共享 index 时的差异；或断言 MTP 层初始 skip_topk 为 False、draft step 0 后 topk_indices_buffer 已按 token_indices_to_sample 压缩
@@ -43,3 +43,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - effect
+    - visibility

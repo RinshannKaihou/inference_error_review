@@ -4,7 +4,7 @@ slug: minimax_m27_w8a8_ep_allgather_garbage
 aliases: []
 title: MiniMax-M2.7 w8a8 在 ALLGATHER 路径输出无意义内容
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: MiniMax-M2.7-w8a8 在 910B TP8 + --enforce-eager 下对「中国的首都是」返回无意义串；加 --enable-expert-parallel 与 FLASHCOMM1=1 后恢复。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 同一请求分别在 ALLGATHER（默认）与 EP+FLASHCOMM1 下各跑一次，比对输出；或直接检查 _EXTRA_CTX.moe_comm_type 与 flash_comm_v1_enabled
   fix: 启动时同时加 --enable-expert-parallel 与 export VLLM_ASCEND_ENABLE_FLASHCOMM1=1（issue 评论给出的规避）；issue 仍 open，未见修复 PR
@@ -42,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    uncertain:
+    - subsystem
+    - effect
+    - behavior

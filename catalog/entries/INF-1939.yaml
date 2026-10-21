@@ -4,13 +4,13 @@ slug: vllm_ascend_eagle3_sp_drafter_acceptance
 aliases: []
 title: eagle3 开 SP 后草稿 token1 接受率掉到 0.08
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 解码/采样
+  - subsystem: 并行切分
     stack: vllm
     component: eagle3 草稿前向（SP）
-  behavior: 打开序列并行（VLLM_ASCEND_ENABLE_FLASHCOMM1=1 使 sp_enabled）后,eagle3 草稿模型与目标模型的分布对不上,token0/token1 位置接受率明显偏低;同权重同脚本关掉 SP 即恢复正常水平
+  behavior: 启用 SP/FLASHCOMM1 后，eagle3 草稿模型在 SP 路径上的分布/精度异常，第二个及以后草稿 token 几乎不被接受；同权重同脚本关闭 SP 即恢复
 effect:
   objects:
   - 输出分布
@@ -43,3 +43,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 解码/采样
+        to: 并行切分
+    rewritten:
+    - behavior
+    uncertain:
+    - visibility

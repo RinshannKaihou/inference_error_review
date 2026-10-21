@@ -4,7 +4,7 @@ slug: embedding_bag_indices_no_range_check
 aliases: []
 title: EmbeddingBag 不校验 indices 范围，越界取到垃圾行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: weight [8,16]、indices=[0,8] 或 [0,-1] 时 GetWS/Launch/Sync 全 SUCCESS，bag 输出为相邻/越界行的垃圾值，PyTorch embedding_bag 对该输入直接报错
+  detail: aclnnEmbeddingBag 在 weight [8,16]、indices [0,8] 或 [0,-1]、offsets [0,2]、mode=sum 时，越界与负索引均返回 SUCCESS，但 bag 输出错误，exit 42；PyTorch embedding_bag 对同样输入拒绝。
   visibility: 静默错误
 mitigation:
   detect: 用 indices 含 num_weights 与 -1 的用例调 aclnnEmbeddingBag，断言参数错误；与 torch.nn.functional.embedding_bag 输出对拍
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

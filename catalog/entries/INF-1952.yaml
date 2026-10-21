@@ -4,7 +4,7 @@ slug: fuse_qknorm_rope_const_token_loop
 aliases: []
 title: fuse_qknorm_rope 融合致图模式恒定输出同一 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -13,9 +13,10 @@ cause:
   behavior: v0.18.0 图编译下开启 fuse_qknorm_rope 融合后注意力输入被改错，解码退化为每次都选同一个 token；关掉该开关即恢复。
 effect:
   objects:
+  - 数值结果
   - 输出内容
-  detail: Qwen2.5-1.5B-Instruct 默认启动（非 eager）时对任意 prompt 都输出「\nB\nB\nB\n」；加 --enforce-eager 或关 fuse_qknorm_rope 后输出正常。
-  visibility: 质量退化
+  detail: v0.18.0图模式、fuse_qknorm_rope默认开启、贪心解码时，Qwen2.5-1.5B-Instruct非eager对「San Francisco is a」返回「\nB\nB\nB\n」等同一token重复；加--enforce-eager或关融合后正常。
+  visibility: 静默错误
 mitigation:
   detect: 固定 prompt + temperature=0 各跑一次，比对 eager 与图模式输出是否一致；出现整段重复单字符即为该症状
   fix: 'serve 时加 --additional-config ''{"ascend_compilation_config": {"fuse_qknorm_rope": false}}''（issue 评论给出的规避）；issue 仍 open，未见修复 PR，现场疑与 CANN 驱动版本有关'
@@ -42,3 +43,24 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 数值结果
+      visibility:
+        from: 质量退化
+        to: 静默错误
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem
