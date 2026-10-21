@@ -3,14 +3,14 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 1795 条；状态：active 1761、pending_audit 34
+共 1816 条；状态：active 1761、pending_audit 55
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 504 |
-| 编译器 | 104 |
-| 运行时/执行 | 104 |
+| 算子/内核 | 506 |
+| 编译器 | 117 |
+| 运行时/执行 | 109 |
 | 集合通信 | 22 |
 | 并行切分 | 15 |
 | KV缓存 | 309 |
@@ -28,7 +28,7 @@
 | MoE路由 | 32 |
 | 重计算/卸载 | 6 |
 | RL训练回路 | 1 |
-| 观测/评测 | 41 |
+| 观测/评测 | 42 |
 | 配置/参数 | 5 |
 | 构建/发布 | 5 |
 | 模型自身 | 16 |
@@ -5955,6 +5955,28 @@
 - **改进措施**：检测 重合点/零距离探针比对 torch cdist 反传；修复 修复 MR https://gitcode.com/cann/ops-math/merge_requests/6518 （merged 2026-10-20T01:57；发布未核实）
 - **来源**：https://gitcode.com/cann/ops-math/merge_requests/6518；https://gitcode.com/cann/ops-math/issues/3677
 
+### INF-1810 `ge_roll_ignores_dims_flatten_shift` GE Roll 忽略 dims 退化为一维移位致精度异常
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：算子/内核 / cann / GE Roll 算子
+- **原因行为**：dims 不为 0 时 Roll 忽略 dims，退化成按 flatten 的一维循环移位，多 axis 的 shift 落到错误元素上。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：TorchAir 图模式下 Swin 窗口注意力的 torch.roll(dims=(2,3)) 结果错位、模型精度下降；改用 cat 手工移位后精度恢复，eager 无此问题（910B3 / CANN 25.5.0）。
+- **改进措施**：检测 图模式下对 dims≠0 的 roll 与 eager/cat 等价实现逐元素比对；修复 规避：用 cat/slice 按 dim 手工实现 roll（报告者验证精度恢复）；待定（issue closed，正文未给修复 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/453
+
+### INF-1815 `reciprocal_backward_inf_huge_error_cann900` CANN 9.0.0 上 Reciprocal 反向出现 inf 与极大误差
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：算子/内核 / cann / Reciprocal 反向算子
+- **原因行为**：CANN 9.0.0 210 版本上 Reciprocal 算子的反向梯度计算异常，float64 随机输入下与 torch 比对出现 inf 与极大误差。
+- **影响对象**：梯度（数值异常）
+- **影响详情**：动态 shape 单算子用例在 grad_dynamic_shape_cmp 断言失败：期望值 -3.58e-01 对应误差 8.26e14，另有 inf，远超 1e-05 容差；同一用例前向比对步骤未报错。
+- **改进措施**：检测 float64 动态 shape 下跑 Reciprocal 单算子反向，与 torch 对拍并单独筛 inf/超大误差项；修复 待定（issue closed，正文未给根因、修复 PR 或规避方式）
+- **来源**：https://gitcode.com/cann/ge/issues/237
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -7120,6 +7142,149 @@
 - **改进措施**：检测 对融合前后图做等价性校验/输出与 eager 对照；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/12390 （open：静态扫描+人工逐条溯源确认 9 处；opgraph 1218 UT 过、depthwise 68/68、ophost 8530 过；未发布）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/6961；https://gitcode.com/cann/ops-nn/merge_requests/12390
 
+### INF-1796 `cann_ge_graph_mode_first_step_logits_nan_tiling_offset` GE 图模式 tiling 偏移越界致首步 logits 全 NaN
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / GE/TBE 图模式 tiling 下发
+- **原因行为**：图模式 tiling 偏移越界（告警 tiling offset out of range, index: 32），算子按错误 tiling 读写，首个 step 的 logits 直接成 NaN；同一模型 eager 与 ONNX 正常
+- **影响对象**：输出分布；输出内容（数值异常）
+- **影响详情**：Qwen2.5-0.5B-Instruct 固定 shape [1,16]、prompt hello world 的 step_00：top-5 logits 全 NaN、logit_min/max 均 NaN，生成退化为感叹号串；同输入 HF eager NPU 与 ONNX 均正常
+- **改进措施**：检测 同输入对比 eager/ONNX 与图模式 logits，并抓 tiling offset out of range 告警；修复 待定（issue closed，正文未给出修复 PR 或规避参数）
+- **来源**：https://gitcode.com/cann/ge/issues/314
+
+### INF-1797 `cann_ge_matmul_constfold_transpose_blocks_fusion` GE 常量折叠转置后 MatMul 与 eager 不再 bit 一致
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / 常量折叠与 TensorMove 融合 pass
+- **原因行为**：torch.compile 后 GE 把右矩阵 Transpose 的输出常量折叠成 Const，融合 pass 的入参类型校验因此失败、融合未开启，MatMul 的右矩阵路径与 eager 不同，编译后精度下降
+- **影响对象**：数值结果（质量退化）
+- **影响详情**：最小用例 nn.Linear 加 view 即可复现：eager 下右矩阵在线转置，compile 后走常量折叠路径，两者结果不再 bit 一致、compile 版本精度更低；netron 打开 OM 首个 GE 图可见该 Transpose 输出已是 Const
+- **改进措施**：检测 对比 eager 与 compile 的中间结果，检查 OM 首个 GE 图中 Transpose 输出是否被折叠为 Const；修复 待定（issue closed，正文未给出修复 PR；报告者要求两条路径 bit 一致）
+- **来源**：https://gitcode.com/cann/ge/issues/63
+
+### INF-1798 `cann_ge_air_export_missing_contiguous_conversion` air 离线图丢 contiguous 转换，余弦仅 0.65
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / TorchAir air 导出/静态图构图
+- **原因行为**：转静态图时 GE 没有像 torch.compile 那样自动插入 .contiguous 转换，online air 与 atc 导出的 om 在算子顺序和首个 transpose 的输入上都不同，同一模块离线推理精度大幅偏离
+- **影响对象**：数值结果（质量退化）
+- **影响详情**：只做减均值除方差的模块：torchair online 与 pytorch 完全对齐，torchair.dynamo_export 出 air 再用 atc 出 om 后余弦相似度只有 0.65；逐个算子 dump io 可见 om 先做 tensormove、online 先做 transpose
+- **改进措施**：检测 同一模块分别跑 online torchair 与离线 air/om，逐算子 dump io 比对顺序与输入；修复 待定（issue closed，正文未给出修复 PR；规避方式是留在 online 链路）
+- **来源**：https://gitcode.com/cann/ge/issues/60
+
+### INF-1799 `cann_ge_acl_mslite_conv2d_fp32_bias_cast_fp16` mslite/ACL 构图把 conv2d 的 fp32 bias 转 fp16
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / ACL/mslite 构图精度转换 pass
+- **原因行为**：GE 走 ACL 流程把模型转 mslite 时，精度转换 pass 把 conv2d 的 x、filter、bias 全转 fp16；原本 x/filter 为 fp16、bias 为 fp32 时输出应为 fp32，转换后精度被降级
+- **影响对象**：数值结果（质量退化）
+- **影响详情**：300I Duo 上 Torch 前向可复现 fp32 输出，同模型走 ACL 转 mindir 后 PreRunAfterOptimizeAfterStage1 阶段的 GE 图里 conv2d 三个输入全为 fp16，需要高精度的模型输出掉精度且无任何报错
+- **改进措施**：检测 dump PreRunAfterOptimizeAfterStage1 阶段的 GE 图，核对 conv2d 各输入 dtype 与 Torch 前向是否一致；修复 待定（issue 为咨询性质已 closed，正文未给出做转换的 pass 名称与保留 bias fp32 的开关）
+- **来源**：https://gitcode.com/cann/ge/issues/222
+
+### INF-1800 `cann_ge_maskedscatter_tiling_prepare_not_dispatched` MaskedScatter 漏调 TilingPrepare 致核数取错
+
+`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / GE tiling 函数调度
+- **原因行为**：执行 MaskedScatter 时只调 Tiling4MaskedScatter，漏调 TilingPrepare4MaskedScatter，core_num 取错，910A 上精度不达标；补 prepare 后通过
+- **影响对象**：数值结果（质量退化）
+- **影响详情**：910A 上带 MaskedScatter 的用例精度比对不通过，编译与执行都不报错；tiling 日志里只看到进入 Tiling4MaskedScatter，core_num 与实际核数不一致，补调 TilingPrepare4MaskedScatter 后用例精度通过
+- **改进措施**：检测 打开 tiling 日志核对是否进入 TilingPrepare4MaskedScatter，并比对 tiling 下发的 core_num；修复 待定（issue closed，正文只给出补调 TilingPrepare4MaskedScatter 后精度通过，未给修复 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/329
+
+### INF-1801 `cann_ge_hcom_allreduce_count_aligned_up` 静态图 AllReduce 的 count 被按对齐抬到 131200
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / HcomAllReduce count 推导
+- **原因行为**：静态图 HcomAllReduce 的 count 不是用户张量的元素数，而是按对齐后的字节数反推：输入 131071 个 float32 时日志打印 count[131200]，集合通信按多出的 129 个元素收发
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Ascend950 上 allreduce 输入 131071 个 float32：日志 get count[131200]，scratch 2099200B、workspace 2134016B 都按抬后 count 算，前 131071 个元素结果正确，多出的 129 个参与 reduce
+- **改进措施**：检测 打开 HCCL/GE 日志核对 get count 与 SetHcomOpParam 的 count 是否等于张量元素数，并检查 workspace 尺寸；修复 待定（issue closed，正文未给出修复 PR；报告者的预期是日志打印 count[131071]）
+- **来源**：https://gitcode.com/cann/ge/issues/154
+
+### INF-1802 `cann_ge_atc_reducemax_output_shape_not_reduced` onnx→om 后 ReduceMax 输出 shape 未规约
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / ATC ReduceMax infershape
+- **原因行为**：onnx 转 om 后 ReduceMax 的输出 shape 仍被推成与输入一致（2,3），没有规约成一个标量；数值本身正确，但下游按推导出的错误 shape 取数据
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：atc --framework=5 转 Ascend910B1：torch.max 与 onnxruntime 结果和 shape 都正常，om 推理输出数据正确但 shape 与输入相同（应为 1 个值），ais_bench InferSession 按推导出的 shape 返回
+- **改进措施**：检测 转换后逐输出比对 onnx 与 om 的 shape，而不只比数值；对全规约算子检查 infershape 结果；修复 待定（issue 为咨询类已 closed，正文未给根因或修复 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/422
+
+### INF-1806 `op_tiling_py_float16_const_sizeof_vector` float16 常量按 sizeof(vector) 拷贝致越界读
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / CopyConstDataWithFloat16
+- **原因行为**：TBE tiling Python 接口解析 float16 常量时用 sizeof(const_value)/sizeof(float) 求元素数，得到 vector 对象大小 24 字节除以 4 的固定值 6，与真实元素数 N 无关。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：常量数组元素数为 1~5（如标量 [1.0]）时按裸指针越界读堆，越界字节被当常量参与 tiling；元素数大于 6 时数据被静默截断，tiling 与常量实际内容不符，且不报错。
+- **改进措施**：检测 对含 float16 标量常量的算子开 tiling 调试，比对 const_value 元素数与实际拷贝长度；mssanitizer memcheck 可抓越界读；修复 待定（issue closed，正文给修复建议：改用范围 for 遍历 const_value 并 emplace_back 转换，与 ascendc_py.cc 同名函数一致；未给修复 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/553
+
+### INF-1807 `tiling_buildrtensor_uninit_tensordata_size` Tiling 上下文未初始化 TensorData 大小
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / BuildRtTensor
+- **原因行为**：BuildRtTensor 转换 GeTensorDesc 时只设 shape/format/dtype/addr/placement，漏掉 TensorData 的 size，tiling 侧 GetSize() 因此返回默认 0。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：算子在 tiling 里用 GetSize()/GetTensorData().GetSize() 判断输入输出大小时拿到 0，与 GeTensorDesc 记录的真实大小不一致，走错数据大小分支；所有形态可构造 DT 复现。
+- **改进措施**：检测 在 tiling 回调里打印 tiling_context->GetInputTensor(i)->GetSize()，与 GeTensorDesc 的 tensor size 对比；修复 待定（issue 给方案：按 shape_inference.cc:GetTensorHolder 的 placement new 构造方式一次性传入 storage_shape/format/dtype/addr，或 SetAddr 后补 SetSize；未见修复 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/367
+
+### INF-1808 `transpose_shape_check_returns_success` 转置 shape 校验失败仍返回成功并产出数据
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / TransposeWithShapeCheck
+- **原因行为**：TransposeWithShapeCheck 发现目标 shape 与 permutation 推导结果不一致时只打 ACL_ERROR_GE_SHAPE_INVALID 日志、不返回错误，继续转置并返回 SUCCESS。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：隔离程序里合法 dst_shape {3,2} 与非法 {2,3} 都返回 0x0、都输出 12 字节 {1,4,2,5,3,6}；常量 transpose/permute 的 host folding 会把转置数据配上错误 shape 描述继续下发。
+- **改进措施**：检测 对 TransposeKernel/PermuteKernel 传入与 permutation 推导不一致的 dst_shape，断言返回 ACL_ERROR_GE_SHAPE_INVALID 且不产生数据；修复 关联 MR https://gitcode.com/cann/ge/merge_requests/4535 （未核实是否已合入/发布）；规避：调用方保证目标 shape 等于 permutation 推导结果
+- **来源**：https://gitcode.com/cann/ge/issues/536
+
+### INF-1811 `graph_mode_silently_runs_builtin_op` 图模式静默改用 built-in 算子致精度异常
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / 算子包选择
+- **原因行为**：图模式执行时加载的是 cann/opp/build-in 下的同名算子而非 vendor 目录的自定义算子，日志不打印实际执行的算子路径。
+- **影响对象**：数值结果；指标/日志（静默错误）
+- **影响详情**：自定义算子新增 tilingData 变量后动态图报 tilingData size=304/capacity=288；静态图直接出精度问题，dump 显示输入与 tensormove 输出都正常，只有 DEBUG 日志能看出跑的是 build-in 算子。
+- **改进措施**：检测 开 DEBUG 日志核对实际加载的算子 so 路径（vendor 目录 vs cann/opp/build-in），并确认自定义算子包安装目录含该算子；修复 待定（issue 为需求：希望日志直接打印执行的算子路径）；规避：安装后确认自定义算子确实进 vendor 目录
+- **来源**：https://gitcode.com/cann/ge/issues/231
+
+### INF-1812 `online_offline_precision_mode_default_mismatch` 在线离线默认精度模式不一致致 OM 数值偏差
+
+`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / ATC 精度模式默认值
+- **原因行为**：离线 ATC 未显式指定时 precision_mode 落到偏性能默认策略、op_select_implmode 默认 high_performance，在线 TorchAir 显式设 high_precision。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：同一模型同一输入：在线 HF+TorchAir 与 ONNXRuntime 正常，ONNX→ATC→OM 离线结果明显偏差，RMSNorm 等敏感子图整段异常；默认值差异不在任何用户可见提示里。
+- **改进措施**：检测 同一模型分别跑在线 TorchAir 与离线 OM，逐层比对；核对 atc 的 precision_mode / op_select_implmode 是否与在线一致；修复 显式指定 atc --precision_mode 与 --op_select_implmode 对齐在线设置；issue 仍 open，正文未给修复 PR
+- **来源**：https://gitcode.com/cann/ge/issues/327
+
+### INF-1813 `cube_vector_core_type_bare_mix_breaks_profiling` core_type 被覆盖为裸 MIX 致 profiling 缺算子行
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：编译器 / cann / exe_graph_serializer
+- **原因行为**：FE 把 _cube_vector_core_type 无条件覆盖为裸 MIX，序列化 DfxExtendInfo 的 task_type 映射只有 MIX_AIC/MIX_AIV，查不到即置 UINT32_MAX。
+- **影响对象**：指标/日志（静默错误）
+- **影响详情**：task_time.csv 有 te_matmulv3 的 kernel 记录，op_summary.csv 却没有任何 MatMulV3 行，只留 Unsupported task type MIX 的 warning；按算子维度统计耗时会漏掉该算子。
+- **改进措施**：检测 对比 task_time.csv 与 op_summary.csv 的算子集合，并搜 SerializeDfxExtendInfo:Unsupported task type 的 warning；修复 待定（issue closed；期望 FE 把 _cube_vector_core_type 细化为 MIX_AIC/MIX_AIV 并让序列化表兼容裸 MIX）
+- **来源**：https://gitcode.com/cann/ge/issues/500
+
 ## 运行时/执行
 
 ### INF-0015 `ttmetal_dram_sharded_dup_xcoord_buffer_corruption` TensorAccessor 只按 x 坐标选 bank 致 buffer 损坏
@@ -8281,6 +8446,61 @@
 - **影响详情**：A3+CANN 9.0.0：训练/推理无报错，内存压力较大时偶发精度尖刺；D2H 拷贝后 Host 侧出现大量 0 值，数量为页大小整数倍、变 0 区间按页对齐整页为 0；权重被读为 0 值
 - **改进措施**：检测 对 D2H 后 Host 缓冲做页粒度校验/抽查；内存压力下偶发是特征；修复 方案一：回退 ARM 默认 mimalloc 配置（改 PyTorch 原生取消 ARM 默认）；方案二：驱动层进程粒度开关 + torch_npu 感知 mimalloc 版本经环境变量透传 RTS 同步/异步路径防护（issue 给出两方案，落地状态未核实）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5567；https://github.com/pytorch/pytorch/pull/164741
+
+### INF-1803 `cann_ge_custom_op_tiling_so_skipped_without_opsproto` 缺 opsproto 时 GE 跳过 custom 包 tiling so
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：运行时/执行 / cann / custom op 包 so 加载判据
+- **原因行为**：custom 算子包没有 infershape.cpp 时不会生成 cust_opsproto_rt2.0.so，GE 因此跳过该包的 tiling so 加载并改用 legacy tiling so，定制 tiling 逻辑静默不生效
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：910B 上 custom 包无 infershape.cpp 时必现：aclnn 接口允许没有 infershape，但 tiling 改由 legacy so 生成而非定制实现，编译与执行都不报错，tiling 分核策略与预期不符
+- **改进措施**：检测 检查 custom 包目录下是否存在 cust_opsproto_rt2.0.so，并确认 tiling 实际加载的是哪个 so；修复 待定（issue closed，正文未给修复 PR；报告者建议改为按 ophost 对应的 so 判断）
+- **来源**：https://gitcode.com/cann/ge/issues/165
+
+### INF-1804 `om_inout_desc_name_len_read_before_check` OM 入出参解析按未校验 name_len 越界读
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：运行时/执行 / cann / GenInOutTensorDesc
+- **原因行为**：解析 OM 的 MODEL_INOUT_INFO 分区时，先按文件中的 name_len 构造 std::string 读取张量名，之后才做溢出与分区边界检查，检查对该字段无效。
+- **影响对象**：可用性/进度；数值结果（静默错误）
+- **影响详情**：把畸形 OM 最后一个张量的 name_len 置为超大值，aclmdlGetDescFromFile/FromMem 就会越界读堆，读出的字节作为张量名进入 desc 被下游消费；轻则描述符内容错乱，重则崩溃。
+- **改进措施**：检测 构造末张量 name_len 超大的 OM 走 aclmdlGetDescFromFile / aclmdlGetDescFromMem，配 mssanitizer memcheck；修复 待定（issue closed，正文只给修复建议：把 CheckUint64AddOverflow 与 GE_CHECK_LE 提前到 std::string 构造之前；未给修复 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/550
+
+### INF-1805 `om_extend_partition_tlv_len_unchecked` OM 扩展分区按文件声称 len 解析致越界读
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：运行时/执行 / cann / ParseModelDescExtend
+- **原因行为**：ParseModelDescExtend 只校验 PRE_MODEL_DESC_EXTEND 分区 size 与 magic，把文件中声称的 extendDesc->len 直接当 TLV 列表长度，未校验是否超出分区实际剩余。
+- **影响对象**：可用性/进度；数值结果（静默错误）
+- **影响详情**：构造 extendDesc->len 大于分区剩余大小的 om，ParseTlvList 的边界检查全以该声称长度为基准，TlvHead 与 tlv->data 读取越出模型缓冲区；aclmdlQueryExeOMDesc 即可触达。
+- **改进措施**：检测 构造 extendDesc->len 超出分区剩余大小的 om，调 aclmdlQueryExeOMDesc 并配 mssanitizer memcheck；修复 待定（issue closed，正文只给修复建议：第560行调用 ParseTlvList 前比较 extendDesc->len 与 size - sizeof(ModelExtendHead)；未给修复 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/551
+
+### INF-1809 `acldatabuffer_length_ignored_read_past_declared` aclDataBuffer 声明长度小于 OM 需求时读到界外残留
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：运行时/执行 / cann / aclDataBuffer 长度校验
+- **原因行为**：执行时按 OM Data 节点的 dtype/shape 决定读取长度，不比对调用方 aclDataBuffer.length，声明 4 字节仍按 DT_INT64[1] 读 8 字节。
+- **影响对象**：数值结果；可用性/进度（静默错误）
+- **影响详情**：OM 要 8B、只声明 4B 时高 4B 取到同 device 地址释放后重分配的残留，SequenceAt 收到 index=20615843020800 后报 input index out of range；残留刷 0 则 index=0、执行成功。
+- **改进措施**：检测 传 aclDataBuffer.length 小于 OM dtype 宽度的输入，观察下游算子读到的值；或用释放后同址重分配写入特征值确认读到界外字节；修复 待定（issue closed；建议在模型执行入口、host 化拷贝前或算子读取前按 aclDataBuffer.length 校验有效长度）；规避：调用方按 OM dtype 宽度传满字节
+- **来源**：https://gitcode.com/cann/ge/issues/510
+
+### INF-1816 `ge_graph_mode_long_context_repetition` GE 图模式长上下文到 32768 后输出复读
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `speculative` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：运行时/执行 / cann / GE 图模式解码执行
+- **原因行为**：PD 分离的 D 侧用 GE 图模式执行时，序列长度到 32768 token 后解码输出退化为复读，eager 同模型正常，根因未定位。
+- **影响对象**：输出内容（质量退化）
+- **影响详情**：GLM5 长请求（prompt_tokens 32466）在 32768 之前输出正常，之后整段复读并到 finish_reason=length；无报错，D 侧改 eager 后同一请求精度正常。
+- **改进措施**：检测 同一长请求分别在 D 侧 GE 图模式与 eager 下跑，比对 32768 token 前后的输出；修复 待定（正文未给根因与修复）；规避：D 侧退回 eager 模式
+- **来源**：https://gitcode.com/cann/ge/issues/189
 
 ## 集合通信
 
@@ -19668,6 +19888,17 @@
 - **影响详情**：2 golden + 3 output（第 3 个为垃圾 999.0）实测判 PASSED；多出或命名错位的 output 文件不被比对也不报错，回归看着全绿，实际验证从未覆盖那份输出；涉及 optim/loss/pooling/quant/matmul/experimental。
 - **改进措施**：检测 在用例目录多放一个合法命名但内容错误的 *output*.bin，若脚本仍 PASSED 即为命中；也可静态查 zip 前是否有数量校验。；修复 待定（issue closed，未给 MR）：循环前校验两侧文件数，不等即 FAILED 退出，并配对 basename 拦截命名错位。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/5511
+
+### INF-1814 `ge_data_dump_bool_compare_nan` data dump 比较不支持 bool 致结果恒为 NAN
+
+`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+
+- **原因对象**：观测/评测 / cann / data dump 比较
+- **原因行为**：ge 图 data dump 的 tensor 比较不处理 bool dtype，bool 输入输出的比对直接给出 NAN，无法判断是否一致。
+- **影响对象**：测试判定（静默错误）
+- **影响详情**：用 dump 定位 GE 图模式与 eager 精度不一致时，bool 类型算子的输入输出比较结果显示 NAN，这一层算子无法核对，只能跳过或换 dtype 规避。
+- **改进措施**：检测 对 bool dtype 的 dump tensor 做一次比较，确认是否返回 NAN 而非通过/失败结论；修复 待定（需求：比较支持 bool 类型；issue closed，正文未给实现或 PR）
+- **来源**：https://gitcode.com/cann/ge/issues/374
 
 ## 配置/参数
 
