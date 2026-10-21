@@ -4,7 +4,7 @@ slug: msmodelslim_timestep_device_check_inverted
 aliases: []
 title: timestep 量化权重搬运判据写反，该搬的没搬
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -13,9 +13,10 @@ cause:
   behavior: get_quant_weight 写成 if not ...device != device，等价于「设备相同才搬运」，真正需要 .to(device) 时被跳过，直接返回原设备上的 int8 权重
 effect:
   objects:
+  - 模型权重
   - 数值结果
   detail: 权重设备与目标不同时不搬运，调用方拿到异设备张量后与目标设备张量运算会 device mismatch；即便未报错，量化权重也不在预期设备上参与计算（静态走查定位，未实机复现）
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: 调用 get_quant_weight 后断言返回张量 .device 与请求一致；对照同函数 :219 的 weight.device != 'cpu' 写法检查判据极性
   fix: issue 给出的修法是去掉多余的 not（与同函数 :219 写法一致）；未见 PR（issue 已关闭，未核实）
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 模型权重
+      visibility:
+        from: 静默错误
+        to: 报错

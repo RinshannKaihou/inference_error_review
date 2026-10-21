@@ -4,13 +4,13 @@ slug: vllm_ascend_stream_tool_call_missing_finish_reason
 aliases: []
 title: 流式 tool call 收尾不结句继续吐乱码 content
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 输出解析
     stack: vllm
     component: finish_reason 判定
-  behavior: Tool Call arguments 已闭合但未触发 finish_reason=tool_calls，流继续按普通 content 发送增量，内容是乱码词与英文碎片。
+  behavior: Tool Call 的 arguments 已完整闭合后未立即结束，流继续输出普通 content，开头为乱码词语；报告怀疑结束阶段未及时触发 finish_reason="tool_calls"，把后续增量当成普通文本发出。
 effect:
   objects:
   - 输出内容
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

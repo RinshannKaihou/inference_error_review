@@ -4,7 +4,7 @@ slug: ops_nn_batch_norm_grad_v3_splitload_tail_modulo_zero
 aliases: []
 title: batch_norm_grad_v3 通道整除时不写回 dγ/dβ
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: splitLoad 用 totalChannel % 1024 当末段长度，整除时得 0，判据 mod == copyNum-1 永不成立，dγ/dβ 的 StoreOneTensor 不触发。
 effect:
   objects:
+  - 数值结果
   - 梯度
   detail: 910B3 走 aclnnFastBatchNormBackward、每核 channel 为 1024 倍数（如 2048）时 dβ 保持哨兵 999（期望 ~12544），dγ 同样未写；grad_input 正常更新，接口返回成功。
   visibility: 静默错误
@@ -42,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 梯度
+        to: 数值结果

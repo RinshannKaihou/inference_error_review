@@ -4,17 +4,17 @@ slug: msmodelslim_ir_rmsnorm_forced_fp32_output
 aliases: []
 title: IR RMSNorm 无条件把输出转 fp32 破 bf16 链路
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 量化
+  - subsystem: 算子/内核
     stack: pytorch
     component: ir.rms_norm 输出
   behavior: ir/rms_norm.py 末尾对 weight*hidden_states 无条件 .to(torch.float32)，权重与输入都是 bf16 时输出仍变 fp32，与 T5LayerNorm 参考实现不一致
 effect:
   objects:
-  - 数值结果
   - 可用性/进度
+  - 数值结果
   detail: RMSNorm(8).to(bf16) 后 norm(x).dtype 为 float32，接 nn.Linear(bf16) 报 mat1 and mat2 must have the same dtype；CPU 链路（iter_smooth hook）整条量化流程跑不起来
   visibility: 报错
 mitigation:
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 量化
+        to: 算子/内核
+      effect:
+        from: 数值结果
+        to: 可用性/进度

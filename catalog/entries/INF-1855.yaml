@@ -4,17 +4,17 @@ slug: ops_nn_flce_loss_grad_highperf_zero_workspace_ub_overrun
 aliases: []
 title: fused_linear_ce_loss 反向清零越界写 UB
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: fused CE loss grad 高性能
-  behavior: ZeroUserWorkspaceVec 用 Duplicate 固定清 16384 个 half（32KB），copyBackBuf 只按 VOut512BAlignedSize*2+32 分配，V≤16128 时必越界。
+  behavior: 高性能分支以 Duplicate 固定清零 16384 个 half（32768 字节），而 copyBackBuf 仅按 VOut512BAlignedSize*2+32 分配，V≤16128 时缓冲不足，清零越界。
 effect:
   objects:
   - 数值结果
-  detail: V 合法域 [128,65280] 内 V≤16128 即越出 copyBackBuf 最多约 32.2KB：轻则落 UB 空闲池，full case 下可冲出 UB 末端；L0 ST 的 V=256、TTK 的 V=19392 恰在侥幸区。
+  detail: 高性能分支且 V≤16128（合法区间）时，每次启动越界清零最多约 32224 字节：轻则落入 UB 空闲池无现象，full case 下 quebindSoftmax 近占满 UB，可冲出末端清掉其他 TBuf 数据致偶发错值；日志无提示，V=256、V=19392 用例均测不出。
   visibility: 静默错误
 mitigation:
   detect: 对高性能分支（传可选 softmax 输入即路由过去）跑 V=128/256/16128 与 V=19392 多 shape 用例，用 mssanitizer 或 tiling 侧 buffer 容量断言检查；单 shape 验收（V=19392）不越界。
@@ -42,3 +42,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
+    - detail

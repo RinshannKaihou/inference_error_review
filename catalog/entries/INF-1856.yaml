@@ -4,10 +4,10 @@ slug: vllm_ascend_fused_slot_mapping_negative_pos_no_pad
 aliases: []
 title: 融合 slot-mapping 非环形组不补 PAD 位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: KV缓存
     stack: vllm
     component: compute_slot_mapping
   behavior: 融合多组 launch 共用一个 positions，负位置只在 circular 组换成 PAD_ID；非环形组把它当真实槽位，pos<=-block_size 时 block 表窗口还读出本请求行。
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: KV缓存

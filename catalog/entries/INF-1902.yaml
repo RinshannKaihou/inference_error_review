@@ -4,7 +4,7 @@ slug: vllm_ascend_xgrammar_unbounded_array
 aliases: []
 title: xgrammar 无 maxItems 数组无限膨胀至截断
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: json_schema 请求返回数百至数千个 tags 元素并以 finish_reason=length 结束；唯一项用尽后输出两项交替重复，结构化响应不可用。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 对 array<string> 且无 maxItems 的 json_schema 请求设置大 max_tokens，统计数组元素数与 finish_reason
   fix: 上游讨论增加语法循环检测或默认上界（vllm#40099、xgrammar#688 方向，均 open）；当前仅能在 schema 中显式写 maxItems
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误

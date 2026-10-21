@@ -4,10 +4,10 @@ slug: ms_parallel_redistribution_dfs_no_visited_hang
 aliases: []
 title: 并行 redistribution DFS 缺 visited 致编译卡死
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 并行切分
     stack: mindspore
     component: RedistributionNextNode
   behavior: 沿 node_users 递归展开 MakeTuple/TupleGetItem/Depend 时无 visited 去重，DAG 汇合点使工作量按路径数指数增长、同一状态重复追加 next_nodes
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   - 性能/资源
-  detail: mcore pp4+cp8、calculate_per_token_loss 打开时 StepParallel 停在 insert mirror op for AddInfo44 后 ≥30 分钟无进展、单线程满载；GLOG_v=2 下 9.5 分钟写 7200 万行 Depend 日志
+  detail: mcore pp>1、大 seq_length、多路 micro-loss 时编译卡死：单线程 CPU 100%、日志停在 insert mirror op for AddInfo44 后 ≥30 分钟无进展、不报错不退出；关掉后约 13 分钟出 step；DEBUG 疯狂刷 Depend 日志。
   visibility: 挂起
 mitigation:
   detect: 编译停在同一 mirror op 且单核满载时，用 MS_SUBMODULE_LOG_v={PARALLEL:0} 看是否只刷 IsParallelCareNode；对照关闭 calculate_per_token_loss 复测
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 并行切分
+    rewritten:
+    - detail

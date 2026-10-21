@@ -4,7 +4,7 @@ slug: msprobe_multiproc_dump_no_rankid_false_success
 aliases: []
 title: 多进程 dump 无 rankid，比对与构图仍报成功
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -43,3 +43,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

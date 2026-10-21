@@ -4,7 +4,7 @@ slug: vllm_ascend_enable_lora_wrong_stop_token
 aliases: []
 title: --enable-lora 致提前截断与停止符错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: 所有请求被提前截断：reasoning_content 为 null、<think> 混入 content、出现「重要重要」类复读；流式与非流式均复现，禁用 LoRA 即恢复正常。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 同一 Qwen3 服务分别在 --enable-lora 开/关（含无 lora-modules）下发送相同请求，检查 finish_reason、stop token 与 reasoning_content
   fix: 待定（issue 仅给出采样/停止符管线假设，open）
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误

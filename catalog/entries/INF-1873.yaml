@@ -4,13 +4,13 @@ slug: a5_aclgraph_static_kernel_fia_precision
 aliases: []
 title: A5 静态 kernel 下 FIA 输出精度异常
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: pytorch
     component: static_kernel + FIA
-  behavior: static_kernel_compile 把图内 FIA 的运行期输入（actual_seq_lengths）一并静态化，aclgraph 回放时该刷新机制疑似失效（报告者定位方向，无源码证据）。
+  behavior: 开启 static_kernel_compile 后，图内 FIA 的 actual_seq_lengths 这类运行期输入疑似不再刷新，刷新机制受影响（报告者的怀疑方向，未给出源码级证明）。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

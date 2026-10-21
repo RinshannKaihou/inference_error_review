@@ -4,7 +4,7 @@ slug: mindie_structured_output_no_stop_json_continues
 aliases: []
 title: 结构化输出不停机，JSON 后继续补人类轮次
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输出内容
   detail: 'Qwen3-30B-A3B（MindIE 3.0.0，ATB）带 response_format json_schema 的请求，content 是合法 JSON 后紧跟 Human: 提取以下文本…，finish_reason 仍是 stop、HTTP 200 无告警'
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 对结构化输出请求直接 json.loads 校验；解析失败时看尾部是否粘了下一轮模板文本（Human:/Assistant:），而不是怀疑模型能力
   fix: 未修复（issue 已关闭，未核实是否由后续版本修复）；规避：服务端按首个完整 JSON 截断，或检查结构化路径下 stop token/EOS 是否真正生效
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误

@@ -4,12 +4,12 @@ slug: vllm_ascend_qwen35_397b_w8a8_1024_concurrency_garbled
 aliases: []
 title: 397B w8a8 混部 1024 并发下回复乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
     stack: vllm
-    component: 高并发批次调度
+    component: vllm-ascend w8a8 混部推理服务
   behavior: 1024 并发跑多模态精度脚本时回复变乱码，单请求/低并发未见；具体出错算子或缓冲区未定位。
 effect:
   objects:
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - component
+    uncertain:
+    - subsystem

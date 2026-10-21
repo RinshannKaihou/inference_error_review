@@ -4,7 +4,7 @@ slug: ops_nn_matmul_weight_nz_nonstandard_stride_transpose_misjudge
 aliases: []
 title: MatmulWeightNz 非标 stride 转置误判错读布局
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: mat2 view [K,N2]=[32,64]、viewStride [1,K_full] 被判非转置后按 FRACTAL_NZ 直读进 kernel，期望返回 ACLNN_ERR_PARAM_INVALID；作者为静态推演，未上板实测。
+  detail: mat2 view [K,N2]、viewStride [1,K_full]（K_full≠K）时接口不报错，storage 按非转置 FRACTAL_NZ 直传 kernel，结果整片错但量级形状正常，仅比对参考实现可见；标准 stride/fp32 不触发；静态推演，未上板实测。
   visibility: 静默错误
 mitigation:
   detect: 用 FRACTAL_NZ storage + 非标准 viewStride（既非 [K,1] 也非 [1,K]）的 mat2 构造用例，看接口是否拒绝；现有 UT 只覆盖标准 stride，无相关用例。
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

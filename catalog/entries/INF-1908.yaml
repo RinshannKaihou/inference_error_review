@@ -4,7 +4,7 @@ slug: vllm_ascend_gdn_test_shape_only_false_pass
 aliases: []
 title: GatedDeltaRule 单测输入自相矛盾且只验形状
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 测试判定
-  detail: 该用例只比较 shape，NPU 异步执行使 chunk_fwd_o 的 507015 越界故障不暴露，测试报 PASSED；仅在进程退出同步或 ASCEND_LAUNCH_BLOCKING=1 时出现。
+  detail: Ascend NPU 夜间单卡用例报告显示 PASSED，算子正确性未被验证；AICORE 507015（MPU address access invalid）仅在进程退出同步时以 warning 出现，或设 ASCEND_LAUNCH_BLOCKING=1 时硬失败。
   visibility: 静默错误
 mitigation:
   detect: 开启 ASCEND_LAUNCH_BLOCKING=1 重跑该用例，并校验 cu_seqlens[-1] 是否等于 packed seqlen T
@@ -42,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

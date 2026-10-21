@@ -4,7 +4,7 @@ slug: vllm_ascend_stream_retry_cross_request_garbage
 aliases: []
 title: 流式响应重试后混入无关会话乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -13,8 +13,8 @@ cause:
   behavior: 同一请求重试后流式响应未在首个 tool call 后停止，继续输出不属于该请求的乱码 token，并混入另一会话内容，随后产生第二个伪 tool call；根因未定位。
 effect:
   objects:
-  - 输出内容
   - 跨请求/跨样本数据
+  - 输出内容
   detail: 首个 Edit tool call 完成后流不结束，输出 >、d、2 等乱码及无关会话文本「重跑分类脚本（含人工校订）」，再发 Bash tool call；TP8/DP2/EP、BF16。
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 跨请求/跨样本数据
+    uncertain:
+    - subsystem

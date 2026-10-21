@@ -4,12 +4,12 @@ slug: vllm_ascend_async_mtp_stale_accepted_counts
 aliases: []
 title: 异步 MTP 在 batch condense 后复用旧接受计数
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 解码/采样
+  - subsystem: 运行时/执行
     stack: vllm
-    component: PA_ND sparse_attn_kv
+    component: InputBatch/NPUModelRunner
   behavior: condense() 先改写持久 InputBatch 行，_prepare_inputs 再按 prev_positions 重映射上一轮接受计数时读到被覆盖的默认值 1，使 Mamba/GDN 状态拷贝偏移错误。
 effect:
   objects:
@@ -42,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 解码/采样
+        to: 运行时/执行
+    rewritten:
+    - component
+    uncertain:
+    - effect
+    - visibility

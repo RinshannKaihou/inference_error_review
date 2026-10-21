@@ -4,7 +4,7 @@ slug: npu_sparse_mask_drops_explicit_zero_rows
 aliases: []
 title: NPU sparse_mask 丢显式全零行致 SparseAdam 首步失败
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -42,3 +42,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

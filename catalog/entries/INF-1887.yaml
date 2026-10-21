@@ -4,7 +4,7 @@ slug: msprobe_inplace_module_dump_input_overwritten
 aliases: []
 title: inplace Module 的输入在 dump 时已被就地改写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -13,8 +13,8 @@ cause:
   behavior: 对 inplace Module（如 nn.ReLU(inplace=True)）采集时，保存 input 的时刻晚于算子就地改写，input 与 output 落盘成同一份数据，比对显示零差异
 effect:
   objects:
-  - 测试判定
   - 指标/日志
+  - 测试判定
   detail: nn.ReLU(inplace=True) 的 input 落盘已是 ReLU 后的值，与 output 相同；换 non-inplace ReLU 时 input/output 分属两个地址、与日志一致
   visibility: 静默错误
 mitigation:
@@ -43,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 测试判定
+        to: 指标/日志
+    uncertain:
+    - behavior

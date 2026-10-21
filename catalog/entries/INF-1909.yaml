@@ -4,18 +4,19 @@ slug: mssanitizer_synccheck_miss_v_mte2_race_shared_buffer
 aliases: []
 title: synccheck 漏报 V 与 MTE2 共用 buffer 的缺同步
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 观测/评测
+  - subsystem: 算子/内核
     stack: cann
     component: synccheck 跨函数依赖分析
   behavior: 同一块 UB 在 Init 里由 Vector 的 Duplicate 初始化、随后在 Process 里被 DataCopyPad 写入，两处共用 buffer 且只插了 MTE2→V 方向，synccheck 未报缺 V→MTE2 同步
 effect:
   objects:
+  - 数值结果
   - 测试判定
   detail: FlatQuantBnn 单测精度时好时坏，人工补 SetFlag/WaitFlag(HardEvent::V_MTE2) 后消失；mssanitizer --tool=synccheck 在 CANN 8.5.1 与 9.1.0 上各扫一次都无 Error，只有无关 WARNING
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 单测精度间歇失败且怀疑流水竞争时，不要以 synccheck 无 Error 结案；按 buffer 复用关系人工核对跨函数（Init/Process）的 V∩MTE2 依赖
   fix: 未修复（issue 请求优化工具，已关闭但未核实改动）；规避：人工补 SetFlag/WaitFlag(HardEvent::V_MTE2) 后复测
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 观测/评测
+        to: 算子/内核
+      effect:
+        from: 测试判定
+        to: 数值结果
+      visibility:
+        from: 静默错误
+        to: 不可复现

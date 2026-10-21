@@ -4,7 +4,7 @@ slug: npu_profiler_loses_device_tasks_at_record_start
 aliases: []
 title: profiler RECORD 窗口头部设备侧任务丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 指标/日志
-  detail: wait=1/warmup=6/active=10 时 op_summary 只有 8 条 matmul（偶发 9 条），缺的都在窗口头部；同 trace 里 host,node,launch 的 Count 恰为 10；重跑丢失条数变化。
-  visibility: 不可复现
+  detail: active=10 时 op_summary 只有 8 条 matmul（偶发 9 条），缺失集中在窗口头部，尾部完整；同 trace 内 host,node,launch 的 Count 恰为 10；重跑同一脚本丢失条数变化，换成单次更长的 fp32（约 90µs/次）也非确定。
+  visibility: 静默错误
 mitigation:
   detect: 同一 trace 内比 host,node,launch 的 Count 与 op_summary 设备侧记录数；重跑多次看是否稳定等于 active
   fix: 待定（issue open，未给修复 PR）
@@ -42,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误
+    rewritten:
+    - detail

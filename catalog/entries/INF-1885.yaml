@@ -4,7 +4,7 @@ slug: mindie_multimodal_size_limit_config_not_propagated
 aliases: []
 title: 多模态大小限制不透传，Python 侧仍按 20MB 拦
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   - 指标/日志
-  detail: maxRequestLength 超限时 413 文案固定写 512MB；配置 maxImageFileSizeMB=40 后 40MB 图片仍被 Python 侧 20MB 默认值拒绝，两处阈值都与配置不符
+  detail: 配置 maxImageFileSizeMB=40 后，40MB 以内图片仍被拒，报 The size of image_url cannot exceed 20.0 MB；请求体超过 maxRequestLength 时返回 413，文案固定写 512MB，与配置不符；图片近 20MB 阈值时必现。
   visibility: 报错
 mitigation:
   detect: 启动后比对 infer_tokenizer.cpp 打印的 image/audio/video 上限与 Python 侧实际拦截阈值；把 413 文案与实际 maxRequestLength 配置对照
@@ -43,3 +43,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

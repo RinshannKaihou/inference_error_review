@@ -4,7 +4,7 @@ slug: mindie_pd_pullkv_partial_tp_failure_treated_success
 aliases: []
 title: D 节点 pullkv 只按 tp0 判成功致请求误入解码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - 可用性/进度
   - KV状态
-  detail: tp0 成功后即判整体 pull-kv 成功，tp1 的失败被忽略；随后解码报 MIE05E010010 找不到 sequence 101 的缓存、The sequence 101 is not prefilled before decoding
+  detail: 日志先出现 pull kv failed，请求未被拒绝或重试即进入解码，随后报 MIE05E010010 无该序列缓存，收尾为 The sequence 101 is not prefilled before decoding；仅 tp 内单 rank 失败时偶发，重试往往正常。
   visibility: 报错
 mitigation:
   detect: PD 分离大 EP 下抓 pull_kv_results 与各 tp rank 的返回码，确认是否每个 rank 都成功；解码报 no cached data for sequence 时回查 pull 侧单 rank 失败日志
@@ -43,3 +43,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

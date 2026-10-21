@@ -4,7 +4,7 @@ slug: mindformers_moe_aux_loss_tp_grad_scaling_overdivide
 aliases: []
 title: aux-loss 反传多除 tp·cp 致 router 梯度偏小
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 损失计算
@@ -15,8 +15,8 @@ effect:
   objects:
   - 梯度
   - 训练信号
-  detail: tp4/tp8 纯并行重排下 loss 相对单卡系统性偏高并随步数累积（sign_z +6.5/+5.4，late Δloss +4.8e-4/+9.7e-4），tp2 无偏置；mlp.router.weight 梯度比值 ≈0.49，aux 贡献 0.234→0.0095（约 96% 丢失）
-  visibility: 静默错误
+  detail: PyNative+TP≥4+MoE aux-loss≠0，纯并行重排（同一份权重重分片）即触发：loss 相对单卡系统性偏高、随步数累积且与 TP 度无关（tp4≈tp8，tp2≈0），sign_z 单边偏置，强制 fp32 后偏置不变；router.weight 梯度 tp4/tp1≈0.49
+  visibility: 质量退化
 mitigation:
   detect: 同权重 tp1 与 tp≥4 对比逐权重梯度 |·| 之和（或看 sign_z 单边性）；用 moe_aux_loss_coeff=0 二分 aux 对 router 梯度的贡献
   fix: issue 提出三种改法（aux 反传缩放只按 dp 平均不除 tp·cp、seq_aux_loss 改全局 token 归一并对 tp_cp_group 做 AllReduce、改后重跑 tp1/4/8 验证 sign_z→0），均待评审；无关联 PR 链接（issue 已关闭，未核实）
@@ -45,3 +45,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem

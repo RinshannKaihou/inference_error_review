@@ -4,7 +4,7 @@ slug: ms_gpu_pynative_step_time_monotonic_growth
 aliases: []
 title: GPU 动态图单步耗时随步数涨 3~5 倍
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 性能/资源
-  detail: 1800 步内单步从 30~43 ms 涨到 120~176 ms（3.3~4.6 倍），2.6.0.dev/2.7.2 只有 0.94~1.25 倍；真实双分支+3×SE 网络前 5 epoch 均值 21 s 恶化到后 5 epoch 54 s，test 精度不变
+  detail: GPU+PYNATIVE_MODE 多分支/多SE卷积网络，步数上千才显形：前期每步30~40ms，一两千步后升至120~180ms（1800步内3.3~4.6倍，多次run 1.5~5.1）；完整网络每1500步+90~94ms，去掉3个SE块仅+8.6~9.0ms；精度两边一致。
   visibility: 性能退化
 mitigation:
   detect: 画「每步耗时 vs 累计步数」曲线（平均吞吐会把单调增长摊平），同配置跑 GRAPH_MODE 作对照，并与 2.7.2 对比确认 2.8.0 回归
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-21
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
