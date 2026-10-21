@@ -1,30 +1,18 @@
 id: PAT-INF-0001
-title: KV缓存内容偏离当前请求真实计算的副本
-shared_mechanism: 共同点是注意力消费到的 K/V 已不等于当前请求真实算出的那份：数值被压到错误网格（scale 缺失、粒度错配、位宽不足），或归属错位（键缺隔离、块表与页复用竞态）。差异在失真类型：前者随长度累积漂移，后者整段读到他人或过期内容。
-representative: INF-0675
+title: KV 缓存归属错位读到他人或陈旧副本
+shared_mechanism: 缓存身份键（radix 前缀、block-table、seq/stream 映射）在复用、抢占、PD 传输时错位，导致请求读到其他序列或已被覆盖的 KV；内容本身没被量化扭曲，是拿到了不该拿的那一份。
+representative: INF-0399
 members:
 - INF-0399
 - INF-0402
 - INF-0556
 - INF-0607
-- INF-0675
 - INF-0791
-- INF-0870
 - INF-1092
-- INF-1244
 - INF-1245
 - INF-1251
 - INF-1253
 - INF-1259
 - INF-1261
-- INF-1266
-- INF-1267
-- INF-1272
-- INF-1273
 - INF-1282
-- INF-1293
-- INF-1294
 - INF-1322
-- INF-1334
-- INF-1335
-- INF-1339

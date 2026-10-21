@@ -1166,7 +1166,7 @@
 
 ### INF-0129 `ttmetal_llk_dest_src_bank_wait_drain_fix_33_residual_sites` LLK dest-reuse 裸 STALLWAIT 修复未传播，残留 33 处
 
-`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `var` · 发现 2026-09-01 · 旧号 1.130
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-09-01 · 旧号 1.130
 
 - **原因对象**：算子/内核 / tt-metal / LLK dest-reuse 握手等待
 - **原因行为**：dest-reuse 握手在 MOVD2A/MOVD2B 前只等 SRCA_VLD、不排空 math pipeline，dest 可能仍被未完成的数学读占用；#52256 只修两处，16 个文件 33 处站点仍为裸等待。
@@ -1174,7 +1174,6 @@
 - **影响详情**：间歇性、依赖时序的 dest buffer 读旧值或冲突，表现为概率性数值损坏或挂起，无确定性错误信号；WH 与 BH 上使用残留站点的生产内核路径（如 transpose_dest、dest-reuse 变体）均可触发。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/55106
-- **关联**：var:INF-0097
 
 ### INF-0130 `ttmetal_grid_sample_fp32_input_unrelated_values_silent` ttnn.grid_sample 对 FLOAT32 输入静默返回无关值
 
@@ -8738,7 +8737,7 @@
 - **影响详情**：decode 使用的最终 KV 与 prefill 发出的不一致，表现为与传输时序相关、不可复现的输出偏差（原文按机制推断）。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/ai-dynamo/dynamo/issues/1107
-- **关联**：var:INF-0870
+- **关联**：var:INF-0399
 
 ### INF-1425 `hccl_single_rank_v_op_displacement_dropped` HCCL 单 rank V 算子忽略 displacement 错位读写
 
@@ -9214,7 +9213,7 @@
 
 ### INF-0399 `radix_kvcache_cross_contamination` SGLang radix 缓存在 prefill/decode 重叠时跨序列污染
 
-`故障` · `active` · `infra_off` · `partial` · `documented` · `var` · 发现 待定 · 旧号 6.6
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 待定 · 旧号 6.6
 
 - **原因对象**：KV缓存 / sglang / radix 缓存 block 边界
 - **原因行为**：prefill 与 decode 重叠执行（overlap prefill+decode）时，radix 缓存在 block 边界处发生跨序列 KV 污染。
@@ -9222,7 +9221,6 @@
 - **影响详情**：开启 overlap prefill+decode 的并发服务中，attention 读到另一个序列的 K/V，输出静默发散；污染覆盖整个 block 而非单点。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/sgl-project/sglang/issues/22819；https://github.com/vllm-project/vllm/issues/39146
-- **关联**：var:INF-0870
 
 ### INF-0402 `vllm_pd_preemption_race_empty_kv` vLLM P/D 抢占竞态使 connector 向 decode 传输空 KV
 
@@ -9250,7 +9248,7 @@
 
 ### INF-0404 `vllm_mamba_dcp_block_table_not_preserved` vLLM Mamba 混合架构块表容量在 DCP 下未保留
 
-`故障` · `active` · `infra_off` · `partial` · `documented` · `var` · 发现 2026-07-29 · 旧号 6.11
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-07-29 · 旧号 6.11
 
 - **原因对象**：KV缓存 / vllm / Mamba 层块表容量
 - **原因行为**：混合架构（Mamba）的块表容量在 DCP（Decoder Checkpoint 恢复）下未被保留，检查点恢复后 Mamba 块表状态不一致。
@@ -9258,7 +9256,6 @@
 - **影响详情**：DCP 恢复后 Mamba 层的状态缓存（block table）被截断或不一致，decode 质量退化或输出垃圾。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/pull/50287
-- **关联**：var:INF-1174
 
 ### INF-0406 `vllm_pd_mooncake_client_disconnect_orphan_kv` vLLM P/D Mooncake 断连未通知 P 致孤儿 KV 堆积
 
@@ -10787,7 +10784,7 @@
 - **影响详情**：静默发生、无报错，造成跨请求内容泄漏，隐私后果严重；整段位置的表示被替换成另一语境的表示，换入值数值上健康，逐通道离群检测容易漏。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/9231
-- **关联**：var:INF-0870
+- **关联**：var:INF-0399
 
 ### INF-0792 `sglang_eagle_spec_decode_defeats_radix_prefix_reuse` SGLang EAGLE 推测解码使 radix 前缀复用率崩溃
 
@@ -11145,6 +11142,7 @@
 - **影响详情**：后续解码 token 基于被污染的上下文，表现为忘记或记错前文某个词；zero 模式下该位置对后续 query 近乎无信息，swap 模式像把相邻位置内容重复读一遍；打到 attention-sink 位置时破坏最大
 - **改进措施**：检测 待定；修复 待定
 - **来源**：引用：本项目早期实测条目（原型阶段实测，量值不跨栈继承；
+- **关联**：var:INF-0675
 
 ### INF-0871 `ttmetal_gemma4_12b_tp8_warmup_trace_nkv1_doubled_sliding_block_step1_divergence` Gemma4 TP8 warmup trace 固化错误滑窗几何致发散
 
@@ -15697,7 +15695,7 @@
 
 ### INF-0675 `kv_cache_fp8_quantization_drift` FP8 KV cache 量化误差随上下文长度累积漂移
 
-`故障` · `active` · `infra_off` · `config` · `documented` · `var` · 发现 待定 · 旧号 7.2
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 待定 · 旧号 7.2
 
 - **原因对象**：量化 / vllm / FP8 KV cache scale 与粒度
 - **原因行为**：KV cache 以 FP8（e4m3/e5m2）存储，默认 scale=1.0 严重欠用动态范围；Key 未用 per-channel、Value 未用 per-token 粒度，误差随 token 累积并被点积放大。
@@ -15705,7 +15703,6 @@
 - **影响详情**：长上下文退化并随长度复合放大：e4m3 且校准良好时较轻，e5m2 或未校准时严重，出现重复循环、约一句话后语无伦次；kv_cache_dtype=fp8 与 bf16 KV 对照可见。
 - **改进措施**：检测 待定；修复 待定
 - **来源**：https://arxiv.org/abs/2402.02750；https://arxiv.org/abs/2401.18079
-- **关联**：var:INF-0870
 
 ### INF-0676 `fp8_static_scale_overflow` FP8 静态 per-tensor scale 遇离群值饱和或溢出
 
