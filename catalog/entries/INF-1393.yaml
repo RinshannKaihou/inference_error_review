@@ -36,6 +36,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm-ascend/pull/19101
   kind: github_pr
 relations: []
+pattern: PAT-INF-0186
 original:
   mechanism: vllm-ascend AscendStoreConnector（非 layerwise、同步 load_async=false、Mooncake backend、register_buffer）在 hybrid/多 KV cache 组请求下：Mooncake lookup 报前缀命中，但后续 AscendStore 后端加载可对部分块返回 -704 OBJECT_NOT_FOUND。当前代码记录失败块日志，却在 len(block_ids_by_group)!=1（即多组）时不通过 get_block_ids_with_load_errors() 上报。vLLM scheduler 因此不知道已加载前缀不完整，decode 继续用无效/未初始化的 KV 产生损坏输出。结构性条件是一个请求跨越多个 KV cache 组。可用 CPU 单测 mock 后端 get() 对两组请求部分失败复现（无需真实 Mooncake 不一致注入）。
   source: https://github.com/vllm-project/vllm-ascend/issues/18794
@@ -73,3 +74,6 @@ migration:
   - date: '2026-10-19'
     fields:
     - original.notes
+  - date: '2026-10-21'
+    fields:
+    - pattern
