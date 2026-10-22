@@ -45,6 +45,7 @@ original:
   - 2026-10-19 回访 2026-10-19：ops-transformer#6119 open；修复 PR !13800 仍 open（u2026-10-19T08:37）未合入
   - 2026-10-20 回访 2026-10-20：#6119 仍 open（u2026-10-17T07:44 后无更新），修复 PR !13800 状态未复核
   - 2026-10-21 轮巡 2026-10-21：ops-transformer#6119 仍 open，无进展（批次快照）。
+  - 2026-10-22 回访 2026-10-22：ops-transformer#6119 仍 open（u2026-10-17）
 migration:
   method: scan
   scanned: '2026-10-17'
@@ -63,5 +64,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-10-21'
+    fields:
+    - original.notes
+  - date: '2026-10-22'
     fields:
     - original.notes

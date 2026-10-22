@@ -45,6 +45,7 @@ original:
   - 2026-10-19 回访 2026-10-19：vllm-ascend#18754 维持 open（u2026-10-14 后无新活动）
   - 2026-10-20 回访 2026-10-20：#18754 维持 open（u2026-10-14T15:20 后无活动）
   - 2026-10-21 轮巡 2026-10-21：vllm-ascend#18754 仍 open，无进展（批次快照）。
+  - 2026-10-22 回访 2026-10-22：vllm-ascend#18754 仍 open 无进展（u2026-10-14）
 migration:
   method: scan
   scanned: '2026-10-14'
@@ -71,5 +72,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-10-21'
+    fields:
+    - original.notes
+  - date: '2026-10-22'
     fields:
     - original.notes

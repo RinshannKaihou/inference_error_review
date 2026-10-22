@@ -43,6 +43,7 @@ original:
   discovery: 2026-10-20 每日扫描
   notes:
   - '2026-10-21 回访 2026-10-21：issue #6955 仍 open（u2026-10-21T09:16 更新，标题改为''修复 BN3D 累加溢出及图路径并完善三算子 golden''），修复发布状态未核实。'
+  - 2026-10-22 回访 2026-10-22：ops-nn#6955 仍 open（u2026-10-21T09:16），发布未核实
 migration:
   method: scan
   scanned: '2026-10-20'
@@ -59,5 +60,8 @@ migration:
     - glm-5.3
   updates:
   - date: '2026-10-21'
+    fields:
+    - original.notes
+  - date: '2026-10-22'
     fields:
     - original.notes
