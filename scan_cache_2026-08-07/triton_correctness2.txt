@@ -1,3 +1,0 @@
-TOTAL: 1
-
-11186|Fix incorrect reordering in OptimizeThreadLocality|https://github.com/triton-lang/triton/pull/11186|2026-08-05T18:40:23Z

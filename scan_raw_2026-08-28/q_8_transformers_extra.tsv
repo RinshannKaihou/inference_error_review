@@ -1,1 +1,0 @@
-48371	open	NVFP4 MoE experts are dequantized without weight_global_scale, silently	https://github.com/huggingface/transformers/issues/48371	2026-08-27T10:39:57Z	issue

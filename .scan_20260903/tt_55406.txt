@@ -1,9 +1,0 @@
-### 55406 [open] Quasar: Completion queue wraparound uses the wrong address basis
-The host completion reader consumes entries from the completion queue. After it consumes entries, it must publish the new completion-queue read pointer back to the dispatch core. That tells the device that completion-queue space is free again. Currently, this is done in `SystemMemoryManager::send_completion_queue_read_ptr()` through a cached static TLB window. During init, it computed:
-
-`completion_byte_addrs[cq_id] = completion_q_rd_ptr % completion_tlb_size`;
-Then it wrote `read_ptr_and_toggle` to that byte offset in the TLB window.
-
-Why that is wrong: `completion_q_rd_ptr` is a dispatch-core L1 address. `% completion_tlb_size` is not a valid way to convert an L1 address into a TLB-window byte offset. With Quasar dispatch cores and multiple CQs, the per-CQ device addresses are shifted by the CQ zone stride. The modulo can fold the address into the wrong place.
-
-So the host can write the updated completion read pointer to the wrong dispatch L1 address. The dispatch core then sees a stale read pointer and can think the completion queue is still full, especially around wraparound.

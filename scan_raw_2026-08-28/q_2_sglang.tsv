@@ -1,5 +1,0 @@
-36889	open	[DFLASH] Mamba state cache silently caps effective concurrency on hybrid-KDA models — 5 state slots/request, info-level log only (+75% throughput hidden behind one flag)	https://github.com/sgl-project/sglang/issues/36889	2026-08-28T16:48:11Z	issue
-36886	open	[Bug] DCP in GLM-5.3-Flash: index-K cache OOB corruption crash past max_total_num_tokens; output quality still degraded after sizing fix	https://github.com/sgl-project/sglang/issues/36886	2026-08-28T15:58:09Z	issue
-36840	open	TBO unreachable for GLM-5.3-Flash (DSA+mamba hybrid): silent --enable-dp-attention reset + missing Glm5NextDecoderLayer strategy	https://github.com/sgl-project/sglang/issues/36840	2026-08-28T09:46:11Z	issue
-36822	open	[Bug] GPTQ Marlin MoE fails or produces NaNs with BF16 and tensor parallelism	https://github.com/sgl-project/sglang/issues/36822	2026-08-28T08:22:12Z	issue
-36807	open	[Bug] fast_topk_v2 can silently return wrong top-k sets when a radix threshold bucket exceeds its 4096-entry candidate buffer (k=2048, long rows)	https://github.com/sgl-project/sglang/issues/36807	2026-08-28T06:40:26Z	issue

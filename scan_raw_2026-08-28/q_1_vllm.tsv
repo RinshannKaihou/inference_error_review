@@ -1,6 +1,0 @@
-54273	open	[Bug]: Kimi-K3 parsers miss channel terminators - tool calls silently dropped, message terminator leaked into streamed content	https://github.com/vllm-project/vllm/issues/54273	2026-08-28T21:33:40Z	issue
-54206	open	[Bug]: Quark FSE compatibility check matches `shared_expert_gate`, silently disabling fused shared experts on Qwen MoE MXFP4	https://github.com/vllm-project/vllm/issues/54206	2026-08-28T12:02:28Z	issue
-54197	open	[Bug] GlmMoeDsa (V2 model runner) cannot use torch.compile — silent fallback, then fullgraph failures when force-enabled	https://github.com/vllm-project/vllm/issues/54197	2026-08-28T10:06:49Z	issue
-54193	open	[Bug]: KV offloading connector: finished-request store watermark includes a KV slot never written by any forward pass (silent cross-request poisoning with offload_prompt_only=False)	https://github.com/vllm-project/vllm/issues/54193	2026-08-28T09:39:44Z	issue
-54189	open	NVFP4 MoE silently folds an uninitialised activation scale for weight-only checkpoints (zeroes every expert)	https://github.com/vllm-project/vllm/issues/54189	2026-08-28T09:29:16Z	issue
-53975	open	[Bug]: legacy guided_json is silently ignored - request returns 200 with unconstrained free-form text	https://github.com/vllm-project/vllm/issues/53975	2026-08-27T02:24:35Z	issue

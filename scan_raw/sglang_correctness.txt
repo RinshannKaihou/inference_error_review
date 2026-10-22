@@ -1,4 +1,0 @@
-33317|[diffusion] Fix component accuracy topology reuse|https://github.com/sgl-project/sglang/pull/33317|2026-08-03T02:37:22Z|closed|bug,ready-for-review,npu,ci,run-ci,diffusion
-32970|Kimi-K3 bug tracking|https://github.com/sgl-project/sglang/issues/32970|2026-07-30T22:36:30Z|open|bug,kimi
-32963|[NVIDIA] Skip fusion of the post-experts all-reduce under hybrid MoE EP+TP|https://github.com/sgl-project/sglang/pull/32963|2026-07-30T19:40:02Z|open|bug
-32910|[DeepSeek-V4] Fix nvcc 13 crash building the topk_v2 kernel|https://github.com/sgl-project/sglang/pull/32910|2026-07-30T08:48:33Z|closed|bug,deepseek,blackwell,run-ci,nvidia,hopper,jit-kernel,run-ci-extra,kernel,GLM

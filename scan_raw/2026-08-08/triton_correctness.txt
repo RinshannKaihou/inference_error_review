@@ -1,4 +1,0 @@
-TOTAL: 2
-
-#11186 | 2026-08-05 | Fix incorrect reordering in OptimizeThreadLocality
-#11153 | 2026-08-03 | Interpreter and GPU disagree: valid  kernel silently returns wrong result when compiled

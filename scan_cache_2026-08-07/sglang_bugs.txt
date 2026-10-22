@@ -1,4 +1,0 @@
-TOTAL: 2
-
-33470|inference_mode mismatch can break lazy buffers|https://github.com/sgl-project/sglang/issues/33470|2026-08-04T03:17:16Z|bug,high priority
-33317|[diffusion] Fix component accuracy topology reuse|https://github.com/sgl-project/sglang/pull/33317|2026-08-03T02:37:22Z|bug,ready-for-review,npu,ci,run-ci,diffusion

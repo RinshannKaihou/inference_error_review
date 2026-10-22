@@ -1,6 +1,0 @@
-TOTAL: 4
-
-[17159] [#17158][fix] Reject NaN top_p, min_p and temperature in SamplingParams | state=open | created=2026-08-01
-[17158] [Bug]: SamplingParams accepts NaN for top_p, min_p and temperature | state=open | created=2026-08-01
-[17022] `trtllm-eval --max_output_length` is silently discarded on text tasks whose yaml sets `max_gen_toks` | state=open | created=2026-07-29
-[17020] `trtllm-eval aime25`/`aime26` silently disable thinking on DeepSeek-V4, halving reported accuracy | state=open | created=2026-07-29

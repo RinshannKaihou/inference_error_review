@@ -1,2 +1,0 @@
-54584	open	pcc non-determinism for kimi27	https://github.com/tenstorrent/tt-metal/issues/54584	2026-08-27T12:55:05Z	issue
-54516	open	[model]: prefill reference rope is built in bf16, so PCC decays with position	https://github.com/tenstorrent/tt-metal/issues/54516	2026-08-27T03:04:50Z	issue

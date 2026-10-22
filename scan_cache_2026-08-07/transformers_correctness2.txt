@@ -1,6 +1,0 @@
-TOTAL: 4
-
-47838|`additional_special_tokens` is silently discarded when `tokenizer_config.json` also contains `extra_special_tokens`|https://github.com/huggingface/transformers/issues/47838|2026-08-07T19:34:28Z
-47754|## Fix for Issue #47752: Incorrect Precedence of `generation_config` Values  ###|https://github.com/huggingface/transformers/pull/47754|2026-08-04T03:06:21Z
-47752|incorrect precedence of generation_config values|https://github.com/huggingface/transformers/issues/47752|2026-08-03T23:11:04Z
-47712|config: raise on missing local config file instead of silently falling back to defaults|https://github.com/huggingface/transformers/pull/47712|2026-08-02T14:05:30Z
