@@ -4,7 +4,7 @@ slug: scaled_masked_softmax_fp16_scale_overflow
 aliases: []
 title: ScaledMaskedSoftmax fp16 乘 scale 溢出行 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: x=[60000,0]、scale=2.0、mask 全 0：fp32/bf16 输出 [1,0] 正确，fp16 输出 [nan,nan]；三 dtype 腿不一致，两段接口返回 0。中间量溢出仅是表示问题，数学上 softmax([120000,0]) 可算。
+  detail: x=[60000,0]、scale=2.0、mask 全 0 时，fp32/bf16 得 [1,0]，fp16 得 [nan,nan]，三 dtype 腿不一致，接口返回成功无告警；触发条件为 x 在 fp16 范围内但 |x*scale|>65504（预处理放大或显式大 scale）。
   visibility: 数值异常
 mitigation:
   detect: 半精 attention 中 logits 接近 fp16 上限（预处理放大或 scale>1）时出现整行 NaN 即可对照 bf16/fp32 腿定位。
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

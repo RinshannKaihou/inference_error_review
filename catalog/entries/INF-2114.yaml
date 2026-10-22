@@ -4,7 +4,7 @@ slug: vllm_dsv41_piecewise_last_chunk_wrong
 aliases: []
 title: vLLM DSV4.1 末 prefill 块走 PIECEWISE 图输出全错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: DSV4.1 单请求 8202 token、mnbt=8192（末块 10）：从首个生成 token 起全错且逐次确定；enforce_eager 精确；FULL/NONE 0 错、PIECEWISE 1/6 错；trace 唯一差异是末块 PIECEWISE vs eager/FULL。
+  detail: DSV4.1单请求8202token、mnbt=8192（末块10）：首token起全错且逐次一致，enforce_eager精确；六并发mnbt=257下默认FULL_AND_PIECEWISE与纯PIECEWISE各1/6错，FULL/FULL_DECODE_ONLY/NONE 0错。
   visibility: 静默错误
 mitigation:
   detect: 同请求 enforce_eager 与默认图模式对比贪心输出；trace CudaGraphManager.dispatch 看末 prefill 块是否 PIECEWISE。
@@ -42,3 +42,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

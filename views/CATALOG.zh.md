@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2117 条；状态：active 2097、pending_audit 20
+共 2117 条；状态：active 2117
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -6706,18 +6706,18 @@
 
 ### INF-2098 `add_rms_norm_quant_tiling_global_residue` AddRmsNormQuant 全局残留致 tiling 模板漂移
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / AddRmsNormQuant tiling
 - **原因行为**：optionalUbNum_0/_1 为 TU 级全局，写点全在 hasScales2||hasBeta 分支内且无 else 复位，同进程残留值参与重算 ubFactor 并改变模板判定，tiling 不再由本次输入唯一决定。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：性能/资源；数值结果（性能退化）
 - **影响详情**：同一输入（[48,12000] fp16 不传可选输入）模板从 singleN/12224 漂移为 splitD/6880 或 4576；输出当前与 cold 逐 bit 相同、耗时差 <1.5%；前置调用换任意 shape 仍复现（进程级，排除 tiling 缓存）。
 - **改进措施**：检测 export ASCEND_GLOBAL_LOG_LEVEL=0 看 kernel template 与 ubFactor：cold 进程 singleN/12224，warm 进程 splitD/6880 即命中。；修复 待定（建议 CalcOptionalUbNum 入口无条件复位或状态成员化，issue open 未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7006
 
 ### INF-2099 `tril_uint32_int64_partial_write` aclnnTril uint32/int64 返回成功但约半输出未写
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / aclnnTril dtype 模板分派
 - **原因行为**：aclnnTril 按元素字节宽度分派执行模板，uint32/int64 两个 dtype 的宽度或模板映射条目疑似错配，两段接口返回 0 但输出约一半元素完全未写、已写部分掩码错误。
@@ -6728,7 +6728,7 @@
 
 ### INF-2100 `sinkhorn_fp32_noncontig_p_strides` Sinkhorn fp32 分支忽略非连续输出 strides 写错位置
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / aclnnSinkhorn fp32 分支
 - **原因行为**：fp32 分支把非连续 p 直接当 kernel 输出按连续布局写；非 fp32 分支先写连续临时张量再 ViewCopy 按 strides 搬运故正确；CheckParams 对 p 连续性无检查，文档声明不支持却不拒绝。
@@ -6739,7 +6739,7 @@
 
 ### INF-2101 `gelu_out_drops_approximate` gelu.out/gelu_backward 默认丢弃 approximate
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / torch_npu / GeluOut/Backward V1 分支
 - **原因行为**：gelu.out/gelu_backward 的 NPU 实现默认走 V1 aclnnGelu（无 approximate 入参），approximate 未透传，tanh 近似静默按 erf 精确版计算。
@@ -6750,7 +6750,7 @@
 
 ### INF-2102 `deepnorm_grad_cutd_tail_dgamma` DeepNormGrad cutD 尾块 dgamma 尾段静默错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / DeepNormGrad cutD 尾块
 - **原因行为**：cutD 模板最后一个分块较小时 dgamma 尾段计算错误：错误区间起点恒为单次切 D 容量（fp32=6104、fp16/bf16=4432），尾块约 ≤1024 元素时触发。
@@ -6761,29 +6761,29 @@
 
 ### INF-2103 `pfa_benchmark_tiling_key_residue` PFA tiling 全局残留致 tilingKey 漂移触发越界
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / PFA tiling 全局残留
 - **原因行为**：tiling 用全局变量承接 baseApi per-call 语义但只在 baseApi 分支赋值，末尾无条件加进 tilingKey，历史调用残留污染本次 key，kernel 按错误模板 key 执行触发 AICore 越界。
-- **影响对象**：数值结果（报错）
+- **影响对象**：可用性/进度；数值结果（报错）
 - **影响详情**：同算子同入参下，先经 SH+sparse_mode∈{20,21,22} 的 baseApi 路径再调普通 PFA，kernel 实收 tilingKey 从 …01012 变为 …401012，AICore 越界失败（3/3 复现）；cold 与 ctrl 组正常。
 - **改进措施**：检测 对比 tiling 侧 key 与 kernel 实收 key：ASCEND_GLOBAL_LOG_LEVEL=0 下 grep 'The Tiling key is' 与 'GetKernelByTillingKey'，两者不等即 host 侧二次加工污染。；修复 待定（issue open，未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6417
 
 ### INF-2104 `threshold_backward_global_race` ThresholdBackward 全局 thresholdVal_ 多线程竞争
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / aclnnThresholdBackward
 - **原因行为**：per-call threshold 放进程级全局，第一段写入与 IsFloatEqual 读取之间可被其他线程覆盖，线程按他人 threshold 选错 kernel 模板（ReluGrad vs ThresholdGradV2D）。
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：梯度；数值结果（静默错误）
 - **影响详情**：多线程并发时 A 线程读到 B 的 threshold：threshold=0 应走 ReluGrad 却走 ThresholdGradV2D，输出 0 掩码整片错位，无报错；判别元素 self≈0.0020 两线程期望 1/0 随机互换。4 线程每轮连调 32 次第一段再校验以最大化窗口。
 - **改进措施**：检测 并发负载下 ThresholdBackward 梯度掩码与阈值对不上（单线程正常、多线程随机错位）即可怀疑；根因定位靠读 aclnn_threshold_backward.cpp:33/:115/:147。；修复 待定（建议去掉全局、参数随 executor 传递；issue open 未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7026
 
 ### INF-2105 `scaled_masked_softmax_minus10000_mask` ScaledMaskedSoftmax -10000 屏蔽致概率反转
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / scaled_masked_softmax_v2
 - **原因行为**：kernel 用 constexpr -10000.0f 填充屏蔽位后直接 SoftMax，屏蔽位并非恒小：某行有效位 scale*x 低于 -10000 时屏蔽位反而成为行最大值。
@@ -6794,18 +6794,18 @@
 
 ### INF-2106 `scaled_masked_softmax_fp16_scale_overflow` ScaledMaskedSoftmax fp16 乘 scale 溢出行 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / SMS v2 fp16 腿
 - **原因行为**：bf16 先 Cast fp32 再乘 scale，fp16 直接半精域 Muls：x 在 fp16 范围但 x*scale 超上限时中间量溢出 inf，SoftMax 得 inf-inf=NaN。
 - **影响对象**：数值结果（数值异常）
-- **影响详情**：x=[60000,0]、scale=2.0、mask 全 0：fp32/bf16 输出 [1,0] 正确，fp16 输出 [nan,nan]；三 dtype 腿不一致，两段接口返回 0。中间量溢出仅是表示问题，数学上 softmax([120000,0]) 可算。
+- **影响详情**：x=[60000,0]、scale=2.0、mask 全 0 时，fp32/bf16 得 [1,0]，fp16 得 [nan,nan]，三 dtype 腿不一致，接口返回成功无告警；触发条件为 x 在 fp16 范围内但 |x*scale|>65504（预处理放大或显式大 scale）。
 - **改进措施**：检测 半精 attention 中 logits 接近 fp16 上限（预处理放大或 scale>1）时出现整行 NaN 即可对照 bf16/fp32 腿定位。；修复 待定（应统一先升 fp32 再乘；issue open 未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7122
 
 ### INF-2107 `ops_math_tril_triu_tiling_global_accum` tril/triu tiling 全局累乘不复位致二次调用起 tiling 错
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / tril/triu tiling 全局
 - **原因行为**：experimental tril/triu tiling 把 per-call 中间状态放在 TU 级可变全局，matrix_Num 唯一写点是累乘且任何路径不复位，同进程第二次调用携带历史乘积，GM 访存循环上界被放大。
@@ -6816,7 +6816,7 @@
 
 ### INF-2108 `flashinfer_fa2_running_max_nan` FlashInfer FA2 running max 不变时重缩放出 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / flashinfer / FA2 ragged 重缩放分支
 - **原因行为**：FA2 online softmax 在某个早期主导 key 使后续 KV tile 的 running max 保持不变时，该重缩放分支产生 NaN：全部输出 NaN、LSE -inf，而独立全 KV FP64 参考为精确 1。
@@ -6827,7 +6827,7 @@
 
 ### INF-2110 `median_subnormal_radix_key_nan` Median/NanMedian 误把负 subnormal 计为 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / cann / Median radix NaN 统计
 - **原因行为**：PreProcess 原地把浮点输入转 radix key 后，OnRadixInputLoaded 又把已改写数据按浮点统计 NaN：负 subnormal 的 key 位模式恰为 NaN，被误计入 NaN 统计。
@@ -6838,18 +6838,18 @@
 
 ### INF-2113 `vllm_rocm_attn_sw_mask_v_nan` vLLM ROCM_ATTN 滑窗不 mask V，0×NaN 污染整行
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / vllm / ROCM_ATTN 滑窗 kernel
 - **原因行为**：两个 Triton kernel 只把窗外 key 的 score mask 掉（softmax 权重 0）但仍加载其 V 并算 p@v；KV 管理器会释放整窗外的块供复用，窗外槽位可含 NaN/Inf，0*NaN=NaN 污染整行。
-- **影响对象**：输出内容（静默错误）
-- **影响详情**：Qwen3.8-27B+DFlash2（2048 窗非因果 drafter、hybrid）实测：8k 并发 1 接受长度 3.05 正常（少复用），并发 16 塌到 1.21（修复后 3.22）；64k 并发 1 直接 run failed（修复后 2.84）。
+- **影响对象**：数值结果；输出内容（数值异常）
+- **影响详情**：MI355X 实测（Qwen3.8-27B+DFlash2，drafter 2048 token 窗非因果）：8k 并发 1 接受长度 3.05（少复用故不显现）；并发 16 塌到 1.21（修复后 3.22）；64k 并发 1 run failed（修复后 2.84），无报错。
 - **改进措施**：检测 滑窗层 + ROCM_ATTN 下出现间歇性整行 NaN/接受长度骤降；切 TRITON_ATTN 对照。；修复 修复任务 https://github.com/vllm-project/vllm/issues/62415（zero V for out-of-window keys，open 未合）
 - **来源**：https://github.com/vllm-project/vllm/issues/62828
 
 ### INF-2116 `vllm_ascend_hc_pre_sinkhorn_eps_alignment` vllm-ascend hc_pre_v3 epsilon 错位致输出依赖行位置
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：算子/内核 / vllm / hc_pre Sinkhorn 列归一化
 - **原因行为**：hc_pre 对按对齐 stride 存储（hcMult=4→每行 4 有效+4 padding）的列和缓冲加 epsilon 时用 packed 计数（3 行漏 row2 有效位），部分行分母没得到 epsilon。
@@ -9848,12 +9848,12 @@
 
 ### INF-2114 `vllm_dsv41_piecewise_last_chunk_wrong` vLLM DSV4.1 末 prefill 块走 PIECEWISE 图输出全错
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：运行时/执行 / vllm / V2 CudaGraphManager 末块派发
 - **原因行为**：chunked prefill 最后一个 prefill 块被派发为 PIECEWISE CUDA graph（padded 到捕获尺寸）时计算路径出错：同请求 eager 或 FULL 图精确，仅 PIECEWISE 末块错。
 - **影响对象**：输出内容（静默错误）
-- **影响详情**：DSV4.1 单请求 8202 token、mnbt=8192（末块 10）：从首个生成 token 起全错且逐次确定；enforce_eager 精确；FULL/NONE 0 错、PIECEWISE 1/6 错；trace 唯一差异是末块 PIECEWISE vs eager/FULL。
+- **影响详情**：DSV4.1单请求8202token、mnbt=8192（末块10）：首token起全错且逐次一致，enforce_eager精确；六并发mnbt=257下默认FULL_AND_PIECEWISE与纯PIECEWISE各1/6错，FULL/FULL_DECODE_ONLY/NONE 0错。
 - **改进措施**：检测 同请求 enforce_eager 与默认图模式对比贪心输出；trace CudaGraphManager.dispatch 看末 prefill 块是否 PIECEWISE。；修复 待定（issue open 0 评论，根因在 graph 内部哪一层未定位）
 - **来源**：https://github.com/vllm-project/vllm/issues/62811
 
@@ -10251,11 +10251,11 @@
 
 ### INF-2109 `tt_fabric_router_partial_word_drop` tt fabric 路由器丢非 16B 倍包尾字致远端数据损坏
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：集合通信 / tt-metal / fabric ERISC router 尾字
 - **原因行为**：路由器把精确字节数传给 eth_send_packet_bytes_unsafe()，但 TX 队列只搬整 16B 字：非 16B 倍包尾部部分字不被发送，接收端转发 buffer 槽位陈旧字节。
-- **影响对象**：跨请求/跨样本数据（静默错误）
+- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
 - **影响详情**：非 16B 整数倍 fabric payload 尾部到达即损坏；fast dispatch 把任意长度完成队列写经 fabric 转发，宿主读远端 chip 得错误数据无报错。4×N300 实测 test_prefetcher 4 测全 Data mismatch，坏字恰为尾部字节。
 - **改进措施**：检测 多 chip fabric 拓扑跑 ./build/test/tt_metal/perf_microbenchmark/dispatch/test_prefetcher；Data mismatch 且坏字集中在尾部即命中；单 chip（无 fabric hop）对照。；修复 待定（issue open 0 评论）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/61919
@@ -10553,7 +10553,7 @@
 
 ### INF-2117 `vllm_glm_nvfp4_pcp_double_allreduce` GLM-5.3-NVFP4 EP+TP>1+PCP>1 双归约静默放大
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：并行切分 / vllm / DSv3.2 decoder MoE 双归约
 - **原因行为**：decoder 的 MoE 总以 reduce_results=False 构建并把 all-reduce 推给下一层；EP+PCP>1 时 use_all2all_kernels 为真又强制 runner 侧也归约，两次归约都执行。
@@ -14454,7 +14454,7 @@
 
 ### INF-2115 `tt_paged_fused_update_cache_rowmajor` tt paged_fused_update_cache 行主序写坏 KV
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：KV缓存 / tt-metal / paged_fused_update_cache
 - **原因行为**：ROW_MAJOR 路径在三种校验放行的配置下写坏 cache：FP32 输入默认 dest_acc 更新行全坏（含非有限值）；FP32 cache 其余行被舍到 bf16/tf32；bf16 输入开 dest_acc 更新行错。
@@ -20382,11 +20382,11 @@
 
 ### INF-2111 `rope_a2_mode23_fallback_half` RoPE A2 上 mode=2/3 静默按 half 计算
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：位置编码 / cann / RoPE mode 值域无校验
 - **原因行为**：mode 未校验即下传；IsAscend950() 只用于 dtype 校验未用于 mode 支持面，A2 上 mode=2/3 落到与 mode=0 相同的 half 路径。
-- **影响对象**：输出内容（静默错误）
+- **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：A2 上传 mode=2/3 两段接口返回 0，输出与 mode=0（half）逐字节相同（mode=1 vs 0 输出不同，排除数据巧合）；文档明确 A2 仅支持 0/1、承诺 161002。调用方拿到 half 位置编码，精度异常时才暴露；同代码 A2 与 950 语义不同且都返回成功。
 - **改进措施**：检测 同输入分别跑 mode=0/1/2/3 比较输出位模式；mode=2/3 与 mode=0 逐字节相同即命中（数据需保证模式间语义不同）。；修复 待定（issue 建议复用 IsAscend950() 在入口拒绝并补 UT；open 未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6454
@@ -22316,7 +22316,7 @@
 
 ### INF-2112 `tt_kimi_k3_shared_expert_corrupt` tt Kimi K3 共享专家不重叠时二次前向起损坏
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-21
 
 - **原因对象**：MoE路由 / tt-metal / TtSharedExpert 缓冲覆写
 - **原因行为**：forward 在 reduce_scatter 前释放 gate_out/up_out/activated，新输出分配在其上；算子直写邻居输出且因持久中间量跳过起始 barrier（输出并非持久）；共享专家随后读到覆写状态。

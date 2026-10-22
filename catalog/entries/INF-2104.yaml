@@ -4,7 +4,7 @@ slug: threshold_backward_global_race
 aliases: []
 title: ThresholdBackward 全局 thresholdVal_ 多线程竞争
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: per-call threshold 放进程级全局，第一段写入与 IsFloatEqual 读取之间可被其他线程覆盖，线程按他人 threshold 选错 kernel 模板（ReluGrad vs ThresholdGradV2D）。
 effect:
   objects:
+  - 梯度
   - 数值结果
   detail: 多线程并发时 A 线程读到 B 的 threshold：threshold=0 应走 ReluGrad 却走 ThresholdGradV2D，输出 0 掩码整片错位，无报错；判别元素 self≈0.0020 两线程期望 1/0 随机互换。4 线程每轮连调 32 次第一段再校验以最大化窗口。
   visibility: 静默错误
@@ -42,3 +43,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度

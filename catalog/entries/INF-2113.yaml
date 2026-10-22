@@ -4,7 +4,7 @@ slug: vllm_rocm_attn_sw_mask_v_nan
 aliases: []
 title: vLLM ROCM_ATTN 滑窗不 mask V，0×NaN 污染整行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,9 +13,10 @@ cause:
   behavior: 两个 Triton kernel 只把窗外 key 的 score mask 掉（softmax 权重 0）但仍加载其 V 并算 p@v；KV 管理器会释放整窗外的块供复用，窗外槽位可含 NaN/Inf，0*NaN=NaN 污染整行。
 effect:
   objects:
+  - 数值结果
   - 输出内容
-  detail: Qwen3.8-27B+DFlash2（2048 窗非因果 drafter、hybrid）实测：8k 并发 1 接受长度 3.05 正常（少复用），并发 16 塌到 1.21（修复后 3.22）；64k 并发 1 直接 run failed（修复后 2.84）。
-  visibility: 静默错误
+  detail: MI355X 实测（Qwen3.8-27B+DFlash2，drafter 2048 token 窗非因果）：8k 并发 1 接受长度 3.05（少复用故不显现）；并发 16 塌到 1.21（修复后 3.22）；64k 并发 1 run failed（修复后 2.84），无报错。
+  visibility: 数值异常
 mitigation:
   detect: 滑窗层 + ROCM_ATTN 下出现间歇性整行 NaN/接受长度骤降；切 TRITON_ATTN 对照。
   fix: 修复任务 https://github.com/vllm-project/vllm/issues/62415（zero V for out-of-window keys，open 未合）
@@ -42,3 +43,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 数值结果
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: pfa_benchmark_tiling_key_residue
 aliases: []
 title: PFA tiling 全局残留致 tilingKey 漂移触发越界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: tiling 用全局变量承接 baseApi per-call 语义但只在 baseApi 分支赋值，末尾无条件加进 tilingKey，历史调用残留污染本次 key，kernel 按错误模板 key 执行触发 AICore 越界。
 effect:
   objects:
+  - 可用性/进度
   - 数值结果
   detail: 同算子同入参下，先经 SH+sparse_mode∈{20,21,22} 的 baseApi 路径再调普通 PFA，kernel 实收 tilingKey 从 …01012 变为 …401012，AICore 越界失败（3/3 复现）；cold 与 ctrl 组正常。
   visibility: 报错
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 可用性/进度
+    uncertain:
+    - behavior
+    - detail

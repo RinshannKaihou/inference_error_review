@@ -4,7 +4,7 @@ slug: rope_a2_mode23_fallback_half
 aliases: []
 title: RoPE A2 上 mode=2/3 静默按 half 计算
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 位置编码
@@ -13,6 +13,7 @@ cause:
   behavior: mode 未校验即下传；IsAscend950() 只用于 dtype 校验未用于 mode 支持面，A2 上 mode=2/3 落到与 mode=0 相同的 half 路径。
 effect:
   objects:
+  - 数值结果
   - 输出内容
   detail: A2 上传 mode=2/3 两段接口返回 0，输出与 mode=0（half）逐字节相同（mode=1 vs 0 输出不同，排除数据巧合）；文档明确 A2 仅支持 0/1、承诺 161002。调用方拿到 half 位置编码，精度异常时才暴露；同代码 A2 与 950 语义不同且都返回成功。
   visibility: 静默错误
@@ -42,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-21'
+  audit:
+    round: daily-audit-2026-10-22
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 数值结果
