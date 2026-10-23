@@ -3,29 +3,29 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2141 条；状态：active 2117、pending_audit 24
+共 2141 条；状态：active 2141
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 597 |
+| 算子/内核 | 599 |
 | 编译器 | 137 |
-| 运行时/执行 | 133 |
-| 集合通信 | 37 |
+| 运行时/执行 | 132 |
+| 集合通信 | 36 |
 | 并行切分 | 28 |
 | KV缓存 | 349 |
 | 调度/服务 | 85 |
 | 输出解析 | 65 |
 | 解码/采样 | 148 |
-| 量化 | 189 |
+| 量化 | 191 |
 | 位置编码 | 41 |
 | 分词/模板 | 32 |
 | 模型定义 | 47 |
-| 权重/检查点 | 46 |
+| 权重/检查点 | 45 |
 | 数据管线 | 5 |
 | 优化器 | 3 |
 | 损失计算 | 3 |
-| MoE路由 | 41 |
+| MoE路由 | 40 |
 | 重计算/卸载 | 7 |
 | RL训练回路 | 1 |
 | 观测/评测 | 68 |
@@ -6860,7 +6860,7 @@
 
 ### INF-2119 `ttmetal_quasar_topk_negative_order` Quasar topk SFPU 排序负浮点序错
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / tt-metal / Quasar topk SFPU swap
 - **原因行为**：ckernel_sfpu_topk.h 所有 min/max TTI_SFPSWAP 传 imm12=0（二补码 int32 比较），而 imm12 bit0=1 才是 fp32 比较；两个负浮点比较时序错，方向颠倒
@@ -6871,7 +6871,7 @@
 
 ### INF-2120 `torch_npu_searchsorted_ignores_side_right` torch_npu searchsorted 忽略 side 恒返下界
 
-`故障` · `pending_audit` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / torch_npu / searchsorted side 参数
 - **原因行为**：searchsorted 的 NPU 实现不区分 side='right'，恒按 lower_bound（left）语义返回插入点；bucketize(right=True) 不受影响，缺陷限定 searchsorted
@@ -6882,10 +6882,10 @@
 
 ### INF-2122 `ttmetal_where_int_scalar_rounds_via_float32` ttnn.where 整型标量经 float32 舍入静默变值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / tt-metal / ternary where 标量通道
-- **原因行为**：TensorScalarVariant 的 int 替代项分发时隐式转 float（唯一标量重载收 float），整数标量先丢精度再打包整型 tile；范围校验也跑在已舍入 float 上（INT32_MAX 被拒）
+- **原因行为**：TensorScalarVariant 接受 int，但 std::visit 进 invoke_impl 的唯一标量重载收 float，int 隐式转换静默丢精度；范围校验在已舍入 float 上进行（INT32_MAX 被拒）
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：int32/uint32 张量配 Python int 标量 |s|>2^24 返回 float32(s)（16777217→16777216、-2147483647→-2147483648）；INT32_MAX/UINT32_MAX 合法值反被 TT_FATAL 拒绝；ttnn.add 同标量精确
 - **改进措施**：检测 对照 torch.where / ttnn.add 的同标量结果（报告者的表）；修复 issue 建议 int32_t/uint32_t 标量重载 + 按整数做范围校验 + 2^24+1/123456789/±(2^31-1)/UINT32_MAX 测试；修复 PR 未提交
@@ -6893,29 +6893,29 @@
 
 ### INF-2123 `ttmetal_logit_output_dtype_mismatch_garbage` ttnn.logit 输出 dtype 与输入不同时半数元素错位
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / tt-metal / logit 两段 kernel scratch
 - **原因行为**：compute_kernel_hw_startup 按 dfb::out 配 packer，tmp0 却按输入格式分配；阶段1按输出格式 pack、阶段2按输入格式 unpack，DataFormatReconfig 全程 Disabled
-- **影响对象**：数值结果（静默错误）
+- **影响对象**：数值结果（数值异常）
 - **影响详情**：bf16→fp32 输出 ~50% 元素 -inf、~99% abs err>0.05（偶位 logit(0)=-inf、奇位为错位的正确值）；fp32→bf16 输出 451/1024 非有限；同 dtype 或 60+ 其他混合 dtype 一元算子均正确
 - **改进措施**：检测 same-dtype 输出对照或 ttnn.log 同配置对照（均正确）；修复 issue 建议按输出格式分配 tmp0 并在阶段2重配 unpacker 或对 tmp0 pack/unpack 启用 DataFormatReconfig；测试覆盖混合 output_tensor dtype；修复未提交（PR #59167 不触此文件）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/62019
 
 ### INF-2124 `ttmetal_binary_ng_mixed_fp32_operand_loses_precision` ttnn binary_ng 混合 fp32/bf16 操作数静默降精度
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / tt-metal / binary_ng 混合 dtype 路径
 - **原因行为**：一个 float32 操作数与 bfloat16/bfloat8_b/bfloat4_b 操作数混合时，binary_ng 的 add/sub/sqdiff/fast mul/div/比较静默按低精度操作数的精度计算
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：262144 元素随机对照：add bf16 混合 145,060 错、bfloat8_b 71,927 错；比较 eq/ne 也 34,072 错；两个 fp32 操作数正确；无告警
+- **影响详情**：262144 元素随机数据对照 torch fp32：bf16 混合 add 错 145,060、div 152,505，eq/ne 34,072、gt/lt/ge/le 17,036；bfloat8_b/bfloat4_b 混合 71k-94k 量级；两个 fp32 操作数正确；无告警
 - **改进措施**：检测 torch fp32 参考对照（报告者方法）；修复 待定（#61268 首记 add 用例；修复未提交）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/62134
 
 ### INF-2126 `cann_adaptive_avg_pool2d_empty_input_uninit_out` AdaptiveAvgPool2d 空输入静默不写非空输出
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / adaptive_avg_pool2d 空输入早退
 - **原因行为**：aclnn_adaptive_avg_pool2d.cpp L400-404 把 self 空与 out 空合并处理直接返回 SUCCESS：self 空而 out 非空时仍有元素该写而一个不写，输出停留未初始化内存
@@ -6926,7 +6926,7 @@
 
 ### INF-2127 `cann_triu_tiling_global_state_reuse` Triu tiling 进程级全局状态跨调用残留
 
-`故障` · `pending_audit` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / Triu tiling 全局变量
 - **原因行为**：TriuTilingFunc 的 per-call 状态存 namespace 级变量：matrix_Num 初始 1 只设一次、L159 原位累乘不复位，第二次调用从首调用积起步；ub_Sharing_Num 设 4 不恢复 2；并发竞争
@@ -6938,10 +6938,10 @@
 
 ### INF-2129 `ttmetal_remainder_fmod_exact_multiple_inf_wh` ttnn remainder/fmod 精确倍数与无穷除数错值
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / tt-metal / remainder/fmod 边界语义
-- **原因行为**：Wormhole 上 remainder 对符号相反的精确倍数返回除数而非 0（91 % -13 = -13）；remainder/fmod 对无穷除数返回 NaN 而非被除数；fmod(inf,inf) 返回 0 而非 NaN
+- **原因行为**：Wormhole 上：remainder 对符号相反的精确倍数返回除数本身而非 0；remainder/fmod 遇 ±inf 除数返回 NaN，torch 结果因算子为 inf 或被除数；fmod(inf,inf) 得 0 而非 NaN
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：remainder(91,-13) 得 -13（torch 0）、remainder(-5,inf) NaN（torch inf）、fmod(-5,inf) NaN（torch -5）、fmod(inf,inf) 0（torch NaN）；float32 always
 - **改进措施**：检测 与 torch.remainder/fmod 边界用例对照；修复 待定（Blackhole 侧 #61542 同族在办，本单为 Wormhole 侧补齐；test_div_ops.py 无这些输入）
@@ -6949,7 +6949,7 @@
 
 ### INF-2131 `ttmetal_unary_int8_gate_skip_garbage` ttnn 一元算子静默接受 INT8 返回确定性垃圾
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / tt-metal / unary 整型输入门控
 - **原因行为**：is_integer_dtype() 不含 INT8，#56980 门控 early-return 跳过；ABS/RELU 的 UINT/INT32 特例不含 INT8，落入 float SFPU kernel 解释原始整数字节
@@ -6958,20 +6958,43 @@
 - **改进措施**：检测 与 torch int8 语义对照（报告者表）；同 rig 上 uint8/int32 的对照 TT_FATAL 可作判别；修复 issue 给出方向：is_integer_dtype 加 DataType::INT8 让既有门控统一拒绝（门控已编码正确答案）+ int8 拒绝测试；报告者愿提 PR，未提交
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/62133
 
+### INF-2132 `flashinfer_b12x_deterministic_moe_tile32_masked_routes` flashinfer b12x 确定性 MoE tile32/掩码路由错值
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+
+- **原因对象**：算子/内核 / flashinfer / b12x 确定性 fused_moe 计划
+- **原因行为**：确定性 w4a8_mx 后端两缺陷：dynamic_tile_m=32 计划输出错；grouped 模式 topk_ids==-1 的行不写 per-route 输出，合并时累加此前调用的陈旧 scratch
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：Top-6/K=5120/n=2048、5-64 token 调用 cosine 对非确定性路径约 0；掩码约 60% 时 cosine 0.5-0.85、全 -1 行输出非零；新 plan 首调干净、后续调用错；EP 集成恒命中
+- **改进措施**：检测 与 deterministic_output=False 同输入对比（报告者方法）；修复 issue 给出规避：dynamic_tile_m>=64 + 掩码路由重映射为本地专家权重 0（E12/16/96、T1-2100 全扫与非线性路径一致）；正式修复未提交（相关 #6941）
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/7021
+
 ### INF-2136 `cann_clipped_swiglu_group_rows_uninitialized` ClippedSwiglu 组外输出行为未初始化显存
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / cann / clipped_swiglu 输出分配
 - **原因行为**：kernel 只写 group 覆盖行（realBatchSize_=min(sum(gi),batch)），适配层用 at::empty 分配输出——范围外行是显存池残影；仓库 golden 表明正确语义是输出 0
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：sum(group_index)<batch 行数时输出尾部随机出现非零脏数据，同一代码同一输入有时全 0（碰巧干净内存）有时残影；经典未定义行为，单测难稳定捕获
+- **影响详情**：sum(group_index) 小于 batch 行数时，输出未被组覆盖的尾部行是随机非零脏数据（显存池残影）；同一代码同一输入有时全 0、有时出现残影，取决于显存分配历史；无报错，下游消费脏值；预热污染显存池后可稳定复现。
 - **改进措施**：检测 多次调用并先污染显存池（报告者的预热污染法）；修复 修复 PR !12603（clipped_swiglu 传 group_index 时输出未初始化为显存残影，改用 at::zeros 初始化，open）；grad 同缺陷另修
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7223；https://gitcode.com/cann/ops-nn/merge_requests/12603
+- **关联**：cross:TRN-0386
+
+### INF-2137 `cann_matmul_reduce_scatter_v2_attrs_ignored` MatmulReduceScatterV2 静默忽略归约属性
+
+`故障` · `active` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
+
+- **原因对象**：算子/内核 / cann / MRSv2 属性校验
+- **原因行为**：V2 对资料仅支持 sum/0 的 reduceOp/commTurn 不做白名单校验：传 max/1 等非法值第一段返回 0、执行成功且输出与 sum/0 逐元素一致；V1 同输入返回 561002
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：用户以为配置了 max 归约实际执行 sum：语义反转无任何告警；2 卡 A2 实测 max 与 sum 输出不同元素数 0/2048
+- **改进措施**：检测 构造 max≠sum 的输入对照输出（报告者方法）；修复 待定（V1 已有校验可对齐；issue 给出复现脚本）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6524
 
 ### INF-2139 `torch_npu_format_cast_two_arg_aclnn_uses_self` npu_format_cast_ 两参 aclnn 路径误用 self 转换源
 
-`故障` · `pending_audit` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `hw_specific` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：算子/内核 / torch_npu / FormatCast aclnn 分支
 - **原因行为**：npu_format_cast_(self, src) 的 aclnn 分支把 self 而非 src 传给转换实现，再 set_ 换 self 的 storage；legacy 路径正确，两路径语义分叉
@@ -9979,17 +10002,6 @@
 - **改进措施**：检测 同请求 enforce_eager 与默认图模式对比贪心输出；trace CudaGraphManager.dispatch 看末 prefill 块是否 PIECEWISE。；修复 待定（issue open 0 评论，根因在 graph 内部哪一层未定位）
 - **来源**：https://github.com/vllm-project/vllm/issues/62811
 
-### INF-2133 `vllm_flashinfer_bf16_q_nonunit_qscale_garbage` vLLM FlashInfer BF16 Q 非单位 q_scale 输出垃圾
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
-
-- **原因对象**：运行时/执行 / vllm / FlashInfer q_scale 传参
-- **原因行为**：FP8 K/V 下 native FlashInfer 路径把 layer._q_scale_float 传给 kernel，即使 Q 是 BF16/FP16 未量化；非单位 query scale 错误缩放注意力；q_scale=1 掩盖
-- **影响对象**：输出内容（静默错误）
-- **影响详情**：受影响请求输出垃圾而非正确答案；Qwen3.8-27B FP8 非单位 attention scale 服务实测 0.29.0/0.32.0 复现、0.23.0 通过；修复后同请求恢复正确
-- **改进措施**：检测 CPU 参数边界测试（issue 提供复现器：stored_q_scale=0.25 时 passed=0.25）；修复 query-dtype 修复（BF16/FP16 Q 传 q_scale=1，保留 FP8 Q 反量化）——#53754 既有 PR，关联 #53481；发布状态未核实
-- **来源**：https://github.com/vllm-project/vllm/issues/63043
-
 ## 集合通信
 
 ### INF-0103 `ttmetal_all_broadcast_writer_accessor_cross_buffer_space` all_broadcast 输出 accessor 误用输入 buffer
@@ -10393,17 +10405,6 @@
 - **改进措施**：检测 多 chip fabric 拓扑跑 ./build/test/tt_metal/perf_microbenchmark/dispatch/test_prefetcher；Data mismatch 且坏字集中在尾部即命中；单 chip（无 fabric hop）对照。；修复 待定（issue open 0 评论）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/61919
 
-### INF-2137 `cann_matmul_reduce_scatter_v2_attrs_ignored` MatmulReduceScatterV2 静默忽略归约属性
-
-`故障` · `pending_audit` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
-
-- **原因对象**：集合通信 / cann / MRSv2 属性校验
-- **原因行为**：V2 对资料仅支持 sum/0 的 reduceOp/commTurn 不做白名单校验：传 max/1 等非法值两段返回 0 正常执行且输出与 sum/0 逐元素一致；V1 同输入正确返回 561002
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：用户以为配置了 max 归约实际执行 sum：语义反转无任何告警；2 卡 A2 实测 max 与 sum 输出不同元素数 0/2048
-- **改进措施**：检测 构造 max≠sum 的输入对照输出（报告者方法）；修复 待定（V1 已有校验可对齐；issue 给出复现脚本）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/6524
-
 ## 并行切分
 
 ### INF-0353 `distributed_seed_not_broadcast` 分布式 seed 未广播或 TP 切分错误致采样不一致与输出错乱
@@ -10708,11 +10709,11 @@
 
 ### INF-2121 `vllm_glm_dsa_pp_stale_topk_indices` GLM-5.x DSA 流水并行程边界丢失 top-k 索引
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：并行切分 / vllm / PP 边界 topk_indices 传递
 - **原因行为**：PP>1 只传 hidden_states/residual，indexer 层的 top-k 索引留在本 GPU buffer；stage 首个复用层读旧值（上一 batch 或未初始化内存），attend 错误 KV 行
-- **影响对象**：输出内容；隐状态（静默错误）
+- **影响对象**：隐状态；输出内容（质量退化）
 - **影响详情**：stage 边界后的复用层 attend 错误 KV 行，输出仍连贯（其他层正确）故静默；PP8 默认切分 78 层中 13 层受影响
 - **改进措施**：检测 待定；修复 待定（issue 报告者建议在 PP 边界传播索引或 stage 首层重算，未见修复 PR）
 - **来源**：https://github.com/vllm-project/vllm/issues/63170
@@ -14620,7 +14621,7 @@
 
 ### INF-2130 `sglang_qsa_retraction_state_confusion` sglang 回退恢复后 QSA 索引状态来自其他请求
 
-`故障` · `pending_audit` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：KV缓存 / sglang / cpu_tensor 回退备份 QSA 池
 - **原因行为**：QSATokenToKVPool 未覆写 get_cpu_copy/load_cpu_copy，沿用只备份 KV+Mamba 的版本；QSA 压缩索引键与 pending 环从不保存恢复，恢复后槽位已被他请求写入
@@ -14631,7 +14632,7 @@
 
 ### INF-2135 `sglang_fp4_kv_pd_transfer_drops_block_scales` sglang FP4 KV 块缩放因子 PD 传输/回退丢失
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：KV缓存 / sglang / PD 传输与回退的 scale 注册
 - **原因行为**：FP4 KV 池是普通池加量化方法，setup_state_kv_args 只为 MXFP8 注册 BLOCK_SCALE；get_cpu_copy 也只拷 KV，decode 端用自己的零或他人的 scale 反量化 packed KV
@@ -20104,18 +20105,40 @@
 
 ### INF-2125 `flashinfer_blockscale_sf_underflow_nan` flashinfer 块缩放量化守卫旧值致 SF 下溢 NaN
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：量化 / flashinfer / 块 SF 零守卫用舍入前值
-- **原因行为**：5 处块缩放量化站点守卫舍入前的 vecMax 却消费经 fp8 舍入的 SFValue：块最大值 <=2^-10 时 SF 舍 0 而守卫通过，reciprocal(0)=inf，0 元素 0*inf=NaN、非零元素成 inf
+- **原因行为**：5 处块缩放量化站点守卫舍入前 vecMax 却用 fp8 舍入后 SFValue：SFScaleVal*vecMax/6<=2^-10 时 SF 舍为 0 而守卫通过，reciprocal(0)=inf，零元素 NaN、非零元素 inf
 - **影响对象**：数值结果；输出内容（数值异常）
 - **影响详情**：受影响窗口为块最大值约比张量最大值低 2^18.8（~460000×）的块（全局 scale 顶格放置时）；nvfp4 GEMM/DiT norm/FP4-KV 量化输出含 NaN/inf；纯零块走守卫分支不受影响
 - **改进措施**：检测 输出 NaN 扫描（触发窗口确定性）；修复 仓内已有正确形态（#2441 修 cvt_warp_fp16_to_mxfp8 守卫 SFValue!=0；trtllm_moe_allreduce_fusion.cuh L622 同），5 站点对齐即可；修复未提交
 - **来源**：https://github.com/flashinfer-ai/flashinfer/issues/6994
 
+### INF-2133 `vllm_flashinfer_bf16_q_nonunit_qscale_garbage` vLLM FlashInfer BF16 Q 非单位 q_scale 输出垃圾
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+
+- **原因对象**：量化 / vllm / FlashInfer q_scale 传参
+- **原因行为**：FP8 K/V 下 native FlashInfer 路径把 layer._q_scale_float 传给 kernel，即使 Q 是 BF16/FP16 未量化；非单位 query scale 错误缩放注意力；q_scale=1 掩盖
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：受影响请求输出垃圾而非正确答案；Qwen3.8-27B FP8 非单位 attention scale 服务实测 0.29.0/0.32.0 复现、0.23.0 通过；修复后同请求恢复正确
+- **改进措施**：检测 CPU 参数边界测试（issue 提供复现器：stored_q_scale=0.25 时 passed=0.25）；修复 query-dtype 修复（BF16/FP16 Q 传 q_scale=1，保留 FP8 Q 反量化）——#53754 既有 PR，关联 #53481；发布状态未核实
+- **来源**：https://github.com/vllm-project/vllm/issues/63043
+
+### INF-2134 `transformers_finegrained_fp8_partial_block_dequantize` transformers FP8 反量化部分尾块错块尺寸
+
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+
+- **原因对象**：量化 / transformers / Fp8Dequantize 块尺寸推导
+- **原因行为**：_dequantize_one 以 rows//scale_rows 推块尺寸，DeepSeek 式 ceil 网格尾块非整块：不整除时 ValueError 拒载；整除时用错块尺寸（96 代 128）静默装错权重
+- **影响对象**：模型权重；输出内容（静默错误）
+- **影响详情**：DeepSeek-V3/R1 每层 kv_a_proj_with_mqa [576,7168]/scale [5,56] 无 GPU 或 CC<8.9 反量化路径必炸；整除 lucky 形状加载成功但权重错、推理结果静默偏差
+- **改进措施**：检测 对 DeepSeek 检查点在无 GPU 环境尝试 dequantize=True 加载（必现 ValueError）；权重值与 GPU 路径抽样比对；修复 待定（非反量化路径已用 ceil 约定：FP8Linear 按 (out+block-1)//block 分配 scale 行；修复未提交）
+- **来源**：https://github.com/huggingface/transformers/issues/49873
+
 ### INF-2138 `cann_dequant_swiglu_quant_no_group_mode_silent` DequantSwigluQuant 无 group 静默回落 mode0
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：量化 / cann / dequant_swiglu 无 group 路径
 - **原因行为**：Dsk tiling 仅 group_index 存在时 capable，无 group 落到 base tiling 内核——没有 swiglu_mode/clamp/glu 参数管道，硬编码标准 silu×up×smooth
@@ -20123,6 +20146,7 @@
 - **影响详情**：mode2 与 mode0 输出 100% 相同、int8 与文档公式 golden 一致率 43.65%；clamp_limit/glu_alpha/glu_bias 全部静默丢失，无报错无告警
 - **改进措施**：检测 同输入 mode2 vs mode0 输出比对（100% 相同即命中）；修复 修复 PR !12598（fix(dequant_swiglu_quant): 修复无 group_index 时 swiglu_mode 1/2/3 被静默按 mode0 计算，open）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7225；https://gitcode.com/cann/ops-nn/merge_requests/12598
+- **关联**：cross:TRN-0387
 
 ## 位置编码
 
@@ -21465,7 +21489,7 @@
 
 ### INF-2118 `vllm_glm_kpool_unchunked_start_unwritten_or_foreign` GLM kpool 跨非对齐 chunk 起点未写或池入他请求 token
 
-`故障` · `pending_audit` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `partial` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：模型定义 / vllm / GLM5Next kpool 压缩写入
 - **原因行为**：_kpool_compress_insert 假定 pool 对齐 chunk 起点；起点 mod 4 != 0 时跨界 pool 被行号掩码丢弃：首行时永不写出、有前置请求时用上一请求 key/gate 压缩
@@ -21970,24 +21994,13 @@
 - **改进措施**：检测 load_format=dummy 启动后检查 named_parameters 中 kv_b_proj.weight 的 shape 是否为 [0]；再调一次 load_weights 推真实权重看是否断言；修复 待定（issue 建议仅在显式关闭 live reload 时才 dispose，并引入 weight_transfer 能力开关；未附 PR，未核实）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/15463
 
-### INF-2134 `transformers_finegrained_fp8_partial_block_dequantize` transformers FP8 反量化部分尾块错块尺寸
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
-
-- **原因对象**：权重/检查点 / transformers / Fp8Dequantize 块尺寸推导
-- **原因行为**：_dequantize_one 以 rows//scale_rows 推块尺寸，DeepSeek 式 ceil 网格尾块非整块：不整除时 ValueError 拒载；整除时用错块尺寸（96 代 128）静默装错权重
-- **影响对象**：模型权重；输出内容（静默错误）
-- **影响详情**：DeepSeek-V3/R1 每层 kv_a_proj_with_mqa [576,7168]/scale [5,56] 无 GPU 或 CC<8.9 反量化路径必炸；整除 lucky 形状加载成功但权重错、推理结果静默偏差
-- **改进措施**：检测 对 DeepSeek 检查点在无 GPU 环境尝试 dequantize=True 加载（必现 ValueError）；权重值与 GPU 路径抽样比对；修复 待定（非反量化路径已用 ceil 约定：FP8Linear 按 (out+block-1)//block 分配 scale 行；修复未提交）
-- **来源**：https://github.com/huggingface/transformers/issues/49873
-
 ### INF-2140 `vllm_mtp_draft_uninitialized_embedding_pp` MTP draft-only 检查点 PP 下嵌入未初始化
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：权重/检查点 / vllm / MTP drafter 嵌入共享/加载检查
 - **原因行为**：_maybe_share_embeddings 仅 world_size==1 共享；draft-only 检查点无 embed_tokens 不被加载；process_weights_after_loading 使未加载参数通过检查
-- **影响对象**：输出分布；性能/资源（静默错误）
+- **影响对象**：性能/资源；输出分布（性能退化）
 - **影响详情**：drafter 用 torch.empty 的随机位嵌入 x_{t+1}：输出仍正确（验证拒绝坏 draft），唯一症状是接受率坍塌（实测 0.779→0.22 与零嵌入消融吻合；补嵌入后 0.55-0.85、K=2 +49-53% 吞吐），投机加速静默丢失
 - **改进措施**：检测 离线 draft top-1 评测（真嵌入 vs 零嵌入 vs 随机嵌入消融）；对照服务 acceptance 指标；修复 数据级规避：把目标 model.embed_tokens.weight 复制为 draft 目录 model.layers.N.embed_tokens.weight（_rewrite_spec_layer_name 映射，免代码）；建议修复 fail-loud 或 last-stage 加载（#57171 曾提 glm5next 未合）
 - **来源**：https://github.com/vllm-project/vllm/issues/63128
@@ -22557,20 +22570,9 @@
 - **改进措施**：检测 同一 eager bf16 前向连跑两次对比 shared_output PCC；第二次起 PCC 掉到 0.48~0.87 即命中；开 overlap_shared_expert_with_dispatch 对照。；修复 待定（issue open 0 评论）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/61942
 
-### INF-2132 `flashinfer_b12x_deterministic_moe_tile32_masked_routes` flashinfer b12x 确定性 MoE tile32/掩码路由错值
-
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
-
-- **原因对象**：MoE路由 / flashinfer / b12x 确定性 fused_moe 计划
-- **原因行为**：确定性 w4a8_mx 后端两缺陷：dynamic_tile_m=32 计划输出错；grouped 模式 topk_ids==-1 的行不写 per-route 输出，合并时累加此前调用的陈旧 scratch
-- **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：Top-6/K=5120/n=2048、5-64 token 调用 cosine 对非确定性路径约 0；掩码约 60% 时 cosine 0.5-0.85、全 -1 行输出非零；新 plan 首调干净、后续调用错；EP 集成恒命中
-- **改进措施**：检测 与 deterministic_output=False 同输入对比（报告者方法）；修复 issue 给出规避：dynamic_tile_m>=64 + 掩码路由重映射为本地专家权重 0（E12/16/96、T1-2100 全扫与非线性路径一致）；正式修复未提交（相关 #6941）
-- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/7021
-
 ### INF-2141 `sglang_kimi_k3_mxfp4_situ_as_gptoss_swiglu` sglang Kimi-K3 MXFP4 静默算成 GPT-OSS SwiGLU
 
-`故障` · `pending_audit` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `config` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：MoE路由 / sglang / SM90 CUTLASS mxfp4 激活分发
 - **原因行为**：_fused_experts_flashinfer_mxfp4_cutlass 硬编码 Swiglu 不读 activation；K3 的 SiTU 常量被按 GPT-OSS 语义 g·σ(4g)·(u+1) 钳 25 解释，数学上不等价
@@ -23426,7 +23428,7 @@
 
 ### INF-2128 `torch_npu_torchbench_fp64_golden_silent_downgrade` NPU torchbench fp64 golden 静默降级致误报
 
-`故障` · `pending_audit` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
+`故障` · `active` · `infra_off` · `yes` · `documented` · `NEW` · 发现 2026-10-22
 
 - **原因对象**：观测/评测 / torch_npu / torchbench 精度判据链
 - **原因行为**：NPU 无 float64 内核，dtype 转换静默替换为 float32（仅 W 告警）；fp64 golden 采集退化为第二次 fp32 前向产出伪 golden，fp64 RMSE 回退被 dtype 门槛静默跳过

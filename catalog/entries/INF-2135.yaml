@@ -4,7 +4,7 @@ slug: sglang_fp4_kv_pd_transfer_drops_block_scales
 aliases: []
 title: sglang FP4 KV 块缩放因子 PD 传输/回退丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -43,3 +43,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

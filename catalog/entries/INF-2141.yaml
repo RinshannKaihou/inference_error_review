@@ -4,7 +4,7 @@ slug: sglang_kimi_k3_mxfp4_situ_as_gptoss_swiglu
 aliases: []
 title: sglang Kimi-K3 MXFP4 静默算成 GPT-OSS SwiGLU
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem
+    - visibility
+    - detail

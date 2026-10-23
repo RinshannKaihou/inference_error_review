@@ -4,7 +4,7 @@ slug: vllm_mtp_draft_uninitialized_embedding_pp
 aliases: []
 title: MTP draft-only 检查点 PP 下嵌入未初始化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -13,10 +13,10 @@ cause:
   behavior: _maybe_share_embeddings 仅 world_size==1 共享；draft-only 检查点无 embed_tokens 不被加载；process_weights_after_loading 使未加载参数通过检查
 effect:
   objects:
-  - 输出分布
   - 性能/资源
+  - 输出分布
   detail: drafter 用 torch.empty 的随机位嵌入 x_{t+1}：输出仍正确（验证拒绝坏 draft），唯一症状是接受率坍塌（实测 0.779→0.22 与零嵌入消融吻合；补嵌入后 0.55-0.85、K=2 +49-53% 吞吐），投机加速静默丢失
-  visibility: 静默错误
+  visibility: 性能退化
 mitigation:
   detect: 离线 draft top-1 评测（真嵌入 vs 零嵌入 vs 随机嵌入消融）；对照服务 acceptance 指标
   fix: 数据级规避：把目标 model.embed_tokens.weight 复制为 draft 目录 model.layers.N.embed_tokens.weight（_rewrite_spec_layer_name 映射，免代码）；建议修复 fail-loud 或 last-stage 加载（#57171 曾提 glm5next 未合）
@@ -43,3 +43,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出分布
+        to: 性能/资源
+      visibility:
+        from: 静默错误
+        to: 性能退化
+    uncertain:
+    - subsystem

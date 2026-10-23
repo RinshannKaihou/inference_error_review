@@ -4,10 +4,10 @@ slug: transformers_finegrained_fp8_partial_block_dequantize
 aliases: []
 title: transformers FP8 反量化部分尾块错块尺寸
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: 量化
     stack: transformers
     component: Fp8Dequantize 块尺寸推导
   behavior: _dequantize_one 以 rows//scale_rows 推块尺寸，DeepSeek 式 ceil 网格尾块非整块：不整除时 ValueError 拒载；整除时用错块尺寸（96 代 128）静默装错权重
@@ -43,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: 量化

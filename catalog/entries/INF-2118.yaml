@@ -4,7 +4,7 @@ slug: vllm_glm_kpool_unchunked_start_unwritten_or_foreign
 aliases: []
 title: GLM kpool 跨非对齐 chunk 起点未写或池入他请求 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 模型定义
@@ -44,3 +44,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility
+    - detail

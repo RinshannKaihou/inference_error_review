@@ -4,7 +4,7 @@ slug: cann_triu_tiling_global_state_reuse
 aliases: []
 title: Triu tiling 进程级全局状态跨调用残留
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -37,6 +37,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2107
+pattern: PAT-INF-0188
 original:
   mechanism: ops-math 的 TriuTilingFunc 把全部 per-call tiling 状态存于 namespace 作用域变量（triu tiling 源 L50-61）：matrix_Num 仅初始化一次为 1，L159 原位累乘（matrix_Num *= inputShape.GetDim(i)），第二次 tiling 调用从首调用乘积起步；累积值经 L179 total_Length_Aligned 与 L231 写入 tiling->matrixNum，kernel 侧 NsTriu::Triu<T>::Init（experimental/conversion/triu/op_kernel/triu.h:95）与 NaivePath（triu.h:170）按其迭代——膨胀的 matrixNum 使 kernel 读写过 x/y 实际存储（越界）。ub_Sharing_Num 同缺陷：L190/L213 设 4 不恢复默认 2，改变后续调用 UB 缓冲尺寸。并发 tiling 调用也在这些全局上竞争。修复 PR !6604（per-invocation 状态）open。与 INF-2107（tril/triu experimental tiling TU 级全局累乘，2026-10-21 收录）同族失效机制（tiling 状态进程级残留）但为独立算子路径与代码站点。
   source: https://gitcode.com/cann/ops-math/issues/3818（源码级定位）；修复 https://gitcode.com/cann/ops-math/merge_requests/6604（open）
@@ -52,3 +53,13 @@ migration:
   - date: '2026-10-22'
     fields:
     - original.notes
+  - date: '2026-10-23'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

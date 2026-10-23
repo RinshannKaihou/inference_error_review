@@ -4,7 +4,7 @@ slug: ttmetal_binary_ng_mixed_fp32_operand_loses_precision
 aliases: []
 title: ttnn binary_ng 混合 fp32/bf16 操作数静默降精度
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 262144 元素随机对照：add bf16 混合 145,060 错、bfloat8_b 71,927 错；比较 eq/ne 也 34,072 错；两个 fp32 操作数正确；无告警
+  detail: 262144 元素随机数据对照 torch fp32：bf16 混合 add 错 145,060、div 152,505，eq/ne 34,072、gt/lt/ge/le 17,036；bfloat8_b/bfloat4_b 混合 71k-94k 量级；两个 fp32 操作数正确；无告警
   visibility: 静默错误
 mitigation:
   detect: torch fp32 参考对照（报告者方法）
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

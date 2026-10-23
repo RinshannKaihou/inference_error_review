@@ -4,7 +4,7 @@ slug: vllm_glm_dsa_pp_stale_topk_indices
 aliases: []
 title: GLM-5.x DSA 流水并行程边界丢失 top-k 索引
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 并行切分
@@ -13,10 +13,10 @@ cause:
   behavior: PP>1 只传 hidden_states/residual，indexer 层的 top-k 索引留在本 GPU buffer；stage 首个复用层读旧值（上一 batch 或未初始化内存），attend 错误 KV 行
 effect:
   objects:
-  - 输出内容
   - 隐状态
+  - 输出内容
   detail: stage 边界后的复用层 attend 错误 KV 行，输出仍连贯（其他层正确）故静默；PP8 默认切分 78 层中 13 层受影响
-  visibility: 静默错误
+  visibility: 质量退化
 mitigation:
   detect: 待定
   fix: 待定（issue 报告者建议在 PP 边界传播索引或 stage 首层重算，未见修复 PR）
@@ -43,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 隐状态
+      visibility:
+        from: 静默错误
+        to: 质量退化

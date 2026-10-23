@@ -4,15 +4,16 @@ slug: vllm_flashinfer_bf16_q_nonunit_qscale_garbage
 aliases: []
 title: vLLM FlashInfer BF16 Q 非单位 q_scale 输出垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 量化
     stack: vllm
     component: FlashInfer q_scale 传参
   behavior: FP8 K/V 下 native FlashInfer 路径把 layer._q_scale_float 传给 kernel，即使 Q 是 BF16/FP16 未量化；非单位 query scale 错误缩放注意力；q_scale=1 掩盖
 effect:
   objects:
+  - 数值结果
   - 输出内容
   detail: 受影响请求输出垃圾而非正确答案；Qwen3.8-27B FP8 非单位 attention scale 服务实测 0.29.0/0.32.0 复现、0.23.0 通过；修复后同请求恢复正确
   visibility: 静默错误
@@ -42,3 +43,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 量化
+      effect:
+        from: 输出内容
+        to: 数值结果

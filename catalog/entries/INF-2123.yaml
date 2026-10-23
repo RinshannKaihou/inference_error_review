@@ -4,7 +4,7 @@ slug: ttmetal_logit_output_dtype_mismatch_garbage
 aliases: []
 title: ttnn.logit 输出 dtype 与输入不同时半数元素错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: bf16→fp32 输出 ~50% 元素 -inf、~99% abs err>0.05（偶位 logit(0)=-inf、奇位为错位的正确值）；fp32→bf16 输出 451/1024 非有限；同 dtype 或 60+ 其他混合 dtype 一元算子均正确
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: same-dtype 输出对照或 ttnn.log 同配置对照（均正确）
   fix: 'issue 建议按输出格式分配 tmp0 并在阶段2重配 unpacker 或对 tmp0 pack/unpack 启用 DataFormatReconfig；测试覆盖混合 output_tensor dtype；修复未提交（PR #59167 不触此文件）'
@@ -42,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-22'
+  audit:
+    round: daily-audit-2026-10-23
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
