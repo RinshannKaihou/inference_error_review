@@ -36,6 +36,8 @@ original:
   behavior: 使用者在同一进程里先用带 beta 或 scales2 的 npu_add_rms_norm_quant，再跑一次不传可选输入的同 shape 调用：开 tiling 日志会看到 kernel 模板从 singleN 变成 splitD、ubFactor 从 12224 掉到 6880 或 4576；换前置 shape 也复现，只有新起进程才恢复 singleN。输出数值当前逐 bit 不变、耗时差不到 1.5%，但 tiling 选择已经不再由本次输入决定。
   trigger_surface: Atlas A2（910B2）、CANN 9.2.0、torch 2.12.0+cpu/torch_npu 2.12.0.post3；非 regbase 路径；需同进程先执行一次带 beta/scales2 的调用。
   discovery: 2026-10-21 每日扫描
+  notes:
+  - '2026-10-23 回访 2026-10-23：issue #7006 已 closed（关闭原因未见注释）；修复发布状态未核实'
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -56,3 +58,7 @@ migration:
       visibility:
         from: 静默错误
         to: 性能退化
+  updates:
+  - date: '2026-10-23'
+    fields:
+    - original.notes
