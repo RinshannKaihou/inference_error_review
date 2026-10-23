@@ -74,11 +74,14 @@ PATTERNS = os.path.join(ROOT, "catalog", "patterns")
 # （两库各有一个，--pattern 会同时命中两边）。
 PAT_RE = re.compile(r"^PAT-(INF|TRN)-\d{4}$")
 LABEL_ENUMS = {
-    "family": ("infra_off", "model_on", "ambiguous"),
-    "trigger": ("config", "yes", "partial", "other_stack", "hw_specific", "no", "not_target"),
     "confidence": ("verified", "documented", "speculative"),
     "coverage": ("NEW", "var", "rationale", "existing"),
 }
+# 2026-10-23 取消的标签。family（隐藏态 on/off-manifold）与 trigger（能否在 NVIDIA+vLLM 实验环境复现）
+# 是早期监控研究的判定轴，issue/PR 里拿不到依据：扫描期 family 775 条里 774 条写 infra_off，
+# trigger 在 NPU 条目上已按「本平台」而非原定环境判定；trigger_note 是 original.trigger_surface 的复述，
+# trigger_review 是旧环境迁移留下的待复核位。迁移条目的历史取值仍在 original.meta 里。
+RETIRED_LABELS = ("family", "trigger", "trigger_review", "trigger_note")
 STAGES = ("pretrain", "sft", "rl", "shared")
 STATUSES = ("active", "pending_audit", "merged", "retired")
 EVIDENCE_KINDS = ("github_issue", "github_pr", "gitcode_issue", "gitcode_pr", "arxiv", "paper", "other")
@@ -286,6 +289,7 @@ def check_entry(e, voc, strict_lengths=False):
     lab = e["labels"] if isinstance(e["labels"], dict) else {}
     for k, allowed in LABEL_ENUMS.items():
         enum(lab.get(k), allowed, f"labels.{k}")
+    errors += [f"labels.{k} 已取消，删掉该键" for k in RETIRED_LABELS if k in lab]
     stage = lab.get("stage")
     if not is_ph(stage) and (not isinstance(stage, list) or not set(stage) <= set(STAGES)):
         errors.append(f"labels.stage={stage!r} 非法")
@@ -435,6 +439,10 @@ def cmd_new(a):
             errors.append(f"来源已被已有条目引用：{', '.join(dup)}。同一机制请用 update 补充证据；"
                           "确属不同机制时加 --allow-duplicate-source 重新提交")
     labels = data.get("labels") if isinstance(data.get("labels"), dict) else {}
+    # 照旧模板写来的已取消标签直接丢掉，不让它占一次重试
+    dropped = [k for k in RETIRED_LABELS if k in labels]
+    for k in dropped:
+        del labels[k]
     relations, rel_echo, rel_errors = resolve_relations(data.get("relations"), entries, registry, cfg["namespace"],
                                                        sib=sibling())
     errors += rel_errors
@@ -465,6 +473,7 @@ def cmd_new(a):
         errors.append(f"slug {entry['slug']} 已存在，换一个")
     errs, warns = check_entry(entry, voc, strict_lengths=True)
     errors += errs
+    warns += [f"labels.{k} 已取消，已丢弃" for k in dropped]
     if errors:
         out({"ok": False, "errors": errors, "warnings": warns}, 2)
     shown = {"relations": rel_echo} if rel_echo else {}
@@ -609,7 +618,7 @@ def cmd_find(a):
 
 CSV_COLUMNS = ["id", "legacy_ids", "status", "kind", "title", "subsystem", "stack", "component", "cause_behavior",
                "effect_objects", "effect_detail", "visibility", "mitigation_detect", "mitigation_fix",
-               "family", "trigger", "stage", "confidence", "coverage", "discovered", "evidence", "relations", "slug"]
+               "stage", "confidence", "coverage", "discovered", "evidence", "relations", "slug"]
 
 
 def flat(e):
@@ -622,8 +631,7 @@ def flat(e):
         "component": j([o.get("component") for o in objs]), "cause_behavior": e["cause"]["behavior"],
         "effect_objects": j(e["effect"]["objects"]), "effect_detail": e["effect"]["detail"],
         "visibility": e["effect"].get("visibility"), "mitigation_detect": e["mitigation"]["detect"],
-        "mitigation_fix": e["mitigation"]["fix"], "family": lab.get("family"), "trigger": lab.get("trigger"),
-        "stage": j(lab.get("stage")), "confidence": lab.get("confidence"), "coverage": lab.get("coverage"),
+        "mitigation_fix": e["mitigation"]["fix"], "stage": j(lab.get("stage")), "confidence": lab.get("confidence"), "coverage": lab.get("coverage"),
         "discovered": lab.get("discovered"),
         "evidence": j([x.get("url") or f"引用：{x.get('text', '')}" for x in e["evidence"]]) if isinstance(e["evidence"], list) else str(e["evidence"]),
         "relations": j([f"{r.get('kind')}:{r.get('target', r.get('target_raw'))}" for r in e["relations"] or []]),
@@ -650,7 +658,7 @@ def render_markdown(entries, cfg, voc):
         L += [f"## {g}", ""]
         for e in sorted(groups[g], key=lambda x: x["id"]):
             f = flat(e)
-            lab = [x for x in (f["family"], f["trigger"], f["stage"], f["confidence"], f["coverage"]) if x not in (None, NA, "None")]
+            lab = [x for x in (f["stage"], f["confidence"], f["coverage"]) if x not in (None, NA, "None")]
             L += [f"### {e['id']} `{e['slug']}` {e['title']}", "",
                   f"`{e['kind']}` · `{e['status']}` · " + " · ".join(f"`{x}`" for x in lab)
                   + f" · 发现 {f['discovered']}" + (f" · 旧号 {f['legacy_ids']}" if f["legacy_ids"] else ""), "",

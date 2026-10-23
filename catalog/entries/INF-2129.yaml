@@ -20,10 +20,6 @@ mitigation:
   detect: 与 torch.remainder/fmod 边界用例对照
   fix: '待定（Blackhole 侧 #61542 同族在办，本单为 Wormhole 侧补齐；test_div_ops.py 无这些输入）'
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: '精确倍数且符号相反、inf 除数等边界输入；Wormhole n150 float32；Blackhole 同族见 #61542'
   stage: N/A
   confidence: documented
   coverage: NEW

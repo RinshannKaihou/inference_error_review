@@ -23,7 +23,7 @@
 | `cause.behavior` | 原因行为：缺陷本身做错了什么，≤120 字，只写原因 |
 | `effect.objects[]` / `effect.detail` / `effect.visibility` | 影响对象（词表，1–3 项，第一项最直接）、影响详情（≤150 字，只写外部表现与触发条件）、可见性（词表） |
 | `mitigation.detect` / `mitigation.fix` | 改进措施。**扫描时看到修复 PR / 规避方法就写进 `fix`**（写明 PR 链接、状态与是否已发布，未核实就说未核实）；没有就写 `待定` |
-| `labels` | `family`、`trigger`、`trigger_review`、`trigger_note`（推理编目）；`stage`（训练编目）；`confidence`、`coverage`、`discovered` |
+| `labels` | `stage`（训练编目；推理编目写 `N/A`）、`confidence`、`coverage`、`discovered`。`family` / `trigger` / `trigger_review` / `trigger_note` 已于 2026-10-23 取消，不要再写（`new` 会丢弃，`validate` 报错）；触发条件写进 `original.trigger_surface` |
 | `evidence[]` | **必填**，由工具从 `original.source` 中的链接提取：`url` + `kind`（github_issue / github_pr / gitcode_issue / gitcode_pr / arxiv / paper / other，GitCode 含 atomgit.com）；无链接的历史条目为 `{kind: citation, text}` |
 | `relations[]` | `{kind: var, target: <本编目条目>}`：同机制的变体，`coverage=var` 时必填；`{kind: cross, target: <另一编目条目>}`：另一编目里同一机制的条目，在另一编目中查找，反向关联由每日审计（`cross-sync`）自动补上。target 可写新编号或旧编号（如 `4.28`、`HW.01`），工具换算成新编号并回显目标标题 |
 | `original` | 扫描写的原始说明：`mechanism`（机制）、`source`（来源，含可点击链接）、`behavior`（行为效应）、`trigger_surface`（触发面，推理编目）、可选 `signature` / `repro`，`discovery`（发现来源）、`notes`（回访记录，由 update 追加） |
@@ -44,8 +44,7 @@ python3 tools/catalog_tool.py new --file /tmp/entry.json         # 返回 {"ok":
   "cause": {"objects": [{"subsystem": "...", "stack": "...", "component": "..."}], "behavior": "..."},
   "effect": {"objects": ["..."], "detail": "...", "visibility": "..."},
   "mitigation": {"detect": "待定", "fix": "修复 PR https://github.com/... （open，未发布）"},
-  "labels": {"family": "infra_off", "trigger": "partial", "trigger_review": false, "trigger_note": "...",
-             "stage": "N/A", "confidence": "documented", "coverage": "NEW", "discovered": "2026-10-13"},
+  "labels": {"stage": "N/A", "confidence": "documented", "coverage": "NEW", "discovered": "2026-10-13"},
   "relations": [], "remarks": "",
   "original": {"mechanism": "...", "source": "... https://github.com/...", "behavior": "...",
                "trigger_surface": "...", "discovery": "2026-10-13 每日扫描"}

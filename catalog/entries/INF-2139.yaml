@@ -20,10 +20,6 @@ mitigation:
   detect: 调用后核对 self 是否获得 src 数据（报告者最小用例）
   fix: 修复分支 fix/npu-format-cast-aclnn-src（aclnn 分支转换源 self→src + Group 3b 直接用例，报告者本地，未上游合入）
 labels:
-  family: infra_off
-  trigger: hw_specific
-  trigger_review: false
-  trigger_note: Ascend950（IsAclnnOnly 恒走 aclnn）与 Ascend910B CANN>=9.1.0（IsAclnnFormatCastSupported 且张量非 view）；该重载仅 CopyKernel.cpp 三处内部调用，Python 可达但无测试覆盖，自 !22299 引入起潜伏
   stage: N/A
   confidence: documented
   coverage: NEW

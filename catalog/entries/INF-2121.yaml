@@ -21,10 +21,6 @@ mitigation:
   detect: 待定
   fix: 待定（issue 报告者建议在 PP 边界传播索引或 stage 首层重算，未见修复 PR）
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: 需 --pipeline-parallel-size>1 且 stage 边界落在 indexer 层与其复用层之间（GLM-5.3 默认 PP8 切分命中 13/78 层）
   stage: N/A
   confidence: documented
   coverage: NEW

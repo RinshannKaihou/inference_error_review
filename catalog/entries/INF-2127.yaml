@@ -20,10 +20,6 @@ mitigation:
   detect: 同进程连续两次相同入参调用比对 tiling（第二次 matrixNum 翻倍）
   fix: 修复 PR !6604（Make Triu tiling state per invocation，open）
 labels:
-  family: infra_off
-  trigger: 'yes'
-  trigger_review: false
-  trigger_note: 同进程第二次及以后的 Triu tiling 调用（任意入参组合）；并发调用另有竞态；与 INF-2107 tril/triu experimental 路径同族但为已发布路径、独立站点
   stage: N/A
   confidence: documented
   coverage: NEW

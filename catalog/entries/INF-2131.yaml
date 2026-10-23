@@ -20,10 +20,6 @@ mitigation:
   detect: 与 torch int8 语义对照（报告者表）；同 rig 上 uint8/int32 的对照 TT_FATAL 可作判别
   fix: issue 给出方向：is_integer_dtype 加 DataType::INT8 让既有门控统一拒绝（门控已编码正确答案）+ int8 拒绝测试；报告者愿提 PR，未提交
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: ttnn.int8 TILE 张量输入 abs/neg/sign/relu/sqrt/sigmoid/exp/floor/eqz/bitwise_not；#56980 门控的 INT8 延迟腿（其注释 "as of now" 明示）
   stage: N/A
   confidence: documented
   coverage: NEW

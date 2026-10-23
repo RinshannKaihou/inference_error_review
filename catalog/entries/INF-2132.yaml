@@ -21,10 +21,6 @@ mitigation:
   detect: 与 deterministic_output=False 同输入对比（报告者方法）
   fix: 'issue 给出规避：dynamic_tile_m>=64 + 掩码路由重映射为本地专家权重 0（E12/16/96、T1-2100 全扫与非线性路径一致）；正式修复未提交（相关 #6941）'
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: b12x 1.5.1 fused_moe w4a8_mx dynamic 后端 + Caps(deterministic_output=True)；dynamic_tile_m=32（decode_config=None 也选中）或 grouped 模式 topk_ids 含 -1（EP 各 rank 恒有）
   stage: N/A
   confidence: documented
   coverage: NEW

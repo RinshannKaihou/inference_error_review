@@ -21,10 +21,6 @@ mitigation:
   detect: PD 与非 PD 同 prompt 贪心对比（报告者的判定法）
   fix: 'issue 描述修复方向（FP4 池注册 BLOCK_SCALE + get_cpu_copy 拷 scale；MXFP8 已有 #35718/#40792 先例），PR 合入状态未核实'
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: 需 --kv-cache-dtype fp4_mx_block16 + PD disaggregation 或 decode cpu_tensor 回退；MXFP8 路径不受影响
   stage: N/A
   confidence: documented
   coverage: NEW

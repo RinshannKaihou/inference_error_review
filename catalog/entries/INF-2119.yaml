@@ -20,10 +20,6 @@ mitigation:
   detect: 把 test_topk_quasar 输入改全负（报告者方法，两方向均失败）
   fix: imm12=1 的本地实验两方向通过；正式修复未提交；阻塞 gpt-oss Quasar bringup
 labels:
-  family: infra_off
-  trigger: hw_specific
-  trigger_review: false
-  trigger_note: Quasar SFPU topk（FP16B/FP32 加载）+ 输入含负浮点对；gpt-oss 等含负激活的模型 top-k 受影响
   stage: N/A
   confidence: documented
   coverage: NEW

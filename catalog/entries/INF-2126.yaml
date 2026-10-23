@@ -20,10 +20,6 @@ mitigation:
   detect: 空 self + 非空 out 调用后检查 out 是否被写（对照已污染显存池）
   fix: 待定（issue 给出代码位置与语义分析，修复未提交）
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: aclnnAdaptiveAvgPool2d + self 空张量（H=0/W=0/N=0/C=0）+ 预分配或非空 out；A2 910B2/CANN 9.2.0（master a946a7b2）
   stage: N/A
   confidence: documented
   coverage: NEW

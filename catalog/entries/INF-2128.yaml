@@ -20,10 +20,6 @@ mitigation:
   detect: 插桩检查最终 same() 调用点的 fp64_outputs dtype（报告者实测 dtype=float32、cos=False）
   fix: PR !48370（torchbench --accuracy 在 CPU 计算 fp64 golden 当加速器无 float64 支持，open）
 labels:
-  family: infra_off
-  trigger: 'yes'
-  trigger_review: false
-  trigger_note: Ascend TorchBench --accuracy 判定链 + 无 float64 内核机型；预训练权重是过阈必要条件（随机权重 maxdiff 1.4e-6 测不出）
   stage: N/A
   confidence: documented
   coverage: NEW

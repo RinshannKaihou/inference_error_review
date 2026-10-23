@@ -21,10 +21,6 @@ mitigation:
   detect: 对比 SiTU 与 GPT-OSS SwiGLU 的算子级输出（公式 4·tanh(g/4)·σ(g)·25·tanh(u/25) vs g·σ(4g)·(u+1) clamp 25）
   fix: 待定（同文件 materialize_swiglu_params_for_cutlass 对 situ 返回 (None,None,None) 的正确机制存在但 MXFP4 路径未用；修复未提交）
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: 需 Kimi-K3（hidden_act=situ）+ --moe-runner-backend flashinfer_mxfp4 + SM90/Hopper；Blackwell 走 trtllm-gen SiTU runner 不受影响
   stage: N/A
   confidence: documented
   coverage: NEW

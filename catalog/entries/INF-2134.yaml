@@ -21,10 +21,6 @@ mitigation:
   detect: 对 DeepSeek 检查点在无 GPU 环境尝试 dequantize=True 加载（必现 ValueError）；权重值与 GPU 路径抽样比对
   fix: 待定（非反量化路径已用 ceil 约定：FP8Linear 按 (out+block-1)//block 分配 scale 行；修复未提交）
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: transformers 5.17-5.20.2/main（73d9b84f）+ DeepSeek 式 128 块 FP8 检查点 + dequantize=True（无 GPU 自动回退或 CC<8.9）；维度整除时静默、不整除时 fail-loud
   stage: N/A
   confidence: documented
   coverage: NEW

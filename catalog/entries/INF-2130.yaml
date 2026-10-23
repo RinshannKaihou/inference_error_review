@@ -22,10 +22,6 @@ mitigation:
   detect: 对比每个请求 QSA 行备份前后内容（报告者已在单测与 live server 实施）
   fix: issue 附单测+修复 PR（覆写 QSA 备份/恢复；#39893 曾修 HiCache 同类、#35957 修 Mamba，此路径漏网），合入状态未核实
 labels:
-  family: infra_off
-  trigger: 'yes'
-  trigger_review: false
-  trigger_note: 需混合架构模型（Qwen3.8-Flash-Next 等 QSA/DSG 模型）+ cpu_tensor 回退（PD decode 混合模型恒用）+ 回退后槽位被其他请求占用
   stage: N/A
   confidence: documented
   coverage: NEW

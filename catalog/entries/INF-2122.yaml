@@ -20,10 +20,6 @@ mitigation:
   detect: 对照 torch.where / ttnn.add 的同标量结果（报告者的表）
   fix: issue 建议 int32_t/uint32_t 标量重载 + 按整数做范围校验 + 2^24+1/123456789/±(2^31-1)/UINT32_MAX 测试；修复 PR 未提交
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: int32/uint32 tensor + Python int 标量且 |s|>2^24 非 fp32 可表示；TTS/TST/TSS 三形态同错
   stage: N/A
   confidence: documented
   coverage: NEW

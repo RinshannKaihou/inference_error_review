@@ -21,10 +21,6 @@ mitigation:
   detect: 同输入 mode2 vs mode0 输出比对（100% 相同即命中）
   fix: '修复 PR !12598（fix(dequant_swiglu_quant): 修复无 group_index 时 swiglu_mode 1/2/3 被静默按 mode0 计算，open）'
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: aclnnDequantSwigluQuantV2 + 不传 group_index + swiglu_mode 1/2/3（GPT-OSS 变体）；A2 910B3/CANN 9.3.0 源码级确认
   stage: N/A
   confidence: documented
   coverage: NEW

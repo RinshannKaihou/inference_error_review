@@ -21,10 +21,6 @@ mitigation:
   detect: CPU 参数边界测试（issue 提供复现器：stored_q_scale=0.25 时 passed=0.25）
   fix: 'query-dtype 修复（BF16/FP16 Q 传 q_scale=1，保留 FP8 Q 反量化）——#53754 既有 PR，关联 #53481；发布状态未核实'
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: vLLM 0.29-0.32 native FlashInfer 后端 + FP8 KV + BF16/FP16 Q + 非单位 q_scale（校准产物）；校准非必要条件
   stage: N/A
   confidence: documented
   coverage: NEW

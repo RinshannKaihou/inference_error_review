@@ -24,8 +24,7 @@ def good_entry(**over):
                   "behavior": "单核 factory 硬编码 GENERATE_INDICES，忽略调用方 indices_tensor"},
         "effect": {"objects": ["数值结果"], "detail": "单核形状下返回 iota 而非传入索引，无 crash", "visibility": "静默错误"},
         "mitigation": {"detect": "待定", "fix": "修复 PR #59639 open（未发布）"},
-        "labels": {"family": "infra_off", "trigger": "hw_specific", "trigger_review": False, "trigger_note": "tt-metal 专用",
-                   "stage": "N/A", "confidence": "documented", "coverage": "NEW", "discovered": "2026-10-13"},
+        "labels": {"stage": "N/A", "confidence": "documented", "coverage": "NEW", "discovered": "2026-10-13"},
         "relations": [], "remarks": "",
         "original": {"mechanism": "ttnn.topk 的单核 topk_single_core_program_factory 把 GENERATE_INDICES 硬编码为 1 # 注意这里有井号，忽略调用方传入的 indices_tensor payload，只有多核 factory 才读取该张量；单核形状包括 W<8192、非 2 的幂等。",
                      "source": "tt-metal #59639 https://github.com/tenstorrent/tt-metal/issues/59639",
@@ -199,6 +198,19 @@ class CatalogToolTest(unittest.TestCase):
                          [{"kind": "cross", "target": aid}])
         _, res = tool("b", "cross-sync")
         self.assertEqual(res["added"], [])                                            # idempotent
+
+    def test_retired_labels_dropped_on_new_and_rejected_on_update(self):
+        old_style = good_entry(slug="old_template", original=dict(good_entry()["original"], source="https://github.com/o/r/issues/90"),
+                               labels=dict(good_entry()["labels"], family="infra_off", trigger="hw_specific",
+                                           trigger_review=None, trigger_note="tt-metal 专用"))
+        code, res = self.run_tool("new", stdin=json.dumps(old_style))
+        self.assertEqual(code, 0, res)                                              # costs the scanner no retry
+        self.assertEqual(sorted(m for m in res["warnings"] if "已取消" in m),
+                         sorted(f"labels.{k} 已取消，已丢弃" for k in ("family", "trigger", "trigger_review", "trigger_note")))
+        self.assertEqual(set(self.entry(res["id"])["labels"]), {"stage", "confidence", "coverage", "discovered"})
+        code, res = self.run_tool("update", res["id"], "--set", "labels.trigger=config")
+        self.assertEqual(code, 2)
+        self.assertIn("labels.trigger 已取消，删掉该键", res["errors"])
 
     def test_duplicate_detected_from_unlinked_mention(self):
         # an existing entry cites "vLLM #60342/#60421" in its narrative without links

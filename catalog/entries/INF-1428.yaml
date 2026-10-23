@@ -20,10 +20,6 @@ mitigation:
   detect: 传非默认 epsilon 与参考实现对照输出
   fix: 关联 PR https://gitcode.com/cann/ops-transformer/merge_requests/13703 （#6028）/ https://gitcode.com/cann/ops-transformer/merge_requests/13800 （#6119）：tiling 增 epsilon 字段、Host 从第 5 属性读取、缺省回退 1e-7；状态未核实
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: SwinTransformerLnQKV 算子任意调用（默认或自定义 epsilon 均错）；ops-transformer 0f1cf7d 与 master（2026-10 复核未变）静态源码对照，未跑设备数值
   confidence: documented
   coverage: NEW
   discovered: '2026-10-17'

@@ -20,10 +20,6 @@ mitigation:
   detect: same-dtype 输出对照或 ttnn.log 同配置对照（均正确）
   fix: 'issue 建议按输出格式分配 tmp0 并在阶段2重配 unpacker 或对 tmp0 pack/unpack 启用 DataFormatReconfig；测试覆盖混合 output_tensor dtype；修复未提交（PR #59167 不触此文件）'
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: ttnn.logit 显式 output_tensor 且 dtype 与输入不同（bf16↔fp32）；eps 参数无关；[INFERENCE] fp32 输出多 tile 时疑 L1 越界写未验证
   stage: N/A
   confidence: documented
   coverage: NEW

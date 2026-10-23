@@ -20,10 +20,6 @@ mitigation:
   detect: 同进程两次调用后对比 tiling data 中 matrixNum/lastTileLength 与新进程基线。
   fix: 待定（建议状态成员化或最小改动复位；issue open；默认发布包不含该算子，仅 --experimental 构建受影响）
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: 需 --experimental 构建 + 同进程第二次调用；默认 CANN 发布包不含该算子
   confidence: documented
   coverage: NEW
   discovered: '2026-10-21'

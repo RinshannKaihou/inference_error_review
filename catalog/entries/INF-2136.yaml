@@ -20,10 +20,6 @@ mitigation:
   detect: 多次调用并先污染显存池（报告者的预热污染法）
   fix: 修复 PR !12603（clipped_swiglu 传 group_index 时输出未初始化为显存残影，改用 at::zeros 初始化，open）；grad 同缺陷另修
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: clipped_swiglu/clipped_swiglu_grad + 传 group_index 且 sum(group_index)<batch；A3 910_93/CANN 9.1.0（内置预编译 .o 与自编 kernel 均复现）
   stage: N/A
   confidence: documented
   coverage: NEW

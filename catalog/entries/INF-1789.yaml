@@ -20,10 +20,6 @@ mitigation:
   detect: 图模式与单算子调用输出 dtype/精度比对
   fix: 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14243 （open，未发布；正文为空模板，机制细节以 MR 改动为准）
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: true
-  trigger_note: 图模式推理 + out_dtype 参数；MR 正文为空模板，仅标题携带机制，证据边界弱
   confidence: documented
   coverage: NEW
   discovered: '2026-10-20'

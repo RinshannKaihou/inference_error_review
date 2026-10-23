@@ -21,10 +21,6 @@ mitigation:
   detect: 离线 draft top-1 评测（真嵌入 vs 零嵌入 vs 随机嵌入消融）；对照服务 acceptance 指标
   fix: 数据级规避：把目标 model.embed_tokens.weight 复制为 draft 目录 model.layers.N.embed_tokens.weight（_rewrite_spec_layer_name 映射，免代码）；建议修复 fail-loud 或 last-stage 加载（#57171 曾提 glm5next 未合）
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: MTP draft-only 检查点（无 embed_tokens）+ --pipeline-parallel-size>1；PP=1 恒共享不受影响；7×CMP 170HX PP7 GLM-5.3 实测（main 87b804f09d 同码）
   stage: N/A
   confidence: documented
   coverage: NEW

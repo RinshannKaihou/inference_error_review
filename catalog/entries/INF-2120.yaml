@@ -21,10 +21,6 @@ mitigation:
   detect: 与 CPU searchsorted(side='right') 对照重复值元素
   fix: 待定（issue 建议 side='right' 按 upper_bound 实现或对重复值上界修正）
 labels:
-  family: infra_off
-  trigger: 'yes'
-  trigger_review: false
-  trigger_note: torch.searchsorted(side='right')（1D/2D/int64/带 sorter 均复现）；910B3/CANN 9.1.0 与 A3/CANN 9.0.0 双平台；torch.bucketize 不受影响
   stage: N/A
   confidence: documented
   coverage: NEW

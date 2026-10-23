@@ -20,10 +20,6 @@ mitigation:
   detect: torch fp32 参考对照（报告者方法）
   fix: 待定（#61268 首记 add 用例；修复未提交）
 labels:
-  family: infra_off
-  trigger: config
-  trigger_review: false
-  trigger_note: add/subtract/squared_difference/fast multiply/divide/比较 + 一 fp32 一 bf16/bfloat8_b/bfloat4_b 操作数；Blackhole p100a
   stage: N/A
   confidence: documented
   coverage: NEW

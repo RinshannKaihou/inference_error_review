@@ -20,10 +20,6 @@ mitigation:
   detect: 构造 max≠sum 的输入对照输出（报告者方法）
   fix: 待定（V1 已有校验可对齐；issue 给出复现脚本）
 labels:
-  family: infra_off
-  trigger: 'yes'
-  trigger_review: false
-  trigger_note: aclnnMatmulReduceScatterV2 + reduceOp='max' 或 commTurn=1（资料仅支持 sum/0）；A2 910B2/CANN 9.2.0 双卡实测
   stage: N/A
   confidence: documented
   coverage: NEW

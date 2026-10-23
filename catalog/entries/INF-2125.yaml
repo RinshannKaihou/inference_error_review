@@ -21,10 +21,6 @@ mitigation:
   detect: 输出 NaN 扫描（触发窗口确定性）
   fix: 仓内已有正确形态（#2441 修 cvt_warp_fp16_to_mxfp8 守卫 SFValue!=0；trtllm_moe_allreduce_fusion.cuh L622 同），5 站点对齐即可；修复未提交
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: 块 SF 舍入后为 0 的窗口（e4m3：SFScaleVal*vecMax/6 <= 2^-10）；nvfp4_smooth_quantize（SVDQuant GEMM）、fused_dit_layernorm nvfp4 变体、nvfp4_kv_quantize；e8m0 站点窗口在 denormal 域仅一致性
   stage: N/A
   confidence: documented
   coverage: NEW

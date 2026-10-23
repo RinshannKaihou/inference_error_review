@@ -20,10 +20,6 @@ mitigation:
   detect: 监控 D2D on-going 日志频次与已应用计划数（0 应用是特征）
   fix: 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19288 （open：record 模式 forward_before 提前返回、EplbWorker record_only 保持已安装布局为基准；3 个回归 UT 修复前失败修复后通过，ut/eplb 24 passed vs 19；未发布）
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: vllm-ascend EPLB + expert_map_record_path 设置（recording 模式）；动态 EPLB 无 record path 不受影响
   confidence: documented
   coverage: NEW
   discovered: '2026-10-20'

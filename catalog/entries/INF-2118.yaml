@@ -22,10 +22,6 @@ mitigation:
   detect: observe-only 校验每个 index-K 写与调度器期望重建（报告者已实施，双 GPU 217 事件一致）
   fix: issue 附 writer-side-correction.diff（读跨边界 pool 的首尾段合并后压缩），未提交合入，未发布
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: 需 prefill chunk 起点 mod kpool(=4) != 0：共享 step 剩余预算、decode 行消耗 1+K token、DFlash 草稿槽预留（下游 2045 分块）等任意路径；prefix-cache 命中本身块对齐不触发
   stage: N/A
   confidence: documented
   coverage: NEW

@@ -20,10 +20,6 @@ mitigation:
   detect: 抵消型大幅值输入探针（FLT_MAX 对减）
   fix: 修复含于 https://gitcode.com/cann/ops-nn/issues/6955 配套 MR !12382（open；A100 对照验证；未发布）
 labels:
-  family: infra_off
-  trigger: partial
-  trigger_review: false
-  trigger_note: Ascend950PR_9579 + BN3DTrainingReduce + FP32/BF16 + 大幅值抵消输入；独立 Master/Revise CANN 20260923 周包+GPU A100 对照
   confidence: documented
   coverage: NEW
   discovered: '2026-10-20'
