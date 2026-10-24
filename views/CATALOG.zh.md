@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2158 条；状态：active 2141、pending_audit 17
+共 2158 条；状态：active 2158
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 607 |
+| 算子/内核 | 608 |
 | 编译器 | 140 |
 | 运行时/执行 | 132 |
 | 集合通信 | 36 |
@@ -20,7 +20,7 @@
 | 量化 | 191 |
 | 位置编码 | 42 |
 | 分词/模板 | 32 |
-| 模型定义 | 49 |
+| 模型定义 | 48 |
 | 权重/检查点 | 45 |
 | 数据管线 | 5 |
 | 优化器 | 3 |
@@ -7003,9 +7003,9 @@
 - **改进措施**：检测 调用后核对 self 是否获得 src 数据（报告者最小用例）；修复 修复分支 fix/npu-format-cast-aclnn-src（aclnn 分支转换源 self→src + Group 3b 直接用例，报告者本地，未上游合入）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5613
 
-### INF-2143 `torchnpu_index_ops_oob_silent_accept` torch_npu 索引算子越界静默接受：越界读写不报错
+### INF-2143 `torchnpu_index_ops_oob_silent_accept` torch_npu 索引算子越界：三类静默，index_select 报文不符
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / torch_npu / 索引算子 NPU adapter 校验
 - **原因行为**：四类索引算子的 NPU 实现不做 CPU 侧一致的越界/负索引校验：gather/embedding 越界读返回数据、scatter 越界写静默丢弃、index_select 越界错误路由到 MaskedSelect kernel
@@ -7016,7 +7016,7 @@
 
 ### INF-2144 `aclnn_div_integer_fp32_truncation` aclnnDiv 整型除法提升 FP32，|x|>2^24 静默丢位
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / div 整型提升 FP32 逻辑
 - **原因行为**：aclnnDiv/aclnnInplaceDiv 把 int32/int64 输入一律 Cast 到 DT_FLOAT 参与计算再截断回整型，FP32 仅 24 位有效位
@@ -7027,7 +7027,7 @@
 
 ### INF-2146 `aclnn_thnn_fused_lstm_cell_global_state_race` aclnnThnnFusedLstmCell 全局状态并发互覆错值/段错误
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / aclnn 入口与 tiling 全局对象
 - **原因行为**：aclnn 入口的 AclnnParams/Info/BaseOpOutputs 三个结构体在文件作用域实例化为全局对象，多线程并发调用互相覆盖；tiling 的 Info/TilingData 同样全局
@@ -7039,7 +7039,7 @@
 
 ### INF-2151 `torchnpu_int_div_zero_garbage_and_fmod_device_fault` torch_npu 整数除零静默返垃圾，fmod 设备崩溃
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / torch_npu / 整数零除处理
 - **原因行为**：整数 div 除零不抛 ZeroDivisionError 而返回 INT64_MAX/MIN 垃圾值；remainder 原样返回被除数；fmod 整数除零触发设备级 507018（910B3 上进程级崩溃 ERR99999）
@@ -7050,7 +7050,7 @@
 
 ### INF-2152 `aclnn_einsum_int_input_cast_fp16_overflow` aclnnEinsum 整型 Cast FP16 溢出饱和错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / cann / einsum 整型 Cast FP16 路径
 - **原因行为**："abcd,abced->abce" 路径把所有非 FLOAT/FLOAT16 输入一律 Cast 到 DT_FLOAT16 参与 BMM 再 cast 回原 dtype，整型语义无保真
@@ -7061,10 +7061,10 @@
 
 ### INF-2154 `flashinfer_mla_padding_nan_propagation` FlashInfer MLA 把页尾 padding NaN 传入有效输出
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / flashinfer / MLA paged attention 内核
-- **原因行为**：CUTLASS/CuTe monolithic MLA 对请求有效长度之外（末页未用尾部、dense block_tables 未用槽位指向的物理页）的 KV 存储不做隔离，NaN 进入有效行的 P@V
+- **原因行为**：CUTLASS/CuTe DSL monolithic 后端的 MLA 分页注意力未隔离有效 KV 长度之外的存储（末页未用尾部、block_tables 未用槽位指向的物理页），其中 NaN 会传播进有效输出行；传播路径为疑似、未证实。
 - **影响对象**：数值结果；输出内容（数值异常）
 - **影响详情**：仅毒化存储越界区即可让有效输出行出现 NaN（单请求最多 540,672 个非有限元素）；同输入 FA2 后端保持有限且匹配参考
 - **改进措施**：检测 对 KV 池未用区域预填非 NaN 哨兵后复跑可定位；修复 待定（两个 issue open；疑似机制为越过 kv_len 加载后 0×NaN 进入 P@V，报告者明示非证实的 kernel 级根因）
@@ -7072,7 +7072,7 @@
 
 ### INF-2155 `ttmetal_bfloat8_reduce_padding_block_corrupt` tt-metal bfloat8 归约 padding 污染共享指数错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / tt-metal / max/min 归约 padding 处理
 - **原因行为**：bfloat8_b 隐式 tile padding 填入 ±inf，但 block float 16 值共享一个指数，末尾真实值与 padding 同块时其尾数被破坏，归约读出 0 或偏小值
@@ -7083,7 +7083,7 @@
 
 ### INF-2156 `ttmetal_depthwise_conv1d_dilation_ignored` tt-metal depthwise conv1d 忽略 dilation 错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：算子/内核 / tt-metal / depthwise reader kernel
 - **原因行为**：groups==in_channels、无 bias 的 depthwise 路径 reader 按步长 1 逐位走 kernel tap，忽略 dilation 参数
@@ -7091,6 +7091,17 @@
 - **影响详情**：unit-tap 权重参考下 C64/K3/d2/L40 3492/10240 错；C1024/K4/d2/L12（GDN 形状）13811/36864 错；dilation=1 或走带 bias 通用路径正确
 - **改进措施**：检测 待定；修复 待定（issue open；#49694 曾含同一 reader 修改、approved 后因不活跃关闭）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/62052
+
+### INF-2157 `transformers_gemma2_sdpa_softcap_dropped` transformers Gemma2 sdpa 默认静默丢 softcap
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
+
+- **原因对象**：算子/内核 / transformers / sdpa softcap 传递
+- **原因行为**：Gemma2 的 50*tanh(x/50) softcap 在 sdpa（默认）下被忽略；flash 遇无 softcap 参数 kernel 同样丢弃；#40744 移除了警告
+- **影响对象**：数值结果；隐状态；输出内容（静默错误）
+- **影响详情**：eager/flex_attention 有 cap、sdpa/部分 flash 无 cap 的同权重输出分歧；wikitext-103 2048 token 上可测出分布差，无警告
+- **改进措施**：检测 对比 eager 与 sdpa 输出可发现；修复 issue closed（修复状态未核实；历史警告已在 #40744 被移除，恢复路径未定）
+- **来源**：https://github.com/huggingface/transformers/issues/49810；https://github.com/huggingface/trl#7844
 
 ## 编译器
 
@@ -8223,6 +8234,7 @@
 - **影响详情**：Mamba-2 SSD _state_passing_fwd/_bwd_kernel（num_stages=3 autotune 配置）约 25–46% 新进程产出位相同的错误输出（rel diff ~1e-3 vs 参考 ~4e-7）；前向反向同中；钉 num_stages=1 后 16/16 进
 - **改进措施**：检测 同脚本多进程重跑并与纯 torch 参考对比；坏进程输出位级稳定（编译期调度决定）是特征签名；修复 规避：检测 torch_npu 时为 state-passing autotune 配置钉 num_stages=1（state-spaces/mamba#1063 已带；GPU/ROCm 调度不受影响）；上游修复未见（open）
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/2662；https://github.com/state-spaces/mamba/pull/1063
+- **关联**：cross:TRN-0396
 
 ### INF-1770 `ascend_pytorch_nd_tile_rsplit_noncontig_wrong` torch_npu ND tile rsplit 非连续输入静默算错
 
@@ -8623,18 +8635,18 @@
 
 ### INF-2145 `triton_ascend_pipelining_loopcarried_store_stale_stage` triton-ascend 流水线错排 loop-carried 存储间歇错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：编译器 / triton / num_stages>1 流水调度
 - **原因行为**：循环体内存 loop-carried 值且 num_stages>1 时，in-loop store 读取过期流水 stage，kernel 跑完返回貌似合理的错值；num_stages=1 完全消失
-- **影响对象**：数值结果；输出内容（不可复现）
+- **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：Mamba-2 SSD state_passing 前向/反向 25-46% 新进程产出 bit 级相同错误；进程内重复一致、跨进程翻转；梯度同样错
 - **改进措施**：检测 固定 num_stages=1 对照可判别；修复 待定（issue open：规避 pin num_stages=1，16/16 多进程 PASS、输出 bit 稳定）
 - **来源**：https://gitcode.com/triton-lang/triton-ascend/issues/2662
 
 ### INF-2148 `triton_sm89_fp8_acc_rewrite_loses_fp32_accum` Triton sm_89 把 fp8 acc+=dot 静默改写为低精度累加
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：编译器 / triton / fp8 dot 加法折叠 pass
 - **原因行为**：sm_89 上 acc += tl.dot(a,b) 被静默重写为 tl.dot(a,b,acc)，运行和放进 fp8 mma.sync 内部低精度累加，而不是保留显式 fp32 add
@@ -8645,7 +8657,7 @@
 
 ### INF-2149 `triton_batched_dot_n1_accum_overlap` Triton 批量 dot N==1 时批间累加器寄存器重叠错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：编译器 / triton / MMAv2 批间寄存器步进
 - **原因行为**：[B,M,K]x[B,K,1] 批量 dot 在一个 warp 计算多个 batch（B>num_warps）时，MMAv2 lower 步进按 N==1 减半的寄存器数移动，相邻 batch 共享累加器寄存器
@@ -14765,12 +14777,12 @@
 
 ### INF-2142 `vllm_cpu_kv_dtype_unchecked_bf16_write_overflow` vLLM CPU 后端不校验 kv-cache-dtype，写核越界坏 KV
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：KV缓存 / vllm / CPU 后端 dtype 校验与写核
 - **原因行为**：CpuPlatform 不校验 kv-cache-dtype，恒选 CPU_ATTN；量化格式下按 uint8 分配缓存，写核对 fp8 外 dtype 按 bf16 字节步长写，越过缓存末端
 - **影响对象**：KV状态；输出内容（静默错误）
-- **影响详情**：短 prompt 表现正常，~100 token prompt 从首个生成 token 起输出垃圾，无任何报错；写越界还会破坏紧邻内存
+- **影响详情**：启动不报错；短请求看似正常（Qwen2.5-0.5B greedy 答 Paris），~100 token prompt 从首个生成 token 起输出垃圾且无错误日志；块序号进入 KV 池上半区后写入越过缓存末端，最小复现 4 块越界 512 字节（期望 0）。
 - **改进措施**：检测 待定；修复 issue 附修复方向：平台侧 validate_configuration 启动即拒绝不支持 dtype（closed，合入状态未核实）
 - **来源**：https://github.com/vllm-project/vllm/issues/62664
 
@@ -16471,7 +16483,7 @@
 
 ### INF-2147 `vllm_hermes_parser_streaming_stray_tool_call_drop` vLLM Hermes 流式解析器遇正文 tool_call 字面量丢弃后续
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：输出解析 / vllm / hermes_tool_parser 流式状态机
 - **原因行为**：流式分支把正文中出现的字面 <tool_call> 标记当作调用开始，之后所有文本进入缓冲不再作为 content 下发；非流式分支不受影响
@@ -20760,7 +20772,7 @@
 
 ### INF-2150 `vllm_evs_mrope_recompute_chunk_boundary_wrong` vLLM EVS 视频剪枝 chunk 边界内 M-RoPE 位置静默错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：位置编码 / vllm / recompute_mrope_positions
 - **原因行为**：chunked prefill 边界落进视频占位符内部时，recompute_mrope_positions 对从视频中间开始的 chunk 写错 M-RoPE 位置，delta 随之错位
@@ -21653,24 +21665,13 @@
 - **改进措施**：检测 observe-only 校验每个 index-K 写与调度器期望重建（报告者已实施，双 GPU 217 事件一致）；修复 issue 附 writer-side-correction.diff（读跨边界 pool 的首尾段合并后压缩），未提交合入，未发布
 - **来源**：https://github.com/vllm-project/vllm/issues/63168
 
-### INF-2157 `transformers_gemma2_sdpa_softcap_dropped` transformers Gemma2 sdpa 默认静默丢 softcap
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
-
-- **原因对象**：模型定义 / transformers / sdpa softcap 传递
-- **原因行为**：Gemma2 的 50*tanh(x/50) softcap 在 sdpa（默认）下被忽略；flash 遇无 softcap 参数 kernel 同样丢弃；#40744 移除了警告
-- **影响对象**：隐状态；输出内容（静默错误）
-- **影响详情**：eager/flex_attention 有 cap、sdpa/部分 flash 无 cap 的同权重输出分歧；wikitext-103 2048 token 上可测出分布差，无警告
-- **改进措施**：检测 对比 eager 与 sdpa 输出可发现；修复 issue closed（修复状态未核实；历史警告已在 #40744 被移除，恢复路径未定）
-- **来源**：https://github.com/huggingface/transformers/issues/49810；https://github.com/huggingface/trl#7844
-
 ### INF-2158 `transformers_qwen4exp_eager_leftpad_nan` Qwen4-Exp eager 左 padding 批 NaN logits
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：模型定义 / transformers / QSA eager 掩码加法
 - **原因行为**：eager QSA 路径的 mask 加法在含左 padding 样本的 batch 中使有效 token 位置产生 NaN logits；同权重同输入 SDPA 有限
-- **影响对象**：数值结果；输出分布（数值异常）
+- **影响对象**：输出分布；数值结果（数值异常）
 - **影响详情**：批内左 padding 样本的有效 token logits 变 NaN（同批未 padding 样本仍有限）；默认不指定后端时选 SDPA 不触发
 - **改进措施**：检测 待定；修复 待定（issue open；当前 main 6b6792ff 相关 mask 加法仍在）
 - **来源**：https://github.com/huggingface/transformers/issues/49888
@@ -22760,7 +22761,7 @@
 
 ### INF-2153 `ops_nn_moe_dispatch_commalg_unvalidated` MoeDistributeDispatch 不校验 commAlg 静默按默认
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-23
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-23
 
 - **原因对象**：MoE路由 / cann / commAlg 取值校验
 - **原因行为**：commAlg 入参无取值白名单校验：枚举外字符串与不支持的 hierarchy+epWorldSize 组合两段均返回 0，按默认算法静默执行

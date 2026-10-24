@@ -4,13 +4,13 @@ slug: flashinfer_mla_padding_nan_propagation
 aliases: []
 title: FlashInfer MLA 把页尾 padding NaN 传入有效输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: flashinfer
     component: MLA paged attention 内核
-  behavior: CUTLASS/CuTe monolithic MLA 对请求有效长度之外（末页未用尾部、dense block_tables 未用槽位指向的物理页）的 KV 存储不做隔离，NaN 进入有效行的 P@V
+  behavior: CUTLASS/CuTe DSL monolithic 后端的 MLA 分页注意力未隔离有效 KV 长度之外的存储（末页未用尾部、block_tables 未用槽位指向的物理页），其中 NaN 会传播进有效输出行；传播路径为疑似、未证实。
 effect:
   objects:
   - 数值结果
@@ -41,3 +41,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

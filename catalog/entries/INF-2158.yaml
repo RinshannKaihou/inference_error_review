@@ -4,7 +4,7 @@ slug: transformers_qwen4exp_eager_leftpad_nan
 aliases: []
 title: Qwen4-Exp eager 左 padding 批 NaN logits
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 模型定义
@@ -13,8 +13,8 @@ cause:
   behavior: eager QSA 路径的 mask 加法在含左 padding 样本的 batch 中使有效 token 位置产生 NaN logits；同权重同输入 SDPA 有限
 effect:
   objects:
-  - 数值结果
   - 输出分布
+  - 数值结果
   detail: 批内左 padding 样本的有效 token logits 变 NaN（同批未 padding 样本仍有限）；默认不指定后端时选 SDPA 不触发
   visibility: 数值异常
 mitigation:
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 输出分布

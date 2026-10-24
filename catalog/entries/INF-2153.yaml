@@ -4,7 +4,7 @@ slug: ops_nn_moe_dispatch_commalg_unvalidated
 aliases: []
 title: MoeDistributeDispatch 不校验 commAlg 静默按默认
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

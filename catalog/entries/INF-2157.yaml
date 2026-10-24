@@ -4,15 +4,16 @@ slug: transformers_gemma2_sdpa_softcap_dropped
 aliases: []
 title: transformers Gemma2 sdpa 默认静默丢 softcap
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 模型定义
+  - subsystem: 算子/内核
     stack: transformers
     component: sdpa softcap 传递
   behavior: Gemma2 的 50*tanh(x/50) softcap 在 sdpa（默认）下被忽略；flash 遇无 softcap 参数 kernel 同样丢弃；#40744 移除了警告
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 输出内容
   detail: eager/flex_attention 有 cap、sdpa/部分 flash 无 cap 的同权重输出分歧；wikitext-103 2048 token 上可测出分布差，无警告
@@ -41,3 +42,22 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 模型定义
+        to: 算子/内核
+      effect:
+        from: 隐状态
+        to: 数值结果
+    uncertain:
+    - visibility

@@ -4,7 +4,7 @@ slug: vllm_cpu_kv_dtype_unchecked_bf16_write_overflow
 aliases: []
 title: vLLM CPU 后端不校验 kv-cache-dtype，写核越界坏 KV
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 输出内容
-  detail: 短 prompt 表现正常，~100 token prompt 从首个生成 token 起输出垃圾，无任何报错；写越界还会破坏紧邻内存
+  detail: 启动不报错；短请求看似正常（Qwen2.5-0.5B greedy 答 Paris），~100 token prompt 从首个生成 token 起输出垃圾且无错误日志；块序号进入 KV 池上半区后写入越过缓存末端，最小复现 4 块越界 512 字节（期望 0）。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -39,3 +39,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility
+    - behavior

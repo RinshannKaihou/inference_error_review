@@ -4,7 +4,7 @@ slug: triton_ascend_pipelining_loopcarried_store_stale_stage
 aliases: []
 title: triton-ascend 流水线错排 loop-carried 存储间歇错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 输出内容
   detail: Mamba-2 SSD state_passing 前向/反向 25-46% 新进程产出 bit 级相同错误；进程内重复一致、跨进程翻转；梯度同样错
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 固定 num_stages=1 对照可判别
   fix: 待定（issue open：规避 pin num_stages=1，16/16 多进程 PASS、输出 bit 稳定）
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-23'
+  audit:
+    round: daily-audit-2026-10-24
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误
