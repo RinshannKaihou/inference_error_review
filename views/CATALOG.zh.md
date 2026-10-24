@@ -3,21 +3,21 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2158 条；状态：active 2158
+共 2168 条；状态：active 2158、pending_audit 10
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 608 |
-| 编译器 | 140 |
+| 算子/内核 | 613 |
+| 编译器 | 141 |
 | 运行时/执行 | 132 |
 | 集合通信 | 36 |
 | 并行切分 | 28 |
-| KV缓存 | 350 |
-| 调度/服务 | 85 |
+| KV缓存 | 351 |
+| 调度/服务 | 86 |
 | 输出解析 | 66 |
 | 解码/采样 | 148 |
-| 量化 | 191 |
+| 量化 | 192 |
 | 位置编码 | 42 |
 | 分词/模板 | 32 |
 | 模型定义 | 48 |
@@ -25,7 +25,7 @@
 | 数据管线 | 5 |
 | 优化器 | 3 |
 | 损失计算 | 3 |
-| MoE路由 | 41 |
+| MoE路由 | 42 |
 | 重计算/卸载 | 7 |
 | RL训练回路 | 1 |
 | 观测/评测 | 68 |
@@ -7103,6 +7103,61 @@
 - **改进措施**：检测 对比 eager 与 sdpa 输出可发现；修复 issue closed（修复状态未核实；历史警告已在 #40744 被移除，恢复路径未定）
 - **来源**：https://github.com/huggingface/transformers/issues/49810；https://github.com/huggingface/trl#7844
 
+### INF-2160 `cann_addcmul_nan_value_treated_as_one` CANN Addcmul 把标量 value=NaN 判为 1 静默输出有限值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：算子/内核 / cann / aclnnAddcmul
+- **原因行为**：IsEqualToOne 用 !(value>1||value<1) 判等，NaN 比较全 false 取反为 true，NaN 被判为 1 进入不乘 value 的 AxpyV2 快路径。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：value=NaN 时输出全表有限值 self+t1×t2 而非应有的全 NaN，调用方以为计算正常；原地接口同病；两段接口返回 0。
+- **改进措施**：检测 NaN 传播探针：value=NaN 时期望输出全 NaN，有限值即命中；修复 待定
+- **来源**：https://gitcode.com/cann/ops-math/issues/3894
+
+### INF-2161 `cann_msa_index_score_n2_gt1_reads_only_kv_head0` CANN MsaIndexScore N2>1 只读 KV head0
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：算子/内核 / cann / aclnnMsaIndexScore
+- **原因行为**：key 的 N2>1（多 KV head 分组）时 kernel 未按 n2=n1/(N1/N2) 取对应 KV head，所有 query head 都固定读第 0 个 KV head 的数据。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：只改 KV head1 数据输出逐位不变（max|diff|=0），只改 head0 输出大变（12672）；多 KV head 场景注意力分数静默错误，两段接口返回 0。
+- **改进措施**：检测 扰动探针：只改非 0 号 KV head 数据，观察输出是否变化；修复 待定
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6639
+
+### INF-2163 `cann_mhc_pre_alpha2_hres_never_written` CANN MhcPre alpha=(2) 不写 hRes 返回残留显存
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：算子/内核 / cann / aclnnMhcPre
+- **原因行为**：alpha shape [2] 表示无残差分支，该分支只考虑了 hRes 传空指针的情况，调用方传非空张量时 hRes 一个字节都不写，保持调用方原有内容。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：hRes 输出保持调用方显存原值（canary -777 全部残留），下游把未初始化显存当 hRes 消费；两段接口返回 0。
+- **改进措施**：检测 hRes 预填 canary 后检查是否被改写；修复 待定
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6658
+
+### INF-2164 `torch_npu_semantic_divergence_triple` torch_npu 三连：div±inf/空max/cummin NaN
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：算子/内核 / torch_npu / div、max、cummin 适配
+- **原因行为**：三处适配缺陷：div floor/trunc 对 ±inf 除法结果错误且丢 -0.0 符号；空张量 max() 不报错静默返回 0；cummin 遇 NaN 跳过继续归约不传播。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：-1/+inf floor 得 0.0 应为 -1.0、trunc 丢 -0.0 符号；空张量 max() 得 tensor(0.) 而 CPU 报 RuntimeError；cummin 输入含 NaN 时 NaN 后位置取后续有限值；均无报错。
+- **改进措施**：检测 与 CPU 同输入对照（边界值 ±inf/NaN/空张量探针）；修复 待定
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/618；https://gitcode.com/Ascend/op-plugin/issues/619；https://gitcode.com/Ascend/op-plugin/issues/637
+
+### INF-2167 `cann_sparse_flash_mla_metadata_drops_seqused_q` CANN SparseFlashMlaMetadata 丢弃 sequsedQ
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：算子/内核 / cann / SparseFlashMlaMetadata
+- **原因行为**：A2 路径把可选输入 sequsedQOptional 整条数据通路丢弃：无论传什么值产出的 metadata 与不传时逐字节相同，分核按 maxSeqlenQ 满长切分；同签名的 sequsedOriKvOptional 正常生效。
+- **影响对象**：数值结果；性能/资源（静默错误）
+- **影响详情**：sequsedQ=0（应无有效 Q token）仍产出满长 105 非零元素调度；下游 SparseFlashMla 按满长任务搬运 KV 多算；两段接口一律返回 0。
+- **改进措施**：检测 把 sequsedQ 全置 0/1，检查 metadata 指纹是否变化；修复 待定
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6625
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -8665,6 +8720,17 @@
 - **影响详情**：全 1 输入 B=2/M=16/K=16、单 warp：应全 16 的结果出现 0 和 32；每 warp 单 batch 控制组正确
 - **改进措施**：检测 待定；修复 issue closed（修复状态未核实）
 - **来源**：https://github.com/triton-lang/triton/issues/12394
+
+### INF-2159 `ascend_inductor_pixel_shuffle_persistent_reduction_wrong` Ascend Inductor pixel_shuffle 与动态归约错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：编译器 / torch_npu / Inductor codegen
+- **原因行为**：channels-last pixel_shuffle 拆轴用相对 divisor 做根坐标查找并复用旧坐标，宽度取模被消去；动态 persistent 归约按首次输入尺寸 hint 选块，长度跨 32 时块过小漏算。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：torch.compile 编译 pixel_shuffle(channels-last) 输出与参考不一致（用例 54758/73728 元素超差，最大绝对差约 3.9）；dynamic=True 归约在输入 31→33 跨界后漏算，断言 Tensor not close；无崩溃。
+- **改进措施**：检测 对编译前后输出做逐元素比对（test_torchinductor 数值断言不放宽容差）；修复 待定
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5632
 
 ## 运行时/执行
 
@@ -14786,6 +14852,17 @@
 - **改进措施**：检测 待定；修复 issue 附修复方向：平台侧 validate_configuration 启动即拒绝不支持 dtype（closed，合入状态未核实）
 - **来源**：https://github.com/vllm-project/vllm/issues/62664
 
+### INF-2162 `cann_gather_pa_kv_cache_missing_validation_family` CANN GatherPaKvCache 索引/长度缺校验族静默越界或错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：KV缓存 / cann / aclnnGatherPaKvCache
+- **原因行为**：blockTables 取值、sum(seqLens) 对 keyRef 容量、seqOffset 折算 tableOffset 均无值域校验：越界块号读 keyCache、容量不足写缓冲外、偏移越界读。
+- **影响对象**：KV状态；数值结果（静默错误）
+- **影响详情**：非法 blockTables/seqLens/seqOffset 下两段接口返回 0：越界读出的 KV 数据进输出或静默错值、keyRef 之外 128B 被改写；修复 PR #14535/#14536 已出现（open/closed）。
+- **改进措施**：检测 对 blockTables/seqLens/seqOffset 做值域断言；保护带 canary 检查越界写；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/14535 （closed，未合入核实）与 https://gitcode.com/cann/ops-transformer/merge_requests/14536 （open，未发布）；关联 issue #6576 已 closed（10-24）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6675；https://gitcode.com/cann/ops-transformer/issues/6655；https://gitcode.com/cann/ops-transformer/issues/6656；https://gitcode.com/cann/ops-transformer/issues/6676；https://gitcode.com/cann/ops-transformer/merge_requests/14535；https://gitcode.com/cann/ops-transformer/merge_requests/14536
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -15738,6 +15815,17 @@
 - **影响详情**：DeepSeek V4 工具调用第二轮（工具结果回传后）正文正常、finish_reason=stop，但 tool_calls 为空数组；OpenAI SDK 客户端据此继续工具循环并 IndexError。上游 vLLM 已由 #44105 修复。
 - **改进措施**：检测 检查 chat completion 的 message.tool_calls 是 null 还是 []，流式响应检查 delta.tool_calls 是否被省略；修复 vllm-ascend 侧建议 monkey patch 去掉空 tool_calls 数组；上游修复 https://github.com/vllm-project/vllm/pull/44105（issue closed，未核实 vllm-ascend 是否已消费该修复）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/9790
+
+### INF-2168 `vllm_responses_api_drops_developer_message` vLLM Responses API 静默丢 developer 消息
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：调度/服务 / vllm / deepseek_v4 渲染
+- **原因行为**：Python DeepSeek-V4 tokenizer 路径在 thinking 激活且请求未携带 tools 时，把开头的 role:developer 输入项从 prompt 里整体删除，HTTP 200 正常返回。
+- **影响对象**：输入编码；输出内容（静默错误）
+- **影响详情**：developer 消息（Codex 式 harness/策略文本）完全没进模型，模型在无系统提示下作答；usage.input_tokens 不随策略文本增长可证；无任何错误。
+- **改进措施**：检测 对比带/不带 developer 消息的 usage.input_tokens 是否增长；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/63480
 
 ## 输出解析
 
@@ -20304,6 +20392,17 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7225；https://gitcode.com/cann/ops-nn/merge_requests/12598
 - **关联**：cross:TRN-0387
 
+### INF-2165 `vllm_hadacore_transform_odd_rows_garbage_kv` vLLM hadacore 奇数行错值污染 INT4 KV
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：量化 / vllm / hadacore_transform
+- **原因行为**：量化前 K/V 经 hadacore_transform 旋转，行数（token×KV head）为奇数时该 kernel 结果有时错误，越读未映射内存时崩溃。
+- **影响对象**：KV状态；数值结果（静默错误）
+- **影响详情**：奇数行时变换值出现 ~1e36 量级相对误差（垃圾 K/V 写入 INT4 KV cache，推理输出错），或间歇 illegal memory access 崩引擎；1-4352 全扫 1101 个奇数 N 错。
+- **改进措施**：检测 对 single_rht 输出与 float64 参考逐元素比对（奇数行探针）；修复 待定
+- **来源**：https://github.com/vllm-project/vllm/issues/63514
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -22769,6 +22868,17 @@
 - **影响详情**：commAlg="bad" 与 hierarchy+epWorldSize=2 均静默执行；通信拓扑错误可致 MoE 分发结果错或隐性性能损失，无错误码
 - **改进措施**：检测 对照合法 commAlg 输出与耗时；修复 待定（issue open：建议按资料白名单校验）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6533
+
+### INF-2166 `flashinfer_trtllm_gen_fused_moe_sm120_silent_corruption` FlashInfer fused MoE SM120 静默输出垃圾
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-24
+
+- **原因对象**：MoE路由 / flashinfer / fused_moe_120 JIT
+- **原因行为**：trtllm-gen fused MoE 的 fused_moe_120 在 SM120 产生静默损坏输出，运行时无架构门控即接受调用；测试矩阵自声明仅保证 SM100/SM103。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：同权重同配置仅切 moe backend：DEEPGEMM_MXFP4 全部正确，flashinfer_cutlass 从第 1 个 token 起垃圾（6131>6131*19=…）；无任何报错，流畅但错误的补全。
+- **改进措施**：检测 切换 moe backend A/B 对比输出；gsm8k/固定题集回归；修复 报告建议运行时可用性门控对齐测试矩阵（mirror tests/moe/utils.py 的 SM100/SM103 限制），未实现
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/7179
 
 ## 重计算/卸载
 
