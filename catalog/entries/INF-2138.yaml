@@ -43,6 +43,7 @@ original:
   notes:
   - 2026-10-23 回访 2026-10-23：修复 MR !12598 仍 open
   - '2026-10-24 回访 2026-10-24：修复 MR ops-nn!12598 已 merged（10-24T01:13Z），issue #7225 已 closed；是否随版本发布未核实。'
+  - '2026-10-25 回访 2026-10-25：批次快照确认 issue #7225 closed（10-24T01:12Z）、修复 MR !12598 已 merged；版本发布仍未核实，维持 documented。'
 migration:
   method: scan
   scanned: '2026-10-22'
@@ -54,6 +55,9 @@ migration:
     fields:
     - original.notes
   - date: '2026-10-24'
+    fields:
+    - original.notes
+  - date: '2026-10-25'
     fields:
     - original.notes
   audit:

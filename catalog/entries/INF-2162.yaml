@@ -46,6 +46,8 @@ original:
   behavior: 调用 GatherPaKvCache 收集 KV cache 时，如果 blockTables 里的块号超出实际 cache 块数、各序列长度之和超过输出缓冲容量、或 seqOffset 折算的偏移越界，接口都返回成功，实际却把越界内存里的数据当 KV 读进输出（或输出静默错值），甚至往输出缓冲区外面写数据（保护带实测越界写 keyRef 之外）；不崩溃、不报错，注意力输入悄悄被污染。
   trigger_surface: CANN 9.2.0 / Atlas A2 910B2；aclnnGatherPaKvCache（cacheMode=Norm、isSeqLensCumsum=false 路径）；blockTables 越界值 / sum(seqLens)>keyRef dim0 / seqOffset 超界 / keyCache 首维 0。
   discovery: 2026-10-24 每日扫描
+  notes:
+  - '2026-10-25 回访 2026-10-25：修复 MR !14535（gather 越界读）已 closed/合入 10-24T09:31Z，发布版本未核实；!14536（scatter 越界写跳过）仍 open。族内新增 #6676 空输入静默 no-op 分支（INF-2187）。'
 migration:
   method: scan
   scanned: '2026-10-24'
@@ -67,3 +69,7 @@ migration:
     - detail
     uncertain:
     - effect
+  updates:
+  - date: '2026-10-25'
+    fields:
+    - original.notes

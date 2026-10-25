@@ -3,29 +3,29 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2168 条；状态：active 2168
+共 2187 条；状态：active 2168、pending_audit 19
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 615 |
-| 编译器 | 141 |
+| 算子/内核 | 624 |
+| 编译器 | 142 |
 | 运行时/执行 | 132 |
 | 集合通信 | 36 |
 | 并行切分 | 28 |
-| KV缓存 | 350 |
-| 调度/服务 | 85 |
+| KV缓存 | 352 |
+| 调度/服务 | 86 |
 | 输出解析 | 66 |
-| 解码/采样 | 148 |
-| 量化 | 192 |
+| 解码/采样 | 149 |
+| 量化 | 194 |
 | 位置编码 | 42 |
 | 分词/模板 | 33 |
 | 模型定义 | 48 |
 | 权重/检查点 | 45 |
-| 数据管线 | 5 |
+| 数据管线 | 6 |
 | 优化器 | 3 |
 | 损失计算 | 3 |
-| MoE路由 | 41 |
+| MoE路由 | 43 |
 | 重计算/卸载 | 7 |
 | RL训练回路 | 1 |
 | 观测/评测 | 68 |
@@ -7184,6 +7184,105 @@
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6625
 - **关联**：cross:TRN-0414
 
+### INF-2169 `torch_npu_foreach_add_noncontig_view_silent_noop` torch_npu _foreach_add_ 非连续视图静默不生效
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / torch_npu / _foreach_ 组算子快路径
+- **原因行为**：foreach 快路径对非连续视图（转置等）就地加法跳过实际写回，不报错、原存储不变，连续张量路径正常。
+- **影响对象**：数值结果；模型权重（静默错误）
+- **影响详情**：对转置等非连续视图调用 _foreach_add_ 后数值保持原值（maxabs 3.38），无任何报错；下游 fused 优化器/AMP 更新静默丢失，权重冻结。三芯（910/910B3/950PR）一致。
+- **改进措施**：检测 对照连续克隆张量结果 allclose 可发现；修复 修复 PR https://gitcode.com/Ascend/op-plugin/merge_requests/6099 （open，快路径门控收紧非连续走慢路径，未发布）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/640；https://gitcode.com/Ascend/op-plugin/merge_requests/6099
+
+### INF-2170 `torch_npu_complex_special_value_propagation_mismatch` torch_npu 复数特殊值传播与 CPU 不一致（Inf/NaN 翻转）
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / torch_npu / 复数算子向量化/标量分路径
+- **原因行为**：复数张量 Inf/NaN/零的传播语义与 CPU 不一致：小尺寸走标量路径改变特殊值结果，reciprocal 存在按元素数（<3）分路径。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：含 Inf/NaN 复数输入下 NPU 与 CPU 结果模式翻转（cpu=finite→npu=nan、cpu=nan→npu=inf、cpu=inf→npu=nan）；同一算子 1 与 2/3/4 元素结果不同。910 与 910B3 双机逐位一致。
+- **改进措施**：检测 与 CPU 参照逐元素对比特殊值输入可发现；修复 待定（关联上游 pytorch #157272/#141487，本仓 #641 未附修复）
+- **来源**：https://gitcode.com/Ascend/op-plugin/issues/641；https://github.com/pytorch/pytorch/issues/157272；https://github.com/pytorch/pytorch/issues/141487
+
+### INF-2171 `cann_poolkeyindexer_pooltailk_oob_sparse_indices` CANN PoolKeyIndexer poolTailK>0 输出越界索引
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / cann / PoolKeyIndexer kernel
+- **原因行为**：poolTailK>0 时 sparseIndicesOut 在应为 -1 填充的位置产出超出合法域（npool*poolSize）的索引 32/33；poolTailK=0 同输入该位置是 -1。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：稀疏注意力索引输出含越界索引（合法 0..31 实测 32/33，两行各 2 个共 4 个），下游按索引寻址 KV 池将读越界块或产生未定义行为；接口返回 0。
+- **改进措施**：检测 对 sparseIndicesOut 做值域断言（>=npool*poolSize 或非 -1 即报）可发现；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6636
+
+### INF-2175 `cann_simthreadexponential_tail_oob_write` CANN SimThreadExponential 尾部越界写
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / cann / SimThreadExp kernel
+- **原因行为**：kernel 每次调用在输出张量 selfRef 尾部之外多写一段数据（32~992 字节），两段返回 0、输出数值正确；分配尾部留白 4096 字节后同一调用零告警，证明越界写紧贴张量尾部。
+- **影响对象**：跨请求/跨样本数据；数值结果（静默错误）
+- **影响详情**：显存池场景下多写的字节静默改坏相邻张量或通信缓冲，返回码 0、输出正确；破坏要到后续算子才以数值异常或 507035 暴露。fp32 n=256 越界写 992 字节，同夹具 12 个随机/dropout 接口零告警（阴性对照成立）。
+- **改进措施**：检测 mssanitizer --tool=memcheck 可稳定检出（illegal write）；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-math/issues/3920
+
+### INF-2176 `cann_all_uint8_out_truncates_self_values` CANN aclnnAll out=UINT8 输出数值截断非布尔
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / cann / aclnnAll out dtype 路径
+- **原因行为**：out dtype 为 UINT8（资料列为支持）时，kernel 不做 all() 归约，而是把 self 的数值直接截断成 UINT8 写入 out；out=BOOL 路径正确。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：[100,200,300,400]→[100,200,44,144]（300%256=44），[0.1..0.8]→[0,0,0,0]；BOOL 对照 [1,1,1,1]。多 self dtype 均错，两段返回 0，静默脏数据。
+- **改进措施**：检测 用 BOOL 对照或断言 out 值域∈{0,1} 可发现；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-math/issues/3963
+
+### INF-2179 `sglang_flashinfer_prefill_split_invariant_greedy_flip` SGLang FlashInfer prefill 分裂不变性破坏贪心翻转
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / flashinfer / ragged/paged prefill 双路径
+- **原因行为**：同一批 token 注意力走两种数值分解：无前缀整段 ragged；有前缀 ragged 新段 + paged 前缀 + merge_state，两者差 1-2 bf16 ulp；FP8 上放大为 0.35 nat logit 漂移。
+- **影响对象**：输出内容；输出分布（静默错误）
+- **影响详情**：同 prompt 温度 0 二次调用（radix 命中 1344 token 或 chunked prefill 1344+61）首个贪心 token 翻转（chat→query_robot_status），3/3 复现；隔离测试排除 GDN 状态/卷积/GEMM/checkpoint。
+- **改进措施**：检测 同 prompt 冷/热前缀两次生成对比首 token；修复 待定（issue 未附修复；无模型权重最小复现已给出）
+- **来源**：https://github.com/sgl-project/sglang/issues/46259
+
+### INF-2180 `ttmetal_round_negative_decimals_whole_step_error` tt-metal round 负 decimals 邻 tie 整步错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / tt-metal / SFPU _calculate_round_
+- **原因行为**：kernel 用 x*fl(10^-k)（不精确，如 0.01f=0.0099999998）代替精确除法 x/10^k，再 round-half-even；50.000004 在 d=-2 乘积恰舍到 0.5 得 0，正确为 100。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：FLOAT32 decimals<0 时邻 tie 输入整步（10^k）错值：50.000004/-2→0（应100）、1499.9999/-3→2000（应1000）、-1999850.1/-2→-1999800（应-1999900）；确定性必现。
+- **改进措施**：检测 与 torch.round/np.round 邻 tie 样本对比；修复 待定（issue 未附修复；模型确认 ttsim 与 kernel 逐位一致，根因闭合）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/62176
+
+### INF-2183 `ttmetal_fpu_reduce_row_fp32dest_face1_partial_leak` tt-metal FPU REDUCE_ROW fp32Dest 列16残留
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / tt-metal / FPU REDUCE_ROW 归约
+- **原因行为**：fp32_dest_acc_en=True 且 fp32 输出时 REDUCE_ROW 每 tile 列 16 残留 face-1 部分和；row-major W 分块回载再并入列0，W>256 结果错数个百分点。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：ttnn.sum(x,dim=-1) row-major Float32 W>256 结果错数个百分点；bf16 fp32 中间链 ttnn.mean N·C>1 且 W>256 同样错（既有测试 xfail）；逻辑形状 [...,1] 掩盖单次 reduce 的隐藏列。
+- **改进措施**：检测 对 W>256 的 row-major fp32 sum 与 torch 参照对比；修复 待定（issue 未附修复；fp32_dest_acc_en=False + HiFi4 可规避）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/62259
+
+### INF-2184 `cann_recurrent_kda_legal_params_a2_ub_oob_crash` CANN RecurrentKda 合法参数 A2 UB 越界 507035
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：算子/内核 / cann / RecurrentKda kernel
+- **原因行为**：资料声明 A2 支持，但按资料自带示例的合法参数（BSND 默认参数）在 A2 上 host 放行后 kernel 内 aivec UB 读写越界，同步返回 507035；16 种参数组合凡 host 放行 100% 复现，无可用参数组合。
+- **影响对象**：可用性/进度（报错）
+- **影响详情**：首段 GetWorkspaceSize 返回 0、执行段同步 507035（AI Core aivec UB 越界，core 38/39），调用方按资料使用必然崩溃且无法改参规避；对照 layout=TND 被 161002 正常拒绝。
+- **改进措施**：检测 plog 可见 aivec error + VEC UB 越界 errorStr；修复 待定（issue 建议前置校验或修 kernel 偏移；资料 A2 支持声明或需修正，未附修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6642
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -8758,6 +8857,17 @@
 - **改进措施**：检测 对编译前后输出做逐元素比对（test_torchinductor 数值断言不放宽容差）；修复 待定
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5632
 - **关联**：cross:TRN-0413
+
+### INF-2182 `triton_ascend_swiglu_packed_bwd_not_bitwise_identical` triton-ascend packed SwiGLU 反向非 bitwise
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：编译器 / triton / Ascend 后端 hfusion 重排
+- **原因行为**：packed（gate/up 交错）与 separate SwiGLU 数学相同、前向 bitwise 一致，反向梯度仍差（fp32 29% 元素 2.4e-7）；疑 hfusion 改变 packed 反向运算顺序。
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：DeepSpeed swiglu_triton 训练/微调路径 packed 反向与 separate 反向梯度不 bitwise 一致（float 舍入量级），破坏严格 bitwise 对比测试；2-D fp16/bf16 bitwise 一致。
+- **改进措施**：检测 packed vs separate 反向逐元素 diff；修复 待定（issue 询问是否有禁用融合的 kernel 级开关，尚无回复）
+- **来源**：https://github.com/triton-lang/triton-ascend/issues/2645
 
 ## 运行时/执行
 
@@ -14879,6 +14989,30 @@
 - **改进措施**：检测 待定；修复 issue 附修复方向：平台侧 validate_configuration 启动即拒绝不支持 dtype（closed，合入状态未核实）
 - **来源**：https://github.com/vllm-project/vllm/issues/62664
 
+### INF-2178 `vllm_ascend_mooncake_v2_producer_hold_expiry_race` vllm-ascend Mooncake V2 hold 过期 KV 误收
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：KV缓存 / vllm / Mooncake V2 KV 传输完成校验
+- **原因行为**：transfer 完成消息只校验 request ID，不校验 producer 延迟释放 hold 在读期间是否仍有效；producer 过期并回收块后，D 端仍按成功接收 KV 入池；同 ID 复用时旧完成消息可释放新 hold。
+- **影响对象**：KV状态；跨请求/跨样本数据（静默错误）
+- **影响详情**：PD 分离下 P 端 hold 过期块被回收复用后，D 端 pull 仍报成功并把可能已属他请求的 KV 当本请求内容使用；完成消息仅标识 request ID，延迟完成可误放新 hold。
+- **改进措施**：检测 对 pull 后 KV 与重算值比对可发现（成本高）；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/19282 （Validate Mooncake V2 producer holds after KV reads，open 未合入）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/19281；https://github.com/vllm-project/vllm-ascend/pull/19282；https://github.com/vllm-project/vllm/issues/61229；https://github.com/vllm-project/vllm/issues/62065
+- **关联**：var:INF-1350
+
+### INF-2187 `cann_gather_pakvcache_and_uninit_branches` CANN GatherPaKvCache 空输入静默 no-op
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-10-25
+
+- **原因对象**：KV缓存 / cann / GatherPaKvCache 空输入分支
+- **原因行为**：keyCache 首维为 0 时早退返回成功且不写任何输出（静默 no-op），两段返回 0；同族非空路径的 blockId 越界读已由 INF-2162 覆盖，本条为空张量分支。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：空 KV cache 输入下调用返回成功、输出张量保持调用前内容（未写），下游当作已 gather 的 KV 消费；两段 rc=0 无告警。
+- **改进措施**：检测 输出 canary 预填可检出；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6676；https://gitcode.com/cann/ops-transformer/issues/6675
+- **关联**：var:INF-2162
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -15831,6 +15965,17 @@
 - **影响详情**：DeepSeek V4 工具调用第二轮（工具结果回传后）正文正常、finish_reason=stop，但 tool_calls 为空数组；OpenAI SDK 客户端据此继续工具循环并 IndexError。上游 vLLM 已由 #44105 修复。
 - **改进措施**：检测 检查 chat completion 的 message.tool_calls 是 null 还是 []，流式响应检查 delta.tool_calls 是否被省略；修复 vllm-ascend 侧建议 monkey patch 去掉空 tool_calls 数组；上游修复 https://github.com/vllm-project/vllm/pull/44105（issue closed，未核实 vllm-ascend 是否已消费该修复）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/9790
+
+### INF-2186 `sglang_mixed_chunk_greedy_nondeterminism_qwen35` SGLang mixed-chunk 调度改变贪心输出（Qwen3.5-9B）
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：调度/服务 / sglang / mixed-chunk 调度批组成路径
+- **原因行为**：确定性推理（deterministic、seed=42、温度0）下，同一两请求场景仅 mixed-chunk 开关不同，长请求第 82 个生成 token 不同；GDN chunk 对齐修复不消除。
+- **影响对象**：输出内容（不可复现）
+- **影响详情**：两请求（4118-token 长请求生成中 + 255-token 短请求 prefill 混入）第 82 token 翻转，main a99c7d05 3/3、+#45545 commit 3/3 复现，六次试验首分叉均在 index 81；原生 SGLang Engine 无修改复现。
+- **改进措施**：检测 同场景 mixed-chunk 开/关对比生成；修复 待定（#45545 不解决，根因未定位）
+- **来源**：https://github.com/sgl-project/sglang/issues/46446
 
 ## 输出解析
 
@@ -18240,6 +18385,18 @@
 - **改进措施**：检测 同一 prompt 做单请求/并发两组对照，比较是否出现 BOS token 与提前 stop；同时开关 MTP 交叉验证；修复 issue 未附修复 PR（closed，修复状态未核实）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/9170
 
+### INF-2181 `vllm_mtp_forced_reject_gdn_state_divergence_qwen38` vLLM MTP forced-reject 与 target-only 发散
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：解码/采样 / vllm / MTP 推测解码拒绝路径
+- **原因行为**：强制拒绝全部 draft 下 MTP 与 target-only 确定性发散：margin 0.6-5.9 nats 远超底噪 0.5，victim prompt 确定、首分叉随 batch 平移；K>=5、n>=8、L>=192 触发。
+- **影响对象**：输出内容；隐状态（静默错误）
+- **影响详情**：同 prompt 贪心 margin 达 0.6-5.9 nats（远超实测 ≤0.5 nats 非确定性底噪），流完全去相关（diff ratio 1.0），3/3 重复、跨 2 次独立重启一致；拒绝采样应与 target-only token 级等价。
+- **改进措施**：检测 all-reject 等价测试（SpecSafe 型差分）可检出；修复 待定（issue 新开未附修复）
+- **来源**：https://github.com/vllm-project/vllm/issues/63593；https://github.com/vllm-project/vllm/issues/39273；https://github.com/sgl-project/sglang/issues/35150
+- **关联**：var:INF-1062
+
 ## 量化
 
 ### INF-0109 `vllm_xpu_battlemage_persistent_vram_state_corruption_token0` vLLM XPU 并发 decode 后持久损坏，输出全为 token 0
@@ -20408,6 +20565,28 @@
 - **改进措施**：检测 对 single_rht 输出与 float64 参考逐元素比对（奇数行探针）；修复 待定
 - **来源**：https://github.com/vllm-project/vllm/issues/63514
 
+### INF-2172 `cann_moe_init_routing_v4_static_quant_1lsb_round` CANN MoeInitRoutingV4 静态量化边界多 1LSB
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：量化 / cann / MoeInitRoutingV4 取整
+- **原因行为**：quantMode=0 静态量化时取整实现与资料公式 round(x*scale+offset) 不一致：|x-trunc(x)|∈[0.49,0.5) 的边界值被多进 1 LSB（9.49774→10，应为 9）。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：expandedXOut int8 量化值在 .49x 边界系统性 +1（同批 125 条静态量化用例 162 处，单条最多 72/16384 元素、最大差 1LSB）；非边界对照正确，两段返回 0。
+- **改进措施**：检测 对 .49x 边界输入与 std::round 参照逐元素对比可发现；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6716
+
+### INF-2185 `cann_quantmatmulv5_1x1x1_kernel_oob_read_392b` CANN QuantMatmulV5 最小形状 kernel 静默越界读
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：量化 / cann / QuantBatchMatmulV3 ND
+- **原因行为**：M=N=K=1 int8 量化矩阵乘上 kernel 越界读 392 字节 GM，两段返回 0、输出数值正确；页边界/不同布局下可能触发非法访问或把相邻内存读入计算。
+- **影响对象**：跨请求/跨样本数据（静默错误）
+- **影响详情**：6 个 1x1x1 用例（bf16/fp16/int32 出参×4 量化模式）×2 确定性腿 10/10 全命中 illegal read 392B；同进程 OnesLike/MatMulV3 对照无告警；页边界/不同布局下可能触发非法访问或把相邻内存读入计算。
+- **改进措施**：检测 mssanitizer --tool=memcheck 可稳定检出；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7303
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -22356,6 +22535,17 @@
 - **改进措施**：检测 accum>1 时核对 create_dict_iterator 的 num_epochs 是否 ≥ steps×accum/epoch_step；续训失败时比对 add_skip_pass 报的 step 与 dataset_size*num_epochs；修复 issue 给出的修法是容量按 micro-batch 计算并保留一个 epoch 余量（与动态 batch 分支一致，静态分支用 num_accumulation_steps 作倍数）；未见关联 PR（issue 已关闭，未核实）
 - **来源**：https://gitcode.com/mindspore/mindformers/issues/2581
 
+### INF-2177 `mindspore_ascend_videodecoder_sparse_batch_corruption` MindSpore Ascend VideoDecoder 稀疏批量抽帧码块损坏
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：数据管线 / mindspore / VideoDecoder 批量抽帧
+- **原因行为**：每组最后一个目标包提交后即结束该组，不等解码完成或排空输出；多区间 seek 复用同一通道且组间无 EOS/drain，前序区间解码残留污染后续帧。
+- **影响对象**：输入编码（静默错误）
+- **影响详情**：get_frames_at([1810,2212,2615]) 第 2615 帧确定性码块损坏（max 像素差 255/MAE 55.2），删除任一前序索引即恢复；多模态视频输入特征被污染，API 返回成功无告警。
+- **改进措施**：检测 批量与单帧抽取结果逐字节比对（batch==single 断言）可发现；修复 待定（EOS+drain 诊断 helper 可恢复但为受控诊断、非生产补丁，未回归验证）
+- **来源**：https://gitcode.com/mindspore/mindspore/issues/29702
+
 ## 优化器
 
 ### INF-0176 `ttmetal_clip_grad_norm_undefined_p_decomposition_inf_zero` moreh_clip_grad_norm 对 inf/0 阶范数计算失效
@@ -22884,6 +23074,30 @@
 - **影响详情**：commAlg="bad" 与 hierarchy+epWorldSize=2 均静默执行；通信拓扑错误可致 MoE 分发结果错或隐性性能损失，无错误码
 - **改进措施**：检测 对照合法 commAlg 输出与耗时；修复 待定（issue open：建议按资料白名单校验）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6533
+
+### INF-2173 `cann_moe_permute_with_ep_wraparound_tail_unwritten_infer` CANN MoeTokenPermuteWithEp 环绕区间尾部行不写
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：MoE路由 / cann / MoeTokenPermuteWithEp
+- **原因行为**：环绕区间（start>end）时 kernel 过滤条件以 sortedIndices 的 rank 值域 [0,totalLength) 截断，实际只写 numOutTokens-end 行，尾部 end 行从未写出。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：EP 环绕窗口下 permuteTokensOut/permuteProbsOut 尾部 end 行保持调用方预填的未初始化显存，两段接口返回 0 无告警；76 组扫描缺口恒等于 end，start<end 不触发。
+- **改进措施**：检测 输出缓冲预填哨兵值可检出未写行；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6622
+- **关联**：cross:TRN-0393
+
+### INF-2174 `cann_moe_token_unpermute_padded_false_outputs_unwritten_infer` CANN MoeUnpermute padded=false 两输出不写
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-25
+
+- **原因对象**：MoE路由 / cann / MoeTokenUnpermuteWithRM
+- **原因行为**：paddedMode=false 时 outIndex 与 permuteTokenId 两个输出从头到尾没有被写，两段接口返回 0；paddedMode=true 时两输出正确写出。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：paddedMode=false 调用后 outIndex/permuteTokenId 保持调用方预填内容（canary 0x5a5a5a5a 全残留），主输出 unpermutedTokens 两种模式都正确，无报错。
+- **改进措施**：检测 输出缓冲预填 canary 可检出；修复 待定（issue 未附修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6607
+- **关联**：cross:TRN-0391
 
 ## 重计算/卸载
 
