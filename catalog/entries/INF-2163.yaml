@@ -4,7 +4,7 @@ slug: cann_mhc_pre_alpha2_hres_never_written
 aliases: []
 title: CANN MhcPre alpha=(2) 不写 hRes 返回残留显存
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6658
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0408
 original:
   mechanism: CANN 9.2.0（Atlas A2 910B2，aclnnMhcPreGetWorkspaceSize/aclnnMhcPre C 直调）alpha 的 shape 为 [2] 表示无残差分支，资料《规格约束》写明 alpha=(2) 时 hRes 输出为 0、参数表只说该情况可传空指针，并未禁止传张量。实测 alpha=[2] 且调用方给 hRes 传非空张量时，两段接口都返回 0，但 hRes 内存一个字节都没被写，保持调用方原有内容。复现程序自带阴性对照（K19）：同一份代码同一套 shape 只把 alpha 换成 [3]，hRes 立刻被写满（canary 全部消失），证明读回路径有效、问题在 alpha=(2) 分支。
   source: https://gitcode.com/cann/ops-transformer/issues/6658
@@ -38,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  updates:
+  - date: '2026-10-25'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

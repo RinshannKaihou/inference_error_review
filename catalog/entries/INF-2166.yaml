@@ -4,10 +4,10 @@ slug: flashinfer_trtllm_gen_fused_moe_sm120_silent_corruption
 aliases: []
 title: FlashInfer fused MoE SM120 静默输出垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: MoE路由
+  - subsystem: 算子/内核
     stack: flashinfer
     component: fused_moe_120 JIT
   behavior: trtllm-gen fused MoE 的 fused_moe_120 在 SM120 产生静默损坏输出，运行时无架构门控即接受调用；测试矩阵自声明仅保证 SM100/SM103。
@@ -38,3 +38,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: MoE路由
+        to: 算子/内核
+    uncertain:
+    - effect

@@ -4,7 +4,7 @@ slug: cann_addcmul_nan_value_treated_as_one
 aliases: []
 title: CANN Addcmul 把标量 value=NaN 判为 1 静默输出有限值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-math/issues/3894
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0411
 original:
   mechanism: CANN 9.2.0（Ascend 910B2/A2，torch 2.14+torch_npu 2.14，aclnn C 两段式直调）math/addcmul 的 op_api 源码 aclnn_addcmul.cpp:203-209 的 IsEqualToOne 判据为 return !(value->ToFloat() > 1 || value->ToFloat() < 1)。NaN 与任何数比较均为 false，NaN>1 与 NaN<1 同为 false，取反后整体为 true，于是 value=NaN 被判为等于 1；:285-286 据此进入 l0op::AxpyV2 快路径，该路径不做 value 乘法，输出退化为 self+tensor1×tensor2。aclnnInplaceAddcmulGetWorkspaceSize 以 selfRef 为 out 直接复用 aclnnAddcmulGetWorkspaceSize，原地接口同病。资料公式 out=self+value×t1×t2 且 value 为 FLOAT 标量未声明 NaN 例外，value=NaN 时结果应为全 NaN。报告附 C 直调最小复现（对照组 value=1.0、缺陷组 out-of-place/inplace value=NaN），源码行号定位闭合。
   source: https://gitcode.com/cann/ops-math/issues/3894
@@ -38,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  updates:
+  - date: '2026-10-25'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

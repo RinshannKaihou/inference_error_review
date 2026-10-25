@@ -4,10 +4,10 @@ slug: cann_gather_pa_kv_cache_missing_validation_family
 aliases: []
 title: CANN GatherPaKvCache 索引/长度缺校验族静默越界或错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 算子/内核
     stack: cann
     component: aclnnGatherPaKvCache
   behavior: blockTables 取值、sum(seqLens) 对 keyRef 容量、seqOffset 折算 tableOffset 均无值域校验：越界块号读 keyCache、容量不足写缓冲外、偏移越界读。
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 数值结果
-  detail: '非法 blockTables/seqLens/seqOffset 下两段接口返回 0：越界读出的 KV 数据进输出或静默错值、keyRef 之外 128B 被改写；修复 PR #14535/#14536 已出现（open/closed）。'
+  detail: 非法 blockTables/seqLens/seqOffset 下两段接口返回 rc=0：越界 KV 数据进输出或静默错值，sum(seqLens)>keyRef dim0 时写到缓冲外（0x5A 保护带实测）；修复 PR !14535（closed）/!14536（open），合入状态未核实。
   visibility: 静默错误
 mitigation:
   detect: 对 blockTables/seqLens/seqOffset 做值域断言；保护带 canary 检查越界写
@@ -49,3 +49,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 算子/内核
+    rewritten:
+    - detail
+    uncertain:
+    - effect

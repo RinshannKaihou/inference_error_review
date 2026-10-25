@@ -4,7 +4,7 @@ slug: cann_msa_index_score_n2_gt1_reads_only_kv_head0
 aliases: []
 title: CANN MsaIndexScore N2>1 只读 KV head0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6639
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0406
 original:
   mechanism: CANN 9.2.0（Atlas A2 910B2，aclnn 两段式 C 直调不经框架适配层）aclnnMsaIndexScore 在 key 的 N2>1 时对所有 query head 都只读第 0 个 KV head。正确语义应按 n2 = n1/(N1/N2) 取对应 KV head。报告给出单文件自包含 64 行复现（TND，N1=2、N2=2、D=128、T1=128、T2=256，actualSeqQ=[0,128]、actualSeqK=[0,256]）：三次调用只改 key 的 head0 或 head1 常量值比较输出——只改 KV head1（1.0→100.0）输出 max|diff|=0、bitwise 相同；对照只改 head0 输出 max|diff|=12672。缺陷组与对照组 rc 均为 0。
   source: https://gitcode.com/cann/ops-transformer/issues/6639
@@ -38,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-24'
+  updates:
+  - date: '2026-10-25'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-25
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
