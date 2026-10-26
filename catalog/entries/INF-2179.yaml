@@ -4,7 +4,7 @@ slug: sglang_flashinfer_prefill_split_invariant_greedy_flip
 aliases: []
 title: SGLang FlashInfer prefill 分裂不变性破坏贪心翻转
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -16,7 +16,7 @@ effect:
   - 输出内容
   - 输出分布
   detail: 同 prompt 温度 0 二次调用（radix 命中 1344 token 或 chunked prefill 1344+61）首个贪心 token 翻转（chat→query_robot_status），3/3 复现；隔离测试排除 GDN 状态/卷积/GEMM/checkpoint。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 同 prompt 冷/热前缀两次生成对比首 token
   fix: 待定（issue 未附修复；无模型权重最小复现已给出）
@@ -40,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    uncertain:
+    - effect

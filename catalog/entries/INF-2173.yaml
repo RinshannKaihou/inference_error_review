@@ -4,17 +4,17 @@ slug: cann_moe_permute_with_ep_wraparound_tail_unwritten_infer
 aliases: []
 title: CANN MoeTokenPermuteWithEp 环绕区间尾部行不写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: MoE路由
+  - subsystem: 算子/内核
     stack: cann
     component: MoeTokenPermuteWithEp
   behavior: 环绕区间（start>end）时 kernel 过滤条件以 sortedIndices 的 rank 值域 [0,totalLength) 截断，实际只写 numOutTokens-end 行，尾部 end 行从未写出。
 effect:
   objects:
   - 数值结果
-  detail: EP 环绕窗口下 permuteTokensOut/permuteProbsOut 尾部 end 行保持调用方预填的未初始化显存，两段接口返回 0 无告警；76 组扫描缺口恒等于 end，start<end 不触发。
+  detail: EP 环绕窗口（start>end 且 end>0）下调用，输出形状正确、前段正确，但尾部 end 行是未初始化显存的残留内容（哨兵实测全部保留），两段接口均返回成功、无报错或告警；76 组 (start,end) 扫描显示缺口恒等于 end，start<end 时缺口恒为 0。
   visibility: 静默错误
 mitigation:
   detect: 输出缓冲预填哨兵值可检出未写行
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: MoE路由
+        to: 算子/内核
+    rewritten:
+    - detail

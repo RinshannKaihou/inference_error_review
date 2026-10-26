@@ -4,7 +4,7 @@ slug: cann_moe_init_routing_v4_static_quant_1lsb_round
 aliases: []
 title: CANN MoeInitRoutingV4 静态量化边界多 1LSB
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: expandedXOut int8 量化值在 .49x 边界系统性 +1（同批 125 条静态量化用例 162 处，单条最多 72/16384 元素、最大差 1LSB）；非边界对照正确，两段返回 0。
+  detail: expandedXOut 量化值在 .49x 边界系统性 +1LSB（125 条静态量化用例共 162 处，单条最多 72/16384 元素）；接口不报错，9.4/9.6 等非边界对照正确；复现脚本 SUMMARY：ctrl_diffs=0、defect_diffs=2。
   visibility: 静默错误
 mitigation:
   detect: 对 .49x 边界输入与 std::round 参照逐元素对比可发现
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

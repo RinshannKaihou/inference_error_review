@@ -4,17 +4,17 @@ slug: mindspore_ascend_videodecoder_sparse_batch_corruption
 aliases: []
 title: MindSpore Ascend VideoDecoder 稀疏批量抽帧码块损坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 数据管线
+  - subsystem: 调度/服务
     stack: mindspore
     component: VideoDecoder 批量抽帧
   behavior: 每组最后一个目标包提交后即结束该组，不等解码完成或排空输出；多区间 seek 复用同一通道且组间无 EOS/drain，前序区间解码残留污染后续帧。
 effect:
   objects:
   - 输入编码
-  detail: get_frames_at([1810,2212,2615]) 第 2615 帧确定性码块损坏（max 像素差 255/MAE 55.2），删除任一前序索引即恢复；多模态视频输入特征被污染，API 返回成功无告警。
+  detail: get_frames_at([1810,2212,2615]) 第 2615 帧确定性码块损坏（最大像素差 255、平均差 55），删除任一前序索引即逐字节一致；API 正常返回、无报错无告警，若这些帧直接送入视频理解模型，输入特征已被污染且不可察觉。
   visibility: 静默错误
 mitigation:
   detect: 批量与单帧抽取结果逐字节比对（batch==single 断言）可发现
@@ -39,3 +39,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-25'
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 数据管线
+        to: 调度/服务
+    rewritten:
+    - detail

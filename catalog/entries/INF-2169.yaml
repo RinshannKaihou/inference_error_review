@@ -4,7 +4,7 @@ slug: torch_npu_foreach_add_noncontig_view_silent_noop
 aliases: []
 title: torch_npu _foreach_add_ 非连续视图静默不生效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -31,7 +31,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/Ascend/op-plugin/merge_requests/6099
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: TRN-0444
 original:
   mechanism: 'torch._foreach_add_ 对非连续视图（如转置张量）的就地加法在 NPU 上静默不执行。issue #640 给出三芯最小复现：经典 910 / 910B3（CANN 9.1.0 + torch_npu 2.7.1）/ Ascend950PR（CANN 9.1.0 + torch_npu 2.9.1）逐位同错，t=torch.randn(3,4).t() 后 _foreach_add_ 结果与 base.t()+other.t() allclose=False（maxabs=3.383），连续 clone 对照正确。机制指向 foreach 族 133 签名 op_api 单路径无回退（#638 清单 S1 面），快路径假定连续布局；与上游 GPU 端 2025-10 实测的 foreach 非连续静默失效同构（另 pytorch#94865 size-0 列表破坏栈）。同日修复 PR !6099 收紧 foreach 快路径门控：非连续视图改走慢路径。上游 op-plugin #638 记录的 GScaler 多步失败疑似本缺陷为嫌疑机制。'
   source: 2026-10-25 每日扫描；issue https://gitcode.com/Ascend/op-plugin/issues/640 ；修复 PR https://gitcode.com/Ascend/op-plugin/merge_requests/6099
@@ -51,3 +53,16 @@ migration:
   - date: '2026-10-25'
     fields:
     - original.notes
+  - date: '2026-10-26'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
