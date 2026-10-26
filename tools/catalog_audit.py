@@ -6,12 +6,18 @@
 Protocol (same as the 2026-10 migration audit, see RAG normalize/audit):
   1. three base judges, blind classification (task C: original text only) and faithfulness
      (task F: original vs title/component/behavior/detail; quotes located by program);
-  2. any non-final field -> 4 panel judges (7 votes, >= 5 valid and >= 2/3 majority);
+  2. any non-final field -> 3 panel judges (6 votes, >= 4 valid and >= 2/3 majority);
   3. confirmed unfaithful text -> rewritten by the fixer, kept only if both verifiers pass it;
   4. categorical corrections applied; weak decisions keep the scan's value and are listed;
      the entry becomes active with a migration.audit record.
+A void reply (call failed, unparsable, or refused by the checker) is asked once more; still void, it is
+archived with the reason and the head of the raw reply. Uncertain fields that only lacked valid votes
+(void calls, not disagreement) are also listed as uncertain_short.
+--ids on an already active entry re-audits it: round reaudit-<date>, the earlier record kept under
+`previous`, changed fields appended to migration.updates.
 Judges are cheap OpenAI-compatible gateway models, never Claude; the writer's family (glm) is kept out
-of the base set. Votes are archived under catalog/audit/<date>/. Needs JUDGE_API_KEY. Prints counts only.
+of the base set. Votes are archived under catalog/audit/<date>/. Needs JUDGE_API_KEY. Prints counts only
+(and, with --dry-run, the audit record each entry would get).
 """
 
 import os
@@ -55,6 +61,9 @@ PROBLEMS = ("unsupported", "contradicts", "overstated", "missing_condition", "mi
 LABELS_ZH = {"meta": "元数据", "mechanism": "机制", "source": "来源", "behavior": "行为效应", "trigger_surface": "触发面",
              "signature": "隐藏态签名", "repro": "复现方式", "discovery": "发现来源", "notes": "回访"}
 QUORUM_BASE, QUORUM_PANEL, MAJ, FINAL = 2, 4, 2 / 3, ("unanimous", "panel6")
+SHORT = ("short", "unresolved")      # too few valid votes to decide: void calls, not disagreement
+FIELD_PATHS = {"kind": "kind", "subsystem": "cause.objects", "effect": "effect.objects", "visibility": "effect.visibility",
+               "title": "title", "component": "cause.objects", "behavior": "cause.behavior", "detail": "effect.detail"}
 
 
 # ---------------------------------------------------------------- prompts
@@ -103,17 +112,21 @@ def user_f(e, fields=None):
 # ---------------------------------------------------------------- calls
 
 def call(model, system, user, key):
+    """-> (content, None), or (None, last error) after 4 attempts."""
     body = {"model": model, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "max_tokens": 32768, "temperature": 0.0, **MODEL_OPTS.get(model, {})}
+    err = None
     for attempt in range(4):
         try:
             r = requests.post(API, headers={"Authorization": f"Bearer {key}"}, json=body, timeout=900)
             if r.status_code == 200:
-                return r.json()["choices"][0]["message"].get("content") or ""
+                return r.json()["choices"][0]["message"].get("content") or "", None
+            err = f"http {r.status_code}"
             time.sleep((10 if r.status_code == 429 else 5) * (attempt + 1))
-        except Exception:
+        except Exception as ex:
+            err = type(ex).__name__
             time.sleep(5 * (attempt + 1))
-    return None
+    return None, err
 
 
 def parse_obj(content):
@@ -168,9 +181,11 @@ def decide_cat(vals, panel):
         return None, "unresolved"
     top, k = Counter(vals).most_common(1)[0]
     n = len(vals)
+    if n < (QUORUM_PANEL if panel else QUORUM_BASE):
+        return top, "short"
     if panel:
-        return top, "panel6" if n >= QUORUM_PANEL and k / n >= MAJ else "uncertain"
-    return top, "uncertain" if n < QUORUM_BASE else ("unanimous" if k == n else "split")
+        return top, "panel6" if k / n >= MAJ else "uncertain"
+    return top, "unanimous" if k == n else "split"
 
 
 def decide_bin(vals, panel):
@@ -179,23 +194,38 @@ def decide_bin(vals, panel):
         return False, "unresolved"
     t, n = sum(vals), len(vals)
     final = t > n - t
+    if n < (QUORUM_PANEL if panel else QUORUM_BASE):
+        return final, "short"
     if panel:
-        return final, "panel6" if n >= QUORUM_PANEL and max(t, n - t) / n >= MAJ else "uncertain"
-    return final, "uncertain" if n < QUORUM_BASE else ("unanimous" if t in (0, n) else "split")
+        return final, "panel6" if max(t, n - t) / n >= MAJ else "uncertain"
+    return final, "unanimous" if t in (0, n) else "split"
 
 
 # ---------------------------------------------------------------- run
 
-def judge_all(jobs, key, log):
-    """jobs: [(name, model, system, user, checker)] -> {name: parsed or None}; one record per call, archived."""
+def judge_all(jobs, key, log, rounds=None):
+    """jobs: [(name, model, system, user, checker)] -> {name: parsed or None}; one record per job, archived.
+    rounds: {entry id: round} written into the records of re-audited entries."""
     res, lock = {}, threading.Lock()
 
     def work(job):
         name, model, system, user, checker = job
-        parsed = checker(parse_obj(call(model, system, user, key)))
+        for attempt in (1, 2):              # a void reply costs the field its quorum: ask once more
+            content, err = call(model, system, user, key)
+            parsed = checker(parse_obj(content))
+            if parsed is not None:
+                break
+        rec = {"job": name, "model": model, "result": parsed}
+        if (rounds or {}).get(name.split("|")[1]):
+            rec["round"] = rounds[name.split("|")[1]]
+        if attempt > 1:
+            rec["attempts"] = attempt
+        if parsed is None:
+            rec["fail"] = err or ("unparsable" if parse_obj(content) is None else "rejected")
+            rec["raw"] = (content or "")[:400]
         with lock:
             res[name] = parsed
-            log.write(json.dumps({"job": name, "model": model, "result": parsed}, ensure_ascii=False, default=str) + "\n")
+            log.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
             log.flush()
 
     with ThreadPoolExecutor(max_workers=12) as ex:
@@ -209,12 +239,17 @@ def cmd_run(a):
     targets = a.ids or sorted(i for i, e in entries.items() if e["status"] == "pending_audit")
     if not targets:
         T.out({"ok": True, "audited": 0, "note": "没有待审条目"})
+    bad = [i for i in targets if i not in entries or entries[i]["status"] not in ("pending_audit", "active")]
+    if bad:
+        T.out({"ok": False, "errors": [f"只能审计 pending_audit / active 条目：{', '.join(bad)}"]}, 2)
     sys_c, sys_f, sys_fix = prompts(voc)
     day = T.today()
     adir = tempfile.mkdtemp(prefix="catalog_audit_") if a.dry_run else os.path.join(T.CAT, "audit", day)
     os.makedirs(adir, exist_ok=True)
     log = open(os.path.join(adir, "votes.jsonl"), "a", encoding="utf-8")
     fields = {i: text_fields(entries[i]) for i in targets}
+    rounds = {i: f"reaudit-{day}" for i in targets if entries[i]["status"] != "pending_audit"}
+    judge = lambda jobs: judge_all(jobs, key, log, rounds)
 
     def jobs_for(models, ids, tag):
         jc = [(f"{tag}C|{i}|{m}", m, sys_c, f"<<<原文\n{render_original(entries[i])}\n原文>>>", lambda p: check_c(p, voc))
@@ -223,7 +258,7 @@ def cmd_run(a):
               for i in ids for m in models]
         return jc + jf
 
-    votes = judge_all(jobs_for(BASE, targets, "base"), key, log)
+    votes = judge(jobs_for(BASE, targets, "base"))
 
     def decisions(i, with_panel):
         d = {}
@@ -232,21 +267,24 @@ def cmd_run(a):
                  "effect": (entries[i]["effect"]["objects"] or [None])[0] if isinstance(entries[i]["effect"]["objects"], list) else None,
                  "visibility": entries[i]["effect"].get("visibility")}
         tags = ("base", "panel") if with_panel else ("base",)
+        # a panel round that came back all void falls back to the base votes; a split left there is short, not a split
+        void = lambda task, status: "short" if with_panel and status == "split" and not any(
+            votes.get(f"panel{task}|{i}|{m}") for m in PANEL) else status
         for f in CAT_FIELDS:
             vals = [(votes.get(f"{t}C|{i}|{m}") or {}).get(f) for t in tags for m in (BASE if t == "base" else PANEL)]
             v, status = decide_cat(vals, panel=with_panel and any(votes.get(f"panelC|{i}|{m}") for m in PANEL))
-            d[f] = {"prior": prior[f], "final": v, "status": status}
+            d[f] = {"prior": prior[f], "final": v, "status": void("C", status)}
         for f in TEXT_FIELDS:
             recs = [votes.get(f"{t}F|{i}|{m}") for t in tags for m in (BASE if t == "base" else PANEL)]
             vals = [r[0].get(f) if r else None for r in recs]
             issue, status = decide_bin(vals, panel=with_panel and any(votes.get(f"panelF|{i}|{m}") for m in PANEL))
-            d[f] = {"issue": issue, "status": status, "notes": [r[1][f] for r in recs if r and f in r[1]]}
+            d[f] = {"issue": issue, "status": void("F", status), "notes": [r[1][f] for r in recs if r and f in r[1]]}
         return d
 
     dec = {i: decisions(i, False) for i in targets}
     need_panel = [i for i in targets if any(dec[i][f]["status"] not in FINAL for f in CAT_FIELDS + TEXT_FIELDS)]
     if need_panel:
-        votes.update(judge_all(jobs_for(PANEL, need_panel, "panel"), key, log))
+        votes.update(judge(jobs_for(PANEL, need_panel, "panel")))
         for i in need_panel:
             dec[i] = decisions(i, True)
 
@@ -260,7 +298,7 @@ def cmd_run(a):
         fix_jobs.append((f"fix|{i}", FIXER, sys_fix, user_f(entries[i]) + f"\n<<<问题（只改写：{', '.join(fs)}）\n{issues}\n问题>>>",
                          (lambda fs: lambda p: {k: v for k, v in (p or {}).items() if k in fs and isinstance(v, str) and v.strip()
                                                 and len(v) <= T.LIMITS[k]} or None)(fs)))
-    proposed = judge_all(fix_jobs, key, log) if fix_jobs else {}
+    proposed = judge(fix_jobs) if fix_jobs else {}
     verify_jobs = []
     for i, fs in to_fix.items():
         p = proposed.get(f"fix|{i}")
@@ -268,7 +306,7 @@ def cmd_run(a):
             new_fields = dict(fields[i], **p)
             verify_jobs += [(f"verify|{i}|{m}", m, sys_f, user_f(entries[i], new_fields), (lambda nf: lambda q: check_f(q, nf))(new_fields))
                             for m in VERIFIERS]
-    verified = judge_all(verify_jobs, key, log) if verify_jobs else {}
+    verified = judge(verify_jobs) if verify_jobs else {}
     for i, fs in to_fix.items():
         p = proposed.get(f"fix|{i}") or {}
         ok = {}
@@ -280,12 +318,14 @@ def cmd_run(a):
             fixes[i] = ok
     log.close()
 
-    stats = Counter()
+    stats, records = Counter(), {}
+    stats["void_replies"] = sum(v is None for res in (votes, proposed, verified) for v in res.values())
     for i in targets:
         e, d = entries[i], dec[i]
         corrected = {f: {"from": d[f]["prior"], "to": d[f]["final"]} for f in CAT_FIELDS
                      if d[f]["status"] in FINAL and d[f]["final"] != d[f]["prior"]}
         uncertain = [f for f in CAT_FIELDS + TEXT_FIELDS if d[f]["status"] not in FINAL]
+        short = [f for f in uncertain if d[f]["status"] in SHORT]
         if "kind" in corrected:
             e["kind"] = corrected["kind"]["to"]
         if "subsystem" in corrected and isinstance(e["cause"]["objects"], list):
@@ -306,14 +346,23 @@ def cmd_run(a):
                 e["effect"]["detail"] = text
         unfixed = [f for f in to_fix.get(i, []) if f not in fixes.get(i, {})]
         e["status"] = "active"
-        e.setdefault("migration", {})["audit"] = {
-            "round": f"daily-audit-{day}", "base": list(BASE), "panel": list(PANEL) if i in need_panel else [],
+        mig = e.setdefault("migration", {})
+        record = {
+            "round": rounds.get(i, f"daily-audit-{day}"), "base": list(BASE), "panel": list(PANEL) if i in need_panel else [],
             **({"corrected": corrected} if corrected else {}), **({"rewritten": sorted(fixes[i])} if i in fixes else {}),
-            **({"issue_unfixed": unfixed} if unfixed else {}), **({"uncertain": uncertain} if uncertain else {})}
+            **({"issue_unfixed": unfixed} if unfixed else {}), **({"uncertain": uncertain} if uncertain else {}),
+            **({"uncertain_short": short} if short else {}),
+            **({"previous": mig["audit"]} if i in rounds and mig.get("audit") else {})}
+        mig["audit"] = record
+        changed = sorted({FIELD_PATHS[f] for f in [*corrected, *fixes.get(i, {})]})
+        if i in rounds and changed:
+            mig.setdefault("updates", []).append({"date": day, "fields": changed})
+        records[i] = record
         stats["corrected_fields"] += len(corrected)
         stats["rewritten_fields"] += len(fixes.get(i, {}))
         stats["unfixed_fields"] += len(unfixed)
         stats["uncertain_fields"] += len(uncertain)
+        stats["uncertain_short_fields"] += len(short)
         errs, _ = T.check_entry(e, voc)
         if errs:
             stats["left_pending_invalid"] += 1
@@ -322,7 +371,8 @@ def cmd_run(a):
             with open(os.path.join(T.ENTRIES, f"{i}.yaml"), "w", encoding="utf-8") as fh:
                 fh.write(T.dump_yaml(e))
     T.out({"ok": True, "audited": len(targets), "panel": len(need_panel), "dry_run": a.dry_run, **stats,
-           "votes": os.path.join(adir, "votes.jsonl") if a.dry_run else os.path.relpath(os.path.join(adir, "votes.jsonl"), T.ROOT)})
+           "votes": os.path.join(adir, "votes.jsonl") if a.dry_run else os.path.relpath(os.path.join(adir, "votes.jsonl"), T.ROOT),
+           **({"records": records} if a.dry_run else {})})
 
 
 def main():
