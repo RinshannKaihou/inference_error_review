@@ -4,7 +4,7 @@ slug: cann_rotate_quant_empty_x_scaleout_unwritten
 aliases: []
 title: RotateQuant 空张量时 scaleOut 静默未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -31,6 +31,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2187
+pattern: PAT-INF-0192
 original:
   mechanism: aclnnRotateQuant（A2 分支，CANN 9.2.0，ops-nn 711a4f5d）：资料参数表对 x 标注「支持空 Tensor」。当 x 为 (4,0)、yOut 为 int8(4,0)、scaleOut 为 float(4) 时，两段接口都返回 0，但 scaleOut 的 4 个元素一个都没写（预填金丝雀 1e30 读回仍是 1e30）。源码锚点：op_api/aclnn_rotate_quant.cpp 早退分支 `if (x->IsEmpty() || rotation->IsEmpty() || yOut->IsEmpty() || scaleOut->IsEmpty()) { *workspaceSize = 0; ...; return ACLNN_SUCCESS; }`——x、yOut 为空（0 元素）但 scaleOut 是 (4) 非空，「返回成功 + 有非空输出 + 输出未写」三者同时成立，且 workspaceSize=0 意味着第二段不下发任何 kernel。(0,256) 形态不暴露（scaleOut 为 0 元素），故缺陷仅在 M>0 且 N=0 时出现。自包含 C++ 复现（N=256 对照 + N=0 缺陷组对比 scaleOut_canary_kept）。来源 https://gitcode.com/cann/ops-nn/issues/7414（open）。与 INF-2187（GatherPaKvCache 空输入静默 no-op）同机制不同算子。
   source: 2026-10-26 每日扫描（NPU 批次 batch-20261026T230043147986-d99c34of）。https://gitcode.com/cann/ops-nn/issues/7414
@@ -40,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  updates:
+  - date: '2026-10-27'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

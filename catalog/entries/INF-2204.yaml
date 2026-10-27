@@ -4,7 +4,7 @@ slug: msprobe_compare_inf_sign_mismatch_normalized
 aliases: []
 title: msprobe 比对把异号无穷视为一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -13,8 +13,8 @@ cause:
   behavior: handle_inf_nan 只查 inf/NaN 位置不查符号，+inf 与 -inf 同位置都被置 0 后继续比对，异号无穷符号差异被掩盖
 effect:
   objects:
-  - 指标/日志
   - 测试判定
+  - 指标/日志
   detail: actual=[1.0,+inf] vs expected=[1.0,-inf] 返回 (False,'') 且两侧都被改写成 [1.,0.]，比对通过；含符号差异的张量被误判为一致
   visibility: 静默错误
 mitigation:
@@ -41,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 指标/日志
+        to: 测试判定

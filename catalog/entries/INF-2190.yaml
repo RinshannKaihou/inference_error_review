@@ -4,7 +4,7 @@ slug: op_plugin_sdpa_bool_mask_full_masked_row_uniform
 aliases: []
 title: SDPA bool 掩码全遮行输出均匀分布而非 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: bool 融合 kernel 对整行 max=-inf 做 clamp，softmax 退化为均匀分布，输出 v.mean 而非 0 行，与 CPU 语义不一致
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 输出内容
   detail: bool 全遮 query 行输出非零实值（对 key 的均匀 softmax，maxabs 0.37），外观可信；训练/推理注意力输出被静默污染；加性 -inf 掩码路径不受影响
@@ -41,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果

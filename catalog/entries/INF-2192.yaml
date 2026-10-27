@@ -4,7 +4,7 @@ slug: cann_fia_v5_scale_zero_half_mean_v
 aliases: []
 title: FIA V5 scaleValue=0 输出恒为 mean(V)/2
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -39,3 +39,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

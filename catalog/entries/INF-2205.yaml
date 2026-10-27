@@ -4,7 +4,7 @@ slug: cann_remainder_fp32_large_input_zero_collapse
 aliases: []
 title: Remainder fp32 大数值取模结果整片塌 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: other=3、self=2^25~2^28 时 fp32/bf16 输出全 0（期望 2/1/2/1）；边界 16777228→0（应 1）；x=1e30, other=1e-20 → -inf，违反 |out|<|other| 不变量；两段返回 0
+  detail: other=3、fp32 2^25~2^28 全为 0（期望 2/1/2/1）；fp32 边界 16777228→0（应 1）、33554432→0（应 2）；bf16 2^25/2^26 同为 0；x=1e30、other=1e-20→-inf，违反|out|<|other|；接口返回成功、无告警
   visibility: 静默错误
 mitigation:
   detect: 与 CPU torch.remainder 对照（2 的幂输入组）；检查输出是否违反 |out|<|other| 不变量
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

@@ -4,7 +4,7 @@ slug: cann_matmul_emu_split_weight_mixed_layout_silent_wrong
 aliases: []
 title: MatmulEmuSplitWeight 混合布局权重静默算错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7392
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0453
 original:
   mechanism: 'aclnnMatmulEmuSplitWeight 在 wHigh 与 wLow 的内存布局不一致时静默算错：两段接口都返回 0，但 y 与 y=x@wHigh+(1/256)(x@wLow) 的 fp64 参考相差约 4.7e-3（最大相对误差 4.26），同配置对照组仅 4.5e-8。原因链（源码定位）：op_api/aclnn_matmul_emu_split_weight.cpp:249 `bool transposeW = Ops::NN::IsTransposeLastTwoDims(wHigh);` 只从 wHigh 推导；同文件 :272-279 wLow 复用同一个 transposeW 分支做 CreateView，不判自己的 strides；op_kernel/arch22/matmul_emu_split_weight.cpp:102 `layoutTagB = bTran ? ColumnMajor : RowMajor`，wHigh/wLow 共用一个 layoutB。两层形状校验（op_api:157-222、op_host/op_tiling/arch22/*_tiling.cpp:84-113）比较的都是 view 形状，混合布局下两者仍相等故校验全部通过，kernel 按列主序读了连续的 wLow。资料参数表 x/wHigh/wLow/y 的「非连续」列均为 √，写「算子支持非连续Tensor，无需额外做 contiguous」，未声明两个权重必须同布局。环境：Ascend 910B3（8 die）、CANN 9.2.0；x bf16 [M,K]、wHigh/wLow bf16 [K,N]、y fp32。自包含 C++ 复现（CTRL1 两权重均连续、CTRL2 均转置、DEFECT 仅 wHigh 转置）。来源 https://gitcode.com/cann/ops-nn/issues/7392（open）。'
   source: 2026-10-26 每日扫描（NPU 批次 batch-20261026T230043147986-d99c34of）。https://gitcode.com/cann/ops-nn/issues/7392
@@ -38,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  updates:
+  - date: '2026-10-27'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

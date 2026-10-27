@@ -4,7 +4,7 @@ slug: cann_fia_v5_bsnd_d512_partial_rows_unwritten
 aliases: []
 title: FIA V5 BSND D=512 中短序列只写前 32 行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

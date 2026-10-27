@@ -4,7 +4,7 @@ slug: vllm_ascend_fia_v3_mte_48bit_sustained_decode_crash
 aliases: []
 title: FIA V3 持续 decode 负载 MTE 48bit 地址故障崩溃
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -38,3 +38,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

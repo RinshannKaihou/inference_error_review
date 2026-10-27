@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2206 条；状态：active 2187、pending_audit 19
+共 2206 条；状态：active 2206
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -7310,7 +7310,7 @@
 
 ### INF-2188 `cann_fia_v5_atten_mask_dtype_mismatch_wrong_output` FIA V5 掩码 dtype 与 x 不一致未拦截输出错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / FIA V5 入参校验缺失
 - **原因行为**：attenMask dtype 与 x 不一致未拦截且输出错值；innerPrecisionMode 非 0 被静默忽略；scaleValue=NaN 被当 1.0；两段均返回 0
@@ -7321,11 +7321,11 @@
 
 ### INF-2190 `op_plugin_sdpa_bool_mask_full_masked_row_uniform` SDPA bool 掩码全遮行输出均匀分布而非 0
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / torch_npu / SDPA bool 掩码融合 kernel
 - **原因行为**：bool 融合 kernel 对整行 max=-inf 做 clamp，softmax 退化为均匀分布，输出 v.mean 而非 0 行，与 CPU 语义不一致
-- **影响对象**：隐状态；输出内容（静默错误）
+- **影响对象**：数值结果；隐状态；输出内容（静默错误）
 - **影响详情**：bool 全遮 query 行输出非零实值（对 key 的均匀 softmax，maxabs 0.37），外观可信；训练/推理注意力输出被静默污染；加性 -inf 掩码路径不受影响
 - **改进措施**：检测 对 bool 全遮行输出与 CPU 对照（allclose 5.96e-08 内为均匀值）；加性 -inf 掩码路径对照一致；修复 待定
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/642
@@ -7333,7 +7333,7 @@
 
 ### INF-2191 `cann_fia_v5_bsnd_d512_partial_rows_unwritten` FIA V5 BSND D=512 中短序列只写前 32 行
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / FIA V5 BSND D=512 分支
 - **原因行为**：D=512 且 BSND/BSH、32<S<64 时尾块/分核搬运只写前 32 行输出，其余行不写，两段返回 0
@@ -7344,7 +7344,7 @@
 
 ### INF-2192 `cann_fia_v5_scale_zero_half_mean_v` FIA V5 scaleValue=0 输出恒为 mean(V)/2
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / FIA V5 scaleValue=0 路径
 - **原因行为**：scaleValue=0 时 softmax 应退化为均匀分布输出 mean(V)，kernel 却恒输出 0.5×mean(V)，固定 0.5 倍偏差，两段返回 0
@@ -7355,7 +7355,7 @@
 
 ### INF-2193 `cann_fia_v5_tnd_zero_len_batch_gm_oob_write` FIA V5 TND 零长度 batch 静默越界写 GM
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / FIA V5 TND 零长度 batch 分支
 - **原因行为**：TND 且 actualSeqLengths 含零长度 batch（累加值相等）时 kernel 对 GM 不持有区间越界写，两段返回 0、数值正确
@@ -7366,7 +7366,7 @@
 
 ### INF-2194 `cann_matmul_emu_split_weight_mixed_layout_silent_wrong` MatmulEmuSplitWeight 混合布局权重静默算错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / aclnnMatmulEmuSplitWeight
 - **原因行为**：transposeW 只从 wHigh 推导却同时决定 wLow 读取（op_api:249/:272、kernel:102 共用 layoutB），view 形状校验全过，kernel 按列主序读连续 wLow
@@ -7374,22 +7374,23 @@
 - **影响详情**：wHigh 转置、wLow 连续时 y 与 fp64 参考差约 4.7e-3（最大相对误差 4.26），对照组 4.5e-8；两段返回 0；资料未声明两权重须同布局
 - **改进措施**：检测 wHigh/wLow 布局不一致用例与 fp64 参考 y=x@wHigh+(1/256)(x@wLow) 对照；两组同布局对照差 4.5e-8；修复 待定
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7392
+- **关联**：cross:TRN-0453
 
 ### INF-2196 `cann_bitwise_or_scalar_int8_fp16_cast_truncation` BitwiseOrScalar out=INT8 经 fp16 中转截断错值
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-10-26
+`故障` · `active` · `documented` · `var` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / BitwiseOrScalar fp16 中转
 - **原因行为**：out=INT8 时标量先经 fp16 中转（>2048 整数按 8 对齐舍入）再取低 8 位；int16/int32/int64 出参正确
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：0|2147483647 实测 out=0（低 8 位回绕应为 -1）；other=12345→56（回绕 57）、32767/65535/2147483647→0；|结果|≤2048 全对；实测值与 fp16 取低 8 位逐条一致；两段返回 0
+- **影响详情**：0|2147483647 实测 out=0（低 8 位回绕应为 -1）；other=12345→56（回绕预期 57）、32767/65535/2147483647→0；|结果|≤2048 全部正确；实测值与「先转 fp16 再取低 8 位」逐条一致；接口返回成功
 - **改进措施**：检测 out=INT8 + 大标量（>2048）与 CPU 位运算对照；int16 出参对照正确；修复 待定
 - **来源**：https://gitcode.com/cann/ops-math/issues/3999
 - **关联**：var:INF-2122
 
 ### INF-2197 `cann_block_sparse_attention_u32_offset_wraparound` BlockSparseAttention 超大掩码偏移 uint32 回绕错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / block_sparse_attention 偏移
 - **原因行为**：展平偏移（kvseqlen×blockShape 乘加）用 uint32 承载，超 2^32 回绕，寻址错位产生精度问题
@@ -7397,10 +7398,11 @@
 - **影响详情**：kvseqlen=10M、blockShape=128 时（展平偏移 ~1.28e9×块数超 2^32）ATK 双标杆精度不通过；修复 PR 将偏移计算提升为 uint64_t 后转换
 - **改进措施**：检测 超大 kvseqlen×blockShape 用例与 ATK 双标杆对照；修复 修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/14632 （open，未发布）：计算相关偏移时数据类型提升为 uint64_t，确保乘法前完成类型转换
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6766；https://gitcode.com/cann/ops-transformer/merge_requests/14632
+- **关联**：cross:TRN-0458
 
 ### INF-2199 `vllm_ascend_fia_v3_mte_48bit_sustained_decode_crash` FIA V3 持续 decode 负载 MTE 48bit 地址故障崩溃
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / FIA V3 kernel 地址计算
 - **原因行为**：持续 paged-decode 下 kernel 内 scalar 访问 GM 地址超 48 位（errcode 0x4000）；host 可插桩输入全部契约内，根因未定位
@@ -7411,7 +7413,7 @@
 
 ### INF-2201 `cann_acos_grad_tiling_u32_wraparound_silent_partial_compute` acos_grad tiling uint32 回绕只算前 512 元素
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / acos_grad tiling
 - **原因行为**：coreNum 等四处先运算后 uint32 窄化，totalLength 达 2^41-511 时回绕，blockNum=1 仅覆盖前 512 元素仍返回成功
@@ -7419,10 +7421,11 @@
 - **影响详情**：超大 shape 下 kernel 仅覆盖前 512 元素、其余不计算，返回 GRAPH_SUCCESS，静默大规模错误输出；同族 asin_grad tiling 全链 int64 无此问题
 - **改进措施**：检测 超大 totalLength 用例与 CPU 参考全量对照（首 512 元素正确其后全错的结构性特征）；修复 待定（issue 建议全链 int64 承载、窄化前校验值域，越界报 EZ0015）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4087
+- **关联**：cross:TRN-0459
 
-### INF-2203 `cann_groupnorm_family_fp32_narrow_variance_nan` GroupNorm 族 fp32 窄方差输入 rstd/out 全 NaN
+### INF-2203 `cann_groupnorm_family_fp32_narrow_variance_nan` GroupNorm fp32 均值≫标准差：rstd 异常、out 大块 NaN
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / GroupNorm 族方差归约
 - **原因行为**：fp32 组内方差远小于均值平方时方差计算灾难性抵消为负或 0，rstdOut 输出 NaN 或 1/sqrt(eps)，两段返回 0
@@ -7430,15 +7433,16 @@
 - **影响详情**：x=1000±0.01（var≈3.5e-5）时 rstdOut=NaN/1/sqrt(eps)、out 128/128 或 256 中 128 个 NaN；良态输入（均值≈0）同形状正常（相对误差 ~6e-8）；meanOut 始终正常
 - **改进措施**：检测 大均值小方差输入（如 1000±0.01）与 fp64 逐组参考对照；检查 rstdOut 是否 NaN；修复 待定
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7334；https://gitcode.com/cann/ops-nn/issues/7347
+- **关联**：cross:TRN-0454
 
 ### INF-2205 `cann_remainder_fp32_large_input_zero_collapse` Remainder fp32 大数值取模结果整片塌 0
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：算子/内核 / cann / Remainder 标量取模实现
 - **原因行为**：fp32/bf16 在 |self|≳2^24 后取模结果整片塌 0；other 极小时返回 ±inf；int32/fp64 路径正确，资料无 fp32 衰减声明
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：other=3、self=2^25~2^28 时 fp32/bf16 输出全 0（期望 2/1/2/1）；边界 16777228→0（应 1）；x=1e30, other=1e-20 → -inf，违反 |out|<|other| 不变量；两段返回 0
+- **影响详情**：other=3、fp32 2^25~2^28 全为 0（期望 2/1/2/1）；fp32 边界 16777228→0（应 1）、33554432→0（应 2）；bf16 2^25/2^26 同为 0；x=1e30、other=1e-20→-inf，违反|out|<|other|；接口返回成功、无告警
 - **改进措施**：检测 与 CPU torch.remainder 对照（2 的幂输入组）；检查输出是否违反 |out|<|other| 不变量；修复 待定
 - **来源**：https://gitcode.com/cann/ops-math/issues/4006
 
@@ -9030,7 +9034,7 @@
 
 ### INF-2198 `cann_npu_inductor_symbolic_stride_patch_process_wide` NPU Inductor 归约 mask 污染与小图派生多类缺陷
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-10-26
+`故障` · `active` · `documented` · `var` · 发现 2026-10-26
 
 - **原因对象**：编译器 / torch_npu / NPU Inductor codegen
 - **原因行为**：persistent reduction mask 缺失使无效 lane 非零污染归约；多轴归约 layout 压平错误轴；另有负索引/符号证明等六类
@@ -9042,7 +9046,7 @@
 
 ### INF-2206 `cann_concat_to_concatd_over512_tree_default_desc_silent_wrong` ConcatToConcatD 超 512 输入拆树中间节点默认 desc 错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：编译器 / cann / ConcatToConcatD 拆树 desc
 - **原因行为**：输入数超过 kMaxConcatDInputs(512) 时 BuildConcatDTree 拆成多级树，中间层节点无手动 desc 处理、保留 ES 默认 desc（dtype FLOAT、空 shape），下发给真机静默计算错误
@@ -9050,6 +9054,7 @@
 - **影响详情**：构建输入数 >512 的 Concat/ConcatV2 计算图并触发自动融合 pass 后，真机执行无报错、结果错误；修复 MR !6660 已 merged（10-26 快照），issue #3974 已 closed
 - **改进措施**：检测 >512 输入 Concat 图与未融合路径对照；dump 图检查中间层 ConcatD 节点 desc；修复 修复 MR https://gitcode.com/cann/ops-math/merge_requests/6660 已 merged（2026-10-26 批次快照确认）；发布版本未核实
 - **来源**：https://gitcode.com/cann/ops-math/issues/3974；https://gitcode.com/cann/ops-math/merge_requests/6660
+- **关联**：cross:TRN-0452
 
 ## 运行时/执行
 
@@ -11239,12 +11244,12 @@
 
 ### INF-2200 `vllm_ascend_finegrained_tp_pp_group_mix_hang` 细粒度 TP 组 rank 布局与 PP 混排静默挂起
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：并行切分 / torch_npu / vllm_ascend rank_grid
 - **原因行为**：rank_grid reshape(pp,dp,tp) 与实际布局 (ext_dp,dp,pp,pcp,tp) 不符，pp>1 时组内混入不同流水线阶段 rank；无 pp 前置检查
 - **影响对象**：可用性/进度（挂起）
-- **影响详情**：dp=2,pp=2,tp=1 时实际 DP 组应为 {0,2}/{1,3}，构建出 {0,1}/{2,3}（各混 PP 两阶段）；首个跨 DP 交换静默挂起；pp=1 时 reshape 恰好匹配故已支持部署正常
+- **影响详情**：dp=2,pp=2,tp=1 时实际 DP 组应为 {0,2}/{1,3}，却构建出 {0,1}/{2,3}（各混 PP 两阶段）；首个跨 DP 交换静默挂起；仅 pp==1 且 pcp==1 时 reshape 恰好匹配，故已支持部署正常（隐含假设 pcp==1）
 - **改进措施**：检测 静态审查（本条目即静态分析发现，无硬件复现）；对照 all_ranks 的 (external_dp,dp,pp,pcp,tp) reshape；修复 指南 #17968 已记录「四个旋钮暂不能与 PP 组合」；issue 期望最低修复为 config 加载时拒绝 pp>1 fail-fast
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/18209
 
@@ -20793,7 +20798,7 @@
 
 ### INF-2189 `cann_rotate_quant_empty_x_scaleout_unwritten` RotateQuant 空张量时 scaleOut 静默未写
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-10-26
+`故障` · `active` · `documented` · `var` · 发现 2026-10-26
 
 - **原因对象**：量化 / cann / aclnnRotateQuant 早退分支
 - **原因行为**：x/yOut/scaleOut 任一 IsEmpty 即返回成功且不下发 kernel；x=(4,0) 时空、scaleOut=(4) 非空，scaleOut 4 元素全部未写
@@ -20805,7 +20810,7 @@
 
 ### INF-2195 `cann_flatquant_fp16_overflow_scale_inf_out_zero` FlatQuant 中间值超 fp16 上限量化和输出静默清零
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：量化 / cann / aclnnFlatQuant 量化阶段
 - **原因行为**：|x''|>65504 时 quantScale 按 fp16 计算溢出为 inf、out 整块清 0；bf16 输入同样按 fp16 截断；资料未声明上限
@@ -20816,7 +20821,7 @@
 
 ### INF-2202 `cann_layernorm_quant_gamma_row0_silent_truncate` LayerNormQuant 非法 gamma 形状静默截断
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：量化 / cann / aclnnLayerNormQuant
 - **原因行为**：未校验 gamma 第一维（须为 1）与 zeroPoints 长度（须 1），非法形状两段返回 0，只读 gamma 第 0 行、zeroPoints 第 0 个
@@ -24160,11 +24165,11 @@
 
 ### INF-2204 `msprobe_compare_inf_sign_mismatch_normalized` msprobe 比对把异号无穷视为一致
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-26
 
 - **原因对象**：观测/评测 / cann / msprobe handle_inf_nan
 - **原因行为**：handle_inf_nan 只查 inf/NaN 位置不查符号，+inf 与 -inf 同位置都被置 0 后继续比对，异号无穷符号差异被掩盖
-- **影响对象**：指标/日志；测试判定（静默错误）
+- **影响对象**：测试判定；指标/日志（静默错误）
 - **影响详情**：actual=[1.0,+inf] vs expected=[1.0,-inf] 返回 (False,'') 且两侧都被改写成 [1.,0.]，比对通过；含符号差异的张量被误判为一致
 - **改进措施**：检测 CPU 复现：npy_data_check(np.array([1.0,np.inf]), np.array([1.0,-np.inf])) 返回 (False,'')；修复 修复 MR https://gitcode.com/Ascend/msprobe/merge_requests/1125 （open，未发布）：改用 isposinf/isneginf 分别校验正负无穷位置，全部通过后才置 0，任一不匹配返回 'Nan' 由上层报错
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/655；https://gitcode.com/Ascend/msprobe/merge_requests/1125

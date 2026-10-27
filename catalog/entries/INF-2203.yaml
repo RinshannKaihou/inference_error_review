@@ -2,9 +2,9 @@ id: INF-2203
 legacy_ids: []
 slug: cann_groupnorm_family_fp32_narrow_variance_nan
 aliases: []
-title: GroupNorm 族 fp32 窄方差输入 rstd/out 全 NaN
+title: GroupNorm fp32 均值≫标准差：rstd 异常、out 大块 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -31,7 +31,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-nn/issues/7347
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0454
 original:
   mechanism: aclnnGroupNorm / aclnnGroupNormSilu 在 fp32 输入满足「组内均值远大于标准差」（完全合法入参，数据量级仍在 fp32 正常范围）时，rstdOut 返回 NaN 或 1/sqrt(eps)（方差被算成 0），out 随之大块 NaN；两段式接口均返回 0，静默脏数据。GroupNormSilu 实测（910B2，CANN 9.2.0）：x=fp32[1,128] 50±0.001 / 1000±0.01（组内方差 3.5e-7/3.5e-5），期望 rstd≈310.77/148.35，实际 rstdOut=NaN、out 128/128 全 NaN、meanOut 正常。GroupNorm 实测（910B2）：x=1000±0.01 fp32，fp64 逐组参考 rstd=55.52/56.08，实测 nan/316.23（=1/sqrt(1e-5)），out 256 元素中 128 个 NaN。两算子良态对照（均值≈0）同形状正常（与 fp64 参考相对误差 ~6e-8），证明是大均值下方差计算（疑似 E[x²]−mean² 形态）灾难性抵消导致方差为负/0，而非非法入参。资料约束（rank 2-8、group 整除 C、eps>0、fp32）均满足。两个 issue 均带完整 C++ 复现脚本。来源 https://gitcode.com/cann/ops-nn/issues/7334、https://gitcode.com/cann/ops-nn/issues/7347（均 open）。
   source: 2026-10-26 每日扫描（NPU 批次 batch-20261026T230043147986-d99c34of）。https://gitcode.com/cann/ops-nn/issues/7334 https://gitcode.com/cann/ops-nn/issues/7347
@@ -41,3 +43,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-26'
+  updates:
+  - date: '2026-10-27'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - title
