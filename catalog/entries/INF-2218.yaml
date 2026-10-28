@@ -4,10 +4,10 @@ slug: cann_inplacesub_ge_graph_negative_index_semantics
 aliases: []
 title: InplaceSub GE 图转换丢负索引与环绕索引取模语义
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 编译器
     stack: cann
     component: InplaceSub 旧融合规则（GE 图模式）
   behavior: GE 图模式把 InplaceSub 转 TensorMove+ScatterSub，旧路径跳过超范围索引，丢原生取模更新语义；跨架构编译目标还可能误跳过 A2/A3 转换。
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 编译器

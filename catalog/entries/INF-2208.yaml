@@ -4,7 +4,7 @@ slug: vllm_mooncake_bhlnc_stride_as_length
 aliases: []
 title: Mooncake 连接器 BHLNC 布局按整块步长传输污染跨请求 KV
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,8 +13,8 @@ cause:
   behavior: 按 head 注册传输区时把整块步长同时当块间距与传输长度，BHLNC 下每 4KB segment 传输 196608 字节并越写相邻块。
 effect:
   objects:
-  - 跨请求/跨样本数据
   - KV状态
+  - 跨请求/跨样本数据
   detail: BHLNC 开启 Mooncake 传输后，load 越过 4KB segment 写进下一物理块（常属其他请求）：600 题温度 0 对照错误 54-60 条 vs 无连接器 0 条，store 约 430 块即写满，全程无告警。
   visibility: 静默错误
 mitigation:
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: KV状态

@@ -4,7 +4,7 @@ slug: vllm_ascend_eplb_mxfp8_silent_corruption
 aliases: []
 title: vllm-ascend EPLB 重排后 W8A8-MXFP8 静默输出垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: 重排前 8/8 正确；9 次 cycle commit 后同类 prompt 0/8，输出如 'cancer cancer...'/'的艺术\r\n'；无 EPLB 或 step_interval 1000000（不触发重排）对照组正确。
+  detail: 重排前 8 题全对，9 次 cycle commit 后 0/8，'The capital of France is' 输出 'cancer cancer cancer...'；无 EPLB、step_interval 1000000（不重排）均正确，step_interval 600 垃圾。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -38,3 +38,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - effect

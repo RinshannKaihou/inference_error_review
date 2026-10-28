@@ -4,7 +4,7 @@ slug: triton_cache_key_shared_wrong_binary
 aliases: []
 title: Triton 磁盘缓存键缺信息复用错二进制
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -38,3 +38,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

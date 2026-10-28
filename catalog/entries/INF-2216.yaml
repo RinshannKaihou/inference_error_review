@@ -4,7 +4,7 @@ slug: torchnpu_rsplit_partial_workspace_oob_write
 aliases: []
 title: triton_experimental rsplit 工作区越界改写相邻张量
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 跨请求/跨样本数据
-  detail: squeezenet 反向两个大 reduction 用例 item[0] 64/64 全错（最大绝对差 494639.28）、输入掩码 TrueCnt 49561237→0 被写穿、严重时挂死；910B2/910B4 双机复现，与型号无关。
+  detail: squeezenet 反向两个大 reduction 用例 item[0] 64/64 全错、最大差 49 万，item[1] 精确；作为输入的相邻掩码张量被静默改写成 0，严重时进程挂死；错误首次 .item() 同步才暴露，平时无报错；910B2/910B4 均复现。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

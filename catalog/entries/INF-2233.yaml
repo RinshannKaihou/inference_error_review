@@ -4,7 +4,7 @@ slug: vllm_qwen35_triton_int32_offset_overflow
 aliases: []
 title: Qwen3.5 Triton kernel int32 偏移溢出错写行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    issue_unfixed:
+    - detail

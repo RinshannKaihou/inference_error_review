@@ -4,13 +4,13 @@ slug: vllm_nixl_gh200_4g_aligned_dma_buf_wrap
 aliases: []
 title: NixlConnector GH200 KV 基址 4GiB 对齐时传输垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 集合通信
     stack: vllm
     component: dma-buf MR 地址回绕
-  behavior: KV 基址 4GiB 对齐时 UCX CUDA_COPY_DMABUF 路径 MR 回绕，decode 拿到垃圾；UCX_CUDA_COPY_DMABUF=no 规避。
+  behavior: KV cache 物理基址恰好 4 GiB 对齐时，decode 端收到的 KV 传输内容是垃圾、输出错误；机制疑指向 dma-buf MR 在该对齐下的地址回绕（环境已拆除，未确证）；对齐依赖显存分配，时有时无、难以复现。
 effect:
   objects:
   - KV状态
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 集合通信
+    rewritten:
+    - behavior

@@ -4,13 +4,13 @@ slug: cann_indexer_quant_cache_negative_slot_stomp
 aliases: []
 title: IndexerQuantCache 负 slot 踩写其他 KV slot
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: cann
     component: slotMapping 值域校验
-  behavior: host/tiling 无 slotMapping 值域校验，负值按 cache末尾−|slot|×4B 落点踩写其他 slot，两段接口返回 0。
+  behavior: host/tiling 对 slotMapping 无值域校验，负 slot 参与 cache 地址计算，按 cache 末尾−|slot|×4B 落点静默改掉另一 slot 的 4 字节数据，调用仍返回成功。
 effect:
   objects:
   - KV状态
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2162
+pattern: PAT-INF-0192
 original:
   mechanism: Ascend950PR + CANN 9.2.0-beta.2（ops-transformer master attention/indexer_quant_cache）。资料声明 slotMapping 取值 [-1, num_slots-1]、-1 跳过；实测 host/tiling 无值域校验，负 slot 参与 cache 地址计算。定量表：slot=-1→跳过（合规）、63→正确 128B、64/65→静默丢弃、-2→4B 写入 slot 63 行内偏移 120-123、-3→slot 63 偏移 116-119、-64→slot 62 偏移 0-3、±2^31→507035。规律：写入位置=cache 末尾−|slot|×4B，3 次重复 3/3 一致、首错下标固定 8184。自包含 C++ 单文件复现（cache FP8[4,16,1,128] 预填 0xA5 + 金丝雀比对）。同族 aclnnScatterPaKvCache 已修同类问题。
   source: https://gitcode.com/cann/ops-transformer/issues/6812（A2 之外的 950PR 实测 + 负 slot 落点定量 + C++ 复现）
@@ -47,3 +48,20 @@ migration:
   - date: '2026-10-27'
     fields:
     - original.notes
+  - date: '2026-10-28'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

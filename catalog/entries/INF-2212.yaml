@@ -4,7 +4,7 @@ slug: sglang_swa_bounded_replay_mixed_chunk_window_cut
 aliases: []
 title: SGLang SWA bounded replay 窗口截为一 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: 生成质量静默下降：240 题两步算术确定性检查（贪心）mixed-chunk off 0.592-0.625 vs on 0.475-0.55（9 轮）；带修复臂恢复 0.592-0.642。输出看起来正常、无报错；DSpark 下影响贪心准确率而非吞吐。
+  detail: 生成质量静默下降：240 题两步算术确定性检查（16 并发贪心）mixed-chunk off 0.592-0.625 vs on 0.475-0.55（9 轮）；带修复臂恢复 0.592-0.642。输出仍流畅、无任何报错；关闭任一开关即恢复。
   visibility: 质量退化
 mitigation:
   detect: 待定
@@ -38,3 +38,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - subsystem
+    - effect

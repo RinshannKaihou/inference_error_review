@@ -4,7 +4,7 @@ slug: sglang_dspark_penalty_ignored
 aliases: []
 title: SGLang DSPARK/DFLASH 推测解码静默忽略采样惩罚项
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -13,8 +13,8 @@ cause:
   behavior: prepare_for_decode 在惩罚累积前移交推测解码返回，DFLASH/DSPARK 分支从不累积生成 token 进 penalizer，verify 调整又忽略惩罚 buffer。
 effect:
   objects:
-  - 输出内容
   - 输出分布
+  - 输出内容
   detail: repetition_penalty 1.0 vs 2.0 vs frequency_penalty 2.0 输出逐字节相同；越界值仍被 SamplingParams.verify() 拒绝（400），证明参数到达但路径不生效；presence_penalty/min_tokens 同路径同影响。
   visibility: 静默错误
 mitigation:
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-27'
+  audit:
+    round: daily-audit-2026-10-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 输出分布
