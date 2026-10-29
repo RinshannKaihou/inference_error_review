@@ -4,7 +4,7 @@ slug: sglang_diffusion_quant_layer_correctness_batch
 aliases: []
 title: SGLang 扩散量化层 11 处正确性缺陷批次
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -13,6 +13,7 @@ cause:
   behavior: multimodal_gen 量化层代码审查发现 11 处缺陷：ModelSlim 双 scale 键名错（必崩）；smooth-quant scale 静默丢弃；ROCm FP8 漏 fnuz；MXFP4 恒分配 bf16 等静默错值。
 effect:
   objects:
+  - 输出内容
   - 数值结果
   - 模型权重
   detail: 静默类：smooth-quant scale 不加载、fnuz 不转换、布局/展平错配、scale patch 静默跳过——输出错值无报错；崩溃类：dual-scale AttributeError 每层必崩（fail-loud）。影响扩散模型多模态生成量化部署。
@@ -39,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 输出内容
+    uncertain:
+    - visibility

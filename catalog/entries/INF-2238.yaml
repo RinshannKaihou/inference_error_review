@@ -4,7 +4,7 @@ slug: ttmetal_paged_sdpa_decode_stale_kv_inf_nan
 aliases: []
 title: tt-metal paged sdpa_decode 复用块残值错输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2113
+pattern: PAT-INF-0195
 original:
   mechanism: 'tenstorrent/tt-metal issue #62901（2026-10-28，open）：ttnn.transformer.paged_scaled_dot_product_attention_decode。复用的 paged K/V block 在 cur_pos 之后的位置仍保留旧值（回收块未清零），kernel 对这些位置不掩蔽直接参与 attention；若残值为 inf/NaN 则输出错误，有限残值经 softmax 归一化不改变结果。实测（Wormhole N150，tt-metal f288db45673，KMD 2.9.0/FW 19.11.0）：stale-cache 用例 test_sdpa_decode_stale_kv.py（#62634）54 failed、同用例 clean cache 18 passed；Llama-3.2-1B decode 在回收块填 inf 时 8/8 次运行 14-27 token 内发散（Llama 栈 39e7277fcd6）。复现：cache 预填 inf、写有效 0..cur_pos、与零填 cache 对照。Frequency: always；非回归。与 vLLM ROCM_ATTN 滑窗不 mask V（INF-2113）共享『越界/窗口外 KV 残值中的 inf/NaN 未被掩蔽即进入 attention』机制，差异在平台（tt-metal paged decode vs vLLM ROCm 滑窗）与残值来源（块复用回收 vs 滑窗槽位）。'
   source: https://github.com/tenstorrent/tt-metal/issues/62901
@@ -41,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  updates:
+  - date: '2026-10-29'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - detail

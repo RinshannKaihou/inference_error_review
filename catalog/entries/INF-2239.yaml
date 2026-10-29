@@ -4,7 +4,7 @@ slug: ttmetal_softmax_tile_padding_inf_nan_poison
 aliases: []
 title: ttnn.softmax tile padding inf/NaN 污染整行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: last dim=24 padding=+inf 时最大相对误差 21.8%、NaN 时 100% 错；last dim=40 +inf 达 40.8%；8200 宽 NaN 100% 错、+inf 正确。行和不等于 1 是直接可见症状。
+  detail: last dim=24 padding=+inf 时最大相对误差 21.8%、NaN 时 100% 错；last dim=40 +inf 达 40.8%；8200 宽 NaN 100% 错、+inf 正确。输出不含 NaN、无报错，仅逐行检查概率和（应等于 1）才能发现。
   visibility: 静默错误
 mitigation:
   detect: 检查每行 softmax 概率和是否为 1 可检出（错行 sum≠1）；输出无 NaN，逐元素对照才能定量
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

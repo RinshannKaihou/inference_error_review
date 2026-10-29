@@ -4,7 +4,7 @@ slug: vllm_ascend_glm_flash_vision_regression_nightly
 aliases: []
 title: vllm-ascend GLM-5.3-Flash 视觉路径全错回归
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输入编码
   - 输出内容
-  detail: 实心红图答 Black、蓝图答 Yellow、文字图 HELLO 2026 读错、双拼色图左右描述颠倒，HTTP 200 无告警；影响一切图像输入请求，仅图像模态受损。
+  detail: 任意图像输入均触发：纯色图主色报错（红→Black、蓝→Yellow）、图内文字识别错误、双拼色图左右描述颠倒；请求全部返回 200、日志无异常、输出语气自信；同服务纯文本问答与长上下文检索正常，回退旧镜像即恢复。
   visibility: 静默错误
 mitigation:
   detect: 固定图片集合的自动化视觉回归（issue 附 PIL 自包含脚本）可检出
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

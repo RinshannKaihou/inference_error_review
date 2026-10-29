@@ -4,7 +4,7 @@ slug: cann_multi_add_rms_norm_dynamic_quant_arch35_defects
 aliases: []
 title: CANN MultiAddRmsNormDynQuant arch35 量化饱和
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: smooth_scale ±FLT_MIN 量级、D=2048/10240/16384 时 y1 饱和超判据；x1 含 inf 时 scale 应 inf 却 NaN；零行 scale 随 D 变；相消输入差 1-2 ULP。修复 MR !12728 merged：泛化 2495 例全 PASS。
+  detail: smooth_scale 极小（如 ±1e-40，次正规量级）时 y1 饱和超 1 LSB 判据（D=2048/10240/16384）；x1 含 inf 时 scale 应 inf 却 NaN；零行 scale 随 D 在 1.0 与 0 间跳变；相消输入差 1-2 ULP；全程无报错。
   visibility: 静默错误
 mitigation:
   detect: 对照 golden 的 int8 判据（|err|≤1 LSB）与 scale 合法性检查可检出
@@ -40,3 +40,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

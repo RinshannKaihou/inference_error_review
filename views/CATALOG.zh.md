@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2253 条；状态：active 2235、pending_audit 18
+共 2253 条；状态：active 2253
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 657 |
+| 算子/内核 | 655 |
 | 编译器 | 148 |
 | 运行时/执行 | 133 |
 | 集合通信 | 37 |
@@ -17,7 +17,7 @@
 | 调度/服务 | 89 |
 | 输出解析 | 66 |
 | 解码/采样 | 152 |
-| 量化 | 201 |
+| 量化 | 203 |
 | 位置编码 | 42 |
 | 分词/模板 | 33 |
 | 模型定义 | 48 |
@@ -7561,20 +7561,9 @@
 - **改进措施**：检测 待定；修复 待定（issue closed；修复与否未核实）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6626
 
-### INF-2236 `cann_dequant_swiglu_quant_out_size_unchecked_oob` CANN DequantSwigluQuant 出参偏小静默越界写
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
-
-- **原因对象**：算子/内核 / cann / dequant_swiglu_quant 出参校验
-- **原因行为**：aclnnDequantSwigluQuantGetWorkspaceSize 不校验 yOut/scaleOut 尺寸是否等于推导尺寸，出参声明小于推导值时两段接口返回 0，内核按 x 推导的真实尺寸写满输出，越过声明张量边界。
-- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
-- **影响详情**：yOut 声明 [4,32]（真实 [4,64]）时边界外被写 128 字节，行数 1/4/16 时越界 32/128/512 字节线性增长；scaleOut 同型（声明 [1] 实际 [4] 时多写 3 个 float）。对照组越界恒 0，排除哨兵误判。
-- **改进措施**：检测 守护区哨兵回读可检出；rc 与日志无异常（实测 ret1=0 ret2=0）；修复 待定（issue 2026-10-28 新报 open；期望按资料错误码表返回 ACLNN_ERR_PARAM_INVALID 161002）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/7569
-
 ### INF-2238 `ttmetal_paged_sdpa_decode_stale_kv_inf_nan` tt-metal paged sdpa_decode 复用块残值错输出
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / tt-metal / paged SDPA decode kernel
 - **原因行为**：paged sdpa_decode 对 cur_pos 之后的 KV 不掩蔽，复用块越界位置残留的 inf/NaN 被读入 attention，返回错误输出且无报错；有限残值不影响结果。
@@ -7586,41 +7575,29 @@
 
 ### INF-2239 `ttmetal_softmax_tile_padding_inf_nan_poison` ttnn.softmax tile padding inf/NaN 污染整行
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / tt-metal / softmax kernel padding 处理
 - **原因行为**：TILE 布局 float32 输入的 tile padding 含 +inf/NaN 时按整 tile 归约，padding 值参与 max/sum 使整行错误且输出无 NaN；有限 padding 正确。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：last dim=24 padding=+inf 时最大相对误差 21.8%、NaN 时 100% 错；last dim=40 +inf 达 40.8%；8200 宽 NaN 100% 错、+inf 正确。行和不等于 1 是直接可见症状。
+- **影响详情**：last dim=24 padding=+inf 时最大相对误差 21.8%、NaN 时 100% 错；last dim=40 +inf 达 40.8%；8200 宽 NaN 100% 错、+inf 正确。输出不含 NaN、无报错，仅逐行检查概率和（应等于 1）才能发现。
 - **改进措施**：检测 检查每行 softmax 概率和是否为 1 可检出（错行 sum≠1）；输出无 NaN，逐元素对照才能定量；修复 待定（issue open 2026-10-28 新报）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/62628
 
 ### INF-2241 `cann_quant_compressor_blocktable_oob_write` CANN QuantCompressor blockTable 越界写
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / quant_compressor 入参校验
 - **原因行为**：aclnnQuantCompressor 把 stateBlockTableOptional 元素直接当 state_cache 物理块号用，不校验 [0, block_num)，越界值静默进 kernel 越界写。
-- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
+- **影响对象**：KV状态；数值结果；跨请求/跨样本数据（静默错误）
 - **影响详情**：block_table 元素填 block_num 时两段接口返回 0、无报错，state_cache 后 1MiB 守护区被写 65536 字节，mssanitizer 报 illegal_write 256 次；对照组合法值 0 字节越界。
 - **改进措施**：检测 mssanitizer --tool=memcheck 可抓到 illegal_write（256 次，实测）；常规 rc/日志无异常；修复 待定（issue 2026-10-28 新报 open；接口资料已写明取值范围 [0, block_num)，属实现未校验）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6822
 
-### INF-2244 `vllm_gdn_fp16_overflow_xpu_unfixed_paths` vLLM GDN fp16 溢出在 XPU 路径未修复复现
-
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-10-28
-
-- **原因对象**：算子/内核 / vllm / GDN XPU 路径状态 dtype
-- **原因行为**：GDN fp16 溢出族在 Intel XPU 复现：core_attn_out 缓冲 5 处按 activation dtype 分配（含 XPU），两修复均门 float32，fp16 状态不覆盖。
-- **影响对象**：KV状态；输出内容（质量退化）
-- **影响详情**：Intel Arc Pro B70 + Holo4-27B（Qwen3.5 系架构）：4.7K/18.7K/37.4K token needle 检索 0/9，短 prompt 完全正常；vLLM 0.27.2rc1.dev77 实测。
-- **改进措施**：检测 长上下文 needle 检索测试可检出（短 prompt 测不出）；无运行时检测（未评估）；修复 上游修复不完整：#54146/#62119 均未覆盖 XPU 路径（issue 正文逐 call site 列出 qwen_gdn_linear_attn.py:974/898/934/851/1029）；fp16 状态缓存配置不受 float32 门保护；issue open，未见针对性修复 PR
-- **来源**：https://github.com/vllm-project/vllm/issues/62781
-- **关联**：var:INF-1446
-
 ### INF-2246 `cann_mse_loss_out_empty_input_unwritten` CANN MseLossOut 空输入成功返回但 out 未写出
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / mse_loss_out 空张量早退分支
 - **原因行为**：aclnnMseLossOut 的空张量早退分支只有一行注释『根据实际支持情况补充』、无填充动作；空输入时两段返回 0 但 out 整块保持未初始化旧值。
@@ -7632,21 +7609,21 @@
 
 ### INF-2248 `ttmetal_embedding_binary_odd_row_bytes` ttnn.embedding BINARY 非 32B 行宽索引 1 全错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / tt-metal / embedding BINARY 行地址计算
 - **原因行为**：BINARY embedding 的 bf16 ROW_MAJOR 权重行字节数非 32 倍数（16/48/80B）时，索引 1 的输出行全错、索引 0 正确，无报错；对齐行宽与 GENERIC/PADDED 正确。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：N150 上 12/12 次调用（dims 8/24/40 × 64/4160 indices × RM/tile indices）索引 1 行全错；输出应与 torch.nn.functional.embedding 一致。
+- **影响详情**：Wormhole N150、tt-metal f288db45673 上 12/12 次调用复现（dims×indices 数×布局组合），always；最小复现为 2×40 bf16 权重、随机 0/1 索引，对照 torch.nn.functional.embedding；非回归。
 - **改进措施**：检测 与 torch embedding 对照可检出；无运行时检测；修复 待定（issue open 2026-10-28 新报）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/62902
 
 ### INF-2249 `cann_kv_quant_sparse_fa_tnd_tail_uninit` CANN KvQuantSparseFA TND 尾部残留 NaN/Inf
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / cann / kv_quant_sparse_fa 初始化
-- **原因行为**：Atlas A2/A3（arch22）上该算子输出初始化排除 TND 布局且按 BSND 长度计算，实际 query 数小于 capacity 时尾部 [actual,T) 不清零，残留 NaN/Inf。
+- **原因行为**：Atlas A2/A3（arch22）初始化逻辑排除 TND、整块长度按 BSND 计算，实际 query 数小于 capacity 时尾部 [actual,T) 不清零，保留缓冲旧值；旧值含 NaN/Inf 时原样输出且无报错。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：TND 布局、capacity 128 实际 64 时输出尾部 64 行保留旧值（含预填 NaN/Inf）；下游若读整块输出即被污染。修复实测 6048 个预填 NaN 的图输出全部有效行有限、尾部精确为 0。
 - **改进措施**：检测 输出预填 NaN 后检查尾部是否清零可检出；eager 对照可现；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/14799 （open，2026-10-28）：为 TND 启用初始化、按 device 上 actual_seq_lengths_query 末项清零 [actual,T)，32B 对齐分核；实测 910B3/CANN 9.3.0.weekly.20261021，回归 4 passed、泛化 42 case、6048 图输出全过；社区 CI 待运行，未发布）
@@ -7654,12 +7631,12 @@
 
 ### INF-2251 `ttmetal_quasar_sharded_layout_silent_corruption` ttnn quasar 分片布局守卫失配静默错值三连
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：算子/内核 / tt-metal / quasar 分片布局校验
 - **原因行为**：quasar 布局守卫查错条件：transpose 查 tile 倍数而非 shard 行 16B 对齐；1D matmul 借用 in0 缓冲致行块只读一次；slice 降级后仍把 TILE 输出交 RM writer 越界写。均静默。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：transpose：bf16 WIDTH_SHARDED shard [32,12]（24B 行）PCC 近 0、写侧只写 4/8 页其余核留旧值；matmul：PCC≈0.3 而非 >0.99；slice：输出按 tile 读 row-major 字节、writer 越过 L1 分配末尾。
+- **影响详情**：transpose：bf16 WIDTH_SHARDED shard [32,12]（24B 行）PCC 近 0、写侧只写 4/8 页其余核留旧值；matmul：多块输出借用 in0 缓冲时 PCC≈0.3；slice：输出按 tile 读 RM 字节、writer 越过 L1 分配末尾。
 - **改进措施**：检测 与 torch 参考实现逐元素对照（PCC 检查）可检出；布局校验层全部放行；修复 待定（三个 issue 均 open，2026-10-27/28 报，属 #58407 quasar 加固系列 item 18/22/23；slice 的 can_land_in_preallocated 判据已存在但未被使用）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/62605；https://github.com/tenstorrent/tt-metal/issues/62465；https://github.com/tenstorrent/tt-metal/issues/62613
 
@@ -11549,7 +11526,7 @@
 
 ### INF-2252 `vllm_ascend_embedding_finegrained_tp_dp_idle_rank_hang` vllm-ascend embedding 细粒度 TP 空闲秩失效
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：并行切分 / vllm / finegrained embedding TP
 - **原因行为**：embedding 细粒度 TP>1 在 DP>1 下，空闲 DP 引擎 dummy batch 直接喂 inputs_embeds 跳过查表，跨 DP 交换无对端、busy 秩集合通信挂死；HCCL 惰性创建竞态损坏首交换。
@@ -15584,16 +15561,17 @@
 - **改进措施**：检测 待定；修复 待定（issue open）
 - **来源**：https://github.com/sgl-project/sglang/issues/46572
 
-### INF-2237 `vllm_kimi_k3_fp8_kv_mla_prefill_silent_accuracy` vLLM Kimi-K3 FP8 KV 致 GSM8K 静默塌陷
+### INF-2244 `vllm_gdn_fp16_overflow_xpu_unfixed_paths` vLLM GDN fp16 溢出在 XPU 路径未修复复现
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `var` · 发现 2026-10-28
 
-- **原因对象**：KV缓存 / vllm / FP8 MLA prefill 路径
-- **原因行为**：Kimi-K3 在 MI355X 上以 --kv-cache-dtype fp8 服务时，ROCM_AITER MLA FP8 prefill 路径产出错误 KV，文本流畅但大面积答错，无任何报错或告警日志。
-- **影响对象**：KV状态；输出内容（质量退化）
-- **影响详情**：8-shot GSM8K 前 200 题 greedy 从 0.975（BF16 KV）塌到 0.305（FP8 KV），134 题仅 BF16 正确；SGLang 同 checkpoint FP8 KV 0.950，指向 vLLM AITER MLA FP8 prefill 路径。
-- **改进措施**：检测 同 prompt BF16/FP8 KV 对照评测可检出；运行时无检测（未评估）；修复 规避：--kv-cache-dtype auto 或目标+draft KV 均 auto（实测 0.975/0.980）；上游修复未定位（issue open，报告者已排除 prefix caching/SITUV2/DSpark/load-format 等因素并锁定 FP8 MLA prefill PS buffer 日志为唯一差异）
-- **来源**：https://github.com/vllm-project/vllm/issues/64106
+- **原因对象**：KV缓存 / vllm / GDN XPU 路径状态 dtype
+- **原因行为**：GDN fp16 溢出族在 Intel XPU 复现：core_attn_out 缓冲 5 处按 activation dtype 分配（含 XPU），两修复均门 float32，fp16 状态不覆盖。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：Intel Arc Pro B70 + Holo4-27B（Qwen3.5 系架构）：4.7K/18.7K/37.4K token needle 检索 0/9，短 prompt 完全正常；vLLM 0.27.2rc1.dev77 实测。
+- **改进措施**：检测 长上下文 needle 检索测试可检出（短 prompt 测不出）；无运行时检测（未评估）；修复 上游修复不完整：#54146/#62119 均未覆盖 XPU 路径（issue 正文逐 call site 列出 qwen_gdn_linear_attn.py:974/898/934/851/1029）；fp16 状态缓存配置不受 float32 门保护；issue open，未见针对性修复 PR
+- **来源**：https://github.com/vllm-project/vllm/issues/62781
+- **关联**：var:INF-1446
 
 ## 调度/服务
 
@@ -16583,12 +16561,12 @@
 
 ### INF-2240 `vllm_ascend_glm_flash_vision_regression_nightly` vllm-ascend GLM-5.3-Flash 视觉路径全错回归
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：调度/服务 / vllm / 多模态视觉输入处理通路
 - **原因行为**：nightly-main（vLLM 0.32.0）上 GLM-5.3-Flash-w8a8 图像理解对全部测试图像自信但全错；同 checkpoint 0.28.0 与 v0.30.0rc2 正确，为视觉路径回归。
 - **影响对象**：输入编码；输出内容（静默错误）
-- **影响详情**：实心红图答 Black、蓝图答 Yellow、文字图 HELLO 2026 读错、双拼色图左右描述颠倒，HTTP 200 无告警；影响一切图像输入请求，仅图像模态受损。
+- **影响详情**：任意图像输入均触发：纯色图主色报错（红→Black、蓝→Yellow）、图内文字识别错误、双拼色图左右描述颠倒；请求全部返回 200、日志无异常、输出语气自信；同服务纯文本问答与长上下文检索正常，回退旧镜像即恢复。
 - **改进措施**：检测 固定图片集合的自动化视觉回归（issue 附 PIL 自包含脚本）可检出；修复 规避：回退 v0.30.0rc2 或 0.28 系镜像；上游修复未定位（issue 2026-10-28 新报，open，未 bisect 出引入 commit）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/20115
 
@@ -19024,7 +19002,7 @@
 
 ### INF-2245 `vllm_hisparse_nan_logits_gumbel_sampler_repeats_token` vLLM Gumbel 采样器把全 NaN logits 变成固定 token
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：解码/采样 / vllm / V2 Gumbel sampler NaN 处理
 - **原因行为**：V2 Gumbel sampler 对全 NaN logits 按 1024 列块 argmax 再跨块 argmax，确定性返回 0*1024+1023=1023；全 NaN logits 被静默采样成固定 token，无任何报错。
@@ -19035,7 +19013,7 @@
 
 ### INF-2250 `vllm_ascend_sampler_logprobs_mode_not_forwarded` vllm-ascend V1 sampler 不透传 logprobs 模式
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：解码/采样 / vllm / V1 runner 构造 sampler
 - **原因行为**：V1 runner 构造 AscendSampler 时不转发 model_config.logprobs_mode，配置 processed_logprobs 等模式的引擎仍以默认 raw 模式初始化，返回概率语义与配置不符。
@@ -19043,6 +19021,7 @@
 - **影响详情**：配置 processed_logprobs 时按 raw_logprobs 计算；历史 MiniMax-M3.1-Flash RL 诊断中修正语义后 mean abs prob diff 从 0.0145 降到 0.0066；对 train/rollout 一致性度量引入偏差。
 - **改进措施**：检测 对同一 logits 对比 raw/processed 两种模式的 logprob 输出可检出；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20146 （open，2026-10-28）：runner→sampler 转发 logprobs_mode，缺失字段回退 raw_logprobs；constructor 回归（CPU）全过；原生 NPU 验收与 CI 归属 reviewer，未合入）
 - **来源**：https://github.com/vllm-project/vllm-ascend/pull/20146
+- **关联**：cross:TRN-0505
 
 ## 量化
 
@@ -21280,35 +21259,57 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7357
 - **关联**：cross:TRN-0457
 
+### INF-2236 `cann_dequant_swiglu_quant_out_size_unchecked_oob` CANN DequantSwigluQuant 出参偏小静默越界写
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
+
+- **原因对象**：量化 / cann / dequant_swiglu_quant 出参校验
+- **原因行为**：aclnnDequantSwigluQuantGetWorkspaceSize 不校验 yOut/scaleOut 尺寸是否等于推导尺寸，出参声明小于推导值时两段接口返回 0，内核按 x 推导的真实尺寸写满输出，越过声明张量边界。
+- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
+- **影响详情**：yOut 声明 [4,32]（真实 [4,64]）时边界外被写 128 字节，行数 1/4/16 时越界 32/128/512 字节线性增长；scaleOut 同型（声明 [1] 实际 [4] 时多写 3 个 float）。对照组越界恒 0，排除哨兵误判。
+- **改进措施**：检测 守护区哨兵回读可检出；rc 与日志无异常（实测 ret1=0 ret2=0）；修复 待定（issue 2026-10-28 新报 open；期望按资料错误码表返回 ACLNN_ERR_PARAM_INVALID 161002）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7569
+
+### INF-2237 `vllm_kimi_k3_fp8_kv_mla_prefill_silent_accuracy` vLLM Kimi-K3 FP8 KV 致 GSM8K 静默塌陷
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
+
+- **原因对象**：量化 / vllm / FP8 MLA prefill 路径
+- **原因行为**：Kimi-K3 在 MI355X 上以 --kv-cache-dtype fp8 服务时，ROCM_AITER MLA FP8 prefill 路径产出错误 KV，文本流畅但大面积答错，无任何报错或告警日志。
+- **影响对象**：KV状态；输出内容（质量退化）
+- **影响详情**：8-shot GSM8K 前 200 题 greedy 从 0.975（BF16 KV）塌到 0.305（FP8 KV），134 题仅 BF16 正确；SGLang 同 checkpoint FP8 KV 0.950，指向 vLLM AITER MLA FP8 prefill 路径。
+- **改进措施**：检测 同 prompt BF16/FP8 KV 对照评测可检出；运行时无检测（未评估）；修复 规避：--kv-cache-dtype auto 或目标+draft KV 均 auto（实测 0.975/0.980）；上游修复未定位（issue open，报告者已排除 prefix caching/SITUV2/DSpark/load-format 等因素并锁定 FP8 MLA prefill PS buffer 日志为唯一差异）
+- **来源**：https://github.com/vllm-project/vllm/issues/64106
+
 ### INF-2242 `cann_dynamic_quant_v2_bf16_extreme_scale_inf` CANN DynamicQuantV2 bf16 极值量化全饱和
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：量化 / cann / dynamic_quant_v2 极差计算
 - **原因行为**：aclnnDynamicQuantV2 行极差在 fp32 中计算，|x|>1.70e38 时溢出为 inf，scale=inf、yOut 全饱和 +127（含负值），返回 0 无报错。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：bf16 [8,64] 行内交替 ±3.3895e38 时 y 全 127、符号信息全丢；阈值扫描 1e38 正确、2e38 起全错。fp16 极差上限 1.31e5 不可达、不触发；控制组 ±1e38 结果正确证明公式理解无误。
+- **影响详情**：bf16 行内同时含 ±3.3895e38 时返回码全 0、无告警，scaleOut=inf、offsetOut=127、yOut 整行饱和 +127，符号与数值全丢；1e38 正确、2e38 起全错，边界 2|x|>3.4028e38；fp16 量程不可达不触发。
 - **改进措施**：检测 检查 scaleOut 是否 inf / yOut 是否整行 ±127 饱和可检出；修复 待定（issue open；报告者建议极差改 fp64 计算或对 scale 做 inf 保护，并建议同族 aclnnRmsNormDynamicQuant/aclnnDynamicQuant 一并核查，均未实施）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7533
 
 ### INF-2243 `cann_multi_add_rms_norm_dynamic_quant_arch35_defects` CANN MultiAddRmsNormDynQuant arch35 量化饱和
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：量化 / cann / multi_add_rms_dyn_quant
 - **原因行为**：arch35 把 inp=y*smooth_scale 物化进 UB，smooth_scale 极小时落入 fp32 次正规区被抹零致 int8 饱和；另有累加序差 1-2 ULP、零行 scale 随模板变、inf 补偿得 NaN。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：smooth_scale ±FLT_MIN 量级、D=2048/10240/16384 时 y1 饱和超判据；x1 含 inf 时 scale 应 inf 却 NaN；零行 scale 随 D 变；相消输入差 1-2 ULP。修复 MR !12728 merged：泛化 2495 例全 PASS。
+- **影响详情**：smooth_scale 极小（如 ±1e-40，次正规量级）时 y1 饱和超 1 LSB 判据（D=2048/10240/16384）；x1 含 inf 时 scale 应 inf 却 NaN；零行 scale 随 D 在 1.0 与 0 间跳变；相消输入差 1-2 ULP；全程无报错。
 - **改进措施**：检测 对照 golden 的 int8 判据（|err|≤1 LSB）与 scale 合法性检查可检出；修复 修复 MR https://gitcode.com/cann/ops-nn/pull/12728 （merged，修复全部四处：归一化后 y 保留正常数域改算 k、累加序对齐 A2、零行 scale 统一 0、回退两处退化补偿；实机 Ascend950PR/950DT 验证；发布版本未核实）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7527；https://gitcode.com/cann/ops-nn/pull/12728
 
 ### INF-2253 `sglang_diffusion_quant_layer_correctness_batch` SGLang 扩散量化层 11 处正确性缺陷批次
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：量化 / sglang / multimodal_gen 量化层
 - **原因行为**：multimodal_gen 量化层代码审查发现 11 处缺陷：ModelSlim 双 scale 键名错（必崩）；smooth-quant scale 静默丢弃；ROCm FP8 漏 fnuz；MXFP4 恒分配 bf16 等静默错值。
-- **影响对象**：数值结果；模型权重（静默错误）
+- **影响对象**：输出内容；数值结果；模型权重（静默错误）
 - **影响详情**：静默类：smooth-quant scale 不加载、fnuz 不转换、布局/展平错配、scale patch 静默跳过——输出错值无报错；崩溃类：dual-scale AttributeError 每层必崩（fail-loud）。影响扩散模型多模态生成量化部署。
 - **改进措施**：检测 与未量化/参考后端对照生成质量可检出静默类；崩溃类自然暴露；修复 待定（issue open 2026-10-24，代码审查报告，未附修复 PR；逐项文件行号已列）
 - **来源**：https://github.com/sgl-project/sglang/issues/46314
@@ -25211,7 +25212,7 @@
 
 ### INF-2247 `rowhammer_triton_jit_pass_bitflip_slowdown` Rowhammer 翻转 Triton JIT 优化 pass 致持续减速
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-10-28
+`故障` · `active` · `documented` · `NEW` · 发现 2026-10-28
 
 - **原因对象**：外部攻击 / 硬件 / CPU DRAM 中 Triton 编译管线
 - **原因行为**：LLVMhammer 在 CPU DRAM 上 Rowhammer 翻转 Triton 编译管线中性能关键优化 pass 的比特，生成功能等价但次优的 GPU kernel；经磁盘缓存持久化，单次翻转致后续推理持续减速。

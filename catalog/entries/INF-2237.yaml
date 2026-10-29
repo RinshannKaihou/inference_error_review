@@ -4,10 +4,10 @@ slug: vllm_kimi_k3_fp8_kv_mla_prefill_silent_accuracy
 aliases: []
 title: vLLM Kimi-K3 FP8 KV 致 GSM8K 静默塌陷
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 量化
     stack: vllm
     component: FP8 MLA prefill 路径
   behavior: Kimi-K3 在 MI355X 上以 --kv-cache-dtype fp8 服务时，ROCM_AITER MLA FP8 prefill 路径产出错误 KV，文本流畅但大面积答错，无任何报错或告警日志。
@@ -39,3 +39,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-28'
+  audit:
+    round: daily-audit-2026-10-29
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 量化
+    issue_unfixed:
+    - behavior
+    uncertain:
+    - effect
