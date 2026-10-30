@@ -36,6 +36,8 @@ original:
   behavior: P/D 分离部署（HiSparse+NIXL）下，偶发长请求在长上下文中途输出突然截断，随后是几十个字符的数字乱码，然后无限重复同一个词（GLM-5.3 上是 'lock'，token id 1023）直到客户端超时取消；期间服务不报错、其他请求正常、同会话下一轮也正常。根因是该请求从某步起每步 logits 全 NaN，而 Gumbel 采样器把全 NaN 确定性映射成 token 1023 并继续产出看似正常的文本，监控完全无感知。
   trigger_surface: vLLM V2 runner + P/D 分离 + MultiConnector[HiSparse+NIXL] + 长上下文（~116K prompt）+ GLM-5.3 FP8/MTP/fp8 KV；罕见（fleet 中偶发单请求）。采样器行为本身平台无关：任何来源的全 NaN logits 都会被映射为固定 token。
   discovery: 2026-10-28 每日扫描
+  notes:
+  - 2026-10-29 2026-10-29 回访：vllm#63811 已 closed（2026-10-28）——closed 不自动证明已修复，关闭原因与修复 commit 未核实
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -51,3 +53,7 @@ migration:
     - qwen3.8-max
     issue_unfixed:
     - detail
+  updates:
+  - date: '2026-10-29'
+    fields:
+    - original.notes

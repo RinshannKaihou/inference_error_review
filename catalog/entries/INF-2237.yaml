@@ -36,6 +36,8 @@ original:
   behavior: 在 MI355X 上按官方 Kimi-K3 配方启动 vLLM 并加 --kv-cache-dtype fp8 后，服务 HTTP 200、无报错无告警、输出流畅，但数学题大面积答错：8-shot GSM8K 前 200 题 greedy 准确率从 0.975 掉到 0.305，同一题的答案往往前几步推导一致、随后一步算错走向错误结论；换回 --kv-cache-dtype auto 立即恢复。所有只看服务日志和输出流畅度的监控都无法发现。
   trigger_surface: AMD MI355X（gfx950）+ TP8 + moonshotai/Kimi-K3 + --kv-cache-dtype fp8 + ROCM_AITER_MLA 后端（FP8 asm MLA prefill）；vLLM nightly-rocm72（0.32.1rc1.dev602）。recipes 仓库 Kimi-K3.yaml MI355X 配方直接触发。
   discovery: 2026-10-28 每日扫描
+  notes:
+  - 2026-10-29 2026-10-29 回访：vllm#64106 仍 open，无修复进展
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -57,3 +59,7 @@ migration:
     - behavior
     uncertain:
     - effect
+  updates:
+  - date: '2026-10-29'
+    fields:
+    - original.notes

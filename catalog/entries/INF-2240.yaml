@@ -36,6 +36,8 @@ original:
   behavior: 升级到 2026-10-28 nightly 镜像后，GLM-5.3-Flash 的图像问答全部答错：纯色图的主色报错（红→Black、蓝→Yellow）、图内文字识别错误、双拼色图左右描述颠倒；输出语气自信、请求全部 200、日志无任何异常，而同服务上的纯文本问答和长文本检索完全正常，回退旧镜像即恢复。
   trigger_surface: Ascend 910B2 ×8 + vllm-ascend nightly-main 2026-10-28（vLLM 0.32.0）+ GLM-5.3-Flash-w8a8（--quantization ascend）+ 任意图像输入；v0.30.0rc2 及更早不受影响。
   discovery: 2026-10-28 每日扫描
+  notes:
+  - 2026-10-29 2026-10-29 回访：vllm-ascend#20115 仍 open，无修复进展
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -51,3 +53,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - detail
+  updates:
+  - date: '2026-10-29'
+    fields:
+    - original.notes
