@@ -4,7 +4,7 @@ slug: triton_mxfp4_quant_context_dependent_encoding
 aliases: []
 title: Triton MXFP4 转换结果依赖同张量无关元素
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 模型权重
   detail: 略高于 1.0/1.5 中点的值单独转换正确选 1.5（E2M1=3），加入一个无关第二元素后第一个值的编码变为 2（表示 1.0）；转换结果随批内无关内容变化，非确定、违反逐元素语义。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 同一值单元素张量 vs 多元素张量分别转换比对编码；对拍独立 MXFP4 参考实现。
   fix: 待定（issue 给出修复方向：tie 判定应逐元素 mask 而非全局 sum；未见修复 PR）
@@ -41,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现

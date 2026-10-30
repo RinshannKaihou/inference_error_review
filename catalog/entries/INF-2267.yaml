@@ -4,13 +4,13 @@ slug: ttmetal_bh_2d_multicast_dram_sharded_in1_grid_mismatch
 aliases: []
 title: BH 2D 组播 matmul DRAM 分片 in1 网格失配
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: tt-metal
     component: 2D multicast matmul in1
-  behavior: MatmulMultiCast 配置且 in1 按 8 个 DRAM bank 宽分片时，compute grid 列数≠8 导致读取映射错位，返回静默错误结果；无异常无断言，退出码 0。
+  behavior: MatmulMultiCast 配置且 in1 权重按 8 个 DRAM bank 宽分片时，compute grid 列数≠8 即返回静默错误结果；无异常无断言，退出码 0。
 effect:
   objects:
   - 数值结果
@@ -40,3 +40,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

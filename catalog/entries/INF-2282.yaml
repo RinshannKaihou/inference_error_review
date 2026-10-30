@@ -2,19 +2,19 @@ id: INF-2282
 legacy_ids: []
 slug: ops_math_histc_int8_wraparound_negative_counts
 aliases: []
-title: aclnnHistc INT8/UINT8 桶计数回绕出负数
+title: aclnnHistc out=INT8/UINT8 桶计数回绕失真
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: histc 8 位计数累加
-  behavior: aclnnHistc 的 out 为 INT8/UINT8 时桶计数按 8 位累加回绕：计数值超过 127/255 后回绕，输出含负计数且计数总和与输入元素数不符；两段均返回 0。
+  behavior: aclnnHistc 的 out 为 INT8/UINT8 时桶计数在 8 位宽度上累加，超过 127/255 后回绕：INT8 输出含负计数，UINT8 输出错值，Σbins 与输入元素数不符；两段接口均返回 0 无告警。
 effect:
   objects:
   - 数值结果
-  detail: 'issue #4224 实测：INT8 out 时计数出现负值（如 -128 级回绕），sum(bins) != numel；正确行为应拒绝该 dtype 组合或饱和。直方图统计/数据画像静默错误。'
+  detail: 'issue #4224 实测：out=INT8/UINT8 且单桶元素数 >127/255 时，INT8 直方图出现负计数、UINT8 为错值，Σbins≠输入元素数；接口返回 0 无告警。资料若不支持该组合应报 161002，实现既未拒绝也未用更宽中间累加，统计/画像结果静默错误。'
   visibility: 静默错误
 mitigation:
   detect: 元素数 >127 的输入 + INT8 out：断言 sum(hist)==numel 与非负。
@@ -40,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
+    - detail
+    - title

@@ -4,7 +4,7 @@ slug: gelu_mul_noncontig_out_silent_miswrite
 aliases: []
 title: GeluMul 非连续 out 与偏小 out 静默错写/越界写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,7 +32,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-nn/issues/7647
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0524
 original:
   mechanism: 'cann/ops-nn 的 aclnnGeluMul 在 Ascend 910B3（Atlas A2）、CANN 9.2.0、仓 master 754a2ee9、算子目录 activation/gelu_mul（无 op_api/，接口由 op def 生成）、二进制 CANN 内置 opp/built-in/.../gelu_mul 的输出校验缺口，两个独立表现：1) 非连续 out：资料参数表把 out「非连续Tensor」标为 ×（#6024 已从 √ 改 ×，即声明不支持），实测不拒绝不转换直接按连续写——以 input=fp32[8x16]（应写 8x8=64 元素）、out 逻辑 [8,8] stride=[16,2] storage=128 为例，两段返回 0、写 64 个元素落在连续前 64 位、按 stride 读回 max|diff|=1.55579054，错位模式可直接对上（strided[1]==contig[2]）；2) 偏小 out：不校验 out 形状，声明元素数小于推导值时仍按 input 推得元素数写满，out=[4,8] 越界 128B、[1,4] 越界 240B，越界量=（应写-声明）×元素字节，两组独立用例逐字节吻合；out 尾轴未折半/偏 1 时写 64 个元素后剩余未写。dtype 不一致时第一段返回 161002，证明接口层有校验位置只是形状/连续性漏检。同日同仓 FatreluMul（issue #7647，A2/A3 arch22 路径）为同型缺陷：out shape 不校验、偏小 out 越界写 32-48B（大 shape 线性放大至 80000B）且 mssanitizer memcheck 实测报 illegal write of size 32，arch35 路径已有三检（op_host/arch35/fatrelu_mul_tiling_arch35.cpp:213-241）而 arch22 缺失。'
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/7668 （非连续 out，open，2026-10-29）；同型 https://gitcode.com/cann/ops-nn/issues/7654 （偏小 out 越界写）；同型 arch22 缺口 https://gitcode.com/cann/ops-nn/issues/7647 （FatreluMul，memcheck 佐证）
@@ -44,3 +46,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

@@ -31,6 +31,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7722
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0196
 original:
   mechanism: 'cann/ops-nn issue #7533（2026-10-28，open）：aclnnDynamicQuantV2（ops-nn quant/dynamic_quant_v2）按资料公式 scale=(row_max-row_min)/255 做非对称量化，极差在 fp32 中计算；bf16 输入行内同时含 ±bf16_max（3.3895e38）时极差 6.78e38 超 fp32 上限 3.4028e38 溢出为 inf，随后 scale=inf、offset=127、yOut 全饱和 +127。实测（Ascend910B2 与 910B3 均复现，CANN 9.2.0，npu-smi 26.1.1，两段式 C 直调）：控制组 ±1e38 输出 127/-128 交替正确；缺陷组 ±3.3895e38 得 scale=inf、offset=127、y 全 127；阈值扫描 1e38 正确、2e38/3e38/3.3895e38 全错，边界恰在 2|x|>3.4028e38。资料未对 x 取值域做限制，属合法输入。含完整 C++ 复现脚本。'
   source: https://gitcode.com/cann/ops-nn/issues/7533
@@ -61,3 +62,6 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-10-30'
+    fields:
+    - pattern

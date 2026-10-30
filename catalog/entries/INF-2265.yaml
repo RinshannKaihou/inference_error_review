@@ -4,7 +4,7 @@ slug: vllm_ascend_mla_qb_padded_head_prolog_v3
 aliases: []
 title: vllm-ascend MLA padded 头 Q_B 投影错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 权重/检查点
@@ -41,3 +41,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem

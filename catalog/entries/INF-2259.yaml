@@ -4,7 +4,7 @@ slug: moe_gating_topk_softmax_310p_tiling_ub_overflow
 aliases: []
 title: MoeGatingTopKSoftmax 310P tiling UB 溢出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -31,7 +31,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-transformer/merge_requests/14811
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: TRN-0522
 original:
   mechanism: Ascend 310P（RC 形态单 SoC，GetCoreNumAic()=10 即 blockNum=10）上 moe/moe_gating_top_k_softmax 的 310P tiling 路径（tilingKey=18）缺陷。源码 moe/moe_gating_top_k_softmax/op_host/moe_gating_top_k_softmax_tiling_310p.cpp 的 DoOpTiling：oneCoreRow = Align(std::min(rowTmp, UB_SIZE / (32 * (colTmp + 3 * kAlign))), 16 * blockNum)。Align() 向上取整到 16*blockNum（310P RC 上=160），当 rowTmp<160（如 156）时取整越过真实行数 → activateCore = CeilDiv(156,160)=1，整个输入塌缩成单个尾块；尾块非 8 倍数时走 SoftMaxTilingFunc 的单整块路径，UB 需求约 (m+16)*col*fp16*3，col=256、m>144 时超过 MAX_UB_SIZE(245760B) → softmax 输出被写坏 → TopK 产出垃圾专家索引 → MoE 路由错乱 → 首 token EOS 空输出。EP 机型（blockNum=8）幸免纯属 batch 形状没踩中：Align(25,128)=128<156 从未越过行数，不是平台差异而是形状差异。kernel 侧 sha256 两机型一致，病全在 host tiling。毒窗：col=256 时 rowTmp∈[145,159] 且非 8 倍数 100% 中招（152 为 8 倍数走 4 均分路径安全）。复现环境：Ascend 310P RC 单卡，vLLM + MoE 模型（256 experts）GSM8K 动态 batch；单算子最小复现 row=156、col=256、fp16。RC 机型 GSM8K 94.01% vs EP 机型 95.75%。
   source: GitCode issue https://gitcode.com/cann/ops-transformer/issues/6910 （open，2026-10-29 报告，含完整根因分析与最小复现）；修复 PR https://gitcode.com/cann/ops-transformer/merge_requests/14811 （open，CI 已通过）
@@ -43,3 +45,20 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem
+    - behavior

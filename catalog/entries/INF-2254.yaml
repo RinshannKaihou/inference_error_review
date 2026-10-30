@@ -4,7 +4,7 @@ slug: attention_update_lse_common_offset_denorm
 aliases: []
 title: AttentionUpdate 大 LSE 公共偏移致归一权重失真输出翻倍
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -40,3 +40,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

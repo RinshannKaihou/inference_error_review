@@ -4,7 +4,7 @@ slug: vllm_ascend_ec_memcache_config_width_reshape
 aliases: []
 title: vllm-ascend EC memcache 按配置宽度重排多模态缓存错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -15,7 +15,7 @@ effect:
   objects:
   - 输入编码
   - 性能/资源
-  detail: Qwen3-Omni 视觉 DeepStack 8192 宽而音频 2048：错宽度条目以错误 token 数进入模型，被丢的静默重编码（延迟增加）；上游 vllm#57904 已改逐模态测量但漏掉 EC memcache。
+  detail: Qwen3-Omni 视觉 DeepStack 输出 8192 宽、音频 2048，在上游 vllm#57904 之后的版本用 EC memcache 连接器加载时：宽度不符的条目一部分以错误 token 数静默进入模型，另一部分被丢弃并重新编码（延迟上升），仅一条 not aligned 日志。
   visibility: 静默错误
 mitigation:
   detect: 多模态（视觉/音频宽度不同）模型 + EC memcache：比对加载条目 reshape 后 token 数与请求实际编码数；日志中 not aligned 计数。
@@ -41,3 +41,15 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

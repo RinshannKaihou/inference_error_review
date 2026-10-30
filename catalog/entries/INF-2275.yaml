@@ -4,7 +4,7 @@ slug: ops_nn_dynamic_block_mx_quant_interleave_overlap
 aliases: []
 title: DynamicBlockMxQuant Interleave 源目标同址
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -42,3 +42,13 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

@@ -4,18 +4,18 @@ slug: ttmetal_bh_sfpu_fp16_16bit_dest_garbage
 aliases: []
 title: BH SFPU 读 16-bit Dest 的 fp16 得垃圾
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: tt-metal
     component: SFPU fp16 Dest load/store
-  behavior: Blackhole 上一元 SFPU 算子的操作数以 fp16 存在 16-bit Dest（dest_acc=No）时在垃圾数据上计算：SFPLOAD/SFPSTORE 对 fp16 Dest 的格式处理错误；Wormhole 正确。
+  behavior: Blackhole 一元 SFPU 算子操作数以 fp16 存 16-bit Dest（dest_acc=No）时在垃圾数据上计算；Wormhole 正确。疑似 SFPLOAD/SFPSTORE 的 fp16 load/store 格式。
 effect:
   objects:
   - 数值结果
   detail: ULP 全量扫描（p100a/p150）：Float16 目标每 lane 回 NaN；读值算子错 1e8~1e9 步；仅 Abs/Neg/Identity 精确；bf16/fp32、dest_acc=Yes 不受影响。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: tt_metal/tt-llk/tests/python_tests/test_unary_sfpu_ulp.py 一元 ULP 扫描；fp16 算子对拍 CPU 参考。
   fix: 待定（定位 SFPLOAD/SFPSTORE 对 fp16 Dest 的格式路径；未见修复 PR）
@@ -40,3 +40,16 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - behavior

@@ -4,7 +4,7 @@ slug: ops_math_inplace_reciprocal_complex64_nan
 aliases: []
 title: InplaceReciprocal complex64 零输入 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 0/次正规复数输入的倒数输出 NaN（应为按公式计算的有限/inf 值）；仅 complex64 多元素路径触发，complex128 正确，两段返回 0。
+  detail: 对 complex64 多元素张量做原地倒数时，值为 0 或次正规的元素输出 nan+nanj，并随后续计算传播；接口返回成功、无报错，异常值以 NaN 形式静默出现在结果中；complex128 同接口同输入正确，两段返回 0。
   visibility: 数值异常
 mitigation:
   detect: 含 0/次正规元素的 complex64 张量求倒数，检查 NaN 位；complex128 对照。
@@ -40,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

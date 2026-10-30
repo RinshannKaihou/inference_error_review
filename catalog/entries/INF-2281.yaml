@@ -4,10 +4,10 @@ slug: ttmetal_all_gather_wrong_axis_guard_1xn
 aliases: []
 title: tt_all_gather 1xN mesh 错轴守卫静默跳过聚合
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 并行切分
+  - subsystem: 集合通信
     stack: tt-metal
     component: tt_all_gather 守卫
   behavior: 单设备守卫检查任意轴含 1 而非目标轴：cluster_axis=1 在 [1,N] mesh（axis1 有 N 设备）恒命中，直接返回输入不做 gather；all_reduce 同款守卫。
@@ -40,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 并行切分
+        to: 集合通信

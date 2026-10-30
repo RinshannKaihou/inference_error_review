@@ -4,17 +4,17 @@ slug: ops_nn_fused_ce_loss_max_sum_empty_vocab_silent
 aliases: []
 title: FusedCEWithMaxSum V=0/行数不校验错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 损失计算
+  - subsystem: 算子/内核
     stack: cann
     component: fused_cross_entropy_loss
   behavior: V=0 时 InitParams() 不申请 buffer，BtCompute() 无条件搬运使 log(sumExp) 算成 log(logitsMax)；行数不校验致少写/越界；可选 input/weight 被静默忽略。
 effect:
   objects:
-  - 训练信号
   - 数值结果
+  - 训练信号
   detail: 上板验证（910B3/CANN 9.3.0）：修复前 5 项负向用例（V=0、行数偏小/偏大、input/weight 非空）全放行返回 0；正向 lossOut 与理论值逐点一致。
   visibility: 静默错误
 mitigation:
@@ -41,3 +41,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-29'
+  audit:
+    round: daily-audit-2026-10-30
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 损失计算
+        to: 算子/内核
+      effect:
+        from: 训练信号
+        to: 数值结果
+    uncertain:
+    - component
+    - detail
