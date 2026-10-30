@@ -40,6 +40,8 @@ original:
   signature: 12 例 6 过 6 败的固定模式（[narrow,wide] FAIL / [wide,*] PASS），assert_close rtol=0 atol=0 直接断言失败。
   repro: issue 附 /repro/repro_kv_cache_views_npu.py 完整输出与复现脚本。
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：vllm-ascend#20157 批次快照仍 open。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -50,3 +52,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

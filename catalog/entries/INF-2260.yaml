@@ -37,6 +37,8 @@ original:
   signature: rank 26~30：两段 rc=0 且输出保持金丝雀初值；rank 25 正常、rank 31 报 161002。
   repro: issue 含自包含 repro.cpp（0xA5 金丝雀计数）。
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：同型机制新增 aclnnSituGlu（ops-nn#7741，rank≥26 两段 0/0、ws=0、输出金丝雀未写，INF-2293 建 var 关联）；#7640 本轮批次快照仍 open，无修复进展。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -52,3 +54,7 @@ migration:
     - qwen3.8-max
     uncertain:
     - effect
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

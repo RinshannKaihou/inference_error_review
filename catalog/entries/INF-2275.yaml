@@ -39,6 +39,8 @@ original:
   signature: 修复前后 TTK 回归 9/9 逐字节一致性对比；UB 地址重叠代码定位。
   repro: issue 附排查步骤与回归尺寸清单（修复版验证记录）。
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：ops-nn#7717 批次快照显示 closed（2026-10-29），closed 不自动证明修复发布，关闭原因未核实。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -52,3 +54,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-10-30'
+    fields:
+    - original.notes

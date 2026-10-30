@@ -38,6 +38,7 @@ original:
   discovery: 2026-10-28 每日扫描
   notes:
   - 2026-10-29 2026-10-29 回访：vllm#63811 已 closed（2026-10-28）——closed 不自动证明已修复，关闭原因与修复 commit 未核实
+  - 2026-10-30 2026-10-30 回访：vllm#63811 保持 closed（10-28 关闭）；closed 不自动证明修复，关闭原因与修复 commit 仍未核实（core API 快照）。
 migration:
   method: scan
   scanned: '2026-10-28'
@@ -55,5 +56,8 @@ migration:
     - detail
   updates:
   - date: '2026-10-29'
+    fields:
+    - original.notes
+  - date: '2026-10-30'
     fields:
     - original.notes

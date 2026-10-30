@@ -42,6 +42,8 @@ original:
   signature: 空输出样本的 batch input_tokens 100% 落在 (144,159] 且非 8 倍数；单算子 RC/EP 同输入输出分歧且 kernel sha256 一致。
   repro: issue 正文含完整最小复现（row=156, col=256, fp16）与 vLLM GSM8K 评测统计。
   discovery: 2026-10-29 每日扫描
+  notes:
+  - 2026-10-30 2026-10-30 回访：ops-transformer#6910 批次快照仍 open；修复 !14811 未在窗口内更新（未核实合入）。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -49,6 +51,9 @@ migration:
   - date: '2026-10-30'
     fields:
     - relations
+  - date: '2026-10-30'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-30
     base:
