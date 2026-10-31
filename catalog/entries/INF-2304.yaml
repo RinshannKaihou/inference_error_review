@@ -4,7 +4,7 @@ slug: flashinfer_mxfp4_extreme_scale_inf_weight_dot
 aliases: []
 title: FlashInfer MXFP4 极值 scale 物化 inf 权重
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: 极端 scale 下权重 inf、dot 输出 inf/NaN；修复改检测溢出 scale、以 activation×unscaled E2M1+scaled FMA 重算受影响行，55 组回归；PR open Draft 未合入。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: 构造 scale 字节 253/254 的 MXFP4 矩阵与零/小激活对照 FP64 参考；55 组回归用例在 PR 内。
   fix: '修复 PR https://github.com/flashinfer-ai/flashinfer/pull/7847 （open Draft 未合入；main 集成与目标 correctness 已完成，等待正式批准）；前驱 #7845/#7838 已 merge 为独立修复。'
@@ -40,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常

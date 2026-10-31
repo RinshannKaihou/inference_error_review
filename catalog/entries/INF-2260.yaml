@@ -29,6 +29,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7640
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0198
 original:
   mechanism: cann/ops-nn 的 aclnnGeluBackwardV2 在 Ascend 910B2（单卡）、CANN 9.2.0（npu-smi 26.1.1）、TorchNPU 2.12.0.post3、仓 master 754a2ee9111fc9bdf6ce87ffa1fc3f837d37c694（2026-10-29）的维度校验缺口。910B 走内置 kernel ascend910b/ops_legacy/gelu_grad_v2，aclnn 入口在 libopapi.so。对 rank 26~30 输入两段返回 0 但 gradInput 完全未写（0xA5 金丝雀 32/32 残留）；rank≤25 正常（与解析导数 max 绝对差 7e-08），rank≥31 返回 161002。资料 activation/gelu_grad_v2/docs/aclnnGeluBackwardV2.md 三个张量「维度」列声明 0-8，同仓同族 elu_grad_v2 的 op_api/aclnn_elu_backward.cpp:32 定义 MAX_DIM_LEN=8 且 :102 用 OP_CHECK_MAX_DIM 拒绝，本算子缺少等价校验。issue 含自包含 repro.cpp（金丝雀判读）。
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/7640 （open，2026-10-29，含对照/缺陷组金丝雀实测表）
@@ -58,3 +59,6 @@ migration:
   - date: '2026-10-30'
     fields:
     - original.notes
+  - date: '2026-10-31'
+    fields:
+    - pattern

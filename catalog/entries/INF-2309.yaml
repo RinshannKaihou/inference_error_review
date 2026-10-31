@@ -4,7 +4,7 @@ slug: ops_nn_fakequant_perchannel_inverted_equal_channel_semantics
 aliases: []
 title: FakeQuantPerChannel 倒置/相等通道语义异于 TF
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 测试判定
-  detail: 950PR 实测 22 例 L0 失败：001 例 matched_ratio≈0.4789≈P(min<max)；016 例 Expected:nan/Actual:0.0；倒置域偏差达量程全跨度（max_abs_error≈200）。
+  detail: 950PR 实测 22 例 L0 精度比对失败：倒置域偏差达量程全跨度（max_abs_error≈200）；相等通道比对呈 Expected:nan/Actual:0.0；001 例 matched_ratio≈0.4789 与 P(min<max) 吻合。
   visibility: 静默错误
 mitigation:
   detect: per-channel min/max 独立随机域用例与 TF 参考比对；倒置/相等通道定向构造。
@@ -29,7 +29,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7791
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0561
 original:
   mechanism: 'cann/ops-nn FakeQuantWithMinMaxVarsPerChannel 在 TTK geir 通路 L0 精度比对失败 22 例（issue #7791，Ascend950PR，cann/golden/ttk 20261013，float32 absolute_precision 1e-8，用例来自社区 sleeveen/operator_test_case 656 例）：(1) 倒置通道（min>max）输出语义与 TF 不一致——三输入同随机域独立采样必然出现倒置通道，kernel 比对参考 golden 链 clamp 顺序（torch.clamp 先 max 后 min，倒置域取 nudged_max 侧）与 TF 原生 functor cwiseMin(nudged_max).cwiseMax(nudged_min)（先 min 后 max，倒置域取 nudged_min 侧）相反，与 TF 一致的 NPU 输出被比对判错，该域偏差达量程全跨度（max_abs_error≈200）；(2) 相等通道（min==max≠0）kernel 按退化清零输出 0，TF 原生 Nudge 的 inv_scale=+inf → 0×inf=NaN 整通道 NaN，比对呈 Expected:nan/Actual:0.0；(3) round 0.5 边界：参考 golden 链 inv_scale 为 python 标量/tensor 除法两步舍入与 IEEE 单步差 1 ULP，t=shift×inv_scale 在边界分落两侧产生 ±1 量化级失配（8-bit 宽量程超 0.01 绝对门限）。001 例 matched_ratio≈0.4789 与 P(min<max) 逐位吻合证实倒置域占比解释。注意：该单混合含「比对参考链自身缺陷」与「kernel 语义偏离 TF」两层，issue 要求两侧都按 TF 原生语义对齐。'
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/7791 （open，2026-10-30 创建；含三类形态定位、matched_ratio 概率吻合证据与 TTK 命令）
@@ -41,3 +43,30 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - kind
+    - subsystem
+    - effect
+    - visibility
+    - behavior
+    uncertain_short:
+    - kind
+    - subsystem
+    - effect
+    - visibility

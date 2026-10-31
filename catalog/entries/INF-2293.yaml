@@ -4,7 +4,7 @@ slug: ops_nn_situ_glu_rank26_output_unwritten
 aliases: []
 title: aclnnSituGlu rank≥26 返回成功但输出完全未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -31,6 +31,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2260
+pattern: PAT-INF-0198
 original:
   mechanism: 'cann/ops-nn aclnnSituGlu 缺 rank 上限校验（issue #7741，910B2/CANN 9.2.0，master c46db05f 实测）：资料 activation/situ_glu/docs/aclnnSituGlu.md 参数表声明 x 维度 1-8，错误码表 561001 写明维度超范围应报错。实测同进程连续执行：rank=8（合法）与 rank=25（超声明）两段 0/0、ws=16777216、输出正常且与 rank=8 逐字节相同；rank=26/28（及 26–34）两段 0/0、ws=0、输出一个字节未写（保持预填金丝雀 0x5A5A5A5A5a5a5a5a）。ws=0 说明 tiling 未调起（正常固定 16MB）、kernel 未启动，但两段接口都返回 ACLNN_SUCCESS——op_host 侧完全没有 rank 上限校验。调用方以「返回 0 即成功」读取输出会拿到未初始化显存（上次残留或任意值）。与 10-29 INF-2260（GeluBackwardV2 rank26-30 输出未写）同型不同算子，各自独立提单。'
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/7741 （open，2026-10-30 创建；含 rank=8/25/26/28 对照表与金丝雀复现脚本）
@@ -49,3 +50,13 @@ migration:
   - date: '2026-10-30'
     fields:
     - labels.coverage
+  - date: '2026-10-31'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

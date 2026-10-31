@@ -4,7 +4,7 @@ slug: vllm_ascend_pd_stash_overwrite_gqa_draft_kv
 aliases: []
 title: vllm-ascend PD stash 覆盖致 GQA draft KV 损坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -16,7 +16,7 @@ effect:
   - KV状态
   - 输出内容
   detail: decode TP<prefill TP 时 GQA 组（draft KV，8 KV heads）被丢；目标模型 MLA/indexer 1 KV head 不受影响——损坏对输出监控不可见，仅推测接受长度坍缩。GLM+DSPark 双节点端到端复现。
-  visibility: 质量退化
+  visibility: 性能退化
 mitigation:
   detect: 监控推测解码接受长度（accept length）按 shard/组拆分；对比 decode TP=prefill TP 基线；检查 stash 覆盖前后 group 数。
   fix: 待定（issue 结构性分析给出合并语义修复方向：stash 按 group 追加合并；main/v0.26rc/v0.30/v0.31.0rc @0bbf9248 均带缺陷）
@@ -41,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 性能退化

@@ -4,7 +4,7 @@ slug: ops_transformer_prompt_fa_fp16_numerator_overflow
 aliases: []
 title: PromptFA fp16 退化输入分子溢出 inf
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -40,3 +40,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

@@ -4,13 +4,13 @@ slug: ops_math_linalg_cross_fp64_fma_residual
 aliases: []
 title: aclnnLinalgCross fp64 叉积平行向量非零且溢出区返回 inf
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: linalg_cross fp64 叉积实现
-  behavior: fp64 通路疑似以 FMA 实现叉积（z0=fma(x1,y2,-round(x2*y1))），乘积舍入残差被保留；AICORE cross.h 的 Mul+Sub 精确相消为 0。
+  behavior: fp64 通路疑似以 FMA 实现叉积（z0=fma(x1,y2,-round(x2*y1))），乘积舍入残差被保留；AICORE op_kernel/cross.h 为 AscendC::Mul+Sub，两乘积位相同时精确相消为 0。
 effect:
   objects:
   - 数值结果
@@ -40,3 +40,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

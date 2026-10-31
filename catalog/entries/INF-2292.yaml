@@ -4,13 +4,13 @@ slug: ops_math_signbit_negzero_false
 aliases: []
 title: aclnnSignbit 对 -0.0 返回 False（资料要求 True）
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: signbit -0.0 判定
-  behavior: signbit 实现按 self<0 判定而非符号位判定，-0.0 与 -NaN（符号位为 1）的符号位被漏检返回 False。
+  behavior: aclnnSignbit 对 -0.0 与符号位为 1 的 -NaN 返回 False，资料要求返回 True；各浮点 dtype 一致，接口不报错。报告者据现象推断实现按 self<0 比较而非读符号位（未核实）。
 effect:
   objects:
   - 数值结果
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

@@ -4,10 +4,10 @@ slug: ops_transformer_compressor_autograd_grad_garbage
 aliases: []
 title: compressor 公开入口 autograd 梯度全错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 模型定义
+  - subsystem: 算子/内核
     stack: cann
     component: compressor autograd 入口
   behavior: torch.autograd.Function.forward 内部强制 no_grad，grad_enabled 判据结构性恒 False，kernel 不写中间量，backward 消费未初始化显存得垃圾梯度。
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6962
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0563
 original:
   mechanism: 'cann/ops-transformer compressor 公开入口经 _CompressorFunction 反向梯度静默全错（issue #6962，A3 实测）：位置 attention/compressor/torch_extension/compressor.py:368，引入提交 fa4364547（MR !13855）。根因：torch.autograd.Function.forward 内部强制 no_grad，`grad_enabled = torch.is_grad_enabled() and any(t.requires_grad...)` 结构性恒 False → kernel 不写 softmax_score/kv 中间量 → backward 消费未初始化显存 → 经 cann_ops_transformer.compressor() 训练态梯度为垃圾值/nan，无任何报错。改动前（父提交 3d40e5645）公开入口为普通函数、判据 grad_enabled = x.requires_grad，行为正确。验证（910_93，B=1/S=1024 与 131072、H=5120、D=512、cmp_ratio=2、bf16）：直调 _compressor_forward(grad_enabled=True)+_compressor_backward 三梯度 rel 2.5e-3~3.5e-3（=权重 bf16 量化噪声正常）；走公开入口 rel 1.1~2.8、大形状 nan；打一行补丁后公开入口两形状全绿。现有 pytest 三通路均直调内部 op，未覆盖公开入口 autograd 路径。'
   source: GitCode issue https://gitcode.com/cann/ops-transformer/issues/6962 （open，2026-10-30 创建；含源码行、引入提交、对照验证数据）
@@ -40,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 模型定义
+        to: 算子/内核

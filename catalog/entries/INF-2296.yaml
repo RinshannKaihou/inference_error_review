@@ -4,7 +4,7 @@ slug: ops_math_remainder_negative_divisor_product_overflow
 aliases: []
 title: aclnnRemainder fp32 负除数乘积溢出返 -inf/0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: self=3.4e38 实测：other=-1.2e38 → -inf（应 -2.0e37）；other=-1.0e38 → -inf；self=3.0e38,other=-1.0e38 → 0.0（应 -1.0e37）。35 组扫描 19 组命中；正除数 8/8 全对；fp64 全对。
-  visibility: 静默错误
+  detail: fp32、|self|≈3.4e38 且 other<0 时无报错：remainder(3.4e38,-1.2e38)=-inf（真值约 -2e37），remainder(3.0e38,-1.0e38)=0.0（真值约 -1e37）；35 组扫描 19 组命中，正除数与 fp64 全对。
+  visibility: 数值异常
 mitigation:
   detect: 大值×负除数 remainder 与 fp64 对照；扫描 |self| 接近 fp32 上限 × 负除数组合。
   fix: 待定（未见修复 MR）
@@ -40,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail

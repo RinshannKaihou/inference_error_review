@@ -4,7 +4,7 @@ slug: ops_nn_bn3d_training_reduce_fp16_kahan_loss
 aliases: []
 title: BN3DTrainingReduce FP16 归约丢补偿量
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -30,7 +30,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-nn/pull/13131
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: TRN-0564
 original:
   mechanism: 'cann/ops-nn BN3DTrainingReduce 在 Ascend 950（DAV3510）FP16 归约精度缺陷（issue #7762，参考原始报告 wangyueting/changwei_jiaoyiming#30；受测 18a86283）：(1) 短行分支 N≤64、R0=1 直接累加，53×5 固定输入（[-1000,-10] 均匀分布）稳定超三方 L1 RMSE 比值门槛；(2) 分核路径只传 FP32 部和，Kahan 类补偿量在根核合并前丢失，同 shape 相消输入（+65536 个 1 与 -65536 个 -1 加 2^-9）NPU 输出 -1 而 CPU/GPU -0.998046875；(3) 仓内 Golden Promote 平方和独立参考累加误差：[2047,1] 重复 5 次原 FP32 并行平方和 20951048，精确可表示值 20951050。修复 PR !13131（merged）：分核 FP16 改 K=8+平方和双链保留跨核主值/补偿量（修订后开销 -0.3%~+5%）；短行 N=53/64 增 0.66/0.71μs；三组短行 RMSE 2.254/3.011/2.803→0.711/0.540/0.589，三组相消 32/16/16→1；GEIR14/14、ST13/13、Host UT60/60。扩展 32 条中 2 条（(1,1,1048575)/(1,4,1048575) FP16 均匀正数）平方和 1 ULP 差异为既有算子问题，本 PR 未修、未放宽标准。'
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/7762 （closed，2026-10-30 创建；含冻结输入复现、修复前后 RMSE 与验证矩阵）；修复 PR https://gitcode.com/cann/ops-nn/pull/13131 （merged）
@@ -42,3 +44,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  updates:
+  - date: '2026-10-31'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

@@ -4,19 +4,19 @@ slug: vllm_dp_dummy_run_writes_live_mamba_state
 aliases: []
 title: vLLM DP dummy run 写活请求 Mamba 状态块
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: KV缓存
     stack: vllm
     component: _dummy_run block table
   behavior: _dummy_run（FULL）提交活 block table 后建 metadata，NULL 填充范围为空，dummy 行保留活请求 block ID；mamba kernel 无守卫就地更新共享 KV。
 effect:
   objects:
-  - 跨请求/跨样本数据
   - KV状态
+  - 跨请求/跨样本数据
   detail: RL 权重热更新 pause（keep）期间每 rank 空转 2–56 dummy 步，循环状态覆盖他人 K/V，fp32 状态读成 bf16 含 NaN，活请求下一实步 NaN logits。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: DP+FULL graph+align 模式 pause 后监控活请求 logits NaN；检查 dummy 步 block table 是否指向 NULL。
   fix: 待定（PR 给出修复：dummy 批全部行指向 NULL_BLOCK_ID；新版 v1/worker/gpu runner 已用独立 get_dummy_block_tables）
@@ -41,3 +41,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-30'
+  audit:
+    round: daily-audit-2026-10-31
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: KV缓存
+      effect:
+        from: 跨请求/跨样本数据
+        to: KV状态
+      visibility:
+        from: 静默错误
+        to: 数值异常
