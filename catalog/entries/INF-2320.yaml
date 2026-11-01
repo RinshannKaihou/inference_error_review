@@ -41,6 +41,8 @@ original:
   signature: gnormScale=0 组 TTK L0 用例 FAIL（golden 特判 0/1 vs kernel 0/0=NaN）。
   repro: issue 附用例配置（atk_aclnnApplyAdamWQuant.json L0_093/097/129/151）与 TTK 回归。
   discovery: 2026-10-30 每日扫描
+  notes:
+  - '2026-10-31 2026-10-31 回访：issue #7736 已 closed（10-30）；修复 !13012 此前已 merged；是否随版本发布未核实'
 migration:
   method: scan
   scanned: '2026-10-30'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-10-31'
     fields:
     - relations
+  - date: '2026-10-31'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-31
     base:

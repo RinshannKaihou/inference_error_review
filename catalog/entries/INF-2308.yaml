@@ -41,6 +41,8 @@ original:
   signature: 短行 RMSE 比值>2；相消输入 NPU=-1 vs CPU/GPU=-0.998046875。
   repro: issue 附冻结 CSV 用例与定向 numpy 构造输入。
   discovery: 2026-10-30 每日扫描
+  notes:
+  - '2026-10-31 2026-10-31 回访：issue #7762 已 closed（10-30，修复 !13131 此前已 merged）；关闭原因未逐条核实'
 migration:
   method: scan
   scanned: '2026-10-30'
@@ -48,6 +50,9 @@ migration:
   - date: '2026-10-31'
     fields:
     - relations
+  - date: '2026-10-31'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-10-31
     base:

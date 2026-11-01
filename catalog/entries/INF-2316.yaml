@@ -28,6 +28,8 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/6962
   kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/merge_requests/15041
+  kind: gitcode_pr
 relations:
 - kind: cross
   target: TRN-0563
@@ -39,6 +41,8 @@ original:
   signature: 公开入口 backward rel 1.1~2.8/nan vs 内部直调 2.5e-3~3.5e-3。
   repro: issue 附两形状对照实测与一行补丁验证。
   discovery: 2026-10-30 每日扫描
+  notes:
+  - 2026-10-31 2026-10-31：修复 MR !15041（open）补充两个新证据面——公开入口 Python 判据 torch.is_grad_enabled() 在 Function.forward 内结构性恒 False（fa4364547 引入，父提交正确）；arch35/92 GenTilingKey 判 OPTIONAL.Bool 指针恒非空致 GRAD_ENABLED 位恒 1，推理态白写 softmax_score/kv（S=131072/bf16/D=512 约 536MB）；两缺陷互相掩盖须同一笔修复（3 文件 3 行）
 migration:
   method: scan
   scanned: '2026-10-30'
@@ -46,6 +50,10 @@ migration:
   - date: '2026-10-31'
     fields:
     - relations
+  - date: '2026-10-31'
+    fields:
+    - evidence
+    - original.notes
   audit:
     round: daily-audit-2026-10-31
     base:

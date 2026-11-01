@@ -41,6 +41,7 @@ original:
   discovery: 2026-10-29 每日扫描
   notes:
   - 2026-10-30 2026-10-30 回访：ops-nn#7717 批次快照显示 closed（2026-10-29），closed 不自动证明修复发布，关闭原因未核实。
+  - 2026-10-31 2026-10-31 回访：#7717 保持 closed（10-29 关闭），无新评论证据，维持原判
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -56,5 +57,8 @@ migration:
     - qwen3.8-max
   updates:
   - date: '2026-10-30'
+    fields:
+    - original.notes
+  - date: '2026-10-31'
     fields:
     - original.notes
