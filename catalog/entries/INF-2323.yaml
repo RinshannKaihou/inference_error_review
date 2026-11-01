@@ -28,6 +28,8 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5785
   kind: gitcode_issue
+- url: https://gitcode.com/Ascend/pytorch/issues/5787
+  kind: gitcode_issue
 relations:
 - kind: cross
   target: TRN-0565
@@ -39,6 +41,8 @@ original:
   signature: fp32 GEMM 输出误差带 ~2e-4 且与「输入先转 fp16 再 fp32 累加」参照逐位级吻合；allow_hf32 三态输出逐位相同。
   repro: issue 附判读方法与固定 seed 脚本（每算子独立子进程 + CPU 三参照对照）。
   discovery: 2026-10-31 每日扫描
+  notes:
+  - 2026-11-01 补证 2026-11-01：#5787（kthvalue 值面 fp16 量化，INF-2350）证明该量化面不限于 Cube/GEMM 路径，选择类算子同中；原「降级仅发生在 Cube 单元路径」的边界表述据此修正
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -46,6 +50,10 @@ migration:
   - date: '2026-11-01'
     fields:
     - relations
+  - date: '2026-11-01'
+    fields:
+    - evidence
+    - original.notes
   audit:
     round: daily-audit-2026-11-01
     base:

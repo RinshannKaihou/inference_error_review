@@ -39,6 +39,8 @@ original:
   trigger_surface: cann/ops-nn scatter_nd_update；updates 形状失配或 indices 维度数 a > varRef.rank；ACLNN 两段式直调；910B3/CANN 9.2.0。
   signature: 非法形状第一段返回 0；varRef 被写入与 updates 无关的越界读值。
   discovery: 2026-10-31 每日扫描
+  notes:
+  - 2026-11-01 回访 2026-11-01：修复 MR !13327（Validate indices depth and updates shape in ScatterNdUpdate）已开（11-01 18:36Z 更新），仍 open 未合入
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -46,6 +48,9 @@ migration:
   - date: '2026-11-01'
     fields:
     - relations
+  - date: '2026-11-01'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-01
     base:

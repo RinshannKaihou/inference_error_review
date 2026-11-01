@@ -43,6 +43,7 @@ original:
   discovery: 2026-10-30 每日扫描
   notes:
   - '2026-10-31 2026-10-31 回访：issue #7736 已 closed（10-30）；修复 !13012 此前已 merged；是否随版本发布未核实'
+  - '2026-11-01 回访 2026-11-01：同接口 ops-nn#7901（mRef 输出恒 0）与 #7888（固定 4096 越界读写）另立新案 INF-2355/INF-2364；源 #7736 closed，修复 !13012 merged 但发布未核实'
 migration:
   method: scan
   scanned: '2026-10-30'
@@ -51,6 +52,9 @@ migration:
     fields:
     - relations
   - date: '2026-10-31'
+    fields:
+    - original.notes
+  - date: '2026-11-01'
     fields:
     - original.notes
   audit:

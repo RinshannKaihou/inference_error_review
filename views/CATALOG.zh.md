@@ -3,24 +3,24 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2349 条；状态：active 2349
+共 2365 条；状态：active 2349、pending_audit 16
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 712 |
+| 算子/内核 | 722 |
 | 编译器 | 151 |
-| 运行时/执行 | 134 |
+| 运行时/执行 | 135 |
 | 集合通信 | 39 |
 | 并行切分 | 31 |
-| KV缓存 | 367 |
+| KV缓存 | 370 |
 | 调度/服务 | 92 |
 | 输出解析 | 68 |
 | 解码/采样 | 153 |
-| 量化 | 213 |
+| 量化 | 214 |
 | 位置编码 | 42 |
 | 分词/模板 | 33 |
-| 模型定义 | 48 |
+| 模型定义 | 49 |
 | 权重/检查点 | 49 |
 | 数据管线 | 5 |
 | 优化器 | 4 |
@@ -8109,7 +8109,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：matmul/addmm/F.linear/conv2d 输出与 fp16in 参照误差 1e-7~6.7e-5 吻合、与真 fp32 参照超容差 4~6 倍（2~4e-4），einsum 13/16 案超容差、稀疏错元约 1/20；无任何警告，无法经用户侧 API 恢复真 fp32。
 - **改进措施**：检测 固定 seed 三参照对照（真 fp32 / bf16 / fp16in=输入降 fp16 升回后 CPU 精算）；翻转 allow_hf32 三态验证输出是否逐位不变即可识别开关失效。；修复 待定（issue open，未见修复；A3 同版本代码开关正常，提示为 310P3 路径特有）
-- **来源**：https://gitcode.com/Ascend/pytorch/issues/5785
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5785；https://gitcode.com/Ascend/pytorch/issues/5787
 - **关联**：cross:TRN-0565
 
 ### INF-2324 `torch_npu_950pr_index_put_oob_silent_corruption` 950PR index_put_/scatter_ 越界写静默腐蚀邻接内存
@@ -8284,6 +8284,117 @@
 - **影响详情**：全掩码行（该行所有 KV 被 mask，vregLseMax 保持 -FLT_MAX_NEW）在 softmaxLseFlag 生效且不显式传 minCheckValue（走默认值）时 LSE 输出错误值而非 inf；非掩码行不受影响。修复 = 三处默认参数改 -FLT_MAX_NEW。
 - **改进措施**：检测 构造全掩码行输入检查 LSE 是否为 inf；显式传入 -FLT_MAX 亦可规避（显式传参路径不受默认值影响）。；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15023 （merged 2026-10-31：三处默认参数改为 -FLT_MAX_NEW；是否随 CANN 版本发布未核实；!15022 为同修复早期提交已关闭）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/6975；https://gitcode.com/cann/ops-transformer/merge_requests/15023
+
+### INF-2350 `kthvalue_310p_fp16_quantized_values` 310P kthvalue 值路径走 fp16 内部表示，返回不存在于输入中的数
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / torch_npu / kthvalue 内核值路径
+- **原因行为**：fp32 输入的 kthvalue 返回值按 fp16 舍入而非原值，返回不在输入张量中的数；索引路径正确，同族 sort/topk/median/min 干净
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：310P3 上 fp32 kthvalue 返回值与 fp16 量化参照差恰为 0（k=1/5/32 全中，raw_diff 最高 9.6e-4），选择算子返回不存在于输入的元素值；indices 形状缺 keepdim 维（四芯共性适配层问题）
+- **改进措施**：检测 待定；修复 待定（issue open；可用 sort/topk/median/min 规避——同芯片同输入逐位干净）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5787
+- **关联**：var:INF-2323
+
+### INF-2355 `apply_adam_w_quant_mref_all_zero` aclnnApplyAdamWQuant mRef 输出恒为 0
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / ApplyAdamWQuant mRef 写回
+- **原因行为**：调用后 mRef（资料定义为输入/输出的量化前 m 索引）256 元素恒为 0，预填 127 仍被写成 0，排除未写回；同调用 vRef/absmaxMRef 正确
+- **影响对象**：数值结果；优化器状态（静默错误）
+- **影响详情**：mRef 全 0 使下一步用 0 号索引反量化 m（absmaxMRef 系统性偏小：第 2 步实测 0.2013 vs 参考 0.5268），动量更新链静默损坏；两段返回 0/0
+- **改进措施**：检测 待定；修复 待定（issue open；关联 #7736 同接口全零 block NaN 案，closed 原因未核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7901
+
+### INF-2356 `aclnn_inverse_out_dtype_silent_cast` aclnnInverse out 与 self dtype 不一致静默降精度
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / aclnnInverse host 校验
+- **原因行为**：GetWorkspaceSize 只查 dtype 可否 cast 不查是否一致，out 与 self dtype 不一致时返回 0 继续执行，结果按 out dtype 静默写出
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：fp32 self + fp16/bf16 out 全返回 0，输出 fp16/bf16 精度（1/3→0.33398）；fp32→int32 正确返回 161002（cast 不允许），fp32→fp64 也返回 0 与资料「需一致」不符
+- **改进措施**：检测 待定；修复 待定（issue open）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7880
+
+### INF-2357 `maxpool2d_indices_contract_split` max_pool2d indices 契约四芯四态分裂
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / torch_npu / max_pool2d indices 适配层
+- **原因行为**：indices dtype 随芯片在 int64/int8/int32/float32 间分裂（310P3 为 float32），形状与 CPU 契约不符，310P3 池化值面同时失真
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：同一 API 四芯四种形态无一符合 CPU 契约（int64+输出空间形状）：310P3 float32 索引不可用于 gather/scatter、A3/910B3 int8 语义不成立、形状破裂使依赖形状的下游报错；310P3 值面同时与 CPU DIVERGE
+- **改进措施**：检测 待定；修复 待定（issue open）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5791
+
+### INF-2358 `ttnn_batch_norm_fp32_params_wrong` ttnn.batch_norm fp32 参数 16 位 Dest 大量错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / tt-metal / batch_norm 内核 fp32 参数处理
+- **原因行为**：bf16 输入+fp32 参数+fp32_dest_acc_en=False 时 16 位 Dest 将 fp32 操作数按 bf16 持有，实际误差远超 bf16 级；文档列该组合为支持且不提 fp32_dest_acc_en
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：实测 2048 值中 1856 错（>2%+0.02 判据，最大偏 2.5）、1728 恰为 0；随机 [2,3,33,40] 三次独立进程 6911/7920 输出偏差 >5%+0.05；无任何报错
+- **改进措施**：检测 待定；修复 待定（issue open；规避：fp32_dest_acc_en=True（默认无 config 时即是）、bf16 stats 或 fp32 输入+stats 均通过）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/63629
+
+### INF-2359 `ttnn_slice_write_shard_row_misalign` ttnn.slice_write 分片行非 16B 对齐半数错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / tt-metal / slice_write 分片偏移
+- **原因行为**：row-major BLOCK_SHARDED L1 输入写入 interleaved 张量时，分片行（shard 宽×元素大小）非 16 字节倍数时 per-core 偏移计算错，静默写错值；offset 网格另致不返回
+- **影响对象**：数值结果；可用性/进度（静默错误）
+- **影响详情**：bf16 [1,2,4,8] [4,4] 分片（8B 行）写 L1-interleaved：64 值 32 错（全在第二分片列）；8/12/14/18/20/24/28/30/36B 行（bf16/fp32，3/3 进程）恰好半数错值，16/32B 行精确；offset 网格 3/3 不返回
+- **改进措施**：检测 待定；修复 待定（issue open；规避：shard 行 16/32B 对齐、HEIGHT_SHARDED 或 DRAM-interleaved 输入）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/63683
+
+### INF-2362 `lightning_indexer_mte3_mte2_race` lightning_indexer top-k 回读竞态读陈旧值
+
+`故障` · `pending_audit` · `verified` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / lightning_indexer 同步
+- **原因行为**：ProcessVec 写部分 top-k 结果到 vec1ResGm 后仅对 MTE3_V 排序；ProcessLD 经 DataCopyPad 用 MTE2 读同一 GM 却只等 V_MTE2/S_MTE2，缺 MTE3→MTE2 依赖
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：MTE2 读可在前一 MTE3 写完成前消费陈旧 workspace，损坏归约后的 top-k 索引与值（DSA lightning indexer 路径）；无报错
+- **改进措施**：检测 待定；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15092（open，2026-11-01）Fix MTE3 to MTE2 ordering before arch22 top-k readback；未发布
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7004；https://gitcode.com/cann/ops-transformer/merge_requests/15092
+
+### INF-2363 `advastep_numqueries_over_40_skipped` aclnnAdvanceStep 尾部序列静默不更新
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / aclnnAdvanceStep 核映射
+- **原因行为**：内核按 blockIdx 绑定 AIV 核数（40）处理序列，numQueries>40 时下标≥40 的序列四项输出保留调用方旧值；资料参数说明无 40 上限
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：numSeqs=101/numQueries=100 实测 60 个序列 seqLens 未 +1（最大偏差 1），四输出全为旧值；numQueries=40 全对，阈值即核数；两段返回 0/0 无报错
+- **改进措施**：检测 待定；修复 待定（issue open；规避：numQueries≤40 分批调用——未核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7889
+
+### INF-2364 `apply_adam_w_quant_fixed_4096_oob` aclnnApplyAdamWQuant 固定 4096 元素读写越界
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / ApplyAdamWQuant kernel 边界
+- **原因行为**：kernel 固定按 singleSize=4096 元素读写 var/grad/m/v/absmax，与实际 numel 无关；numel=256（官方示例规模）时越界量=4096−numel
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：mssanitizer memcheck 稳定 14 条 illegal read/write（mRef 越界读 3808B、varRef 7104B 读+写）；numel=4096 时 0 条；每 tensor +8KB 后 0 条（slack 吸收=静默腐蚀邻接内存）；fp16/fp32 均复现
+- **改进措施**：检测 mssanitizer --tool memcheck 可稳定捕获（14 条 illegal read/write）；修复 待定（issue open）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7888
+
+### INF-2365 `sgl_kernel_npu_compressor_accum_order` sgl compressor 小 batch 累加序漂移
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：算子/内核 / cann / compressor K-loop 偏移
+- **原因行为**：arch22 compressor 对小 batch 改变 D tile 宽度，MM1 K-loop 偏移依赖 core 索引与 D tile 数，同一输出列在 prefill 与短验证调用间以不同顺序累加 K 块
+- **影响对象**：数值结果（不可复现）
+- **影响详情**：DeepSeek-V4-Flash BF16 实测第 360 列 prefill 0.56640625 vs 验证 0.5625（FP64 舍入参考为 0.56640625）；同 token 新状态也不一致——P/D 或推测解码下 prefill/verify 路径结果漂移
+- **改进措施**：检测 待定；修复 修复 PR https://github.com/sgl-project/sgl-kernel-npu/pull/922（open，2026-11-01）：K-loop 偏移改由固定 64 列输出块导出；Ascend 910C 上 512 压缩输出值全部匹配 FP64 舍入参考、1/6/16/17/32/64/128/129/255/256/257/511/512/513 token 混合扫描 + 24 例 BF16/FP16（C4/C128、head 128/512）+ graph replay 通过；未发布
+- **来源**：https://github.com/sgl-project/sgl-kernel-npu/pull/922
 
 ## 编译器
 
@@ -11463,6 +11574,17 @@
 - **影响详情**：0.7.0.post1/0.7.2.post1（sm_120/121）复现；main@96ca3d0 已有 #5168 守卫（捕获期折叠准备改 RuntimeError），诉求 backport；混合图+eager 执行输出交替正确/全零。
 - **改进措施**：检测 图捕获后首个 eager run() 输出与图重放对照；检查 _folded_w1_alpha 是否全零。；修复 main 已有守卫 PR #5168（5c4058bd9b：捕获期折叠准备改为显式 RuntimeError 提示 eager 预热）；0.7.x release 未携带，issue 诉求 backport（open，未发布）
 - **来源**：https://github.com/flashinfer-ai/flashinfer/issues/8119
+
+### INF-2352 `torchnpu_inner_abort_poisons_process` 310P INNER-ABORT 后同进程 NPU 算子静默返回垃圾值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：运行时/执行 / torch_npu / error-manager 内错中止后的设备上下文
+- **原因行为**：fp64/bf16 等不支持的算子触发 CANN error-manager INNER-ABORT 后进程未退出，设备上下文已死但后续算子继续在毒化态上执行，静默返回未初始化显存值
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：一次 INNER-ABORT 之后同进程所有后续 NPU 计算静默返回未初始化垃圾值（全有限、非 NaN），fp32 matmul 相对误差达 8.06e+17，无任何异常或告警
+- **改进措施**：检测 待定；修复 待定（issue open；规避：不支持的 dtype/模式调用前显式检查，或 abort 后立即重启进程——A3 上同类调用为干净 RuntimeError 且不毒化）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5789；https://gitcode.com/Ascend/pytorch/issues/5788
 
 ## 集合通信
 
@@ -16372,6 +16494,39 @@
 - **影响详情**：prefill/decode 混合批 SFA/indexer query 行失配或直接错答；W8A8+INT8 KV+TP1/PCP8/EP8+MTP5+4 并发复现，eager 与 FULL_DECODE_ONLY 均受影响，纯 prefill 不暴露。
 - **改进措施**：检测 PCP 混合批配置下对比纯 prefill/纯 decode 与混合批输出；监控 SFA query 行数与 KPool 输出 token 数一致性。；修复 待定（issue open 2026-10-31，main@469c6c260 复现；报告给出四处根因与修复方向（对齐行数/replicated decode 判定/packed store 寻址/预留双 chunk），未见修复 PR）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/20510
+
+### INF-2351 `vllm_ascend_swa_zip_drops_layers` vLLM-Ascend SWA 层分组用 zip() 静默丢弃不均匀尾层缓存
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：KV缓存 / vllm / group_cache_specs SWA 层分组
+- **原因行为**：按物理槽位转置 SWA 层分组时用 zip()，列长不齐时在最短列截断，尾部层被静默丢弃出调度器组
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：39 层骨干（KV 源层 [2,8,14,20]→SWA 列长 [10,10,10,9]）丢层 36/37/38 的 SWA 缓存；削减层 DeepSeek V4.1 骨干静默失去尾部层缓存，属缓存规划正确性缺陷
+- **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20532（open，2026-11-01）：改 zip_longest 省略缺项，含 37/38/39/40 层回归测试；未发布
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/20532
+
+### INF-2353 `vllm_ascend_block_size_omitted_corrupts_output` vLLM-Ascend 省略 --block-size 时元数据失配输出乱码
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：KV缓存 / vllm / block size 刷新与元数据构建不一致
+- **原因行为**：用户未显式传 --block-size 时，Ascend 侧先按 128 刷新分配规格，load_model 后 vLLM worker 又按后端偏好改回 16，已分配规格与 DSA 元数据构建器所用 block size 不一致
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：DeepSeek V4.1 Flash P/D 部署省略 --block-size 时全部 8 个端点与 16 组 P/D 对检查失败：reasoning 复述错误的校验码与算式、content 为 null 或空、1024 token 截断；显式 --block-size 128 输出正常
+- **改进措施**：检测 待定；修复 待定（issue open；规避：显式传 --block-size 128）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20550
+
+### INF-2361 `vllm_ascend_retention_interval_dead_env` Ascend 混合 KV retention_interval 配置失效
+
+`故障` · `pending_audit` · `verified` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：KV缓存 / vllm / KV 协调器初始化与转发
+- **原因行为**：协调器读 0.29 清理中已删除的 env 恒得 None，不调 super().__init__()，覆写的 find_longest_cache_hit 也不转发 retention_interval，三处断裂使配置失效
+- **影响对象**：KV状态；性能/资源（静默错误）
+- **影响详情**：DeepSeek-V4/V4.1 上 --prefix-cache-retention-interval 无任何效果；非法值（4097 非 block-size 32 倍数）被静默接受、四 DP 引擎正常初始化、/metrics 正常，上游应抛的 ValueError 从未触发
+- **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20546（open，2026-11-01）：改读 CacheConfig 字段、补校验与转发；未发布。历史：#17480 修过 env 读取但 2026-10-09 被 #18029 整体回退
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20537；https://github.com/vllm-project/vllm-ascend/pull/20546
 
 ## 调度/服务
 
@@ -22294,6 +22449,17 @@
 - **改进措施**：检测 固定权重与 scale，比对 W8A8 与 W8A16 per-group 伪量化输出（两者应一致）；全 1 激活下输出应等于反量化权重行和。；修复 待定（issue open，未见修复；默认配方未必用 (int8_per_token, int8_per_group) 组合，默认一键量化是否受影响未确认）
 - **来源**：https://gitcode.com/Ascend/msmodelslim/issues/666
 
+### INF-2354 `vllm_ascend_swiglu_mxfp_tail_masks` SwigluGroupQuant MXFP 尾部四连存计数缺失越界写
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：量化 / vllm / SwigluGroupQuant 尾存储掩码
+- **原因行为**：四个连续 packed store 各自维护独立的剩余列计数器，同一尾部被四个 store 都当作有效，越行覆写相邻 UB 缓冲
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：专家中间维 640（W4A8 MoE，Qwen3.8-Next 实测）在四路 packed 输出存储路径留下不完整尾向量，激活量化输出错误或不稳定；修复后 22 例 NPU 回归通过、端到端 GPQA 90.91%（180/198）
+- **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20539 与 backport #20540（均 closed/merged 进 v0.32.0rc，2026-11-01）：四个 store 共享一个计数器，含 640 宽度/FP16/BF16/重复性/重建误差/graph replay 回归；发布状态未核实
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/20539；https://github.com/vllm-project/vllm-ascend/pull/20540
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -23676,6 +23842,17 @@
 - **影响详情**：批内左 padding 样本的有效 token logits 变 NaN（同批未 padding 样本仍有限）；默认不指定后端时选 SDPA 不触发
 - **改进措施**：检测 待定；修复 待定（issue open；当前 main 6b6792ff 相关 mask 加法仍在）
 - **来源**：https://github.com/huggingface/transformers/issues/49888
+
+### INF-2360 `modernbert_mean_pool_fp16_overflow` ModernBERT mean pooling fp16 求和溢出 NaN
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-01
+
+- **原因对象**：模型定义 / transformers / ModernBERT mean pooling
+- **原因行为**：mean pooling 先对全部 token 的 last_hidden_state 求和再除以 token 数，fp16 下乘积与求和均为 fp16 张量，和超 65504 即 inf，经分类头变 NaN
+- **影响对象**：输出内容（数值异常）
+- **影响详情**：四个默认 classifier_pooling=mean 的 checkpoint 在 8192 token 内即溢出（mmBERT-small 通道均值 27~29、和达 23.8 万）；NaN logits；CUDA autocast 对 sum 走 fp32 理论不触发（未测 CUDA）
+- **改进措施**：检测 待定；修复 待定（issue open；规避：fp32 求和后除法或 fp32/bf16 运行）
+- **来源**：https://github.com/huggingface/transformers/issues/50216
 
 ## 权重/检查点
 
