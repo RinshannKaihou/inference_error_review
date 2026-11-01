@@ -4,19 +4,19 @@ slug: triton_ascend_workspace_block_count_uint32_wraparound
 aliases: []
 title: triton-ascend workspace program 数 32 位回绕
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: triton
     component: driver.py workspace 计价
-  behavior: workspace 按 per-program size × program 总数计价，grid 三乘积在赋值时按 32 位回绕；乘积 2^32 回绕成 0，totalWorkSpaceSize=0 致申请失败或 kernel 越界。
+  behavior: totalWorkSpaceSize 按 per-program size×program 总数计价，blockNum4Workspace=gridX*gridY*gridZ 赋值时按 32 位回绕，乘积达 2^32 时算得 0 字节。
 effect:
   objects:
-  - 数值结果
   - 可用性/进度
+  - 数值结果
   detail: 'grid 乘积恰好 2^32 的形态回绕为 0（main-dev 已由 #2875 修复同源缺陷，release/3.2.2 旧 driver.py 路径未覆盖——#2834 修复不完整）；只放宽 workspace 侧，block_dim 形参仍须 32 位（语义不同）。'
-  visibility: 静默错误
+  visibility: 报错
 mitigation:
   detect: 大 grid（乘积超 2^32）kernel 的 workspace 字节数断言 >0；对照 main-dev 行为。
   fix: '修复 PR https://github.com/triton-lang/triton-ascend/pull/2903 （open 2026-10-31：两条 launch 路径乘法前加宽到 64 位；关联 issue #2797；未合入未发布）'
@@ -42,3 +42,24 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 可用性/进度
+      visibility:
+        from: 静默错误
+        to: 报错
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

@@ -4,19 +4,20 @@ slug: vllm_indexer_ragged_spec_decode_weights_misaligned
 aliases: []
 title: vLLM indexer ragged spec-decode 权重与因果界错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 解码/采样
+  - subsystem: 算子/内核
     stack: vllm
     component: indexer padded decode 打包
   behavior: ragged decode 批下 q 被打包但两输入不配套：weights 仍按 token 序传（短请求后每 token 读错权重行）；因果界用 batch 最大值而非请求自身 decode 长度。
 effect:
   objects:
+  - 数值结果
   - 输出分布
   - KV状态
   detail: indexer logits 错误 → 选错 top-k KV 行做 sparse attention，无任何报错、输出质量下降；缺陷在 host 侧 metadata/输入切片，与 ROCm 版本无关（MI355X 复现，代码锚点 main@602811546）。
-  visibility: 静默错误
+  visibility: 质量退化
 mitigation:
   detect: 构造含短请求（0<decode_len<max）的 ragged spec-decode 批，对照各请求独立运行的 indexer top-k 行集合。
   fix: 待定（issue open 2026-10-31，未见修复 PR）
@@ -40,3 +41,23 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 解码/采样
+        to: 算子/内核
+      effect:
+        from: 输出分布
+        to: 数值结果
+      visibility:
+        from: 静默错误
+        to: 质量退化

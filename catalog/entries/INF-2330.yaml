@@ -4,7 +4,7 @@ slug: ops_nn_index_int_indices_out_shape_unchecked
 aliases: []
 title: aclnnIndex 整型索引不校验 out 形状，偏小静默截断偏大未初始化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7853
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0569
 original:
   mechanism: 'cann/ops-nn issue #7853（2026-10-31，Atlas A2 910B/CANN 9.2.0-beta.2 + torch_npu 2.12.0）：aclnnIndex 在 indices 为整型时完全不校验 out 形状。源码锚点 index/index/op_api/aclnn_index.cpp:164 的 static void CheckShape 只检查 indices 个数（selfDimNum==0 时 indicesSize>1、indicesSize>selfDimNum 两情形），且只有 OP_LOGW 日志级提示、无 CHECK_RET 返回值被丢弃；从头到尾没有检查 out。实测：self=fp32[6,4]、indices=int64[3]={0,1,2}、out=fp32[1,4] 时 GetWorkspaceSize/aclnnIndex/aclrtSynchronizeStream 全 0，读回 out=(1,4) 内容=self[0]，self[1]/self[2] 被静默丢弃；out=(6,4) 偏大返回 0 尾部未初始化；out=(0,4) 与末维 (3,5) 失配同样返回 0。资料要求 out 形状与 indices 推导不一致时应返回 161002 参数非法。'
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/7853 （open，2026-10-31 创建；含源码锚点与四种失配实测）
@@ -39,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - component

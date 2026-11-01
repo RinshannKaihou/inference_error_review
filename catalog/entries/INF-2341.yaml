@@ -4,18 +4,18 @@ slug: ops_nn_in_training_reduce_v2_ar_fold_loss_lowbits
 aliases: []
 title: INTrainingReduceV2 AR 折叠丢低位极值抵消输出 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: AR 归约结构与折叠
-  behavior: ARA 用默认 AR 结构定位 oom 边界元数据失配致动态 oom；全载 AR 折叠丢低位分量，±FLT_MAX 对消应 sum=0 输出 NaN；DYN Tiling 缺输出格式 Host 保护。
+  behavior: ARA以默认AR结构定位oom元数据，400000元素需112B与默认184B不符；FLOAT求和中间溢出先于抵消，全载AR折叠丢低位分量；DYN Tiling未校验输出ND格式，非法格式误落rank、零R缺诊断。
 effect:
   objects:
   - 数值结果
   detail: 极值对消输入 sum=0 被算成 NaN；137 条动态 oom 失败 + 6 条极值 sum 精度失败（三方冻结输入复现）；修复（400000 单独注册 ARA 结构 + 全 R 共享二进制缩放保留 AR 高/低分量）后 19/19 原失败用例通过、485/486 L1 首跑通过。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: 极值对消输入（±FLT_MAX 序列）检查 sum 是否 NaN；动态 shape 高压回归。
   fix: 修复 PR https://gitcode.com/cann/ops-nn/pull/13239 （open：ARA 结构单独注册+二进制缩放+格式诊断；CANN 9.3.0 实测 19/19 通过，未发布未核实）
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - behavior

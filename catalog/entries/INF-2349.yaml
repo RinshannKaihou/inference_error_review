@@ -4,7 +4,7 @@ slug: vllm_ascend_glm53_flash_mrv2_pcp_mixed_batch_kv_mismatch
 aliases: []
 title: GLM-5.3-Flash MRV2 PCP 混合批 KV 失配致错答
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -40,3 +40,10 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

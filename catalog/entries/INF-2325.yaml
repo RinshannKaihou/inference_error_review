@@ -4,7 +4,7 @@ slug: ops_math_sign_bits_unpack_oob_write_32b
 aliases: []
 title: aclnnSignBitsUnpack 小 out 越界写 32 字节
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: out 元素数小于 256（fp32 时 out 字节数 <1024）时，算子向 out 之后恒多搬一块对齐数据，越界写恒定 32 字节；out ≥1024 字节后归零。
 effect:
   objects:
+  - 数值结果
   - 跨请求/跨样本数据
   detail: 越界内容为 8 个 -1.0f（约 32 字节），踩坏按 out 精确尺寸申请的相邻 tensor；40 组 n 扫描零反例（n≤31 恒 32 字节、n≥32 恒 0），fp16 同形态（n≤31 越界 16~32 字节）；同机 aclnnAbs 相同哨兵 7 组全 0 越界可排除环境因素。
   visibility: 静默错误
@@ -40,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: 数值结果

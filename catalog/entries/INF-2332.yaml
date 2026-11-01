@@ -4,7 +4,7 @@ slug: ops_math_reduce_log_sum_empty_out_zero
 aliases: []
 title: aclnnReduceLogSum 空输入输出 0 而非 -inf
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 空输入静默得到 0 而非 -inf，下游把「无元素」当作「元素和为 1」处理；具体复现矩阵以 issue 正文为准（本轮按标题+关键词索引判定，正文未深读全段）。
+  detail: 空 tensor（0 元素归约维）输入时接口返回成功、输出 0.0 而非数学正确的 -inf，无任何报错；依赖 -inf 哨兵判断空归约的下游逻辑（如 attention score 空行、logsumexp 组合）把空输入误当有效值 0 继续算。非空输入正常。
   visibility: 静默错误
 mitigation:
   detect: 空张量输入单测，期望 -inf；非空输入对照。
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-math/issues/4366
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0568
 original:
   mechanism: 'cann/ops-math issue #4366（2026-10-31）：aclnnReduceLogSum 在空 tensor 输入时输出填 0，而 log(sum(∅))=log(0) 数学上应为 -inf；issue 标题注明与同仓（其他 reduce 算子空输入行为）对照。本轮按索引（标题+关键词命中）判定收录，正文复现矩阵未逐段深读；机制事实以 issue 正文为准。'
   source: GitCode issue https://gitcode.com/cann/ops-math/issues/4366 （open，2026-10-31 创建）
@@ -39,3 +41,21 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - behavior

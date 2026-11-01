@@ -4,7 +4,7 @@ slug: ops_nn_gather_v3_fp64_rank6_all_zero
 aliases: []
 title: aclnnGatherV3 fp64 且秩≥6 时两段返回 0 但输出整块全 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: fp64 rank6 例 out 2048/2048 元素全 0（正确为非零随机数据）；rank 扫描矩阵 fp32 全 rank 逐位正确而 fp64 rank≥5 起 561000 错、rank6-8 全 0；同一输入重复 3 次完全一致。
+  detail: 910B/CANN 9.2.0-beta.2、dim=0/batchDims=0/mode=1 下，fp64 rank6 输出 2048/2048 元素全 0；fp32 rank 2-8 逐位正确，fp64 rank5 起 561000 错、rank6-8 全 0；同一输入重复 3 次结果一致。
   visibility: 静默错误
 mitigation:
   detect: fp64 高秩输入与 fp32 同形对照；输出全 0 且接口返回 0 即命中。
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/7848
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0570
 original:
   mechanism: 'cann/ops-nn issue #7848（2026-10-31，Atlas A2 910B/CANN 9.2.0-beta.2）：aclnnGatherV3 在 self.dtype=DOUBLE(fp64) 且秩 ≥6（实测 rank≥5 已出现 561000 错值、rank≥6 全 0）时，两段式接口均返回 0，但设备侧输出整块为 0（静默脏数据）。证据矩阵（self=(3,2,...,2)、index=(2,2,...,2)、dim=0）：fp32 全 rank 2-8 逐位正确（neq=0），fp64 rank 2-4 正确、rank5 561000 错、rank6-8 全 0（neq=2048/2048、8192/8192、32768/32768）——fp32 全对排除 shape 构造/标杆问题，是 fp64 通路高秩独立缺陷。确定性证据：同一输入重复 3 次结果完全一致（run0/1/2 全 0），排除竞争/未初始化。资料 index/gather_v2/docs/aclnnGatherV3.md 的 self dtype 表包含 DOUBLE 且产品支持声明 Atlas A2 支持，未对 rank 与 dtype 组合加限制。'
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/7848 （open，2026-10-31 创建；含 rank×dtype 扫描矩阵与三次重复一致性证据）
@@ -39,3 +41,18 @@ original:
 migration:
   method: scan
   scanned: '2026-10-31'
+  updates:
+  - date: '2026-11-01'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-01
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior
