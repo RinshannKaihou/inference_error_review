@@ -4,7 +4,7 @@ slug: modernbert_mean_pool_fp16_overflow
 aliases: []
 title: ModernBERT mean pooling fp16 求和溢出 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 模型定义
@@ -13,6 +13,7 @@ cause:
   behavior: mean pooling 先对全部 token 的 last_hidden_state 求和再除以 token 数，fp16 下乘积与求和均为 fp16 张量，和超 65504 即 inf，经分类头变 NaN
 effect:
   objects:
+  - 输出分布
   - 输出内容
   detail: 四个默认 classifier_pooling=mean 的 checkpoint 在 8192 token 内即溢出（mmBERT-small 通道均值 27~29、和达 23.8 万）；NaN logits；CUDA autocast 对 sum 走 fp32 理论不触发（未测 CUDA）
   visibility: 数值异常
@@ -38,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 输出分布

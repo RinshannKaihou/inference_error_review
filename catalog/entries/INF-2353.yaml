@@ -4,15 +4,16 @@ slug: vllm_ascend_block_size_omitted_corrupts_output
 aliases: []
 title: vLLM-Ascend 省略 --block-size 时元数据失配输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: vllm
     component: block size 刷新与元数据构建不一致
-  behavior: 用户未显式传 --block-size 时，Ascend 侧先按 128 刷新分配规格，load_model 后 vLLM worker 又按后端偏好改回 16，已分配规格与 DSA 元数据构建器所用 block size 不一致
+  behavior: 源码级假设（非运行时 trace）：带 prefix caching/chunked prefill 且未传 --block-size 时，Ascend 构建前解析为 128，随后 worker 按后端偏好选 16，与已分配规格不一致
 effect:
   objects:
+  - KV状态
   - 输出内容
   detail: DeepSeek V4.1 Flash P/D 部署省略 --block-size 时全部 8 个端点与 16 组 P/D 对检查失败：reasoning 复述错误的校验码与算式、content 为 null 或空、1024 token 截断；显式 --block-size 128 输出正常
   visibility: 静默错误
@@ -38,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: KV状态
+    rewritten:
+    - behavior

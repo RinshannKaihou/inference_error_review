@@ -4,7 +4,7 @@ slug: lightning_indexer_mte3_mte2_race
 aliases: []
 title: lightning_indexer top-k 回读竞态读陈旧值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   detail: MTE2 读可在前一 MTE3 写完成前消费陈旧 workspace，损坏归约后的 top-k 索引与值（DSA lightning indexer 路径）；无报错
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 待定
   fix: 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15092（open，2026-11-01）Fix MTE3 to MTE2 ordering before arch22 top-k readback；未发布
@@ -30,7 +30,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-transformer/merge_requests/15092
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: TRN-0584
 original:
   mechanism: ops-transformer lightning_indexer arch22 内核：ProcessVec 在 op_kernel/arch22/lightning_indexer_kernel_arch22.h:487 用 LIServiceVec::CopyOut 把部分 top-k 结果写入 vec1ResGm，:488 只对 MTE3_V 下单；ProcessDecode 调 SyncAll() 后（:681-683）ProcessLD 在 :586/:605 用 MTE2 DataCopyPad 读同一 GM，但 :584-585/:603-604 只等 V_MTE2 和 S_MTE2——没有 MTE3→MTE2 依赖，MTE2 读可能在前一 MTE3 写完成前消费陈旧 workspace，损坏归约后的 top-k 索引与值。issue 给出精确行号定位（源码级机制闭合）。修复 MR !15092（open）补 MTE3→MTE2 排序。来源 https://gitcode.com/cann/ops-transformer/issues/7004（open，2026-11-01）。
   source: 2026-11-01 每日扫描。https://gitcode.com/cann/ops-transformer/issues/7004 ；修复 https://gitcode.com/cann/ops-transformer/merge_requests/15092
@@ -40,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  updates:
+  - date: '2026-11-02'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现

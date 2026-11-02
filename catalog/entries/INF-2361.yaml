@@ -4,7 +4,7 @@ slug: vllm_ascend_retention_interval_dead_env
 aliases: []
 title: Ascend 混合 KV retention_interval 配置失效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,9 +13,9 @@ cause:
   behavior: 协调器读 0.29 清理中已删除的 env 恒得 None，不调 super().__init__()，覆写的 find_longest_cache_hit 也不转发 retention_interval，三处断裂使配置失效
 effect:
   objects:
-  - KV状态
   - 性能/资源
-  detail: DeepSeek-V4/V4.1 上 --prefix-cache-retention-interval 无任何效果；非法值（4097 非 block-size 32 倍数）被静默接受、四 DP 引擎正常初始化、/metrics 正常，上游应抛的 ValueError 从未触发
+  - KV状态
+  detail: DeepSeek-V4/V4.1 上设 --prefix-cache-retention-interval 无任何效果；非法值 4097（非 block-size 32 倍数）被静默接受，四 DP 引擎正常初始化、日志无错误，上游 must be a multiple 校验从未出现
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-01'
+  audit:
+    round: daily-audit-2026-11-02
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: KV状态
+        to: 性能/资源
+    rewritten:
+    - detail
