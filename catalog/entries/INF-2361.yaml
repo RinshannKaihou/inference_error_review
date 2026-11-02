@@ -38,6 +38,9 @@ original:
   behavior: 在 Ascend A3 上部署 DeepSeek-V4.1-Flash 并设 --prefix-cache-retention-interval：无论传什么值（包括明显非法的 4097，不是 block-size 32 的倍数），服务都正常启动、四组 DP 引擎正常初始化、监控指标正常输出，日志里一条错都没有——但该配置对 KV 前缀缓存保留行为毫无作用，用户以为 retention 策略已生效实际完全没生效，上游本应报的 must be a multiple 校验也从未出现。
   trigger_surface: vllm-ascend v0.30.0rc2（Ascend 混合 KV cache 路径，DeepSeek-V4/V4.1）；任何 --prefix-cache-retention-interval 值；#18029 回退后版本
   discovery: 2026-11-01 每日扫描
+  notes:
+  - '2026-11-02 2026-11-02 回访：修复 PR #20546 仍 open（11-02 12:57Z 更新），未合入'
+  - '2026-11-02 2026-11-02 回访：修复 PR #20546 仍 open（11-02 12:57Z 更新），未合入'
 migration:
   method: scan
   scanned: '2026-11-01'
@@ -57,3 +60,10 @@ migration:
         to: 性能/资源
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-02'
+    fields:
+    - original.notes
+  - date: '2026-11-02'
+    fields:
+    - original.notes

@@ -3,21 +3,21 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2365 条；状态：active 2365
+共 2372 条；状态：active 2365、pending_audit 7
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 721 |
+| 算子/内核 | 725 |
 | 编译器 | 151 |
 | 运行时/执行 | 135 |
 | 集合通信 | 39 |
 | 并行切分 | 31 |
-| KV缓存 | 370 |
-| 调度/服务 | 92 |
+| KV缓存 | 371 |
+| 调度/服务 | 93 |
 | 输出解析 | 68 |
 | 解码/采样 | 153 |
-| 量化 | 215 |
+| 量化 | 216 |
 | 位置编码 | 42 |
 | 分词/模板 | 33 |
 | 模型定义 | 49 |
@@ -8387,6 +8387,50 @@
 - **改进措施**：检测 待定；修复 修复 PR https://github.com/sgl-project/sgl-kernel-npu/pull/922（open，2026-11-01）：K-loop 偏移改由固定 64 列输出块导出；Ascend 910C 上 512 压缩输出值全部匹配 FP64 舍入参考、1/6/16/17/32/64/128/129/255/256/257/511/512/513 token 混合扫描 + 24 例 BF16/FP16（C4/C128、head 128/512）+ graph replay 通过；未发布
 - **来源**：https://github.com/sgl-project/sgl-kernel-npu/pull/922
 
+### INF-2369 `quasar_sfpcast_float_int_rounding_truncation` Quasar SFPCAST typecast 8 位尾数截断错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / tt-metal / Quasar SFPU typecast
+- **原因行为**：float→int 转换先走 sign-magnitude int32 的 SFPCAST mode 4，该模式只保留 8 位小数再舍入，(0.5, 0.5+1/256) 区间值被视为精确平手被向下舍
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Float32→Int8 全域 327,552 个输入错 1（Int16 另有 2.68e8 量级 wrap 不饱和）；均匀分数分布下约 1/512 元素受影响，全部为差一错误，RTL 仿真逐输入证实与硬件一致
+- **改进措施**：检测 报告者跑遍 2^32 全部 fp32 输入（NaN 除外）对照 round-to-nearest-even+饱和，RTL 仿真验证；修复 修复方案已给：窄格式用单条 SFP_STOCH_RND 指令（mode 2/3/6/7）直接舍入+饱和，对每个输入精确且同速或更快；单测尚无修复 PR 链接（正文向维护者征询旧注释出处）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/63867
+
+### INF-2370 `maxpool2d_with_mask_m200_tail_unaligned_datacopy_dirt` MaxPool2dWithMask 310P 索引尾部非对齐清零残留脏数据
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / CANN / max_pool2d_with_mask m200
+- **原因行为**：310P 路径清零 indices 尾部用 3 参 DataCopy 按元素计数下发，非 32B 整数倍时硬件按 32B 块向下取整，尾部最多 7 个 int32 未写
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：输出 indices 尾部保留未初始化脏数据（越界/未写），官方样例形状 [1,1,7,7]→5x5=25 即触发（100B%32=4）；元素数为 8 的倍数时不触发
+- **改进措施**：检测 同族 910B 路径与 m200_transpose 对照实现（AlignUp+SetValue 补齐首尾）验证正确行为；报告者已在 NPU 跑正确实现对照实验；修复 待定（正文定位 5 处 M200 实现文件，同算子 910B 路径有正确写法可循，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7917
+
+### INF-2371 `aclnn_foreach_div_scalar_v2_fp16_double_downcast` ForeachDivScalarV2 DOUBLE 标量降 fp16 全 0
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / CANN / aclnnForeachDivScalarV2
+- **原因行为**：x=FLOAT16 且 scalar=DOUBLE（文档明确允许）时标量被降成 fp16 再下发，70000 超 fp16 上限变 inf，除法结果全 0
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：整张输出位模式全 0（正确值 2.14e-5 次正规可表示）；fp32/bf16 路径正确对照；GetWorkspaceSize 返回 0 表示组合被接受，全程静默
+- **改进措施**：检测 报告附完整 repro.cpp（aclrtMemcpy 位模式核验 OUT_BITS=0000）与文档原文对照；修复 待定（修复方向：按文档语义以 DOUBLE 或至少 fp32 参与计算；同仓 Foreach 系列标量提升规则统一修复 MR !13432 已开、状态 open，覆盖面待核实）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/7954；https://gitcode.com/cann/ops-nn/merge_requests/13432
+
+### INF-2372 `vllm_ascend_310p_qwen_fp16_qk_prescale_overflow` vLLM-Ascend 310P Qwen FP16 QK 溢出错答案
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：算子/内核 / vllm-ascend / 310P FP16 attention 前缩放
+- **原因行为**：未量化 Qwen2 FP16 在 310P 上未掩码 QK 分数达约 31 万（GSM8K 168 层实测最大 322143.9），FP16 上限 65504，常规 attention scale 前即溢出
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：Distill Qwen-1.5B 在 310P 生成错误 FP16 答案（eager 与 ACL Graph 一致地错，与 FP32 参考序列全不匹配）；无崩溃，输出看似有理但答案错
+- **改进措施**：检测 独立 FP32 profiling 定位未掩码 QK 约 31 万；修复后 32960 token 与 CPU FP32 参考精确一致；GSM8K 6 提示 168 层缩放后 FP16 范围外值清零；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20595 （open，未发布）：未量化 Qwen2 FP16 310P 路径 Q 预乘 1/8 + 各路径补偿 scale；缓存 KV 与调用方输入不变；附溢出/回归/重放测试与部署指南；覆盖限 Qwen-1.5B/Llama-8B TP1，更大变体未验证
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/20595
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -16520,6 +16564,17 @@
 - **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20546（open，2026-11-01）：改读 CacheConfig 字段、补校验与转发；未发布。历史：#17480 修过 env 读取但 2026-10-09 被 #18029 整体回退
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/20537；https://github.com/vllm-project/vllm-ascend/pull/20546
 
+### INF-2368 `trtllm_swa_scratch_reuse_host_staging_race` TRT-LLM SWA KV 页表 staging 竞态读覆写数据
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：KV缓存 / TensorRT-LLM / KVCacheManagerV2 staging
+- **原因行为**：enable_swa_scratch_reuse=True 的 per-layer 路径复用持久 host staging 张量做 non_blocking 异步拷贝，流未排空前 host 源被下一迭代覆写
+- **影响对象**：隐状态（静默错误）
+- **影响详情**：GPU 收到描述错误状态的 per-layer KV block offsets，attention 静默读错物理 KV 页；复现 5 次竞态拷贝全部 checksum 失配（3048 → 5.9e8 量级），控制组全对
+- **改进措施**：检测 报告附确定性复现 harness（排队 stream stall 后覆写 host 再同步比对 checksum）；修复 同机制默认 V2 block-offset 路径已由 PR #16088 修复并明确点出 per-layer 路径为遗留 follow-up；snapshot 到 fresh pinned buffer 的写法验证可消除（本路径修复尚未核实）
+- **来源**：https://github.com/NVIDIA/TensorRT-LLM/issues/21385；https://github.com/NVIDIA/TensorRT-LLM/pull/16088
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -17549,6 +17604,17 @@
 - **影响详情**：多模态/embed 请求被重算错误 KV、输出错且无报错（应 abort）；已流式输出的请求重启后新 token 拼接进旧流。PR #47521 改为 abort 503，open 未合入。
 - **改进措施**：检测 多模态/embeds 请求在 KV 压力触发 retract 后比对输出与无 retract 基线；监控 retract 后输出质量骤降。；修复 修复 PR https://github.com/sgl-project/sglang/pull/47521 （open，未合入）：release_req 返回可恢复性，不可恢复（multimodal/embeds rebootstrap、已流出 token 的 reprefill）改为 abort 503；另收 /detokenize 越界 id 由静默 200 改 400。
 - **来源**：https://github.com/sgl-project/sglang/pull/47521
+
+### INF-2367 `vllm_ascend_defer_block_free_accept_count_loss` defer_block_free 暂停请求丢 MTP 计数读过期状态槽
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：调度/服务 / vllm-ascend / defer_block_free 调度暂停
+- **原因行为**：accepted 计数只存在按 batch 行号索引的临时量里，被暂停的请求移出 InputBatch 时删掉 prev 映射，回来时缺省发布为 1
+- **影响对象**：隐状态（静默错误）
+- **影响详情**：混合 GDN + MTP + async 调度下被暂停请求的 recurrent 状态地址（accepted-1）丢失，下次 forward 读过期状态槽，生成被静默污染成复读环/乱码；GPQA 从 83-88 掉到 64-72
+- **改进措施**：检测 报告者有同步现场记录（defer=true、sched_seq>processed_seq、pending D2H 值 2/4 被发布成 1）与真实 FLA GDN 内核因果探针（计数 3→输出 0.375、计数 1→0.125、拷回正确状态恢复 0.375）；修复 修复建议按请求 ID 保存计数（快照 req→row、event 同步后收割、生命周期失效），报告者称已有实现并验证（A/B：计数丢失事件每 rank 3298→0、16384 token 复读环请求 1651 token 干净结束），尚未提 PR
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20677
 
 ## 输出解析
 
@@ -22462,6 +22528,17 @@
 - **影响详情**：调用返回成功、无报错，但 mRef 输出全 0，使下一步以 0 号索引反量化 m，absmaxMRef 系统性偏小（第 2 步实测 0.2013，参考 0.5268），量化优化器状态静默损坏；Atlas A2/910B2、CANN 9.2.0、blockSize=256 实测
 - **改进措施**：检测 待定；修复 待定（issue open；关联 #7736 同接口全零 block NaN 案，closed 原因未核实）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/7901
+
+### INF-2366 `vllm_ascend_fp8_block_tp_shard_offset_misresolve` vLLM-Ascend block-FP8 TP 分片反量化静默错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-02
+
+- **原因对象**：量化 / vllm-ascend / resolve_block_scales
+- **原因行为**：反量化函数假定分片行/列从全局块边界开始，TP 分片起点落在 block_n/block_k 块中间时给约半数行配错 scale
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：block-FP8 模型 TP 切分且每 rank 行数非 block_n 整数倍时（如 1536 行 TP=8 → 192），反量化权重静默错值，报告复现 66.6% 元素错，最大偏差 1.8，无任何报错或形状告警
+- **改进措施**：检测 报告附 CPU-only 纯 torch 复现脚本（构造错位分片与整张量先 resolve 再切片对拍）；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20653 （open，未发布）：加 row_offset/col_offset 参数 + load 时校验分片形状直接拒绝（镜像上游 vLLM validate_fp8_block_shape）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20652；https://github.com/vllm-project/vllm-ascend/pull/20653
 
 ## 位置编码
 
