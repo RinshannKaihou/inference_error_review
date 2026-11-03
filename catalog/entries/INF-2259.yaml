@@ -44,6 +44,7 @@ original:
   discovery: 2026-10-29 每日扫描
   notes:
   - 2026-10-30 2026-10-30 回访：ops-transformer#6910 批次快照仍 open；修复 !14811 未在窗口内更新（未核实合入）。
+  - 2026-11-03 回访 2026-11-03：源 ops-math#6910 连续第四轮在滚动窗口外（updated 久于批次窗口），状态未核；gitcode 单点核验 API 未在本轮预算内，下轮优先。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -52,6 +53,9 @@ migration:
     fields:
     - relations
   - date: '2026-10-30'
+    fields:
+    - original.notes
+  - date: '2026-11-03'
     fields:
     - original.notes
   audit:
