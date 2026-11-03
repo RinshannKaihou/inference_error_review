@@ -8,3 +8,7 @@ __pycache__/
 *.py[cod]
 *.bak*
 .claude/settings.local.json
+
+# Daily scan raw responses (training-repo convention) are not catalog deliverables.
+daily/raw/**
+!daily/raw/.gitkeep
