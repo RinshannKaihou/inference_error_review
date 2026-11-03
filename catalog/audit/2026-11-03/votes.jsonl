@@ -1,0 +1,60 @@
+{"job": "baseC|INF-2369|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2368|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2370|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2367|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2366|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|INF-2369|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2371|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2370|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2368|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2369|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2368|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2366|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseC|INF-2370|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2371|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2371|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2372|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseF|INF-2366|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-2372|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-2368|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-2372|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-2366|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "模型权重", "visibility": "静默错误"}}
+{"job": "baseF|INF-2367|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2369|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "missing_condition", "quote": "(0.5, 0.5+1/256) 区间值被视为精确平手被向下舍", "evidence": "小数落在 (0.5, 0.5+1/256) 且上文为偶数的值看似精确平手被向下舍"}, "detail": {"problem": "contradicts", "quote": "全部为差一错误", "evidence": "Int16 557,056 差一外加 268,431,870 个 ≥32767.5 wrap（40000→7232）、UInt16 278,528 差一 + 125,828,351 wrap"}}]}
+{"job": "baseF|INF-2370|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "（越界/未写）", "evidence": "尾部 <32B（最多 7 个 int32）不被清零……输出的 indices 尾部最多 7 个 int32 保留未初始化/脏数据"}}]}
+{"job": "baseF|INF-2366|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2367|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2370|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "（越界/未写）", "evidence": "输出的 indices 尾部最多 7 个 int32 保留未初始化/脏数据"}}]}
+{"job": "baseF|INF-2368|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2368|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2371|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2372|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-2367|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseF|INF-2366|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-2367|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseF|INF-2371|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2370|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "（越界/未写）", "evidence": "输出的 indices 尾部最多 7 个 int32 保留未初始化/脏数据"}}]}
+{"job": "baseF|INF-2369|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "(0.5, 0.5+1/256) 区间值被视为精确平手被向下舍", "evidence": "小数落在 (0.5, 0.5+1/256) 且上文为偶数的值看似精确平手被向下舍"}}]}
+{"job": "baseF|INF-2367|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2372|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "overstated", "quote": "与 FP32 参考序列全不匹配", "evidence": "但答案与 FP32 参考不一致（scale-one 负对照与 4 条 CPU FP32 参考序列全不匹配）。"}}]}
+{"job": "baseF|INF-2372|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2371|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2369|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "(0.5, 0.5+1/256) 区间值被视为精确平手被向下舍", "evidence": "小数落在 (0.5, 0.5+1/256) 且上文为偶数的值看似精确平手被向下舍"}}]}
+{"job": "panelC|INF-2369|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2369|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2372|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-2369|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2372|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelF|INF-2372|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2372|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2369|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "(0.5, 0.5+1/256) 区间值被视为精确平手被向下舍", "evidence": "小数落在 (0.5, 0.5+1/256) 且上文为偶数的值看似精确平手被向下舍"}}]}
+{"job": "panelF|INF-2369|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "(0.5, 0.5+1/256) 区间值被视为精确平手被向下舍", "evidence": "小数落在 (0.5, 0.5+1/256) 且上文为偶数的值看似精确平手被向下舍"}}]}
+{"job": "panelC|INF-2372|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "输出内容", "visibility": "静默错误"}, "attempts": 2}
+{"job": "panelF|INF-2369|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "区间值被视为精确平手被向下舍", "evidence": "小数落在 (0.5, 0.5+1/256) 且上文为偶数的值看似精确平手被向下舍"}}]}
+{"job": "panelF|INF-2372|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "fix|INF-2370", "model": "qwen3.8-max", "result": {"detail": "输出 indices 尾部最多 7 个 int32 保留未初始化/脏数据，算子仍返回成功、索引看似有数但不可信，下游据此回溯位置时静默取错；官方样例 [1,1,7,7]→5x5=25（100B%32=4）即触发，元素数为 8 的倍数时不触发"}}
+{"job": "fix|INF-2369", "model": "qwen3.8-max", "result": {"behavior": "float→int 转换先走 sign-magnitude int32 的 SFPCAST mode 4，该模式只保留 8 位小数再舍入，小数落在 (0.5, 0.5+1/256) 且上文为偶数的值看似精确平手被向下舍"}}
+{"job": "verify|INF-2370|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2370|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2369|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2369|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}

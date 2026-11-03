@@ -4,7 +4,7 @@ slug: aclnn_foreach_div_scalar_v2_fp16_double_downcast
 aliases: []
 title: ForeachDivScalarV2 DOUBLE 标量降 fp16 全 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -30,7 +30,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-nn/merge_requests/13432
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: TRN-0596
 original:
   mechanism: aclnnForeachDivScalarV2（ops-nn commit 7044c8328c）在 x=FLOAT16 + scalar=DOUBLE 时把 DOUBLE 标量降成 fp16 再下发。scalar=70000.0 超 fp16 上限 65504 变 inf，1.5/inf=0，整张输出位模式全 0；文档 docs/aclnnForeachDivScalarV2.md 参数表明确声明 x=FLOAT16 时 scalar 支持 FLOAT16、DOUBLE。对照实验：x=fp32+DOUBLE 正确（2.14e-5/3.57e-5/5.0e-5）；x=bf16+DOUBLE 被显式提升成 FLOAT 正确（2.15e-05 等）；仅 fp16 路径错。环境：Atlas A2（910B2）、CANN 9.2.0、aarch64、2026-11-02 复现，附完整 repro.cpp（RET_GWS=0 组合被接受、OUT_BITS 全 0）。同日同仓开出统一 Foreach 系列标量提升规则的修复 MR !13432（ FLOAT16 输入下 DOUBLE/FLOAT 标量被降精度），与本条机制同族，覆盖面待核实。
   source: https://gitcode.com/cann/ops-nn/issues/7954；同族修复 https://gitcode.com/cann/ops-nn/merge_requests/13432
@@ -40,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  updates:
+  - date: '2026-11-03'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

@@ -4,7 +4,7 @@ slug: vllm_ascend_fp8_block_tp_shard_offset_misresolve
 aliases: []
 title: vLLM-Ascend block-FP8 TP 分片反量化静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -13,6 +13,7 @@ cause:
   behavior: 反量化函数假定分片行/列从全局块边界开始，TP 分片起点落在 block_n/block_k 块中间时给约半数行配错 scale
 effect:
   objects:
+  - 模型权重
   - 数值结果
   detail: block-FP8 模型 TP 切分且每 rank 行数非 block_n 整数倍时（如 1536 行 TP=8 → 192），反量化权重静默错值，报告复现 66.6% 元素错，最大偏差 1.8，无任何报错或形状告警
   visibility: 静默错误
@@ -40,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 数值结果
+        to: 模型权重

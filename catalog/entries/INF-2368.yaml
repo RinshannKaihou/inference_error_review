@@ -4,7 +4,7 @@ slug: trtllm_swa_scratch_reuse_host_staging_race
 aliases: []
 title: TRT-LLM SWA KV 页表 staging 竞态读覆写数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,6 +13,7 @@ cause:
   behavior: enable_swa_scratch_reuse=True 的 per-layer 路径复用持久 host staging 张量做 non_blocking 异步拷贝，流未排空前 host 源被下一迭代覆写
 effect:
   objects:
+  - KV状态
   - 隐状态
   detail: GPU 收到描述错误状态的 per-layer KV block offsets，attention 静默读错物理 KV 页；复现 5 次竞态拷贝全部 checksum 失配（3048 → 5.9e8 量级），控制组全对
   visibility: 静默错误
@@ -40,3 +41,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-02'
+  audit:
+    round: daily-audit-2026-11-03
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 隐状态
+        to: KV状态
