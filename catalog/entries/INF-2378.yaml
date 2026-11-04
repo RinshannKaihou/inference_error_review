@@ -4,7 +4,7 @@ slug: foreach_sin_fp32_large_arg_unbounded_output
 aliases: []
 title: ForeachSin fp32 大参数返回 inf 越界值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: fp32 输入 |x|>=1e10 时 sin 输出 5.18e21/±inf 等 [-1,1] 外越界值，7/7 复现；同机 fp16/bf16 与 torch 对照正确，775 条精度线用例 max 组 28 条全 FAIL
-  visibility: 静默错误
+  detail: fp32 输入 |x|>=1e10 时输出 5.18e21 或 ±inf 等 [-1,1] 外越界值且不报错，7 值复现全越界（std::sin 参考均在 [-1,1]）；同值 1e4 时 fp16/bf16/fp32 全对；精度线 special_input=max 的 28 条全 FAIL
+  visibility: 数值异常
 mitigation:
   detect: 对大幅值输入抽查 |sin(x)|<=1 有界性
   fix: 待定（issue open，未见修复 PR）
@@ -38,3 +38,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-04
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail

@@ -4,10 +4,10 @@ slug: mindspore_string_enum_cross_mapping
 aliases: []
 title: MindSpore 字符串枚举跨枚举静默映射错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 配置/参数
+  - subsystem: 算子/内核
     stack: mindspore
     component: op_enum 字符串转枚举表
   behavior: op_enum.cc 的 AddValues(map) key 默认空串，所有 COMMON 枚举 merge 进同一张表；GetValues 找不到专用 key 也返回合并表，跨枚举名字被接受并当作当前参数的枚举值
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-04
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 配置/参数
+        to: 算子/内核

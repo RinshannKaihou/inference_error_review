@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2385 条；状态：active 2372、pending_audit 13
+共 2385 条；状态：active 2385
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -13,7 +13,7 @@
 | 运行时/执行 | 135 |
 | 集合通信 | 39 |
 | 并行切分 | 31 |
-| KV缓存 | 373 |
+| KV缓存 | 374 |
 | 调度/服务 | 94 |
 | 输出解析 | 68 |
 | 解码/采样 | 153 |
@@ -29,7 +29,7 @@
 | 重计算/卸载 | 7 |
 | RL训练回路 | 1 |
 | 观测/评测 | 72 |
-| 配置/参数 | 7 |
+| 配置/参数 | 6 |
 | 构建/发布 | 5 |
 | 模型自身 | 16 |
 | 外部攻击 | 19 |
@@ -8435,7 +8435,7 @@
 
 ### INF-2376 `foreach_roundoffnumber_mode6_uninit_residual` RoundOffNumber roundMode=6 返回未初始化残值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / RoundOffNumber 舍入模式分派
 - **原因行为**：roundMode=6（最近邻奇数舍入）路径未按语义计算且未写输出，返回未初始化 UB 缓冲内容；两段接口均返回 0，roundMode 1~5 正确
@@ -8446,67 +8446,69 @@
 
 ### INF-2377 `foreach_norm_p_non_12_wrong_order` ForeachNorm 非 1/2 阶 p 静默返 L1/L2 结果
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / foreach_norm 阶数分派
-- **原因行为**：第二入参 p（范数阶数）只实现 1/2 两个分支，其余 p 值静默落入最近分支：1<p<2 落 p=1、p>2 落 p=2，nan/±inf 也返回有限 L2 值；不校验不报错
+- **原因行为**：第二入参 p（范数阶数）仅实现 p=1、p=2 两个分支，其余 p 值不校验不报错，静默返回 L1 或 L2 范数结果；p=nan 亦返回有限值
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：p=1.5 返回 L1 值（31.93 期望给 249.8）、p=3/0.5/inf/-inf/nan 均返 L2 值 11.53；同机 torch._foreach_norm 全部 p 正确，两段返回码 0
+- **影响详情**：实测 p=1.5 输出与 p=1 完全相同（249.809）；p=3/2.5/0.5/±inf/nan 均输出 L2 值 11.5266（期望 4.23/6.30/124923/0.7448/0.25/未定义）；torch._foreach_norm 对全部 p 正确，两段直调返回码 0
 - **改进措施**：检测 以 p=1.5 与 p=1 比对输出是否相同；修复 待定（issue open，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8012
+- **关联**：cross:TRN-0612
 
 ### INF-2378 `foreach_sin_fp32_large_arg_unbounded_output` ForeachSin fp32 大参数返回 inf 越界值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / foreach_sin fp32 通路
 - **原因行为**：fp32 通路直接调 Sin<float,false>，角度归约 x-k*2π 中间量在 |x| 超出归约范围后溢出返回 ±inf；fp16 走 half 指令、bf16 值域够不到阈值不受影响
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：fp32 输入 |x|>=1e10 时 sin 输出 5.18e21/±inf 等 [-1,1] 外越界值，7/7 复现；同机 fp16/bf16 与 torch 对照正确，775 条精度线用例 max 组 28 条全 FAIL
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：fp32 输入 |x|>=1e10 时输出 5.18e21 或 ±inf 等 [-1,1] 外越界值且不报错，7 值复现全越界（std::sin 参考均在 [-1,1]）；同值 1e4 时 fp16/bf16/fp32 全对；精度线 special_input=max 的 28 条全 FAIL
 - **改进措施**：检测 对大幅值输入抽查 |sin(x)|<=1 有界性；修复 待定（issue open，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8007
 
-### INF-2379 `foreach_pow_nan_exponent_returns_one` foreach 幂族 NaN 指数当 0 次幂返回 1.0
+### INF-2379 `foreach_pow_nan_exponent_returns_one` NPU foreach 幂族 NaN 指数对非负底数返回 1.0
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / foreach pow 适配层
 - **原因行为**：PowerAdapter 链对非负底数把 NaN 指数静默当 0 次幂处理（x^0=1）；负底数走另一支路正确返 nan；同机 torch.pow 正确，缺陷限定在 foreach kernel 适配链
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：x1=[0.5,2,0,-0.5] x2=[nan,2,nan,3] 输出 [1,4,1,-0.125]，仅 NaN 位被替换为 1.0；IEEE-754/CPU/同机 NPU torch.pow 均应 nan；inf/-inf/0/-1/0.5 指数全对
+- **影响详情**：NPU（A3/A2，CANN 9.2.0-beta.2）上 exp=nan 时非负底数静默返 1.0：x=[0.5,2,0,-0.5,-2,1] 得 [1,1,1,nan,nan,1]，前五位应为 nan；负底数返 nan 正确，exp=inf/-inf/0/-1/0.5 与 torch 一致。
 - **改进措施**：检测 含 NaN 指数的 foreach_pow 输出比对 torch.pow；修复 待定（issue open，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8013
+- **关联**：cross:TRN-0612
 
 ### INF-2380 `block_sparse_attention_offset_uint32_wraparound` block_sparse_attention 偏移 uint32 回绕精度失败
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / cann / BSA 展平偏移 uint32 计算
 - **原因行为**：大规模稀疏 blockSparseMask 下展平偏移超过 uint32_t 范围导致地址回绕，KV 读取位置错误造成精度问题；修复 !15196 已 merged
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：kvseqlen=10M、blockShape=128 超大用例精度不通过（ATK 双标杆测试 FAIL）；常规规模正常
+- **影响详情**：kvseqlen=10M、blockShape=128 的超大稀疏用例输出精度测试失败（双标杆比对不过）；常规规模用例正常，无崩溃无报错
 - **改进措施**：检测 超大 kvseqlen 用例 ATK 双标杆比对；修复 修复 MR https://gitcode.com/cann/ops-transformer/pull/15196 （merged，发布版本未核实）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7051；https://gitcode.com/cann/ops-transformer/pull/15196
 
-### INF-2382 `scatter_pa_cache_scene2_third_seg_offset` ScatterPaCache 场景二第三段从 key[0] 起写致静默错值
+### INF-2381 `mindspore_string_enum_cross_mapping` MindSpore 字符串枚举跨枚举静默映射错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
-- **原因对象**：算子/内核 / cann / ScatterPaCache 场景二写入偏移
-- **原因行为**：场景二第三段 KV 从 key[0] 重新开始写而非从 key[compressSeqOffset+compressLens] 起写，keyCacheRef 被写入重复历史 token，违反文档与 IR 约束
-- **影响对象**：KV状态；数值结果（静默错误）
-- **影响详情**：注意力结果静默错误；自包含 C++ 复现（./repro 1 2 4 0 1 观察 row[2]）确认写入位置与契约不符
-- **改进措施**：检测 场景二调用后校验第三段起始 slot 内容；修复 待定（issue open，未见修复 PR）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/7063
+- **原因对象**：算子/内核 / mindspore / op_enum 字符串转枚举表
+- **原因行为**：op_enum.cc 的 AddValues(map) key 默认空串，所有 COMMON 枚举 merge 进同一张表；GetValues 找不到专用 key 也返回合并表，跨枚举名字被接受并当作当前参数的枚举值
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：ops.fft2(norm='none') 按 ortho 计算、'mean'按 forward、binary_cross_entropy/smooth_l1_loss 的 reduction='ortho'/'floor' 按 none、'forward' 按 mean；真正不存在的名字才报错
+- **改进措施**：检测 传其他枚举的名字（如 norm='none'）看是否被接受；修复 待定（issue open，未见修复）
+- **来源**：https://atomgit.com/mindspore/mindspore/issues/29710
 
 ### INF-2384 `tt_celu_neg_alpha_nan_band` ttnn.celu 负 alpha 临界带返回 NaN/正无穷
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：算子/内核 / tt-metal / SFPU expm1_cw_clamped 重构
 - **原因行为**：expm1_cw_clamped 重构中 k=128 时 two_k=setexp(1.0,k+127) 为 +inf，r<0 得 inf+(-inf)=NaN；89 截断保 k<=128 但 k=128 仍可达该路径
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：x/alpha∈(88.376,88.723) 带内 float32 返 NaN、bfloat16 舍入成 +inf（torch 给有限值或 -inf）；带外 1 ULP 内一致；主分支 863b43dd33 四用例全失败
+- **影响对象**：数值结果（数值异常）
+- **影响详情**：alpha<0 且 x/alpha∈(88.376,88.723) 时 float32 返 NaN、bfloat16 返 +inf，torch 给有限值/-inf；alpha=-0.5/-1/-4 均触发；带外 <88.376 与 torch 差 1 ULP，>ln(FLT_MAX) 均 -inf
 - **改进措施**：检测 负 alpha 下 x/alpha 扫过 88.4-88.7 带比对 torch；修复 待定（issue open；#61029 的截断已合入但 k=128 残留）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/64021
 
@@ -10199,12 +10201,12 @@
 
 ### INF-2385 `fla_chunk_scaled_dot_kkt_fwd_nondeterministic` GDN Triton/FLA 预填充非确定错误结果
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：编译器 / triton / sm90 loop-carried 归约代码生成
 - **原因行为**：BK<K 且 num_warps>=4 的 12/27 autotune 配置输出错误且 run 间不同，autotune 恰选中坏配置；疑似 triton 3.6 sm90 loop-carried 累加 codegen 缺陷
 - **影响对象**：输出分布；输出内容（不可复现）
-- **影响详情**：同 prompt 每次 forward 的 prompt logprobs 均值差 1.0-2.3 nat/token、尾部 20-35 nat；RL rollout 中表现为偶发立即 EOS、token 0 连发、NaN logprob（从初始状态续算预填充时）
+- **影响详情**：同 prompt（同进程、关前缀缓存、temperature 0）每次 forward 的 logprobs 不同：均值 |Δ|≈1.0-2.3 nat/token、尾部 20-35 nat；RL rollout 偶发立即 EOS、连发 token 0 与 NaN logprob。
 - **改进措施**：检测 同输入多次 forward 比对 prompt logprobs；逐 autotune 配置隔离测试；修复 待定（BK=K(=128) 或 num_warps=2 的配置确定性且 rel 1.7e-3，可作规避；根因修复未见）
 - **来源**：https://github.com/vllm-project/vllm/issues/65385
 
@@ -16678,7 +16680,7 @@
 
 ### INF-2373 `va_block_table_stale_rows_garbled_output` block_table 残留旧块号致前缀命中请求确定性乱码
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：KV缓存 / vllm / block_table 行残留清理
 - **原因行为**：append_row 只写活区间、add_row 只重置长度、move_row 不清源行与目标尾，行内残留上一租户块号；消费方按请求长度索引行把残留单元当有效块号解引用
@@ -16686,6 +16688,17 @@
 - **影响详情**：命中前缀缓存的请求输出确定性乱码或立即 EOS，冷请求正常；12/12 复现、两台 910B 位级同签名，损坏沿前缀扩散到后续命中请求
 - **改进措施**：检测 同前缀双请求 A/B 对比（暖轮乱码冷轮正常）；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20828 （open，未发布）；上游 vLLM #49757 已修 move_row 源行清理
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/20827；https://github.com/vllm-project/vllm-ascend/pull/20828
+
+### INF-2382 `scatter_pa_cache_scene2_third_seg_offset` ScatterPaCache 场景二第三段从 key[0] 起写致静默错值
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
+
+- **原因对象**：KV缓存 / cann / ScatterPaCache 场景二写入偏移
+- **原因行为**：场景二第三段 KV 从 key[0] 重新开始写而非从 key[compressSeqOffset+compressLens] 起写，keyCacheRef 被写入重复历史 token，违反文档与 IR 约束
+- **影响对象**：KV状态；数值结果（静默错误）
+- **影响详情**：注意力结果静默错误；自包含 C++ 复现（./repro 1 2 4 0 1 观察 row[2]）确认写入位置与契约不符
+- **改进措施**：检测 场景二调用后校验第三段起始 slot 内容；修复 待定（issue open，未见修复 PR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7063
 
 ## 调度/服务
 
@@ -17719,7 +17732,7 @@
 
 ### INF-2375 `va_balance_scheduler_sync_kv_load_order` BalanceScheduler 漏置同步 KV 装载标志致未装载先前向
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：调度/服务 / vllm / BalanceScheduler 输出构造
 - **原因行为**：BalanceScheduler.schedule() 构造 SchedulerOutput 时未填 has_sync_kv_loads，默认 False 使 start_load_kv 推迟到 forward 后，层等待时装载未初始化
@@ -17730,12 +17743,12 @@
 
 ### INF-2383 `vllm_l2_sleep_queued_request_before_reload` vLLM level-2 sleep 排队请求在权重重载前执行出错误输出
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：调度/服务 / vllm / wake_up 无 tag 立即恢复调度
 - **原因行为**：POST /wake_up 不带 tags 时立即恢复调度，睡眠期间排队的请求在 reload_weights 恢复被丢弃权重之前执行，用丢弃的权重算出与 prompt 无关的输出并 HTTP 200 返回
 - **影响对象**：输出内容（静默错误）
-- **影响详情**：睡眠引擎唤醒后首个排队请求输出与 prompt 完全无关但 HTTP 200；唤醒后再发的请求正确；分步唤醒（先 weights tag 再 kv_cache tag）可避开
+- **影响详情**：睡眠期间排队请求在 wake_up 后、reload_weights 完成前执行，输出与 prompt 无关但仍 HTTP 200；重载完成后请求恢复正常。分步唤醒可避开：wake_up?tags=weights → reload_weights → wake_up?tags=kv_cache
 - **改进措施**：检测 唤醒后先发对照 prompt 校验输出；修复 规避：分步唤醒 wake_up?tags=weights → reload_weights → wake_up?tags=kv_cache（issue 已给）；代码修复待定
 - **来源**：https://github.com/vllm-project/vllm/issues/65325
 
@@ -22665,7 +22678,7 @@
 
 ### INF-2374 `va_engram_quarot_missing_file_identity_rotation` QuaRot 旋转文件缺失静默用单位阵致知识塌缩
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-03
 
 - **原因对象**：量化 / vllm / engram 旋转基加载
 - **原因行为**：检查点声明了 QuaRot 全局旋转但 optional/quarot.safetensors 缺失时，load_engram_rotation_block 不校验声明路径存在性，返回单位阵且无日志；声明过旋转与从未声明两种情况不可区分
@@ -26233,17 +26246,6 @@
 - **影响详情**：两次执行的输出都只有 -vc 产出的 verl_param_compare_result/*.csv 与 NPU_config.json，没有 hyper_params_verify 结果，也没有任何冲突告警
 - **改进措施**：检测 检查输出目录是否同时出现 -vv 的 hyper_params_verify.csv 与 -vc 的 compare 结果；两者互斥时应在参数解析处直接报错；修复 待定（issue closed，仅要求“互斥参数应明确告知用户”，正文未给修复 PR）
 - **来源**：https://gitcode.com/Ascend/msprobe/issues/395
-
-### INF-2381 `mindspore_string_enum_cross_mapping` MindSpore 字符串枚举跨枚举静默映射错值
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-03
-
-- **原因对象**：配置/参数 / mindspore / op_enum 字符串转枚举表
-- **原因行为**：op_enum.cc 的 AddValues(map) key 默认空串，所有 COMMON 枚举 merge 进同一张表；GetValues 找不到专用 key 也返回合并表，跨枚举名字被接受并当作当前参数的枚举值
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：ops.fft2(norm='none') 按 ortho 计算、'mean'按 forward、binary_cross_entropy/smooth_l1_loss 的 reduction='ortho'/'floor' 按 none、'forward' 按 mean；真正不存在的名字才报错
-- **改进措施**：检测 传其他枚举的名字（如 norm='none'）看是否被接受；修复 待定（issue open，未见修复）
-- **来源**：https://atomgit.com/mindspore/mindspore/issues/29710
 
 ## 构建/发布
 

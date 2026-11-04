@@ -4,7 +4,7 @@ slug: tt_celu_neg_alpha_nan_band
 aliases: []
 title: ttnn.celu 负 alpha 临界带返回 NaN/正无穷
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,8 +14,8 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: x/alpha∈(88.376,88.723) 带内 float32 返 NaN、bfloat16 舍入成 +inf（torch 给有限值或 -inf）；带外 1 ULP 内一致；主分支 863b43dd33 四用例全失败
-  visibility: 静默错误
+  detail: alpha<0 且 x/alpha∈(88.376,88.723) 时 float32 返 NaN、bfloat16 返 +inf，torch 给有限值/-inf；alpha=-0.5/-1/-4 均触发；带外 <88.376 与 torch 差 1 ULP，>ln(FLT_MAX) 均 -inf
+  visibility: 数值异常
 mitigation:
   detect: 负 alpha 下 x/alpha 扫过 88.4-88.7 带比对 torch
   fix: 待定（issue open；#61029 的截断已合入但 k=128 残留）
@@ -38,3 +38,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-04
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    rewritten:
+    - detail

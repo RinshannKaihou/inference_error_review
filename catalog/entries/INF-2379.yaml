@@ -2,9 +2,9 @@ id: INF-2379
 legacy_ids: []
 slug: foreach_pow_nan_exponent_returns_one
 aliases: []
-title: foreach 幂族 NaN 指数当 0 次幂返回 1.0
+title: NPU foreach 幂族 NaN 指数对非负底数返回 1.0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: x1=[0.5,2,0,-0.5] x2=[nan,2,nan,3] 输出 [1,4,1,-0.125]，仅 NaN 位被替换为 1.0；IEEE-754/CPU/同机 NPU torch.pow 均应 nan；inf/-inf/0/-1/0.5 指数全对
+  detail: NPU（A3/A2，CANN 9.2.0-beta.2）上 exp=nan 时非负底数静默返 1.0：x=[0.5,2,0,-0.5,-2,1] 得 [1,1,1,nan,nan,1]，前五位应为 nan；负底数返 nan 正确，exp=inf/-inf/0/-1/0.5 与 torch 一致。
   visibility: 静默错误
 mitigation:
   detect: 含 NaN 指数的 foreach_pow 输出比对 torch.pow
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8013
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0612
 original:
   mechanism: foreach 幂族（ForeachPowScalar/V2/ScalarList/ScalarAndTensor/PowList，A3 910+CANN 9.2.0-beta.2+ops-nn@118c0c71，A2 910B3 交叉验证一致）在指数为 NaN 时对非负底数返回 1.0（x^0=1），违反 IEEE-754（应 NaN）。边界矩阵证明只有 exp=nan 一列出错：x 段 [0.5..]/[2..]/[0..] 的 exp=nan 全返 1，exp=inf/-inf/0/-1/0.5 全部与 torch 一致；负底数段 [-0.5,-2,..] 返 nan 正确（另一支路），唯非负底数 NaN 指数被误判。关键反证：同一台 NPU torch.pow 标量版/tensor 版全对、torch._foreach_pow CPU 对，只有 torch._foreach_pow NPU 与 aclnnForeachPowScalarV2 直调错（x=[0.5,2,0,-0.5,-2,1] exp=nan：期望 [nan,nan,nan,nan,nan,1]，得 [1,1,1,nan,nan,1]，末位 1^nan=1 两边一致正确），把缺陷从平台收紧到 foreach kernel 适配链（foreach_one_scalar_binary.h→PowerAdapter），AscendC Power 基础实现无责。一行 Python 复现：torch._foreach_pow([tensor([0.5,2.0,0.0,-0.5]).npu()], nan) → [1.0,1.0,1.0,nan]。含自包含 C++ aclnn 直调复现。
   source: https://gitcode.com/cann/ops-nn/issues/8013
@@ -38,3 +40,20 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-04
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    - title

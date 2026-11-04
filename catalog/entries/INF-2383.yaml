@@ -4,7 +4,7 @@ slug: vllm_l2_sleep_queued_request_before_reload
 aliases: []
 title: vLLM level-2 sleep 排队请求在权重重载前执行出错误输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: 睡眠引擎唤醒后首个排队请求输出与 prompt 完全无关但 HTTP 200；唤醒后再发的请求正确；分步唤醒（先 weights tag 再 kv_cache tag）可避开
+  detail: 睡眠期间排队请求在 wake_up 后、reload_weights 完成前执行，输出与 prompt 无关但仍 HTTP 200；重载完成后请求恢复正常。分步唤醒可避开：wake_up?tags=weights → reload_weights → wake_up?tags=kv_cache
   visibility: 静默错误
 mitigation:
   detect: 唤醒后先发对照 prompt 校验输出
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-03'
+  audit:
+    round: daily-audit-2026-11-04
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
