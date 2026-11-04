@@ -37,6 +37,8 @@ original:
   behavior: NPU 上调用 foreach 幂族（torch._foreach_pow 或 aclnn ForeachPow* 直调）且指数含 NaN 时，非负底数那些元素静默返回 1.0 而不是 NaN；同元素指数为正常值时结果正确。CPU 与同机普通 pow 均正确。
   trigger_surface: A3（910）/A2（910B3）；CANN 9.2.0-beta.2；foreach 幂族算子 + NaN 指数 + 非负底数。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#8013 仍 open，无更新
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -44,6 +46,9 @@ migration:
   - date: '2026-11-04'
     fields:
     - relations
+  - date: '2026-11-04'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-04
     base:

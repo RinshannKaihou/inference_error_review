@@ -35,6 +35,8 @@ original:
   behavior: 调用 aclnnForeachRoundOffNumber/V2 且 roundMode=6 时，输出与输入无关且每次运行都不同；全 0 输入也返回非 0 值；改 shape 后数值随之改变。无任何报错，返回码 0。roundMode 1~5 正常且逐位可复现。
   trigger_surface: Atlas A2（910B2）；CANN 9.2.0；aclnnForeachRoundOffNumber/V2 roundMode=6。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#8006 仍 open（11-03T12:55 后无更新）
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -50,3 +52,7 @@ migration:
     - qwen3.8-max
     uncertain:
     - visibility
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

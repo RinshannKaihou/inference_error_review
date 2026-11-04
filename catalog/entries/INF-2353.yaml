@@ -38,6 +38,7 @@ original:
   discovery: 2026-11-01 每日扫描
   notes:
   - 2026-11-03 回访 2026-11-03：源 vllm-ascend#20550 仍 open（11-03 16:06 有更新），未见修复合入。
+  - '2026-11-04 回访 2026-11-04：源 #20550 仍 open（11-03T16:06 后无更新）'
 migration:
   method: scan
   scanned: '2026-11-01'
@@ -59,5 +60,8 @@ migration:
     - behavior
   updates:
   - date: '2026-11-03'
+    fields:
+    - original.notes
+  - date: '2026-11-04'
     fields:
     - original.notes

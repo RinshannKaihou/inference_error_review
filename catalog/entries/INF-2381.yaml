@@ -35,6 +35,8 @@ original:
   behavior: 给算子字符串参数传本参数不支持的取值（但属于其他枚举的名字，如 norm='none'、reduction='ortho'）时，不报 ValueError，而是静默按另一个语义计算：fft2 按 ortho 归一化、BCE/smooth_l1 的 reduction 被换算成 none 或 mean，结果数值与调用者意图不同。拼写完全错误的值仍会报错，掩盖了枚举校验的存在感。
   trigger_surface: MindSpore（issue 未标注具体版本，最新版本未修复）；PyNative/图模式通用；字符串枚举入参（norm/reduction 等）传入跨枚举取值。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#7063 仍 open（11-03T08:45 后无更新）
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -52,3 +54,7 @@ migration:
       subsystem:
         from: 配置/参数
         to: 算子/内核
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

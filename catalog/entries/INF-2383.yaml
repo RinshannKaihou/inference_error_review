@@ -35,6 +35,8 @@ original:
   behavior: 对开启 level-2 sleep 的引擎：睡眠期间进来的请求在唤醒后被立即执行，但权重尚未重载，返回 HTTP 200 且输出与 prompt 完全无关（由丢弃的权重算出）；稍后重载完成后的请求恢复正常。影响睡眠期间仍能收到请求的部署。
   trigger_surface: vLLM 0.33.0/main；--enable-sleep-mode level=2；POST /wake_up 不带 tags；睡眠期间有排队请求。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#65325/#65324 仍 open
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -50,3 +52,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

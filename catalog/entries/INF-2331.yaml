@@ -44,6 +44,7 @@ original:
   - 2026-11-02 2026-11-02 回访：修复 MR !13327 仍 open（11-02 03:19Z 更新），未合入
   - 2026-11-02 2026-11-02 回访：修复 MR !13327 仍 open（11-02 03:19Z 更新），未合入
   - 2026-11-03 回访 2026-11-03：修复 !13327 仍 open（11-02 03:19 更新）。
+  - 2026-11-04 回访 2026-11-04：修复 !13327 仍 open
 migration:
   method: scan
   scanned: '2026-10-31'
@@ -61,6 +62,9 @@ migration:
     fields:
     - original.notes
   - date: '2026-11-03'
+    fields:
+    - original.notes
+  - date: '2026-11-04'
     fields:
     - original.notes
   audit:

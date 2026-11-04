@@ -3,29 +3,29 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2385 条；状态：active 2385
+共 2402 条；状态：active 2385、pending_audit 17
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 732 |
-| 编译器 | 152 |
+| 算子/内核 | 736 |
+| 编译器 | 153 |
 | 运行时/执行 | 135 |
 | 集合通信 | 39 |
 | 并行切分 | 31 |
-| KV缓存 | 374 |
+| KV缓存 | 378 |
 | 调度/服务 | 94 |
 | 输出解析 | 68 |
-| 解码/采样 | 153 |
-| 量化 | 217 |
-| 位置编码 | 42 |
+| 解码/采样 | 155 |
+| 量化 | 219 |
+| 位置编码 | 43 |
 | 分词/模板 | 33 |
-| 模型定义 | 49 |
-| 权重/检查点 | 49 |
+| 模型定义 | 50 |
+| 权重/检查点 | 50 |
 | 数据管线 | 5 |
 | 优化器 | 4 |
 | 损失计算 | 3 |
-| MoE路由 | 45 |
+| MoE路由 | 46 |
 | 重计算/卸载 | 7 |
 | RL训练回路 | 1 |
 | 观测/评测 | 72 |
@@ -8512,6 +8512,50 @@
 - **改进措施**：检测 负 alpha 下 x/alpha 扫过 88.4-88.7 带比对 torch；修复 待定（issue open；#61029 的截断已合入但 k=128 残留）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/64021
 
+### INF-2389 `index_add_v2_empty_index_output_unwritten` IndexAddV2 空 index 返回成功但输出未写入
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / cann / IndexAddV2 空 index 分支缺失
+- **原因行为**：index 长度 0（source 在 dim 维同 0，满足资料约束）时两条实现路径都没有把 self 拷到 out 或早退写输出，两段接口返回 0 但 out 完全未写
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：out 保持调用方预填的 0xA5 哨兵 48/48 字节未变，读回未初始化脏数据；V1 接口 aclnnIndexAdd 同输入输出正确等于 self，四种 dtype/mode/dim 组合均复现
+- **改进措施**：检测 空 index + out 预填哨兵的写回检查（V1 对照正确）；修复 待定（issue 2026-11-04 新开；相关 ops-nn#8069 覆盖 IndexAdd 族值域校验但未含本条空 index 输出未写）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8102
+
+### INF-2390 `rmsnorm_dynamic_mxquant_epsilon_double_narrowing` RmsNormDynamicMxQuant epsilon 静默归零
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / cann / RmsNorm epsilon 属性窄化
+- **原因行为**：aclnn 接口把 epsilon 声明为 double，算子原型却登记为 Float 属性，进入 tiling/kernel 前被窄化成 fp32，小于 float 最小次正规的合法 double 静默变 0
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：全零 x 下 epsilon=1e-46（合法 double）时 rstd 返回 inf（期望约 1e23，在 fp32 值域内），y 输出 0；epsilon=1e-6 正常，同装置对照排除传参错误
+- **改进措施**：检测 全零 x + 极小 epsilon 对照 rstd 输出（1e-6 正常 / 1e-46 inf）；修复 待定（issue 2026-11-04 新开；建议 norm/ 下 .Float epsilon 类属性一并排查）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8096
+
+### INF-2391 `chunkcat_empty_input_skip_out_validation` ChunkCat 空输入早退跳过 out 校验返回脏数据
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / cann / ChunkCat 空输入早退次序
+- **原因行为**：空 tensorList 与全空 tensor 两条早退路径排在参数校验之前，既不校验 out 空指针/shape 也不写任何数据，直接返回成功
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：out 预填 qNaN 在空列表/全空输入下 12/12 全部残留，调用方拿到返回码 0 但 out 是未初始化内容；161001/161002 两类参数错误在空态全部失效
+- **改进措施**：检测 空输入 + out 预填哨兵的写回检查；修复 待定（issue 2026-11-04 新开，未见修复）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4460
+
+### INF-2400 `ttnn_permute_uint32_padded_volume_overflow` ttnn.permute 2^32 tile 填充体积 uint32 溢出全错
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：算子/内核 / tt-metal / permute 分块体积 uint32
+- **原因行为**：MultiCoreTiledGeneric 工厂以 uint32_t 累乘 tile 填充体积 padded_xw_volume 并除以 tile 面积得 xw_blocks，达到 2^32 时回绕为 0，后续任务切分全错
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：n=2047（填充体积 0.999*2^32）位级正确；n=2048（恰好 2^32）20971520/20971520 元素全错且非有限值为 0（静默垃圾值），输入仅 21M 元素、只有 tile 填充输出达到 2^32
+- **改进措施**：检测 n=2047/2048 边界对照（位级正确 vs 全错）；修复 待定（issue 2026-11-03 报告，main 上源码未变，未见修复 PR）
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/63940
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -10209,6 +10253,17 @@
 - **影响详情**：同 prompt（同进程、关前缀缓存、temperature 0）每次 forward 的 logprobs 不同：均值 |Δ|≈1.0-2.3 nat/token、尾部 20-35 nat；RL rollout 偶发立即 EOS、连发 token 0 与 NaN logprob。
 - **改进措施**：检测 同输入多次 forward 比对 prompt logprobs；逐 autotune 配置隔离测试；修复 待定（BK=K(=128) 或 num_warps=2 的配置确定性且 rel 1.7e-3，可作规避；根因修复未见）
 - **来源**：https://github.com/vllm-project/vllm/issues/65385
+
+### INF-2396 `torchair_addmm_split_loses_bias_rounding` torchair AddMM 拆分丢失 bias 低精度舍入边界
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：编译器 / torch_npu / torchair addmm 拆分
+- **原因行为**：二维逐元素 bias 的 aten.addmm 在 lowering 中被拆成 MatMul+Add，bias 来自 BF16/FP16 Mul 时其生产者内联进 FP32 Add epilogue，丢失原 Mul 输出的低精度舍入边界
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：五轮 BF16 矩阵多项式图首轮 B 即 200252/1048576 元素不同，最大绝对差 3.05e-5，五轮放大后完整输出超 83 判据；恢复 10 处 bias Mul 的 BF16 舍入后与关闭 MM 融合逐 bit 一致
+- **改进措施**：检测 同输入多轮图对比 + 关闭 MM 融合逐 bit 对照；已保留失败节点真实中间输入可单片段验证；修复 待定（issue 2026-11-04 新开；建议保留带 bias MatMul IR 或拒绝后融合走 late fallback，未出修复 PR）
+- **来源**：https://gitcode.com/Ascend/torchair/issues/939
 
 ## 运行时/执行
 
@@ -16700,6 +16755,51 @@
 - **改进措施**：检测 场景二调用后校验第三段起始 slot 内容；修复 待定（issue open，未见修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7063
 
+### INF-2387 `adler32_request_id_collision_stale_kv_reuse` Adler32 请求 ID 碰撞致稀疏卸载残留 KV 被复用
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：KV缓存 / vllm / sparse KV offload 常驻归属判定
+- **原因行为**：fused-overlap 稀疏 KV 卸载用 Adler32 值做请求身份，两个不同请求 ID 碰撞时新请求复用旧请求物理行，跳过失效逻辑并把旧请求前缀 KV 当作常驻命中
+- **影响对象**：跨请求/跨样本数据；KV状态（静默错误）
+- **影响详情**：新请求的 attention 直接消费上一请求残留的历史常驻 KV 槽位内容；把常驻槽位改 +8/-8 实验证实同时改变注意力输出与生成 token，破坏身份匹配或换非碰撞 ID 均恢复参考行为
+- **改进措施**：检测 单 NPU 受控实验：碰撞 ID 对 + 常驻槽位 ±8 对照；修复 待定（issue 2026-11-04 新开，未见修复 PR）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20904
+
+### INF-2388 `scatter_pa_kv_cache_32bit_offset_wraparound` ScatterPaKvCache 超 2^32 元素 32 位写偏移回绕
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：KV缓存 / cann / ScatterPaKvCache 写偏移位宽
+- **原因行为**：SIMT 路径位宽选择只看输入元素数而非 cache 偏移上界，cache 超过 2^32 元素时整条写偏移链在 uint32 域计算回绕
+- **影响对象**：KV状态（静默错误）
+- **影响详情**：cache 49.15 亿元素（>2^32）时合法 slot=76,799,999 两段返回 0 但目标位置一个字节未写，写入回绕落到 cache 中部约第 75760 block，静默覆盖其他 block
+- **改进措施**：检测 对照写后读回目标 slot（对照 NB=1024 正常、NB=600000 未写）；修复 待定（issue 2026-11-04 新开，未见修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7088
+
+### INF-2395 `stem_oam_prep_paged_kv_kflat_oob_write` StemOamPrepPagedKv kFlat 形状未校验越界写
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-04
+
+- **原因对象**：KV缓存 / cann / StemOamPrepPagedKv 输出形状校验
+- **原因行为**：tiling 只读取 kFlat 末维不与 stemStride*D 比较，CheckParams 只校验输入不校验输出；kernel 每行固定写 2048 个 bf16，kflat_dim 偏小时行 stride 错配越界写
+- **影响对象**：KV状态（静默错误）
+- **影响详情**：kflat_dim 传 1024（应为 2048）时两段返回 0，越过调用方 kFlat 缓冲区末尾写 2048 字节，canary 实测 2048/4096 被踩；同函数 vBias 写入同样不校验末维
+- **改进措施**：检测 kFlat 尾部 4KB canary 预填检查（对照 2048 正常 / 1024 被踩）；修复 待定（issue 2026-11-04 新开，未见修复）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7089；https://gitcode.com/cann/ops-transformer/issues/7085
+- **关联**：var:INF-2162
+
+### INF-2402 `kimi_k3_hybrid_long_prompt_at_wall_degeneration` Kimi-K3 混合架构长 prompt 退化 @ token 墙
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：KV缓存 / vllm / FLASHMLA+GDN 混合层状态管理
+- **原因行为**：Kimi-K3（24 全注意力+69 线性注意力层）长 prompt 下部分请求输出退化为 @ token 墙直至 max_tokens；前缀细节决定触发，串行单请求可复现，根因未定位
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：finish_reason=length、@ token 重复墙或多语言垃圾碎片交替，同 prompt 串行/并发命中率不同，请求内不可恢复；另一部署变体为混合乱码，指向 attention/KV 错位
+- **改进措施**：检测 长短 prompt + 前缀标记对照（24/24 vs 24/24）；已排除连接器 GET 路径、D2H 保存路径、CUDA 错误/OOM/抢占、pin 泄漏、block table 别名、驱动/Xid；修复 待定（issue 2026-11-04 新开，向维护者求证 FLASHMLA+hybrid 线性注意力 recurrent state page 已知问题）
+- **来源**：https://github.com/vllm-project/vllm/issues/65680
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -20238,6 +20338,28 @@
 - **改进措施**：检测 同参数开/不开 prompt lookup 的输出 diff（重点 guidance_scale / watermark）；SynthID 检测分数对比。；修复 待定（issue 未附修复 PR）
 - **来源**：https://github.com/huggingface/transformers/issues/50051
 
+### INF-2392 `v1_runner_pp_mtp_silent_token_corruption` V1 runner PP+MTP 三重缺陷静默错 token
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：解码/采样 / vllm / PP+MTP 草稿与接受计数通路
+- **原因行为**：V1 runner + PP>1 + MTP 下 draft token 永不到达调度器、非末级 PP stage 接受计数陈旧、batch queue 让调度器超前消费三重缺陷叠加，需同时修复任一子集仍输出错误
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：输出 token 被静默污染；drafts=0 时 PP2 输出与 PP1 完全一致（投机静默失效，看似正确）；async_scheduling 组合仍观察到静默错 token 由启动守卫拒绝
+- **改进措施**：检测 PP2 与 PP1 输出一致性不构成验证（drafts=0 时同样一致）；需断言 drafts>0；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20844 （open，未发布，Fixes #14207；同时为未覆盖的 V1+PP>1+spec+async 组合加启动拒绝守卫）
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/20844；https://github.com/vllm-project/vllm-ascend/issues/14207
+
+### INF-2401 `deepseek_v4_beam_search_compression_cache_misreorder` DeepSeek-V4 beam search 压缩缓存未随 beam 重排
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：解码/采样 / transformers / HCA/CSA reorder_cache 继承
+- **原因行为**：HCA/CSA 层在普通滑动窗 KV 外存压缩状态，但继承的 reorder_cache() 只按 beam 父选择重排 keys/values 行，压缩状态留在旧行未随 beam 移动
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：num_beams=3+use_cache 时 beam 候选与 use_cache=False 不一致：CSA 改变首个返回序列、HCA 改变第二/三候选顺序、混合模型改变候选集；补上压缩状态 batch 选择后与全上下文/无缓存 beam 生成一致
+- **改进措施**：检测 seeded 小模型上 reorder_cache([2,0,0]) 逐步与全上下文 forward 对比；beam generate 与 use_cache=False 对照；修复 待定（issue 2026-11-04 新开，报告者已验证补齐 batch 选择可恢复一致，未见修复 PR）
+- **来源**：https://github.com/huggingface/transformers/issues/50336
+
 ## 量化
 
 ### INF-0109 `vllm_xpu_battlemage_persistent_vram_state_corruption_token0` vLLM XPU 并发 decode 后持久损坏，输出全为 token 0
@@ -22687,6 +22809,28 @@
 - **改进措施**：检测 加载后对比正确 prompt 的 prompt_logprobs rank；检查镜像是否拷贝 optional/ 子目录；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20830 （声明路径缺失时抛 FileNotFoundError，open 未发布）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/20829；https://github.com/vllm-project/vllm-ascend/pull/20830
 
+### INF-2386 `glm_fp8_ignored_layers_prefix_mismatch_silent_quant` GLM 嵌套前缀失配致 FP8 排除层被静默量化
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：量化 / vllm / AscendFp8Config 层排除匹配
+- **原因行为**：检查点用扁平前缀列出排除层，而嵌套包装模型真实前缀多一层，exact 匹配全部失败，约 1150 个本应保持 BF16 的层被静默按 FP8 块量化
+- **影响对象**：模型权重；输出内容（静默错误）
+- **影响详情**：模型正常加载服务，无任何告警；KeyPool 稀疏索引器 wq_b 等层无 scale 张量仍被量化，索引器 query 向量全零，top-k 选择退化为与输入无关的固定集，长生成重复不终止，AIME2026 40%、GPQA 62.1%（修复后 93.3%/89.4%）
+- **改进措施**：检测 对比修复前后基准分数；检查索引器 query 向量是否全零；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20861 （open，未发布）：exact 匹配失败时回退 suffix 匹配并告警一次
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20860；https://github.com/vllm-project/vllm-ascend/pull/20861
+
+### INF-2394 `w4a16_moe_group_size_ignored_defaults_32` W4A16 MoE 忽略 group_size 静默按 32 量化
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：量化 / vllm / W4A16 工厂丢弃组大小
+- **原因行为**：工厂解析出每层 weight_quant.group_size 却构造 scheme 时不传入，scheme 读无关的顶层配置，标准 group 64/128 静默变 32
+- **影响对象**：模型权重（静默错误）
+- **影响详情**：group128 应得 w13 scale (2,512,4)/w2 (2,512,2)，default32 路径生成 (2,512,16)/(2,512,8)，检查点 scale 形状无法匹配加载
+- **改进措施**：检测 AST 加载生产代码的 CPU 回归（合成张量核对 scale 形状）；修复 待定（issue 2026-11-04 新开，未见修复 PR）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20973
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -23163,6 +23307,17 @@
 - **影响详情**：chunk 中部起的视频 token、其后全部文本 token 的 M-RoPE 位置错，mrope_position_delta 偏移每个解码 token，无异常抛出
 - **改进措施**：检测 待定；修复 待定（issue open，未附修复 PR；与 #62937/#62959 首块锚点、#48833/#48835 边界崩溃均为不同缺陷）
 - **来源**：https://github.com/vllm-project/vllm/issues/62969
+
+### INF-2398 `dspark_draft_kv_unrotated_context_keys` DSpark draft KV 上下文键未旋转致接受率跌半
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：位置编码 / vllm / Ascend RoPE 非就地语义失配
+- **原因行为**：上游 DFlash 假定原地 rotary 语义，Ascend RoPE 实现返回旋转后张量，返回值被丢弃后未旋转的上下文 key 写入 draft KV cache
+- **影响对象**：KV状态；输出内容（质量退化）
+- **影响详情**：draft token 接受率实测仅 50% 出头（正常应显著更高），投机解码加速失效；位置编码错配无报错
+- **改进措施**：检测 对比投机接受率与无投机基线；draft KV 中上下文 key 与主模型 KV 比对；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20002 （open）：forward_oot 把旋转后 q/k 拷回原缓冲并带回归测试
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20924；https://github.com/vllm-project/vllm-ascend/pull/20002
 
 ## 分词/模板
 
@@ -24081,6 +24236,17 @@
 - **改进措施**：检测 待定；修复 待定（issue open；规避：fp32 求和后除法或 fp32/bf16 运行）
 - **来源**：https://github.com/huggingface/transformers/issues/50216
 
+### INF-2397 `mindformers_mla_tnd_dsa_flag_loses_causal_mask` MindFormers MLA TND 因 DSA 标志误判丢因果掩码
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：模型定义 / mindformers / MLA 掩码预处理 DSA 分支
+- **原因行为**：掩码预处理只看 DSA 标志不检查实际 attention variant，普通 MLA+TND+EOD 压缩时提前返回空 mask，MLA FlashAttention V4 读整段序列
+- **影响对象**：隐状态（静默错误）
+- **影响详情**：自回归位置本应只访问因果前缀，空 mask 下首 token 与因果前缀参考最大差 0.90（与全序列参考仅差 3.4e-5）；输出与 Q/K/V 梯度均有差异，末 token 不受影响
+- **改进措施**：检测 同输入 mask=None 与压缩因果 mask 双跑 local_v4_varlen_flash_attention 对比（首 token 差 0.90）；修复 修复 MR https://atomgit.com/mindspore/mindformers/merge_requests/8893 （open，未发布）：将省略 mask 分支限制到实际 DSA 稀疏路径
+- **来源**：https://atomgit.com/mindspore/mindformers/issues/2624；https://atomgit.com/mindspore/mindformers/merge_requests/8893
+
 ## 权重/检查点
 
 ### INF-0352 `ep_checkpoint_shard_mismatch` EP 重分片或跨框架转换致 expert 权重错位
@@ -24631,6 +24797,17 @@
 - **影响详情**：复现（Qwen3ForCausalLM+.bin 双进程对照）：目标与 untied 对照的 head 哈希、logits/softmax SHA、argmax 全不同（63 vs 0）；检查点两张量 SHA-256 各异数值独立。服务正常出话但语义错乱。
 - **改进措施**：检测 加载后对 lm_head.weight 与 embed_tokens.weight 做 data_ptr/哈希比对；tied 配置但检查点含独立 lm_head.weight 时告警。；修复 待定（issue open 2026-10-30，vLLM 0.32.0；未见修复 PR）
 - **来源**：https://github.com/vllm-project/vllm/issues/64704
+
+### INF-2393 `camem_sleep_wake_memcpy_error_ignored` CaMem sleep/wake 忽略 memcpy 失败丢弃权重
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：权重/检查点 / vllm / CaMemAllocator 拷贝返回值未检查
+- **原因行为**：sleep 的 device→host 拷贝失败仍提交未初始化备份并释放有效 device 存储；wake 先标 awake 再拷贝，host→device 失败被忽略且清空唯一 CPU 备份
+- **影响对象**：模型权重（静默错误）
+- **影响详情**：ACL memcpy 返回非零被当成功：失败的 sleep 丢掉有效设备数据换入残缺备份；失败的 wake 权重显示已恢复但内容是坏拷贝且无重试来源；权重内容静默损坏
+- **改进措施**：检测 AST 加载生产代码 + mock 注入非零返回的 CPU 复现（5 测试用例）；修复 待定（issue 2026-11-04 新开，未见修复 PR）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/20972
 
 ## 数据管线
 
@@ -25275,6 +25452,17 @@
 - **影响详情**：同镜像同负载：stair 100 prompts 3 次 cycle、default 400 prompts 0 次；一行修复后同负载 11 次。无报错无日志，专家永不迁移。
 - **改进措施**：检测 统计 'Ascend async EPLB cycle committed' 日志行数 vs prompts 数；对比 stair policy 行为。；修复 待定（issue 给出一行修复并自证 11 cycles；默认被 _patch_eplb_policy_config 翻成 stair，仅显式 default 可达）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/20362
+
+### INF-2399 `flashinfer_pdl_routed_fp8_moe_wrong_rows` PDL 路由 FP8 MoE 依赖未就绪 scratch 返回错行
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-04
+
+- **原因对象**：MoE路由 / flashinfer / trtllm-gen MoE PDL 时序
+- **原因行为**：SM100 上 trtllm_fp8_block_scale_routed_moe 在 PDL（默认开启）下部分调用读取到尚未写完的 scratch/中间缓冲，返回部分错误行；PDL 关闭时同调用位级正确
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：错行 2~550 行/次、常按 8/16 行成组，|diff| 达 3.5（mean |out|≈0.5）；workspace 预填 0xFF 时 32000 次中 831~1003 次错（2.6~3.1%），普通分配 2~8/96000，PDL off 全部 0 错
+- **改进措施**：检测 PDL on/off 位级对比 + workspace 0xFF 预填放大（确定性算子必须逐位一致）；修复 规避：enable_pdl=False（issue 2026-11-04 新开，根因修复未见）
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/8607
 
 ## 重计算/卸载
 

@@ -37,6 +37,7 @@ original:
   discovery: 2026-11-02 每日扫描
   notes:
   - '2026-11-03 回访 2026-11-03：修复 #20595 仍 open（11-02 后无更新），未合入。'
+  - '2026-11-04 回访 2026-11-04：修复 #20595 仍 open（11-02 后无更新）'
 migration:
   method: scan
   scanned: '2026-11-02'
@@ -52,5 +53,8 @@ migration:
     - qwen3.8-max
   updates:
   - date: '2026-11-03'
+    fields:
+    - original.notes
+  - date: '2026-11-04'
     fields:
     - original.notes

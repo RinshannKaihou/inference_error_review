@@ -36,6 +36,8 @@ original:
   behavior: 使用 aclnnScatterPaCache 场景二（带压缩段偏移）时，压缩段之后的 KV 数据被写到缓存开头而不是接在压缩段之后，缓存里出现重复的历史 token，后续注意力计算结果错误但无任何报错，接口返回成功。
   trigger_surface: Ascend 950PR；CANN 9.2.0-beta.2；aclnnScatterPaCache cacheMode=Norm + key 4 维场景二（传 compressLens/compressSeqOffset）。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#29710 仍 open
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -53,3 +55,7 @@ migration:
       subsystem:
         from: 算子/内核
         to: KV缓存
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

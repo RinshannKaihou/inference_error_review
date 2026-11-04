@@ -37,6 +37,8 @@ original:
   behavior: 调用 aclnnForeachNorm 且阶数 p 不是 1 或 2 时，返回值实际是 L1 或 L2 范数而非所请求的 p 阶范数，数值可差万倍（p=0.5 期望 124923 返回 11.53）；无报错。同机 torch 接口正确，仅 aclnn 直调/foreach 适配层错。
   trigger_surface: A3（910）/A2（910B3）；CANN 9.2.0-beta.2；aclnnForeachNorm p∉{1,2}。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#8007 仍 open，无更新
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -44,6 +46,9 @@ migration:
   - date: '2026-11-04'
     fields:
     - relations
+  - date: '2026-11-04'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-04
     base:

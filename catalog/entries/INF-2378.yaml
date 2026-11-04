@@ -35,6 +35,8 @@ original:
   behavior: 对 fp32 大幅值（|x|>=1e10）输入调用 aclnnForeachSin，sin 结果是 1e21 量级或 ±inf，而不是有界 [-1,1] 内的值；不报错。小幅值与其他 dtype 正常，容易在长尾大值数据上被忽视。
   trigger_surface: Atlas A2（910B2）；CANN 9.2.0；aclnnForeachSin fp32 通路 |x|>=1e10。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#8012 仍 open，无更新
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -51,3 +53,7 @@ migration:
         to: 数值异常
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

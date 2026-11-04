@@ -36,6 +36,8 @@ original:
   behavior: GDN/线性注意力模型走 Triton/FLA 预填充时，同样的 prompt 每次前向给出的 prompt logprobs 都不一样（每 token 平均差 1-2.3 nat，尾部最高 35 nat）；RL rollout 中表现为偶发的立即 EOS、连发 token 0 与 NaN logprob。换 eager 模式、关 TMA 均不解决。
   trigger_surface: vLLM GDN Triton/FLA prefill；Hopper H20（sm90）；triton 3.6；autotune 选中 BK<K 且 num_warps>=4 的配置。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - 2026-11-04 回访 2026-11-04：#65385 仍 open
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -54,3 +56,7 @@ migration:
     uncertain:
     - subsystem
     - effect
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

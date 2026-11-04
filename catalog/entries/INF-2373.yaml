@@ -38,6 +38,8 @@ original:
   behavior: 开启前缀缓存的服务上，命中缓存的请求（第二个共用前缀的请求）稳定输出乱码或直接 EOS，首个冷请求正常；同一负载下确定性复现（12/12，跨两台设备输出签名位级一致），换负载后看似间歇。损坏驻留在被回收复用的物理页上，随前缀命中向后续请求扩散。
   trigger_surface: vllm-ascend 0.30.x/main；hybrid 模型（GDN+mamba 状态池与 KV 池共用统一池的 dense 布局）；prefix caching 开启；请求 churn/块回收顺序特定。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - '2026-11-04 回访 2026-11-04：源 #20827 与修复 #20828 均仍 open（批次快照 11-04T22:59），无合入动向'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -51,3 +53,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

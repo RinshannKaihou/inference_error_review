@@ -1,0 +1,40 @@
+id: INF-2390
+legacy_ids: []
+slug: rmsnorm_dynamic_mxquant_epsilon_double_narrowing
+aliases: []
+title: RmsNormDynamicMxQuant epsilon 静默归零
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: 算子/内核
+    stack: cann
+    component: RmsNorm epsilon 属性窄化
+  behavior: aclnn 接口把 epsilon 声明为 double，算子原型却登记为 Float 属性，进入 tiling/kernel 前被窄化成 fp32，小于 float 最小次正规的合法 double 静默变 0
+effect:
+  objects:
+  - 数值结果
+  detail: 全零 x 下 epsilon=1e-46（合法 double）时 rstd 返回 inf（期望约 1e23，在 fp32 值域内），y 输出 0；epsilon=1e-6 正常，同装置对照排除传参错误
+  visibility: 静默错误
+mitigation:
+  detect: 全零 x + 极小 epsilon 对照 rstd 输出（1e-6 正常 / 1e-46 inf）
+  fix: 待定（issue 2026-11-04 新开；建议 norm/ 下 .Float epsilon 类属性一并排查）
+labels:
+  stage: N/A
+  confidence: documented
+  coverage: NEW
+  discovered: '2026-11-04'
+remarks: ''
+evidence:
+- url: https://gitcode.com/cann/ops-nn/issues/8096
+  kind: gitcode_issue
+relations: []
+original:
+  mechanism: CANN ops-nn aclnnRmsNormDynamicMxQuant（master 0fc301c67，CANN 9.3.0，Ascend950PR）：头文件声明 epsilon 为 double，算子原型 rms_norm_dynamic_mx_quant_def.cpp:89 登记为 Float 属性（默认 1e-06），double 入参进入 tiling/kernel 前被窄化 fp32。任何 0<epsilon<1.4e-45（float 最小次正规）的合法 double 被静默变 0。真机复现：x 全零 bf16[4,64]（mean(x^2)=0，rstd 完全由 epsilon 决定），gamma=1、beta=0、dstType=FLOAT8_E4M3FN、outputRstd=true；epsilon=1e-6 时 rstd=1000.0 正确，epsilon=1e-46 时 rstd=inf（期望 1/sqrt(1e-46)≈1e23，完全在 fp32 值域内），证明 epsilon 已被归零。两段接口均返回 0。aclnn 两段式 C 接口 ctypes 直调，不经 torch_npu。报告者标 P2（常规 1e-5/1e-6 取值不受影响），故障模式 FP-A10（接口声明与实现不一致）。
+  source: https://gitcode.com/cann/ops-nn/issues/8096
+  behavior: 对 RmsNorm 动态 MX 量化算子传入极小 epsilon（如 1e-46，合法 double）做无 eps 等价实验时，rstd 输出 inf 而非约 1e23，y 输出 0——静默错误结果且依赖分配器残留不可复现；常规 epsilon 取值正常，问题只在极小值区间出现，返回码始终为 0。
+  trigger_surface: CANN 9.3.0 ops-nn master 0fc301c67；aclnnRmsNormDynamicMxQuant；0<epsilon<1.4e-45 的 double 入参。
+  discovery: 2026-11-04 每日扫描
+migration:
+  method: scan
+  scanned: '2026-11-04'

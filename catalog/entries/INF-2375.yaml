@@ -36,6 +36,8 @@ original:
   behavior: 开启 balance scheduling 且使用外部 KV connector 同步装载的服务上，清空 HBM 前缀缓存但外部缓存仍命中时，请求输出损坏（同 prompt 在全量重算与 HBM 命中下正常）。批量请求下表现稳定可复现。
   trigger_surface: vllm-ascend 0.30.0rc2（另请确认 release 分支）；enable_balance_scheduling + 外部 KV connector 同步层wise 装载 + prefix caching + async 调度。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - '2026-11-04 回访 2026-11-04：源 #20725 仍 open（11-04T08:42 更新）'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -49,3 +51,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

@@ -38,6 +38,8 @@ original:
   behavior: 部署后服务正常起、无任何报错日志，但模型知识/算术明显塌缩：问 3*4 答 9,216；问法国首都接「建于 7 世纪」类错误文本；1,2,3…11 能正确接 12（语言流畅性保留）。正确 prompt 的 prompt_logprobs 接近随机（capital 排 rank 68232，健康模型应个位数）；中文 prompt 输出全 ASCII、content 为空而 reasoning 载错误文本（不发 end-of-reasoning 标记）。
   trigger_surface: vllm-ascend v0.30.0；DeepSeek-V4.1-Flash W8A8 QuaRot export；检查点镜像缺 optional/quarot.safetensors（quant_description 声明了该文件）。
   discovery: 2026-11-03 每日扫描
+  notes:
+  - '2026-11-04 回访 2026-11-04：源 #20829 与修复 #20830 均仍 open，无合入动向'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -48,3 +50,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-04'
+    fields:
+    - original.notes

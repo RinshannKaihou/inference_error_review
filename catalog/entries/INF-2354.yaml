@@ -41,6 +41,7 @@ original:
   - '2026-11-02 2026-11-02 回访：backport #20540 已 closed（11-01），关闭原因未核实（closed≠已修复发布）；主修复 #20539 此前 merged，是否随版本发布未核实'
   - '2026-11-02 2026-11-02 回访：backport #20540 已 closed（11-01），关闭原因未核实（closed≠已修复发布）；主修复 #20539 此前 merged，是否随版本发布未核实'
   - '2026-11-03 回访 2026-11-03：主修复 #20539 与 backport #20540 均 closed（11-01）；closed 原因未核实（可能 superseded），不再推进。'
+  - 2026-11-04 回访 2026-11-04：#20540 快照 closed（11-01 起），关闭原因仍未核实，维持注记
 migration:
   method: scan
   scanned: '2026-11-01'
@@ -64,5 +65,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-11-03'
+    fields:
+    - original.notes
+  - date: '2026-11-04'
     fields:
     - original.notes

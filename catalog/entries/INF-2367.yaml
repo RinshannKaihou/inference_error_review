@@ -38,6 +38,7 @@ original:
   discovery: 2026-11-02 每日扫描
   notes:
   - '2026-11-03 回访 2026-11-03：源 #20677 仍 open（11-03 12:42 更新），无修复动向。'
+  - '2026-11-04 回访 2026-11-04：源 #20677 仍 open（11-04T03:51 更新），无修复动向'
 migration:
   method: scan
   scanned: '2026-11-02'
@@ -57,5 +58,8 @@ migration:
         to: KV状态
   updates:
   - date: '2026-11-03'
+    fields:
+    - original.notes
+  - date: '2026-11-04'
     fields:
     - original.notes
