@@ -4,7 +4,7 @@ slug: kimi_k3_hybrid_long_prompt_at_wall_degeneration
 aliases: []
 title: Kimi-K3 混合架构长 prompt 退化 @ token 墙
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: finish_reason=length、@ token 重复墙或多语言垃圾碎片交替，同 prompt 串行/并发命中率不同，请求内不可恢复；另一部署变体为混合乱码，指向 attention/KV 错位
+  detail: 输出为 @ token 重复墙或多语言垃圾碎片交替，直到撞 max_tokens（finish_reason=length）；同 prompt 多数请求正常，失败随前缀细节确定性切换，串行单请求即复现，请求内不可恢复，无错误日志；另一部署变体为混合乱码，指向 attention/KV 错位。
   visibility: 静默错误
 mitigation:
   detect: 长短 prompt + 前缀标记对照（24/24 vs 24/24）；已排除连接器 GET 路径、D2H 保存路径、CUDA 错误/OOM/抢占、pin 泄漏、block table 别名、驱动/Xid
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

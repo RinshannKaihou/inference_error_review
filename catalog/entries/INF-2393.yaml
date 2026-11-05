@@ -4,10 +4,10 @@ slug: camem_sleep_wake_memcpy_error_ignored
 aliases: []
 title: CaMem sleep/wake 忽略 memcpy 失败丢弃权重
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 权重/检查点
+  - subsystem: 重计算/卸载
     stack: vllm
     component: CaMemAllocator 拷贝返回值未检查
   behavior: sleep 的 device→host 拷贝失败仍提交未初始化备份并释放有效 device 存储；wake 先标 awake 再拷贝，host→device 失败被忽略且清空唯一 CPU 备份
@@ -38,3 +38,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 权重/检查点
+        to: 重计算/卸载

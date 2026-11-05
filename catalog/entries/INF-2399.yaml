@@ -4,10 +4,10 @@ slug: flashinfer_pdl_routed_fp8_moe_wrong_rows
 aliases: []
 title: PDL 路由 FP8 MoE 依赖未就绪 scratch 返回错行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: MoE路由
+  - subsystem: 算子/内核
     stack: flashinfer
     component: trtllm-gen MoE PDL 时序
   behavior: SM100 上 trtllm_fp8_block_scale_routed_moe 在 PDL（默认开启）下部分调用读取到尚未写完的 scratch/中间缓冲，返回部分错误行；PDL 关闭时同调用位级正确
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 输出内容
-  detail: 错行 2~550 行/次、常按 8/16 行成组，|diff| 达 3.5（mean |out|≈0.5）；workspace 预填 0xFF 时 32000 次中 831~1003 次错（2.6~3.1%），普通分配 2~8/96000，PDL off 全部 0 错
+  detail: SM100（GB200）PDL 默认开启、2560~8192 token 非图调用时，少量 token 行 MoE 输出错值（|diff| 至 3.5，非舍入噪声），按 8/16 行成组，比例 0.01%~3% 随内存布局浮动；无 NaN 无报错；关 PDL 或走 CUDA graph 后消失。
   visibility: 静默错误
 mitigation:
   detect: PDL on/off 位级对比 + workspace 0xFF 预填放大（确定性算子必须逐位一致）
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: MoE路由
+        to: 算子/内核
+    rewritten:
+    - detail

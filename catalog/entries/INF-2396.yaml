@@ -4,7 +4,7 @@ slug: torchair_addmm_split_loses_bias_rounding
 aliases: []
 title: torchair AddMM 拆分丢失 bias 低精度舍入边界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -38,3 +38,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

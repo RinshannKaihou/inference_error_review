@@ -4,7 +4,7 @@ slug: ttnn_permute_uint32_padded_volume_overflow
 aliases: []
 title: ttnn.permute 2^32 tile 填充体积 uint32 溢出全错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -38,3 +38,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

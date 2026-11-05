@@ -4,10 +4,10 @@ slug: scatter_pa_kv_cache_32bit_offset_wraparound
 aliases: []
 title: ScatterPaKvCache 超 2^32 元素 32 位写偏移回绕
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 算子/内核
     stack: cann
     component: ScatterPaKvCache 写偏移位宽
   behavior: SIMT 路径位宽选择只看输入元素数而非 cache 偏移上界，cache 超过 2^32 元素时整条写偏移链在 uint32 域计算回绕
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 算子/内核

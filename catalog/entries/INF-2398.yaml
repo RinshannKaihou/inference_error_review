@@ -4,7 +4,7 @@ slug: dspark_draft_kv_unrotated_context_keys
 aliases: []
 title: DSpark draft KV 上下文键未旋转致接受率跌半
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 位置编码
@@ -16,7 +16,7 @@ effect:
   - KV状态
   - 输出内容
   detail: draft token 接受率实测仅 50% 出头（正常应显著更高），投机解码加速失效；位置编码错配无报错
-  visibility: 质量退化
+  visibility: 性能退化
 mitigation:
   detect: 对比投机接受率与无投机基线；draft KV 中上下文 key 与主模型 KV 比对
   fix: 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20002 （open）：forward_oot 把旋转后 q/k 拷回原缓冲并带回归测试
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 性能退化
+    uncertain:
+    - detail

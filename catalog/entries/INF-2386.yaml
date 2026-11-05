@@ -4,19 +4,20 @@ slug: glm_fp8_ignored_layers_prefix_mismatch_silent_quant
 aliases: []
 title: GLM 嵌套前缀失配致 FP8 排除层被静默量化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: vllm
     component: AscendFp8Config 层排除匹配
-  behavior: 检查点用扁平前缀列出排除层，而嵌套包装模型真实前缀多一层，exact 匹配全部失败，约 1150 个本应保持 BF16 的层被静默按 FP8 块量化
+  behavior: 检查点以扁平前缀列出约 1150 个排除层，嵌套包装模型真实前缀多一层，exact 匹配全部失败，被排除层（若干层无 weight_scale_inv 张量）被静默路由到 FP8 块量化
 effect:
   objects:
+  - 数值结果
   - 模型权重
   - 输出内容
-  detail: 模型正常加载服务，无任何告警；KeyPool 稀疏索引器 wq_b 等层无 scale 张量仍被量化，索引器 query 向量全零，top-k 选择退化为与输入无关的固定集，长生成重复不终止，AIME2026 40%、GPQA 62.1%（修复后 93.3%/89.4%）
-  visibility: 静默错误
+  detail: 加载与服务正常、无报错无告警；11 层索引器每层 q_values 对所有 token、所有位置恒为零，稀疏索引 top-k 塌缩为与 query 无关的固定集；生成长而无效、大量撞 max_tokens，AIME2026 40%、GPQA 62.1%（修复后 93.3%/89.4%）
+  visibility: 质量退化
 mitigation:
   detect: 对比修复前后基准分数；检查索引器 query 向量是否全零
   fix: 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20861 （open，未发布）：exact 匹配失败时回退 suffix 匹配并告警一次
@@ -41,3 +42,23 @@ original:
 migration:
   method: scan
   scanned: '2026-11-04'
+  audit:
+    round: daily-audit-2026-11-05
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 模型权重
+        to: 数值结果
+      visibility:
+        from: 静默错误
+        to: 质量退化
+    rewritten:
+    - behavior
+    - detail
