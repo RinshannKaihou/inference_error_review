@@ -37,6 +37,8 @@ original:
   behavior: 调用 IndexAddV2 传空 index（合法退化输入）时返回码全 0 表示成功，但输出张量一个字节都没写，读回的是申请时的未初始化内存或预填值；同一输入换 V1 接口结果正确。下游若信任返回码会把脏数据当计算结果，且每次运行内容随内存残留变化。
   trigger_surface: CANN 9.3.0 ops-nn master 0fc301c67；aclnnIndexAddV2；index 长度 0（source dim 维同为 0）；fp32/fp16、mode 0/1、dim 0/-1 均触发。
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-05 2026-11-05 回访：#8102 仍 open（11-05T06:44 有更新，状态未核）
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -44,6 +46,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - relations
+  - date: '2026-11-05'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-05
     base:

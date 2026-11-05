@@ -35,6 +35,8 @@ original:
   behavior: Kimi-K3 混合架构（69 线性注意力层）在约万 token 长 prompt 服务时，部分请求输出完全退化为 @ token 重复墙或中英混垃圾碎片，直到撞 max_tokens（finish_reason=length）；同 prompt 多数请求正常，失败随 prompt 前缀细节确定性地切换，串行也能触发，请求内无法恢复。无任何错误日志。
   trigger_surface: vLLM 0.30.0 + FLASHMLA + TP16/EP；Kimi-K3 hybrid（24 full-attn+69 GDN）；~9700 token prompt + 特定前缀；max_model_len 1M。根因未定位（已排除外部 KV 连接器/驱动/采样）。
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-05 2026-11-05 回访：#65680 仍 open，根因未定位状态未变
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -50,3 +52,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - original.notes

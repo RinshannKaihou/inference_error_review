@@ -39,6 +39,8 @@ original:
   behavior: GLM-5.3-Flash 原生 FP8 检查点在 vllm-ascend 服务时基准分数大幅低于预期区间（AIME2026 40% 对期望 ~90-93%，GPQA-Diamond 62.1% 对期望 ~89.9%），生成呈现长而无效、大量撞 max_tokens、与 W8A8-MXFP8 版本相比逐字重复率升高；模型加载与服务完全正常，无任何报错或警告。打修复后 AIME2026 93.3%、GPQA 89.4%。
   trigger_surface: vllm-ascend main（vLLM 0.31.0）；GLM-5.3-Flash 原生 FP8 检查点 + 嵌套包装模型；Ascend 950DT TP=8。其他 exact 匹配已成功的检查点不受影响。
   discovery: 2026-11-04 每日扫描
+  notes:
+  - '2026-11-05 2026-11-05 回访：#20860 已 closed（2026-11-05T08:59Z，修复 #20861 后续未核实是否合入/发布；closed 不自动证明已修复）'
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -62,3 +64,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - original.notes

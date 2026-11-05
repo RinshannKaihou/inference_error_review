@@ -35,6 +35,8 @@ original:
   behavior: 调用 ChunkCat 传空输入列表（或全空 tensor）时接口返回 0 表示成功，但输出张量保持申请时的未初始化内容（预填 NaN 全残留），非法 out（空指针、shape 不符）也不再被拦截；下游把脏数据当拼接结果使用，每次内容随内存残留不同。
   trigger_surface: CANN 9.3.0 ops-math master（2026-11-04）；aclnnChunkCat；空 tensorList 或全空 tensor 输入。
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-05 2026-11-05 回访：#4460 仍 open（11-05T11:28 有更新，状态未核）
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -48,3 +50,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - original.notes

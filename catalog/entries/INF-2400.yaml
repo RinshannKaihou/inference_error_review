@@ -35,6 +35,8 @@ original:
   behavior: 在 Blackhole 上对约 2^32 tile 填充元素量级（如 n=2048 的 4 维 permute）调用 ttnn.permute，输出全部元素为错误值（垃圾数据而非 NaN），无任何报错或警告；略低于阈值（n=2047）位级正确。大张量数据搬运结果静默全错，下游计算随之污染。
   trigger_surface: ttnn 0.81.1（main 同）；Blackhole P150；TILE 布局 permute 且 tile 填充体积 ≥ 2^32（约 n≥2048 的 4 维场景）。
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-05 2026-11-05 回访：#63940 仍 open，main 未修
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -45,3 +47,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - original.notes

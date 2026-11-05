@@ -36,6 +36,8 @@ original:
   behavior: DeepSeek-V4（含 HCA/CSA 压缩注意力层）用 beam search + KV cache 生成时，返回的 beam 候选与不用缓存时不一致：首选序列、候选排序或候选集错误，随 beam 父选择漂移；无报错，正常单请求生成不受影响。
   trigger_surface: transformers 5.23.0.dev0/main；DeepseekV4ForCausalLM（HCA/CSA 层）+ generate(num_beams>1) + use_cache；任意硬件（CPU 复现）。
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-05 2026-11-05 回访：#50336 仍 open
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -55,3 +57,7 @@ migration:
         to: 输出内容
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - original.notes

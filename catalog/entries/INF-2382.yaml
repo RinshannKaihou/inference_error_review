@@ -19,7 +19,7 @@ effect:
   visibility: 静默错误
 mitigation:
   detect: 场景二调用后校验第三段起始 slot 内容
-  fix: 待定（issue open，未见修复 PR）
+  fix: '修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15405 已挂（Fixes #7063/#7086/#7087/#7088，open 未合入；含 arch35 Omni 内核 step2 同源修复；CPU 仿真 UT 6/6，整数模型复现 off=1,cl=2,sl=4,slot=0 修复后 row[2]=key[3]）'
 labels:
   stage: N/A
   confidence: documented
@@ -38,6 +38,7 @@ original:
   discovery: 2026-11-03 每日扫描
   notes:
   - 2026-11-04 回访 2026-11-04：#29710 仍 open
+  - '2026-11-05 2026-11-05 回访：修复 MR !15405 出现，同时覆盖 #7086/#7087/#7088（后者=INF-2388 写偏移回绕，use32 判定改为按各 tensor 最大访问偏移 uint64 上界）；MR open 未合入'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -58,4 +59,8 @@ migration:
   updates:
   - date: '2026-11-04'
     fields:
+    - original.notes
+  - date: '2026-11-05'
+    fields:
+    - mitigation.fix
     - original.notes

@@ -36,6 +36,8 @@ original:
   behavior: GB200 服务 DeepSeek 式 FP8 MoE 时，PDL 默认开启下少量 token 行的 MoE 输出错值（|diff| 至 3.5，非舍入噪声），成组出现（8/16 行），比例 0.01%~3% 随内存布局浮动；关 PDL 或开 CUDA graph 后消失。输出无 NaN 无报错，服务结果静默污染。
   trigger_surface: flashinfer main/0.7.2.post1 + trtllm-gen bmm fdba669-16ba8ed；SM100（GB200）；enable_pdl 开启（默认）+ 2560~8192 token 非图调用。
   discovery: 2026-11-04 每日扫描
+  notes:
+  - 2026-11-05 2026-11-05 回访：#8607 仍 open，无状态变化
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -55,3 +57,7 @@ migration:
         to: 算子/内核
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-05'
+    fields:
+    - original.notes
