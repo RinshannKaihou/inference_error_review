@@ -4,7 +4,7 @@ slug: nixl_consumer_reads_recycled_kv_after_lease_expiry
 aliases: []
 title: NixlConnector 租约过期后读已回收 KV 块
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,10 +13,10 @@ cause:
   behavior: consumer 心跳自请求进调度器才开始，路由器滞留超 30s 租约后 producer 回收块复用；kv_transfer_params 对 prefill 块无有效期，consumer 持 stale 块号仍发起读取
 effect:
   objects:
-  - 跨请求/跨样本数据
   - KV状态
+  - 跨请求/跨样本数据
   detail: consumer 静默加载其他请求的 KV 与循环状态，数步后 logits 全 NaN（5 轮 NaN 请求 100% 租约先过期）；top-k 采样 cooperative_topk cudaErrorIllegalAddress 整引擎崩溃，v0.33 变静默垃圾输出
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: producer 日志 "Releasing expired KV blocks ... retrieved by 0 remote worker(s)" + 按请求统计 NaN；双侧 block id 插桩（issue 方法）
   fix: 待定（issue open 2026-11-05 新开，未附修复 PR；#63118 为相关崩溃面）
@@ -39,3 +39,20 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: KV状态
+      visibility:
+        from: 静默错误
+        to: 数值异常

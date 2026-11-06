@@ -4,18 +4,19 @@ slug: dspark_aux_state_one_based_capture_misalignment
 aliases: []
 title: DS V4.1 DSpark 辅助层捕获错位一层
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: 解码/采样
     stack: vllm
     component: V4.1 aux 层捕获条件
   behavior: Ascend target 对零基 layer_ids 仍用 V4 一基条件（layer_idx+1 in ids），捕获残差比意图早一层；且在 Engram 注入前采样、末边界永不捕获
 effect:
   objects:
+  - 隐状态
   - 输出内容
   detail: DSpark draft 以早一层的隐藏态为条件，接受率下降：对齐修复后 TPOT -3.25%（14.35→13.89ms）、加权验证产出 +3.13%（3.445→3.553）；输出仍看似合理，静默劣化
-  visibility: 质量退化
+  visibility: 性能退化
 mitigation:
   detect: '对比 ns=1/ns=3 逐位置接受率（本例 pos1 即掉 22.6 点为 PP+MTP 组合病灶特征）；修复 PR #21023 自带三层层级单测'
   fix: 修复 PR https://github.com/vllm-project/vllm-ascend/pull/21023 （open，含 unit 级复现；未发布）
@@ -38,3 +39,23 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: 解码/采样
+      effect:
+        from: 输出内容
+        to: 隐状态
+      visibility:
+        from: 质量退化
+        to: 性能退化

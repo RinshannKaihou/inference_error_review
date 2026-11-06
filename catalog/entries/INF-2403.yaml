@@ -4,7 +4,7 @@ slug: cumsum_2p30_silent_identity
 aliases: []
 title: aclnnCumsum 元素数超 2^30 静默返回恒等
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: S=2^30+1 起 fp32 一维 cumsum 两段返回 0/0，out==x（首元素对、其余等于输入），长序列累计统计/扫描线结果静默全错且无法定位
+  detail: S=2^30+1 起 fp32 一维 cumsum 的 GetWorkspaceSize 与执行均 rc=0，但 out==x（x[0]=1 其余 0 时期望全 1.0，实际仅 out[0]=1）；下游拿到看似正常的张量继续算，前缀和语义的结果整体静默错误，比崩溃更难发现
   visibility: 静默错误
 mitigation:
   detect: 对大规模输入用 shape 判据（S>2^30）在调用侧拦截，或抽查 out[1..] 是否等于 x
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-math/issues/4574
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0629
 original:
   mechanism: CANN ops-math aclnnCumsum（A3 Ascend910_9362，CANN 9.3.0，master 84f3256f）在输入元素数 S>2^30 时静默返回恒等。实测 S=2^30 及以下正确（x[0]=1 其余 0 时 out 全 1.0）；S=2^30+1 与 2^30+65536 时 out==x（out[1]=0.0），GetWorkspaceSize 与执行均 rc=0、ws=16777728、输出非哨兵，说明 kernel 确实执行但块间 carry 未叠加。第二组构造（前三位 1,2,4）交叉验证：S=2^30 正确（1024,1026,1030），S=2^30+65536 恒等（1024,2,4）。9.2.0 与 9.3.0 逐值一致（非 9.3.0 回归）。报告者定位（未坐实）：arch35 cumsum_twoway_ss.h 两遍式实现中 mBlockPara.blockCount/blockFactor 为 32 位（:60/:73），「首元素正确、后续全 0」形态与 32 位自然截断一致，仓内无 1<<30 显式常量。自包含 ~110 行 C++ 两段式复现程序随 issue 附上。
   source: https://gitcode.com/cann/ops-math/issues/4574
@@ -38,3 +40,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

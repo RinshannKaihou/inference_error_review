@@ -4,7 +4,7 @@ slug: flash_attention_score_a6_dn_tail_stride_mismatch
 aliases: []
 title: FlashAttentionScore A6 DN 尾块行距不一致精度错误
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7138
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0636
 original:
   mechanism: CANN ops-transformer FlashAttentionScore（A6 ascend960dt DAV_9201，CANN 9.3.0）。d=192>128 时 tiling 选 S1Base=64；无可选输入时 A6 上 IsDnForTrain=true 走 classic DN 路径（IterateBmm1DnSplitK + ProcessVec1Dn）。cube 侧 DN fixpipe 的 CV_RATIO==1 分支 dstStride 写死 s1BaseSize；vec 侧以 m=Align32(s1RealSize)/CV_RATIO 为行距读取 bmm1 UB 瓦片；尾块 Align32(s1RealSize)<s1BaseSize（如 s1RealSize≤32 时 nSize=32≠64）时写入行距与读取行距不一致，softmax（max/sum/exp）数据错位。复现场景（B=2,headNum=1,seq_q=[250,1],seq_kv=[41,40],d=192,dv=128,bf16）：batch1 唯一输出行（第 250 行）起错误，batch0 前 250 行正确。A5（CV_RATIO=2）dstStride=nSize/2 恒等于 vec 侧 m，无此问题。
   source: https://gitcode.com/cann/ops-transformer/issues/7138
@@ -38,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

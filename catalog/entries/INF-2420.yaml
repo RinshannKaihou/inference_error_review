@@ -4,13 +4,13 @@ slug: histc_minmax_expansion_fp32_rounding_collapse
 aliases: []
 title: torch.histc min==max 适配层展开坍缩静默错 bin
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: torch_npu
     component: histc 适配层展开
-  behavior: min==max 时适配层 aminmax 后按 double 裸 ±1 展开再经 x dtype 舍入，fp32 |m|≥2^24 时坍缩成不等宽 range；int64 标量一律 double payload 丢精度
+  behavior: min==max 时适配层 aminmax 后按 double ±1 展开经 x dtype 舍入，fp32 |m|≥2^24 坍缩为不等宽 range；标量一律转 double payload 回传，int64 遇 >2^53 丢精度
 effect:
   objects:
   - 数值结果
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

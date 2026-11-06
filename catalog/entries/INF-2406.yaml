@@ -4,7 +4,7 @@ slug: pool_key_indexer_sentinel_neg1_leak
 aliases: []
 title: PoolKeyIndexer 排序哨兵 -1 泄入输出放大为负索引垃圾段
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

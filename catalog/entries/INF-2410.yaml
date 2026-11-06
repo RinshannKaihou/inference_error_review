@@ -4,10 +4,10 @@ slug: batch_matmul_quant_noncontig_quant_param_misread
 aliases: []
 title: BatchMatmulQuant 非连续 quantParam 静默按连续读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: BatchMatmulQuant 输入连续化
   behavior: PreInputProcess 按值传递形参，l0op::Contiguous 的连续化产物只写入局部副本，建图仍用原始非连续指针，kernel 按连续内存顺序读取量化参数
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化

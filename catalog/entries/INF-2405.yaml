@@ -4,7 +4,7 @@ slug: pool_key_indexer_concurrent_silent_unwrite
 aliases: []
 title: PoolKeyIndexer 高占用并发下输出整张量静默零写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -39,3 +39,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

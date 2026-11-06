@@ -4,7 +4,7 @@ slug: npu_dropout_rand_ops_cse_merge
 aliases: []
 title: npu._npu_dropout 未入 rand_ops 被 CSE 合并
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - effect

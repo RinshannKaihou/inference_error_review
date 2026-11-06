@@ -4,7 +4,7 @@ slug: mxquant_aux_zero_dim_early_exit_y_unwritten
 aliases: []
 title: AntiMxQuant 辅输入 0 维早退非空输出未写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 主输入 x=[1,4] F8E4M3 与输出 y=[1,4] BF16 均非空，仅 mxscale 第三维 2→0：rc 0/0、ws=0、y 0/4 写入保持金丝雀 0x7E01；两设备独立复现
+  detail: 主输入 x 与输出 y 均非空，仅 mxscale 第三维 2→0：基线 [1,1,2] 为 rc 0/0、ws=512、y 4/4 写入；变异后 rc 0/0、ws=0、y 0/4，金丝雀 0x7E01 原样；A5 950PR 双设备独立复现
   visibility: 静默错误
 mitigation:
   detect: y 预填金丝雀写后读回；调用侧校验 mxscale 各维与 x 对应维匹配
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

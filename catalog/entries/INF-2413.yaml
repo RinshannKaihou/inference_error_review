@@ -4,17 +4,17 @@ slug: triton_ascend_argmin_max_index_channel_corruption
 aliases: []
 title: triton-ascend argmin/argmax 索引通道静默损坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: triton
     component: with_index 索引通道 lowering
-  behavior: 列形 [R,1] (值,索引) 累加器上 minimum_with_index/maximum_with_index 的 lowering 损坏索引通道：多块 argmax 恒返回初始索引 0，argmin 返回非极值索引
+  behavior: minimum_with_index/maximum_with_index 的 helper lowering 损坏索引传播：kernel 文本语义正确，但多块 argmax 恒返回初始累加器索引 0，argmin 返回非极值索引
 effect:
   objects:
   - 数值结果
-  detail: fp16/bf16 argmin/argmax 经 torch.compile+triton_experimental 返回错误索引（12 配置 7 错；错误索引不在并列极值集合内，多块 argmax 恒 0）；极值本身正确，无报错
+  detail: fp16/bf16 argmin/argmax 经 torch.compile+triton_experimental 返回错误索引：argmax 恒返 0，argmin 返 19/37/10/3 等非极值索引；极值正确、无报错，确定性复现；torch_npu 默认排除兜底，需手动加回注册清单
   visibility: 静默错误
 mitigation:
   detect: compiled 与 eager 输出索引比对（极值相同、索引不同即中招）；12 配置矩阵见 issue
@@ -38,3 +38,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
+    - detail

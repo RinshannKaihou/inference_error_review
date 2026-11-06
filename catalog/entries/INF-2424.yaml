@@ -4,10 +4,10 @@ slug: sglang_tbo_prefill_offset_and_aux_state_drop
 aliases: []
 title: sglang TBO 微批偏移错置与辅助态丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: 运行时/执行
     stack: sglang
     component: Two-Batch Overlap 微批切分
   behavior: TBO 切 token 缓冲为微批但 extend_start_loc 保持父批相对，第二微批读错 KV 槽/越界；分级层执行绕过普通前向的辅助态捕获点，EAGLE3 解包失败
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-05'
+  audit:
+    round: daily-audit-2026-11-06
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: 运行时/执行
