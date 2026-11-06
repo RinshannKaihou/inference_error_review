@@ -37,6 +37,8 @@ original:
   behavior: 对超过 2^30（约 10.7 亿）元素的一维 fp32 张量做 cumsum：接口不报错，返回码全 0，但输出就是输入本身——累加完全没做。比如 x[0]=1 其余为 0，期望全 1.0，实际只有 out[0]=1 其余全 0。下游拿到看似正常的张量继续算，前缀和语义的结果整体静默错误，比崩溃更难发现。
   trigger_surface: CANN 9.2.0/9.3.0（两者一致）；aclnnCumsum fp32 1 维 dim=0；元素数 > 2^30（约 4GiB fp32）；A3 910_9362 真机两段式直调复现。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访 2026-11-06：#4574 仍 open（批次快照 11-06T07:31 有更新，状态未变，无修复 MR 迹象）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -44,6 +46,9 @@ migration:
   - date: '2026-11-06'
     fields:
     - relations
+  - date: '2026-11-06'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-06
     base:

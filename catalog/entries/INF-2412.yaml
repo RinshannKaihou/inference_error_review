@@ -37,6 +37,8 @@ original:
   behavior: 昇腾 A6 上变长序列注意力计算：当某个 batch 的 query 长度不是对齐基数的整数倍（存在尾块，如 250 和 1 混批）时，注意力输出从尾块对应的行开始悄悄算错，前面的行正常。修复 MR 已提交但未合入。同负载在 A5 上正确。
   trigger_surface: CANN 9.3.0；FlashAttentionScore DN 路径；A6 ascend960dt；d>128（S1Base=64）+ 变长 TND 存在尾块（Align32(s1RealSize)<s1BaseSize）；bf16 复现。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访 2026-11-06：#2981 仍 open 无状态变化
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -44,6 +46,9 @@ migration:
   - date: '2026-11-06'
     fields:
     - relations
+  - date: '2026-11-06'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-06
     base:

@@ -35,6 +35,8 @@ original:
   behavior: 对一个 buffer 做重叠视图拷贝（如 buf[5:37] ← buf[0:32]）：CPU 版 PyTorch 会直接报错拒绝；NPU 版不报错、返回成功，但拷出来的数据是错的——而且每次跑错的元素位置还不一样（10 次里 9 次错，错 5 到 10 个元素浮动）。torch._foreach_copy_ 这类优化器批量拷贝路径用同款接口，重叠使用时结果静默污染且不可复现，极难排查。
   trigger_surface: CANN 9.2.0；aclnnForeachCopy / torch._foreach_copy_ NPU 路由；x 与 out 指向同一存储的前向重叠区间；910B3 真机 20 次实测。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访 2026-11-06：#8260 仍 open（11-06T03:01 更新，状态未变）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -45,3 +47,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - original.notes

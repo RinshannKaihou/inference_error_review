@@ -1,0 +1,41 @@
+id: INF-2443
+legacy_ids: []
+slug: ascendstore_pp_rank_key_noop
+aliases: []
+title: AscendStore decode PP 键扩展静默不生效
+kind: 故障
+status: pending_audit
+cause:
+  objects:
+  - subsystem: KV缓存
+    stack: vllm
+    component: decode_adaptor_prefill_pp
+  behavior: decode_adaptor_prefill_pp 用硬编码 @pp_rank:0 做键替换展开，但键内 @pp_rank 是本 worker 秩；pp_rank>0 的 worker 替换不命中，N 个扩展键全等于原键
+effect:
+  objects:
+  - KV状态
+  - 跨请求/跨样本数据
+  detail: 保存时 N 个分区 addr/size 写同一键互相覆盖只留一份 KV；查询时 all() 聚合假报块完整，缺失分区被永久跳过；计数校验对重复键平凡通过；静态代码检查+确定性路径，无 runtime 复现
+  visibility: 静默错误
+mitigation:
+  detect: store 后按键空间抽查 @pp_rank:0..N-1 键存在性
+  fix: 待定（按 KeyMetadata.pp_rank 构造源串或改用非硬编码替换）
+labels:
+  stage: N/A
+  confidence: documented
+  coverage: NEW
+  discovered: '2026-11-06'
+remarks: 静态代码检查发现（main@e617b70），代码路径确定性但无 NPU runtime 复现。
+evidence:
+- url: https://github.com/vllm-project/vllm-ascend/issues/21164
+  kind: github_issue
+relations: []
+original:
+  mechanism: vllm-ascend main@e617b70（2026-11-06 静态检查，路径确定性）：vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/metadata.py:680-702 decode_adaptor_prefill_pp 用硬编码 key.replace("@pp_rank:0", f"@pp_rank:{j}", 1) 把一个逻辑 store 键展开为每个 prefill PP rank 一个键；但键前缀（metadata.py:349-357）内嵌的 @pp_rank 来自 KeyMetadata.pp_rank=本 pool worker 的 rank_in_group（pool_worker.py:127/315-321），不恒为 0。decode 实例 PP>1 时 pp_rank≠0 的 worker 键为 @pp_rank:<k>，replace 不命中返回原键，N 个扩展键全相同。后果：1) store 路径（kv_transfer.py:926-932）N 个分区切片写同一键互相覆盖，只留一份 KV；2) lookup（:510-515）N 个键解析到同一键，all() 聚合（:531-533）假报块完整——正是其 docstring（:496-504）警告的 false-hit 场景，缺失分区被永久跳过；3) 计数校验（:933 len%logical）对重复键平凡通过；4) 期望的 @pp_rank:0..N-1 键空间在该 rank 不存在，decode 消费方与 prefill 生产方键空间不一致。
+  source: https://github.com/vllm-project/vllm-ascend/issues/21164
+  behavior: PD 分离部署中 decode 实例 PP>1 且 AscendStore pool worker 秩不为 0 时：多 PP prefill 的 KV 块保存静默丢失（N 份只存下 1 份），块查询却报告完整命中，decode 复用到不完整/错误的 KV；无报错，表现为长提示下 decode 输出质量劣化或与前缀不一致，难与量化噪声区分。
+  trigger_surface: AscendStore KV pool+decode 侧 PP>1+pool worker pp_rank≠0；main@e617b70
+  discovery: 2026-11-06 每日扫描
+migration:
+  method: scan
+  scanned: '2026-11-06'

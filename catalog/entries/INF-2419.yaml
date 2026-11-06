@@ -36,6 +36,8 @@ original:
   behavior: DeepSeek V4.1 用 DSpark 投推解码时，Ascend 侧目标模型给 draft 模型喂的辅助隐藏态取错了层——差一层。draft 以错误状态为条件，接受率系统性偏低， speculative 解码净收益缩水（同栈修复对照：吞吐类指标差 3% 左右）。生成内容本身看不出异常，只是变慢，属于典型的静默配置级劣化。修复 PR 已提交待合入。
   trigger_surface: vllm-ascend main（40b3842d3）；DeepSeek V4.1 系检查点（dspark_target_layer_ids 零基语义）；DSpark speculative decoding；MRV2/V1 runner 均受影响（V1 因 +1 掩码巧合对齐但仍有 Engram/末边界问题）。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访 2026-11-06：修复 MR !3919 仍 open 未合入（11-06T04:11 更新），发布状态未核实
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -59,3 +61,7 @@ migration:
       visibility:
         from: 质量退化
         to: 性能退化
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - original.notes

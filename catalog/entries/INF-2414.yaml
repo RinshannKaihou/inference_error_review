@@ -36,6 +36,8 @@ original:
   behavior: GLM-5.3-Flash 8 卡上用 MTP 投推解码：TP4×PP2 布局下开 3 个 speculative tokens 反而比 1 个更差——平均接受率掉到 36.7%，第三个位置的接受率在 16% 的采样窗口里干脆是 0。同样的模型、负载、配置换 TP8 布局就正常（65.3%）。输出内容不受污染，但投推完全白做还倒贴，吞吐显著受损；切换 TP8 可规避。
   trigger_surface: vllm-ascend 0.30.0rc1+#19309；GLM-5.3-Flash-w8a8；TP4×PP2 + deepseek_mtp ns≥2 + cudagraph FULL_DECODE_ONLY + async scheduling；910B 8 卡；根因未定位。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访 2026-11-06：#21103 仍 open（11-06T09:00 更新，状态未变）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -59,3 +61,7 @@ migration:
       visibility:
         from: 质量退化
         to: 性能退化
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - original.notes

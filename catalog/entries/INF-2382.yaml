@@ -39,6 +39,7 @@ original:
   notes:
   - 2026-11-04 回访 2026-11-04：#29710 仍 open
   - '2026-11-05 2026-11-05 回访：修复 MR !15405 出现，同时覆盖 #7086/#7087/#7088（后者=INF-2388 写偏移回绕，use32 判定改为按各 tensor 最大访问偏移 uint64 上界）；MR open 未合入'
+  - 2026-11-06 回访 2026-11-06：#7063 仍 open，修复 MR !15405 合入状态未核实
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -63,4 +64,7 @@ migration:
   - date: '2026-11-05'
     fields:
     - mitigation.fix
+    - original.notes
+  - date: '2026-11-06'
+    fields:
     - original.notes

@@ -35,6 +35,8 @@ original:
   behavior: MX 格式反量化算子：主输入和输出都非空、完全正常，只要辅助输入 mxscale 的形状里混进一个 0 维（如 [1,1,0]），算子就把它当「空输入」提前返回成功——输出一个字节都不写，读回是未初始化显存。调用方拿到 SUCCESS 和垃圾数据，无任何告警。与之前收过的「主输入为空」类缺陷不是同一个触发面。
   trigger_surface: CANN 9.3.0（B020/beta.1）；aclnnAntiMxQuant；辅输入 mxscale 含 0 维（主输入/输出均非空）；A5 950PR 双设备独立复现。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访 2026-11-06：#7164 仍 open（11-06T02:15 更新，状态未变）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -50,3 +52,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-06'
+    fields:
+    - original.notes
