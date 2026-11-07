@@ -35,6 +35,8 @@ original:
   behavior: W8A8 反量化 matmul 走 A16W8 PerGroup ND 路径时输出严重偏离参考：相对误差约 19%（NRMS 0.19），接口无任何报错返回成功；同一权重换 PerChannel 即恢复正常（0.17%），量化模型精度劣化时难以从日志定位到该路径。
   trigger_surface: torch_npu.npu_weight_quant_batchmatmul A16W8+PerGroup（antiquantGroupSize≠0）+ND 格式；910B3、CANN 9.3.0、torch_npu 2.14.0
   discovery: 2026-11-06 每日扫描
+  notes:
+  - 2026-11-07 2026-11-07 回访：issue 11-07T00:19 有更新，仍 open，无状态变化。
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -50,3 +52,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - behavior
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - original.notes

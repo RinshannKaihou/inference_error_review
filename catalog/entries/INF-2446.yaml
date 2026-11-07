@@ -35,6 +35,8 @@ original:
   behavior: AMD gfx950 上启用 ROCM_AITER_MLA 且 gqa_ratio=16、fp8 Q+KV、decode_qlen 3-4 时：MLA decode 输出与参考完全不相关（cos_diff 0.84-0.90，aiter 自身门限 0.03），无报错无警告，返回 shape/dtype 均正常；服务化后表现为该配置下生成内容整体错误。gqa_ratio=32 或 qlen≤2 不触发。
   trigger_surface: ROCM_AITER_MLA+gqa_ratio=16+fp8 Q/KV+decode_qlen 3-4；gfx950；ROCM_AITER_MLA 可达
   discovery: 2026-11-06 每日扫描
+  notes:
+  - 2026-11-07 2026-11-07 回访：vllm#66141 搜索窗口内仍 open 无后续变化。
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -50,3 +52,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - component
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - original.notes

@@ -37,6 +37,8 @@ original:
   behavior: sglang v0.5.23 服务处理一个约百万 token 的长请求后：之后的所有请求输出持续退化——内容为空或同一 token 重复到 max_tokens、MTP/EAGLE 接受率跌到 0.00、结构化输出请求直接 HTTP 500；flush_cache 无法恢复，只能重启进程。长请求本身在 v0.5.23 可能成功（5/5 needle）也可能在 nightly 上直接退化（0/5），短请求在其前一切正常。
   trigger_surface: sglang v0.5.23/nightly+GLM-5.3 类 mamba/KDA 混合模型+MTP（speculative_attention_mode=prefill）+~1M token 深度 chunked prefill；v0.5.22 干净
   discovery: 2026-11-06 每日扫描
+  notes:
+  - 2026-11-07 2026-11-07 回访：sglang#48964 仍 open（11-06 创建），本轮搜索窗口内无根因定位新评论，维持留观根因。
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -56,3 +58,7 @@ migration:
         to: KV状态
     uncertain:
     - visibility
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - original.notes
