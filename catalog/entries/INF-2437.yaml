@@ -4,7 +4,7 @@ slug: moegatingtopksoftmax_missing_k_check
 aliases: []
 title: MoeGatingTopKSoftmax 输出校验漏末维==k
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -30,7 +30,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-transformer/issues/7155
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0643
 original:
   mechanism: 'cann/ops-transformer moe/moe_gating_top_k_softmax（Ascend950PR、CANN 9.2.0-beta.2；本地镜像 master=537d738a9，gitcode master 最新 2c1938672 已 fetch 核对 CheckOutShape 仍无末维比较，文档 :131 原文仍在）：op_host moe_gating_top_k_softmax_tiling_base.cpp:46-72 的 CheckOutShape 只比维数/dim0/3D 时 dim1，缺 GetDim(dimNum-1)==k；:127/:132/:137 三处输出（yOut/expertIdxOut/rowIdxOut）都过此函数。实测 k=2 时 yOut fp16[8,2] ret=0、fp16[8,1] 亦 ret=0（应 161002），文档 docs/aclnnMoeGatingTopKSoftmax.md:131 明确要求 yOut -1 轴大小同 k。越界写观测（如实标注局限）：挂 debug .o 一轮 memcheck 中 MoeGatingTopKSoftmax kernel 报连续 illegal write of size 4，地址 0x120000019010/19014/19018/1901c 递增、跨 aiv(4)-(7)；该轮用例参数事后不可追溯（用例文件被重生成），不作为稳定复现证据，仅说明 yOut 小于 k 时确有按 k 写、越界的量级。与 #7155（MoeFusedTopk IsEmpty 早退跳过校验）同为校验不完整族不同路径。'
   source: https://gitcode.com/cann/ops-transformer/issues/7222 （互引：https://gitcode.com/cann/ops-transformer/issues/7155 ）
@@ -40,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - subsystem

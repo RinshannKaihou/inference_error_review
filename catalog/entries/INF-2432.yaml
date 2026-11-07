@@ -4,13 +4,13 @@ slug: wqbmm_pergroup_nd_silent_wrong
 aliases: []
 title: WQBMM PerGroup ND 路径静默算错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: cann
     component: weight_quant_batchmatmul
-  behavior: A16W8 PerGroup（G量化）ND 路径反量化/数值实现缺陷（或该场景未支持却放行）：接口返回成功但与 FP64 反量化参考 NRMS≈0.19，同接口 PerChannel 路径 NRMS≈0.0017 正常
+  behavior: 疑似 WeightQuantBatchMatmulV2 PerGroup ND 路径反量化/数值实现缺陷，或该场景实际未支持但未返回错误
 effect:
   objects:
   - 数值结果
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

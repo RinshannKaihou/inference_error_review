@@ -4,7 +4,7 @@ slug: sglang_mamba_state_poisoned_after_m_request
 aliases: []
 title: sglang GLM-5.3 长请求后引擎状态损坏后续全退化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,6 +13,7 @@ cause:
   behavior: '~1M token 请求（约 127 个 chunk）后引擎状态损坏，怀疑 #44098 删 KDA 状态池 NextN 层（35→34）而 prefill 模式 draft 仍读写 KDA 致槽位错位；根因未定位'
 effect:
   objects:
+  - KV状态
   - 跨请求/跨样本数据
   - 可用性/进度
   detail: 长请求后所有后续请求输出垃圾（空内容或单 token 重复至 max_tokens）、MTP 接受率 0.00（正常 0.6-0.8）、json_schema 请求 HTTP 500；/flush_cache 无效，仅重启恢复；v0.5.22 干净、v0.5.23/nightly 复现
@@ -39,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: KV状态
+    uncertain:
+    - visibility

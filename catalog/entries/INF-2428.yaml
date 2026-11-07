@@ -4,7 +4,7 @@ slug: te_scalar_accumulator_four_family
 aliases: []
 title: TE 标量累加器四族代码生成缺陷，整型/低精度旁路归约错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -38,3 +38,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

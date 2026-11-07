@@ -4,7 +4,7 @@ slug: reppad_backward_double_undefined
 aliases: []
 title: ReplicationPad 反传 DOUBLE 放行结果错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,8 +13,9 @@ cause:
   behavior: op_host .DataType() 只注册 FLOAT/FLOAT16/BF16 未注册 DOUBLE，资料却声明支持；DOUBLE 输入两段 rc=0 放行，无对应 kernel 可选走未定义执行路径
 effect:
   objects:
+  - 梯度
   - 数值结果
-  detail: 官方示例全部改 ACL_DOUBLE 后 gradInput=[0,2.25,0,2.25]，FLOAT 对照 [4,4,4,4]（与手工推导一致）；对照算子 MoeTokenUnpermuteWithRoutingMap 对 DOUBLE 正确返回 161002
+  detail: 官方示例改 ACL_DOUBLE 后两段 rc=0，gradInput=[0,2.25,0,2.25]，既非 FLOAT 结果 [4,4,4,4] 也不符合合理 fp64 语义；对照算子 MoeTokenUnpermuteWithRoutingMap 对 DOUBLE 返回 161002
   visibility: 静默错误
 mitigation:
   detect: fp64 路径与 fp32/FP64 手工参考对照
@@ -38,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 数值结果
+        to: 梯度
+    rewritten:
+    - detail

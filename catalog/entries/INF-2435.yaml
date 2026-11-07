@@ -4,7 +4,7 @@ slug: slice_last_dim_multidefect
 aliases: []
 title: SliceLastDim srcStride 窄化丢高 32 位静默错数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: int8 x=(2,4.3e9) 连续拷贝 srcStride 真值 4299999900B 窄化为 5032604，第二行源偏移错位输出无报错错误数据；负 stride/[-2] 未知秩返回成功但输出负维度或 0 字节
+  detail: 行距≥2^32 字节（≥4GiB）的 int8 大宽度连续拷贝丢高 32 位，各 block 源地址错位，第二行起源偏移错位，静默输出错误数据且无报错；负 stride、[-2] 未知秩等非法属性仍返回成功，但输出负长度维度或 0 字节空输出，错误被推迟到下游。
   visibility: 静默错误
 mitigation:
   detect: 大行距拷贝与参考切片逐元素对照；-ftrapv 构建可拦极值溢出
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

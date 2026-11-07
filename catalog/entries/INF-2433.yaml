@@ -4,17 +4,17 @@ slug: padconv2d_fusion_same_overwrite
 aliases: []
 title: PadConv2dFusionPass 融合后 SAME 覆盖显式 pads
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 编译器
     stack: cann
     component: PadConv2dFusionPass
   behavior: 融合把 Pad 填充量累进 Conv2D pads 后，dn2nz 能力缺失平台仍将 padding 写成 SAME；InferConv2DPadsWithPadding 按 SAME 重算并覆盖 pads，融合进来的显式填充丢失
 effect:
   objects:
   - 数值结果
-  detail: Pad(4)+Conv2D(7x7,s2,VALID) 输入 [256,512,512,1]：未融合 Conv 输出 [256,257,257,16]、MaxPool [256,128,128,16]；融合后 [256,256,256,16]/[256,127,127,16]，无报错
+  detail: dn2nz 缺失平台 + 可融合 Pad+Conv2D（A2/A3、CANN 9.2.0）：SAME(512,k=7,s=2) 得 pads [2,3] 而非 [4,4,4,4]，输出 256 vs 257；Conv2D 及后续 MaxPool 尺寸比未融合小 1，shape 静默改变、无报错
   visibility: 静默错误
 mitigation:
   detect: 融合前后输出 shape 对照；检查融合后 Conv2D 的 padding/pads 属性
@@ -38,3 +38,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 编译器
+    rewritten:
+    - detail

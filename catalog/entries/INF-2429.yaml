@@ -4,7 +4,7 @@ slug: aot_i64_args_packed_as_i32
 aliases: []
 title: AOT i64 参数按 int32 打包致参数块错位，输出 25% 错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: '[300,256]×4 拼接应全 4，实测 76800/307200（25%）元素错，最大差 13.97 在第二分块 (85,399)；shift_k=0..3×use_static_size 共 8 组基线 7 PASS 1 FAIL'
+  detail: AOTInductor+unbacked 符号尺寸+use_static_size=True 下，wrapper 把 i64 尺寸参数按 int32 打包致参数块错位，输出约 1/4 元素静默错误、无报错，最大差近 14，最大错误点 (85,399) 位于拼接第二分块 [256,512)
   visibility: 静默错误
 mitigation:
   detect: 生成 wrapper 与 kernel 签名逐字段核对偏移
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

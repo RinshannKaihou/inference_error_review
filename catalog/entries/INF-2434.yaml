@@ -4,7 +4,7 @@ slug: layernorm_eps_negative_nan_family
 aliases: []
 title: LayerNorm 族 eps<0 放行静默输出全 NaN（三算子同型）
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,7 +32,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-nn/issues/8310
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0640
 original:
   mechanism: 'cann/ops-nn 三单同型缺陷（950）：#8304 aclnnLayerNorm 对 eps<0 放行并静默输出全 NaN，同族 aclnnAddRmsNorm 返回 161002；#8309 aclnnFastLayerNorm 对 eps<0 不校验，放行 rc=0 并静默产出全 NaN（与 #8304 同型、接口不同）；#8310 aclnnBatchNorm 对 eps<0 不校验，放行 rc=0 并静默产出全 NaN（与 #8304/#8309 同型）。三单均实测 rc=0，属参数校验缺失+非法参数静默产出 NaN：调用方传负 eps（配置错误、符号算反、动态 eps 计算出错）时接口不拒绝，方差倒数 1/sqrt(含负 eps 的表达式) 产出 NaN 整块输出，返回码 SUCCESS。同仓 AddRmsNorm 的正确拒绝行为证明这是校验缺失而非约定行为。'
   source: https://gitcode.com/cann/ops-nn/issues/8304 （同型：https://gitcode.com/cann/ops-nn/issues/8309 https://gitcode.com/cann/ops-nn/issues/8310 ）
@@ -42,3 +44,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  updates:
+  - date: '2026-11-07'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

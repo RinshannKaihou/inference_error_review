@@ -3,13 +3,13 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2447 条；状态：active 2425、pending_audit 22
+共 2447 条；状态：active 2447
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 759 |
-| 编译器 | 160 |
+| 算子/内核 | 758 |
+| 编译器 | 161 |
 | 运行时/执行 | 136 |
 | 集合通信 | 40 |
 | 并行切分 | 31 |
@@ -8716,29 +8716,18 @@
 
 ### INF-2431 `reppad_backward_double_undefined` ReplicationPad 反传 DOUBLE 放行结果错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / pad_v3_grad_replicate def
 - **原因行为**：op_host .DataType() 只注册 FLOAT/FLOAT16/BF16 未注册 DOUBLE，资料却声明支持；DOUBLE 输入两段 rc=0 放行，无对应 kernel 可选走未定义执行路径
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：官方示例全部改 ACL_DOUBLE 后 gradInput=[0,2.25,0,2.25]，FLOAT 对照 [4,4,4,4]（与手工推导一致）；对照算子 MoeTokenUnpermuteWithRoutingMap 对 DOUBLE 正确返回 161002
+- **影响对象**：梯度；数值结果（静默错误）
+- **影响详情**：官方示例改 ACL_DOUBLE 后两段 rc=0，gradInput=[0,2.25,0,2.25]，既非 FLOAT 结果 [4,4,4,4] 也不符合合理 fp64 语义；对照算子 MoeTokenUnpermuteWithRoutingMap 对 DOUBLE 返回 161002
 - **改进措施**：检测 fp64 路径与 fp32/FP64 手工参考对照；修复 待定（期望删除资料 DOUBLE 或补 DT_DOUBLE 注册；关联 #4527 为同接口空 tensor 误拒，机理不同）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4595
 
-### INF-2433 `padconv2d_fusion_same_overwrite` PadConv2dFusionPass 融合后 SAME 覆盖显式 pads
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
-
-- **原因对象**：算子/内核 / cann / PadConv2dFusionPass
-- **原因行为**：融合把 Pad 填充量累进 Conv2D pads 后，dn2nz 能力缺失平台仍将 padding 写成 SAME；InferConv2DPadsWithPadding 按 SAME 重算并覆盖 pads，融合进来的显式填充丢失
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：Pad(4)+Conv2D(7x7,s2,VALID) 输入 [256,512,512,1]：未融合 Conv 输出 [256,257,257,16]、MaxPool [256,128,128,16]；融合后 [256,256,256,16]/[256,127,127,16]，无报错
-- **改进措施**：检测 融合前后输出 shape 对照；检查融合后 Conv2D 的 padding/pads 属性；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13841（open）：融合后统一写 padding=EXPLICIT/auto_pad=NOTSET 保留 pads；nn_op_graph_ut 19 项用例通过（same_padding_fused_pads 验证 SAME[2,3]+Pad[3,3] 合并为 [5,6,5,6]）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/8322
-
 ### INF-2434 `layernorm_eps_negative_nan_family` LayerNorm 族 eps<0 放行静默输出全 NaN（三算子同型）
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / LayerNorm eps 校验
 - **原因行为**：三个归一化算子对 eps<0 不校验直接放行，含负 eps 的方差倒数计算产出 NaN，两段 rc=0；同族 aclnnAddRmsNorm 对同类输入正确返回 161002
@@ -8746,46 +8735,47 @@
 - **影响详情**：eps<0 时三个归一化算子 rc=0 且输出全 NaN（#8304 LayerNorm、#8309 FastLayerNorm、#8310 BatchNorm 同型三单）；AddRmsNorm 同条件返回 161002 形成对照
 - **改进措施**：检测 入口侧断言 eps≥0，或对首个输出块做 NaN 检查；修复 待定（期望与 AddRmsNorm 一致返回 161002；三单未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8304；https://gitcode.com/cann/ops-nn/issues/8309；https://gitcode.com/cann/ops-nn/issues/8310
+- **关联**：cross:TRN-0640
 
 ### INF-2435 `slice_last_dim_multidefect` SliceLastDim srcStride 窄化丢高 32 位静默错数据
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / slice_last_dim arch35
 - **原因行为**：DoCopyIn 连续拷贝分支 GM 行距经 static_cast<uint32_t> 窄化再赋 int64 字段，行距≥2^32 字节丢高 32 位致源地址错位；infershape 另缺 stride≥1/rank 校验
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：int8 x=(2,4.3e9) 连续拷贝 srcStride 真值 4299999900B 窄化为 5032604，第二行源偏移错位输出无报错错误数据；负 stride/[-2] 未知秩返回成功但输出负维度或 0 字节
+- **影响详情**：行距≥2^32 字节（≥4GiB）的 int8 大宽度连续拷贝丢高 32 位，各 block 源地址错位，第二行起源偏移错位，静默输出错误数据且无报错；负 stride、[-2] 未知秩等非法属性仍返回成功，但输出负长度维度或 0 字节空输出，错误被推迟到下游。
 - **改进措施**：检测 大行距拷贝与参考切片逐元素对照；-ftrapv 构建可拦极值溢出；修复 待定（单内列 tiling/infershape/kernel/proto/README 多域整改项，未见统一修复 MR）
 - **来源**：https://gitcode.com/cann/ops-math/issues/4577
 
 ### INF-2440 `adaptivemaxpool2d_nhwc_transpose_missing` AdaptiveMaxPool2d NHWC 输出未转回布局，恒等池化即整块错位
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / adaptive_max_pool2d
 - **原因行为**：ConvertNHWCtoNCHW 只转输入，ProcessAdaptiveMaxPoolResults 把 NCHW 结果直接 Reshape 成 NHWC 形状后 ViewCopy，缺 NCHW→NHWC 反向 transpose
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：恒等池化（outputSize=输入 H/W）下 self=[1,4,4,8] NHWC 输出 126/128 元素与输入不一致（首差 idx1：输入 0.51 输出 0.58）；NCHW 对照与 NHWC C=1 对照均 128/128 一致；两段 rc=0
+- **影响详情**：恒等池化（outputSize 取输入 H/W）下，4 维 NHWC 且 C>1（C=8 用例）输出 126/128 元素与输入不一致；NCHW 输入与 NHWC C=1 对照全对；两段接口均返回 0，自包含 C++ 复现脚本在缺陷复现时退出码 1。
 - **改进措施**：检测 NHWC 路径恒等池化自检（输出应逐元素等于输入）；修复 待定（应在 ProcessAdaptiveMaxPoolResults/ProcessAndCopyResults 中把结果含 indices transpose 回 NHWC 再 ViewCopy）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8180
 
 ### INF-2441 `groupnormsiluquant_rstd_nan` GroupNormSiluQuant rstd 整块 NaN
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / group_norm_silu_quant
 - **原因行为**：group_norm_silu_quant_b16.h 把 E[x²]−E[x]²+eps 直接塞进 sqrt，|mean| 远大于组内扰动时灾难性抵消为负，sqrt(负数) 得 NaN；quant 入口未同步钳位修复
 - **影响对象**：数值结果（数值异常）
-- **影响详情**：fp16 全常数 self（真实方差 0）+eps=1e-5 时 rstdOut 整块 NaN×256/256，ret=0；eps=1 恢复 2.82812（反推 var≈−0.875 落入 eps 区间）；channel 交替常数时 NaN 精确按组跟随 128/128；A2/A3 双机逐位一致
+- **影响详情**：aclnnGroupNormSiluQuant(fp16)+组内方差极小的合法输入(如近常数channel/真实方差≈0)+小eps：rstdOut整块或按组选择性NaN，两段接口返回0无报错；eps=1e-5/1e-2均NaN×256，eps=1恢复2.82812；A2/A3双机逐位一致
 - **改进措施**：检测 常数/近常数组输入下检查 rstdOut 是否 NaN；eps 抬升可判别；修复 待定（期望把 51ed92dd3 的 var 钳位同步到 group_norm_silu_quant 全部 kernel）
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8209
 
 ### INF-2442 `fa_arch38_dn_pitch_halfs1` arch38 FA DN pitch 与 halfS1 计算错误
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / FA arch38 DN 参数
-- **原因行为**：ProcessVec1DnRegbaseV2 第二段 DataCopy 源 gap 用 vec1S2CopyLenDn 且 L1 pitch 未按 64 对齐；halfS1RealSize 误取 align32 值
+- **原因行为**：s2RealSize>vec1S2CopyLenDn 时第二段 DataCopy 源 gap 用该值、L1 pitch 未按其 64 对齐；useDn 且 s1RealSize>16 时 halfS1RealSize 误取 align32
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：mc62(arch38) FA DN（useDn）场景 S2 尾块 s2RealSize>s2BaseSize/2 且非 64 对齐用例精度异常；本单无实测数值，机制由提交者源码定位；issue 已 closed 关联 MR !15443
 - **改进措施**：检测 S2 尾块非 64 对齐用例与 golden 对照；修复 修复 MR https://gitcode.com/cann/ops-transformer/merge_requests/15443（issue closed，合入与发布未核实）
@@ -8793,7 +8783,7 @@
 
 ### INF-2445 `fas_arch35_hasrope_offset` FA arch35 hasRope 偏移错误致精度异常
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：算子/内核 / cann / flash_attention_score
 - **原因行为**：IterateBmm1NdL0Split 对 query rope 偏移额外乘 s1BaseSize/s1Size，与 Q/keyRope 的 goIdx 计算不一致，gSize>1 时读错 rope 数据
@@ -8804,9 +8794,9 @@
 
 ### INF-2446 `vllm_rocm_aiter_mla_gqa16_silent_garbage` ROCM_AITER_MLA gqa16 fp8 qlen3-4 静默算错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
-- **原因对象**：算子/内核 / rocm / aiter mla_decode_fwd 派发
+- **原因对象**：算子/内核 / rocm / aiter decode config remap
 - **原因行为**：gqa_ratio=16+fp8 的 decode_qlen 3/4 落入无 persistent 无 arch 条件的分支，派发非 persistent kernel 并静默错误计算；gqa_ratio=32 同长度被既有检查正确拒绝
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：gfx950 上 cos_diff 0.84-0.90（通过门限 0.03），输出与参考不相关；无崩溃无警告，shape/dtype 正确；bf16/gqa128/qlen≤2 对照均通过，确定性复现
@@ -10546,29 +10536,30 @@
 
 ### INF-2426 `inductor_dynamic_sum_first_length` Inductor dynamic 归约长度固化首次值，输入变短后静默算错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：编译器 / torch_npu / NPUIndexTritonKernel 范围树
 - **原因行为**：initialize_range_tree 用首次编译的具体长度替换符号长度并写回 numels，随后固化进 kernel 调用参数，后续不同长度的输入仍按旧长度归约
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：910C 上 dynamic=True 编译 sum(dim=-1)，首输入 4096 后传 2048 得 8386560 而非 2096128（恰为 4096 之和），512 输入得 4208640，全程无异常
+- **影响详情**：910C 上 dynamic=True 编译 sum(dim=-1)，首输入长度 4096 后再传 2048，应得 2096128 实得 8386560；传 512 应得 130816 实得 4208640，全程无报错无 NaN
 - **改进措施**：检测 编译结果与 eager 逐输入长度对照可发现；修复 上游符号形状修复 commit 8695719 / v2.10 分支 9f2455f（910C 回归待完成，未核实发布）；现场以全局关闭 torch.compile 规避
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5930
+- **关联**：cross:TRN-0638
 
 ### INF-2427 `argmax_nan_index_wrong` NPU argmax/argmin 全 NaN 归约返回错误索引
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：编译器 / torch_npu / triton_helpers 极值归约
-- **原因行为**：_extremum/max_with_index/min_with_index 索引阶段只判断 value==极值，NaN 与自身比较为假致全部匹配失败返回填充值最大索引；极值阶段也未完整传播 NaN 与最低索引语义
+- **原因行为**：_extremum/max_with_index/min_with_index 索引阶段只判断 value==极值，NaN 与自身比较为假可能全部匹配失败，返回用作填充值的最大索引；极值阶段未完整保留 NaN 传播与最低索引语义
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：32×32 含 NaN 输入全 NaN 列 argmax 应返回最低索引 0，NPU 编译结果返回 31，2/32 索引不一致（相对差 inf），test_argmax_argmin_with_nan_npu 退出码 1
+- **影响详情**：含 NaN 输入做 argmax/argmin（如 mask 或脏数据产生全 NaN 列）时，NPU torch.compile 路径对该列返回最大索引 31 而非期望的最低索引 0；32×32 用例 2/32 索引不一致、最大绝对差 31、相对差 inf，测试断言失败但业务侧无报错
 - **改进措施**：检测 含 NaN 输入的 argmax/argmin 与 eager/CPU 对照；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49185（open 未合入）：极值阶段复用上游比较器传播 NaN，索引阶段补「输入值与极值均为 NaN」匹配并取最小原始索引；6 项回归 PASS
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5924
 
 ### INF-2428 `te_scalar_accumulator_four_family` TE 标量累加器四族代码生成缺陷，整型/低精度旁路归约错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：编译器 / torch_npu / TE 标量累加器 codegen
 - **原因行为**：标量累加器路径四族独立缺陷：loop-carry init 携带旧秩、int64 累加器降级 int32、-inf 哨兵经 fptoui 变 255 毒化归约、窄整型 sum 标量携带被 vendor 编译器误编译
@@ -10579,25 +10570,37 @@
 
 ### INF-2429 `aot_i64_args_packed_as_i32` AOT i64 参数按 int32 打包致参数块错位，输出 25% 错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：编译器 / torch_npu / CppWrapperNpu 参数声明
 - **原因行为**：generate_args_decl 先走默认整数分支固定 int32_t 后才查 signature，i64 符号参数提前入默认分支：前两字段合计少占 8 字节，Y0BLOCK 偏移从 48 提前到 40 后续错位
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：[300,256]×4 拼接应全 4，实测 76800/307200（25%）元素错，最大差 13.97 在第二分块 (85,399)；shift_k=0..3×use_static_size 共 8 组基线 7 PASS 1 FAIL
+- **影响详情**：AOTInductor+unbacked 符号尺寸+use_static_size=True 下，wrapper 把 i64 尺寸参数按 int32 打包致参数块错位，输出约 1/4 元素静默错误、无报错，最大差近 14，最大错误点 (85,399) 位于拼接第二分块 [256,512)
 - **改进措施**：检测 生成 wrapper 与 kernel 签名逐字段核对偏移；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49186（open 未合入）：默认整数/浮点分支移到 signature 分支之后（+8/-8 行）；候选 8 组全 PASS、i64/u64/fp64 三组恢复基线后再次失败
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5925
 
 ### INF-2430 `static_launcher_a5_repeated_inplace` A5 static launcher 重复执行 in-place kernel
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：编译器 / torch_npu / static Triton launcher
 - **原因行为**：static launcher 在 Ascend950 one-program-per-tile 形态下 grid 与参数处理不正确，同一 in-place pointwise kernel 被多次执行，输出每执行一次被缩放一次
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：Ascend950 上 triton_experimental 编译 matmul/8.0 与 eager 差 5.7~6.0；107 个社区模型 74 个 fail_accuracy；坏区域 compiled/raw≈0.0119 即 0.125 的幂；910B group-dispatch 免疫
+- **影响详情**：Ascend950+triton_experimental+默认 static launcher，「matmul+标量缩放」等 in-place pointwise 融合模式输出被反复缩放：最小复现最大绝对差 5.7~6.0；社区 107 模型 74/128 例精度不通过，无报错；910B 免疫。
 - **改进措施**：检测 ic.use_static_triton_launcher=False 做 A/B 对照；坏区比值呈 0.125 幂次可识别；修复 规避：torch._inductor.config.use_static_triton_launcher=False（实测恢复 0.0/1.86e-06）；根治需修 static_launcher/compile_result.py 与 launcher_codegen.py（未提交）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5920
+- **关联**：cross:TRN-0652
+
+### INF-2433 `padconv2d_fusion_same_overwrite` PadConv2dFusionPass 融合后 SAME 覆盖显式 pads
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
+
+- **原因对象**：编译器 / cann / PadConv2dFusionPass
+- **原因行为**：融合把 Pad 填充量累进 Conv2D pads 后，dn2nz 能力缺失平台仍将 padding 写成 SAME；InferConv2DPadsWithPadding 按 SAME 重算并覆盖 pads，融合进来的显式填充丢失
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：dn2nz 缺失平台 + 可融合 Pad+Conv2D（A2/A3、CANN 9.2.0）：SAME(512,k=7,s=2) 得 pads [2,3] 而非 [4,4,4,4]，输出 256 vs 257；Conv2D 及后续 MaxPool 尺寸比未融合小 1，shape 静默改变、无报错
+- **改进措施**：检测 融合前后输出 shape 对照；检查融合后 Conv2D 的 padding/pads 属性；修复 修复 MR https://gitcode.com/cann/ops-nn/merge_requests/13841（open）：融合后统一写 padding=EXPLICIT/auto_pad=NOTSET 保留 pads；nn_op_graph_ut 19 项用例通过（same_padding_fused_pads 验证 SAME[2,3]+Pad[3,3] 合并为 [5,6,5,6]）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8322
 
 ## 运行时/执行
 
@@ -17157,7 +17160,7 @@
 
 ### INF-2439 `scatterpakvcache_pa_nz_oob` ScatterPaKvCache PA_NZ 缺 slot 上界过滤越界写
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：KV缓存 / cann / scatter_pa_kv_cache PA_NZ
 - **原因行为**：arch35 PA_NZ 模板只过滤负 slot 未过滤上界，slot=numBlocks*blockSize 时直接换算成 cache 元素偏移写入，DataCopyPad 越过 cache 张量 32 字节
@@ -17168,18 +17171,18 @@
 
 ### INF-2443 `ascendstore_pp_rank_key_noop` AscendStore decode PP 键扩展静默不生效
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：KV缓存 / vllm / decode_adaptor_prefill_pp
 - **原因行为**：decode_adaptor_prefill_pp 用硬编码 @pp_rank:0 做键替换展开，但键内 @pp_rank 是本 worker 秩；pp_rank>0 的 worker 替换不命中，N 个扩展键全等于原键
 - **影响对象**：KV状态；跨请求/跨样本数据（静默错误）
-- **影响详情**：保存时 N 个分区 addr/size 写同一键互相覆盖只留一份 KV；查询时 all() 聚合假报块完整，缺失分区被永久跳过；计数校验对重复键平凡通过；静态代码检查+确定性路径，无 runtime 复现
+- **影响详情**：PP>1 且 pool worker pp_rank≠0 的 decode 实例：store 路径 N 个分区切片写同一键互相覆盖，只留一份 KV；lookup N 个键解析到同一键，all() 聚合假报块完整，缺失分区被永久跳过；无报错，长提示下 decode 输出质量劣化或与前缀不一致
 - **改进措施**：检测 store 后按键空间抽查 @pp_rank:0..N-1 键存在性；修复 待定（按 KeyMetadata.pp_rank 构造源串或改用非硬编码替换）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21164
 
 ### INF-2444 `mooncake_hybrid_stale_block_hashes` hybrid/layerwise 截断后 block_hashes 未重建
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：KV缓存 / vllm / hybrid/layerwise 截断
 - **原因行为**：#20213 的 block_hashes 重建只加在两处连接器，hybrid 与 layerwise 同样截断 prompt 却未重建，hash 仍描述截断前 prompt，前缀缓存与 KV 复用决策失真
@@ -17190,11 +17193,11 @@
 
 ### INF-2447 `sglang_mamba_state_poisoned_after_m_request` sglang GLM-5.3 长请求后引擎状态损坏后续全退化
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：KV缓存 / sglang / mamba/KDA 状态池
 - **原因行为**：~1M token 请求（约 127 个 chunk）后引擎状态损坏，怀疑 #44098 删 KDA 状态池 NextN 层（35→34）而 prefill 模式 draft 仍读写 KDA 致槽位错位；根因未定位
-- **影响对象**：跨请求/跨样本数据；可用性/进度（质量退化）
+- **影响对象**：KV状态；跨请求/跨样本数据；可用性/进度（质量退化）
 - **影响详情**：长请求后所有后续请求输出垃圾（空内容或单 token 重复至 max_tokens）、MTP 接受率 0.00（正常 0.6-0.8）、json_schema 请求 HTTP 500；/flush_cache 无效，仅重启恢复；v0.5.22 干净、v0.5.23/nightly 复现
 - **改进措施**：检测 MTP 接受率骤降+后续请求退化作为金丝雀；长请求后跑短探针；修复 待定（回退 v0.5.22 可规避；#44098 嫌疑待验证，报告者愿意无补丁复测）
 - **来源**：https://github.com/sgl-project/sglang/issues/48964
@@ -23298,10 +23301,10 @@
 
 ### INF-2432 `wqbmm_pergroup_nd_silent_wrong` WQBMM PerGroup ND 路径静默算错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：量化 / cann / weight_quant_batchmatmul
-- **原因行为**：A16W8 PerGroup（G量化）ND 路径反量化/数值实现缺陷（或该场景未支持却放行）：接口返回成功但与 FP64 反量化参考 NRMS≈0.19，同接口 PerChannel 路径 NRMS≈0.0017 正常
+- **原因行为**：疑似 WeightQuantBatchMatmulV2 PerGroup ND 路径反量化/数值实现缺陷，或该场景实际未支持但未返回错误
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：910B3+CANN9.3.0+torch_npu2.14：文档合规输入（antiquantScale [⌈k/g⌉,n] bf16 ND、group=128）NRMS 0.1935、allclose False；M 缩到 256 仍 0.1806；PerChannel 0.00166 True
 - **改进措施**：检测 PerGroup 与 PerChannel 通道对照、与 FP64 反量化参考比 NRMS；修复 待定
@@ -23309,7 +23312,7 @@
 
 ### INF-2436 `int4pack_group_offset_overlap` ConvertWeightToINT4Pack 后组覆盖前组
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：量化 / cann / convert_weight_to_int4
 - **原因行为**：组间写偏移 idxG*k*n 使用未填充 ND 尺寸而非 NZ 填充后尺寸 k1*CUBE_BLOCK_SIZE*n1*c0SizeInt8，K 非 16 对齐时 k*n 小于组区大小，后组数据写进前组已排好区域
@@ -23320,11 +23323,11 @@
 
 ### INF-2438 `fp8_silent_bf16_fallback` 原生 FP8 checkpoint 在 A2/A3 静默以 BF16 运行
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：量化 / vllm / fp8_block 平台分支
 - **原因行为**：fp8_block.py 以 is_950() 决定 mxfp8_method，非 950 时为 None，process_weights_after_loading 把整块 FP8 权重反量化成模型 dtype 走非量化 GEMM，不报错
-- **影响对象**：性能/资源；输出分布（静默错误）
+- **影响对象**：性能/资源；输出分布（性能退化）
 - **影响详情**：A2/A3 无 FP8 matmul 却静默降级 BF16：权重显存翻倍（fp8 1B→bf16 2B）、加载峰值更高，27B FP8 单卡属性破坏；唯一痕迹一条看似正常的 info 日志；文档 quantization.md:117 写成 intended
 - **改进措施**：检测 对比加载后权重大小/显存占用；查 fp8_block.py mxfp8_method 是否 None；修复 待定（报告者准备 fail-fast PR，未见提交）；规避：A2/A3 使用 BF16 发布版或 ModelSlim/LLM-Compressor 量化 checkpoint
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21157
@@ -25942,7 +25945,7 @@
 
 ### INF-2437 `moegatingtopksoftmax_missing_k_check` MoeGatingTopKSoftmax 输出校验漏末维==k
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-06
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-06
 
 - **原因对象**：MoE路由 / cann / moe_gating_top_k_softmax
 - **原因行为**：CheckOutShape 只比维数/dim0/3D 时 dim1，从未比较最后一维==k；yOut 最后一维小于 k 时 GetWorkspaceSize 返回 0，kernel 按 k 写入越过用户输出缓冲
@@ -25950,6 +25953,7 @@
 - **影响详情**：k=2 时 fp16[8,1] yOut 实测第一段 ret=0（应 161002）；一轮 memcheck 观测连续 illegal write of size 4 跨 aiv4-7（用例参数事后不可追溯，仅作量级佐证不作为稳定复现）
 - **改进措施**：检测 调用前自查输出末维==k；memcheck 挂 debug .o 观测越界写；修复 待定（修复面一行：OP_CHECK_IF(outShape.GetDim(dimNum-1)!=k, return GRAPH_FAILED)，三个输出共用同一函数）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7222；https://gitcode.com/cann/ops-transformer/issues/7155
+- **关联**：cross:TRN-0643
 
 ## 重计算/卸载
 

@@ -4,17 +4,17 @@ slug: argmax_nan_index_wrong
 aliases: []
 title: NPU argmax/argmin 全 NaN 归约返回错误索引
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: torch_npu
     component: triton_helpers 极值归约
-  behavior: _extremum/max_with_index/min_with_index 索引阶段只判断 value==极值，NaN 与自身比较为假致全部匹配失败返回填充值最大索引；极值阶段也未完整传播 NaN 与最低索引语义
+  behavior: _extremum/max_with_index/min_with_index 索引阶段只判断 value==极值，NaN 与自身比较为假可能全部匹配失败，返回用作填充值的最大索引；极值阶段未完整保留 NaN 传播与最低索引语义
 effect:
   objects:
   - 数值结果
-  detail: 32×32 含 NaN 输入全 NaN 列 argmax 应返回最低索引 0，NPU 编译结果返回 31，2/32 索引不一致（相对差 inf），test_argmax_argmin_with_nan_npu 退出码 1
+  detail: 含 NaN 输入做 argmax/argmin（如 mask 或脏数据产生全 NaN 列）时，NPU torch.compile 路径对该列返回最大索引 31 而非期望的最低索引 0；32×32 用例 2/32 索引不一致、最大绝对差 31、相对差 inf，测试断言失败但业务侧无报错
   visibility: 静默错误
 mitigation:
   detect: 含 NaN 输入的 argmax/argmin 与 eager/CPU 对照
@@ -38,3 +38,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - detail

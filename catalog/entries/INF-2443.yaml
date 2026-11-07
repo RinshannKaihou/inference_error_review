@@ -4,7 +4,7 @@ slug: ascendstore_pp_rank_key_noop
 aliases: []
 title: AscendStore decode PP 键扩展静默不生效
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 跨请求/跨样本数据
-  detail: 保存时 N 个分区 addr/size 写同一键互相覆盖只留一份 KV；查询时 all() 聚合假报块完整，缺失分区被永久跳过；计数校验对重复键平凡通过；静态代码检查+确定性路径，无 runtime 复现
+  detail: PP>1 且 pool worker pp_rank≠0 的 decode 实例：store 路径 N 个分区切片写同一键互相覆盖，只留一份 KV；lookup N 个键解析到同一键，all() 聚合假报块完整，缺失分区被永久跳过；无报错，长提示下 decode 输出质量劣化或与前缀不一致
   visibility: 静默错误
 mitigation:
   detect: store 后按键空间抽查 @pp_rank:0..N-1 键存在性
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-06'
+  audit:
+    round: daily-audit-2026-11-07
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
