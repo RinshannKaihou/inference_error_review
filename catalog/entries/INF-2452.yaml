@@ -39,6 +39,8 @@ original:
   behavior: 在请求持续完成、KV 块不断释放再分配的并发 decode 换血负载下，部分请求返回损坏输出：temperature 0 固定种子的 GSM8K 探针在换血前后 6 个中 4 个由正确答案变为错误答案，受影响请求尾部出现乱码文本。块表 dump 可见重复块 ID 只出现在 5 个滑窗 draft 层，全注意力层正常，首个重复恰在首个请求越过 4096 token 窗口边界时（trace 中 decode step 316）。无报错、无 NaN，服务不中断，仅输出内容静默劣化。
   trigger_surface: vllm-ascend + 投机解码（draft 含滑窗注意力层）+ 并发 decode 换血负载；管理块释放重分配后滑窗边界以下块未被屏蔽。触发配置：滑窗层（如 DFlash 式 draft 5 层 SWA、窗口 4096）+ 请求持续完成使块回收再分配。无滑窗层模型不受影响。
   discovery: 2026-11-07 每日扫描
+  notes:
+  - '2026-11-08 回访 2026-11-08：#21251 仍 open 无状态变化，修复 PR #21252 仍 open（批次快照）'
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -53,3 +55,7 @@ migration:
       effect:
         from: 输出内容
         to: 跨请求/跨样本数据
+  updates:
+  - date: '2026-11-08'
+    fields:
+    - original.notes

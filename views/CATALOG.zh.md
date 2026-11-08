@@ -3,25 +3,25 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2458 条；状态：active 2458
+共 2467 条；状态：active 2458、pending_audit 9
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 761 |
-| 编译器 | 164 |
+| 算子/内核 | 765 |
+| 编译器 | 165 |
 | 运行时/执行 | 136 |
 | 集合通信 | 40 |
 | 并行切分 | 31 |
-| KV缓存 | 383 |
+| KV缓存 | 384 |
 | 调度/服务 | 95 |
 | 输出解析 | 68 |
 | 解码/采样 | 156 |
-| 量化 | 228 |
+| 量化 | 229 |
 | 位置编码 | 44 |
 | 分词/模板 | 33 |
-| 模型定义 | 50 |
-| 权重/检查点 | 49 |
+| 模型定义 | 51 |
+| 权重/检查点 | 50 |
 | 数据管线 | 5 |
 | 优化器 | 4 |
 | 损失计算 | 3 |
@@ -8839,6 +8839,50 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8366；https://gitcode.com/cann/ops-nn/pull/13770
 - **关联**：cross:TRN-0658
 
+### INF-2459 `ops_math_floordivide_near_integer_quotient_off_by_one` aclnnFloorDivide fp32 真商贴近整数时结果偏差 1
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：算子/内核 / cann / floor_div vdiv→floor 链路
+- **原因行为**：A2 走 ops_legacy floor_div.py 的 vdiv→floor→cast 链路，商先按 fp32 舍入成整数再取 floor，真商贴近整数（相对差约 1e-7）时结果比数学值大 1（负商方向小 1），无余数校正。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Atlas A2 fp32 输入、真商贴近整数时（0.5/0.1f 真商 4.9999999），floor_divide 返回 5 而非 4；误差恒为 1，超出资料 fp32 容差上限 max(1e-2, 32*ULP)；张量与标量全部入口一致偏差，无告警。
+- **改进措施**：检测 fp32 位型精确构造 0.5/0.1f（真商 4.999999925）与 -3.5/0.7f（真商 -5.000000085），比对实测与双精度 floor 期望。；修复 待定（issue open，未见修复；建议按资料公式以双精度计算商后取 floor）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4620
+
+### INF-2461 `ops_nn_indexadd_out_variant_inplace_overwrites_input` aclnnIndexAdd 出参版原地改写输入 self
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：算子/内核 / cann / aclnnIndexAdd 出参版执行路径
+- **原因行为**：出参版 aclnnIndexAdd 在 self 连续时把结果原地写回输入 self 再拷到 out；非连续时先拷副本、原地计算落在副本上——连续性决定是否改写输入。
+- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
+- **影响详情**：调用结束后 self 的 device 缓冲区字节被改写为计算结果（资料声明 self 为输入）；实测 [512,8] fp32 连续 self 被整块改写、非连续 self 不改写（改写为 0）；torch.index_add（torch_npu 2.12.0）对照输入不变。两段返回 0，无告警。
+- **改进措施**：检测 调用前后对 self 同一块 device 缓冲区做原始字节比较（与 stride 布局无关）；连续 self 被改写即命中。；修复 待定（issue open，未见修复）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8390
+
+### INF-2462 `ops_math_remainder_near_integer_quotient_floor_wrong` aclnnRemainder fp32 真商贴近整数时余数差一个除数
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：算子/内核 / cann / Remainder floor 分支
+- **原因行为**：实现把 fp32 商先舍入成整数再取 floor，真商贴近整数（相对差约 1e-7）时 floor 少取 1，余数由 other-ε 变约 0。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Atlas A2（910B2）fp32 输入、self/other 真商贴近整数（如 -6.000000157）时，remainder 输出误差达 |other|（本例 0.379，即 100%），且接口全程返回成功，无任何告警。
+- **改进措施**：检测 用 IEEE-754 位型精确构造真商贴近整数的 self/other（如 0xC0118406/0x3EC2055D），比对 aclnn 输出与双精度公式 floor 期望。；修复 待定（issue open，未见修复；建议按资料公式以双精度计算商后取 floor）
+- **来源**：https://gitcode.com/cann/ops-math/issues/4619
+
+### INF-2463 `sglang_amd_mla_decode_ragged_64split_nan_wrong_rows` sglang AMD MLA decode ragged 批 NaN/错行
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：算子/内核 / sglang / MLA decode 64-split 路径
+- **原因行为**：gfx1151 上 kv splits 选 64 时，同一 ragged 批内 ≥3 条序列跑满 64-split 即触发未初始化/竞态内存读；GQA shape 全干净、launch hints 无关，竞态点未定位。
+- **影响对象**：数值结果；输出分布（不可复现）
+- **影响详情**：Lk 576/Lv 512 MLA decode 在 ragged 批（≥3 条 9000-token 序列混批）输出 NaN 或错误行，误差约 4（bf16 舍入仅 1e-2）；坏行逐 run 变化（8 seed 全坏）；双服务器 greedy 输出仅 4/64 一致（GQA 24-30/64）。
+- **改进措施**：检测 跑 issue 附 mla_decode_nan_repro.py（ragged MLA 批 × 8 seeds，对 fp32 参考比对）；或双服务器 greedy 一致性探针。；修复 待定（issue open，未见修复；触发依赖 64-split 满额混批，临时可限制 kv splits 上限规避——未验证）
+- **来源**：https://github.com/sgl-project/sglang/issues/48967
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -10673,6 +10717,17 @@
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49252 （open，未合入，标题「sound pad-lane division facts and canonical group_fn」）：lattice 补除法族（非精确情形一律 _PAD_TOP、fill 求解器可为除子负载选 other=-inf）+ group_fn 对齐上游 canonical 展平 numel。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5943；https://gitcode.com/Ascend/pytorch/merge_requests/49252
 - **关联**：cross:TRN-0654
+
+### INF-2460 `pytorch_te_welford_epilogue_unmasked_oob` TE 后端 Welford epilogue 无掩码 mean/var 损坏
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：编译器 / torch_npu / TE codegen 归约 epilogue 掩码
+- **原因行为**：triton_experimental codegen 的 Welford epilogue 无归约维掩码，R0_BLOCK=64 大于内层 extent=8 时 weight/bias 越界读、lane 8..63 散写进行首相邻行。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：test_var_mean（F.layer_norm）在 triton_experimental 后端 86.5% 元素失配、最大绝对差 23074；R0_BLOCK=8 时 0 失配，default 后端正常。无报错，输出静默损坏。
+- **改进措施**：检测 对 (381,8,80,8) float32 → permute/contiguous/view → F.layer_norm((64,)) 跑 test_var_mean，比对 default 后端结果；失配比例随 R0_BLOCK 增大。；修复 修复方向 issue 已给出（epilogue 按 R0_BLOCK 与内层 extent 关系补掩码，或 R0_BLOCK_HINT 作硬约束），未实施；相关组修复 PR !49240-!49255 系列 open，本条具体修复未见
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5954
 
 ## 运行时/执行
 
@@ -17285,6 +17340,17 @@
 - **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/21252 （open，未合入）：镜像上游推导 sliding_window_reach 并以 kernel block size 计算 null-block 数；修复后重复块 ID 消失、6/6 探针对齐基线、输出与无换血基线逐字节一致。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21251；https://github.com/vllm-project/vllm-ascend/pull/21252
 
+### INF-2467 `arxiv_kvguard_kv_cache_memory_safety_checker` KVGuard：PagedAttention KV 块内存安全检查器
+
+`方法` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：KV缓存 / vllm / PagedAttention 块分配与块表管理
+- **原因行为**：论文指出 PagedAttention 块式 KV 管理存在未系统研究的内存安全缺陷：double-free、use-after-free、越界、未初始化读、权限违规，静默损坏输出或破坏请求隔离；CUDA sanitizer 不感知块语义。
+- **影响对象**：KV状态；跨请求/跨样本数据（静默错误）
+- **影响详情**：目标故障的影响：KV 块级内存安全违规静默腐蚀输出或跨请求泄漏状态，无崩溃无报错；KVGuard 提出首个面向 KV cache 管理的内存安全抽象做检测。其对各服务栈真实缺陷的检出/误报率以论文实验为准，本库未实测（未评估/无实测）。
+- **改进措施**：检测 论文方案（KV 块/请求/块表语义级检查抽象）；对本库编目缺陷的检测覆盖未实测。；修复 N/A（方法类条目，非缺陷修复）
+- **来源**：https://arxiv.org/abs/2611.06138
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -23437,6 +23503,17 @@
 - **改进措施**：检测 待定；修复 issue 建议加载期拒绝（复用 verify_group_size_divides_partition，如 WNA16 #46236 与 ModelOpt linear modelopt.py:2139）；ModelOpt MoE 同缺陷已有修复 PR #49951（open）；报告者持有带回归测试的 patch 可提 PR；未核实合入。
 - **来源**：https://github.com/vllm-project/vllm/issues/66211；https://github.com/vllm-project/vllm/pull/49951
 
+### INF-2466 `msmodelslim_kv_perchannel_calibration_observer_reset` msmodelslim KV per-channel 校准观察器每批重置
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：量化 / cann / KV 校准观察器生命周期
+- **原因行为**：ActPerChannelMinmax.forward 每次 reset 观察器再 update，历史幅值统计被丢弃；deploy 又把最后一批参数固化为部署 scale——校准统计只覆盖最后一批。
+- **影响对象**：数值结果；输出内容（质量退化）
+- **影响详情**：连续输入幅值 100 与 1 两批 KV 样本，per-channel max scale 从 0.78740156 变 0.007874016（前批幅值被丢）；官方 dynamic_cache 配置即 per_channel，部署 scale 只反映末批，更大幅值输入即溢出/截断，质量静默退化。
+- **改进措施**：检测 连续跑两个已知幅值（100、1）的 KV 样本过 DynamicCacheQuantizer，检查 scale 是否只剩末批统计；issue 附最小复现脚本。；修复 待定（issue open，未见修复；正确行为应跨批累积 min/max 或在 deploy 前聚合全部校准统计）
+- **来源**：https://gitcode.com/Ascend/msmodelslim/issues/667
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -24864,6 +24941,17 @@
 - **改进措施**：检测 同输入 mask=None 与压缩因果 mask 双跑 local_v4_varlen_flash_attention 对比（首 token 差 0.90）；修复 修复 MR https://atomgit.com/mindspore/mindformers/merge_requests/8893 （open，未发布）：将省略 mask 分支限制到实际 DSA 稀疏路径
 - **来源**：https://atomgit.com/mindspore/mindformers/issues/2624；https://atomgit.com/mindspore/mindformers/merge_requests/8893
 
+### INF-2465 `transformers_step37_need_fp32_gate_ignored` Step-3.7 need_fp32_gate 被忽略路由错
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：模型定义 / transformers / Step3p7TopKRouter 计算精度
+- **原因行为**：官方要求 router matmul 前两操作数 cast 到 FP32；transformers 的 Step3p7TopKRouter 按 weight dtype（BF16）计算、仅事后 upcast，改变 top-k 选择。
+- **影响对象**：输出分布；输出内容（静默错误）
+- **影响详情**：BF16 权重下随机权重测试 1024 token 中 38 个 top-8 专家集合与 FP32 参考不同（need_fp32_gate=True）；路由错误静默改变 MoE 专家分派与生成输出，无告警，autocast 关闭也复现。
+- **改进措施**：检测 issue 附 CPU 复现：need_fp32_gate=True + BF16 router 权重，比对 router(x) top-k 与 F.linear(x.float(), weight.float()) 参考，统计 changed token 数。；修复 待定（issue open，未见修复 PR；相关 #50002/#50003 处理 bias/加载精度与 autocast 但 #50002 明确保留 BF16 gate 计算未改）
+- **来源**：https://github.com/huggingface/transformers/issues/50440
+
 ## 权重/检查点
 
 ### INF-0352 `ep_checkpoint_shard_mismatch` EP 重分片或跨框架转换致 expert 权重错位
@@ -25414,6 +25502,17 @@
 - **影响详情**：复现（Qwen3ForCausalLM+.bin 双进程对照）：目标与 untied 对照的 head 哈希、logits/softmax SHA、argmax 全不同（63 vs 0）；检查点两张量 SHA-256 各异数值独立。服务正常出话但语义错乱。
 - **改进措施**：检测 加载后对 lm_head.weight 与 embed_tokens.weight 做 data_ptr/哈希比对；tied 配置但检查点含独立 lm_head.weight 时告警。；修复 待定（issue open 2026-10-30，vLLM 0.32.0；未见修复 PR）
 - **来源**：https://github.com/vllm-project/vllm/issues/64704
+
+### INF-2464 `sglang_quantized_moe_router_weight_silently_skipped` SGLang 量化 router 权重静默不加载或无 scale 加载
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-08
+
+- **原因对象**：权重/检查点 / sglang / MoE router 构建量化配置传递
+- **原因行为**：Qwen3-MoE 仅 ModelSlim 格式给 router 传 quant_config，Mixtral/Llama4 全格式不传；量化存储的 router 张量无参数可落被静默跳过，或 FP8 codes 无 scale 拷入。
+- **影响对象**：模型权重；输出内容（静默错误）
+- **影响详情**：router 权重未加载时对全部专家输出 NaN，服务器无错启动，回答全是反斜杠/换行垃圾：GSM8K 0.0%（修复构建后 85.7%）；FP8 codes 无 scale 时 router logits 偏差 scale 倍（相对误差 301~7394），路由错误，服务静默错答。
+- **改进措施**：检测 加载后取 layer 0 router 真实张量过 SGLang load 步骤，比对 checkpoint 反量化参考（x@(codes*scale)^T）；或跑 GSM8K 探针；加载日志中 weight_scale not found 警告（Mixtral/Llama4 有、Qwen3-MoE 无）。；修复 PR #49187（#49185 报告者提交，compressed-tensors 路径传 quant_config）open；#49198 指出还需按 checkpoint 实际存储决定是否建量化 router（10/238 个 checkpoint config 会量化但 router 存 BF16，盲目建反而 NaN），完整修复未合
+- **来源**：https://github.com/sgl-project/sglang/issues/49185；https://github.com/sgl-project/sglang/issues/49198
 
 ## 数据管线
 
