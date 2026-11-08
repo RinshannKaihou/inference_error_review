@@ -4,19 +4,19 @@ slug: vllm_eplb_async_worker_error_stall_and_stale_reset_leak
 aliases: []
 title: vLLM EPLB worker 异常静默停摆与 reset 泄漏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: MoE路由
     stack: vllm
     component: async EPLB worker
   behavior: async EPLB worker 异常被吞：step() 不抛、引擎 HEALTHY，EPLB 永久停摆；FT reset 另有 4 种陈旧泄漏（stale error 复写、竞态、信号被重标、per-rank 判定不一致）。
 effect:
   objects:
-  - 可用性/进度
   - 性能/资源
+  - 可用性/进度
   detail: 带 --enable-fault-tolerance 服务时 worker 异常后负载均衡静默失效（专家分布固化、吞吐劣化），引擎健康检查仍 HEALTHY；或 FT 恢复后反复再次故障/集合通信超时。
-  visibility: 静默错误
+  visibility: 性能退化
 mitigation:
   detect: 待定
   fix: '修复 PR https://github.com/vllm-project/vllm/pull/66146 （open，未合入，2026-11-07 仍在更新）：worker 错误经 #62009 路径上报 FT、reset_eplb_async_state() 清错误；作者 follow-up 注明 4 种 stale 泄漏场景只记录未修（硬化尝试已 revert f38055c02f）。'
@@ -41,3 +41,20 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: MoE路由
+      effect:
+        from: 可用性/进度
+        to: 性能/资源
+      visibility:
+        from: 静默错误
+        to: 性能退化

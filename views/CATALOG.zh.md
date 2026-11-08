@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2458 条；状态：active 2447、pending_audit 11
+共 2458 条；状态：active 2458
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -14,7 +14,7 @@
 | 集合通信 | 40 |
 | 并行切分 | 31 |
 | KV缓存 | 383 |
-| 调度/服务 | 96 |
+| 调度/服务 | 95 |
 | 输出解析 | 68 |
 | 解码/采样 | 156 |
 | 量化 | 228 |
@@ -25,7 +25,7 @@
 | 数据管线 | 5 |
 | 优化器 | 4 |
 | 损失计算 | 3 |
-| MoE路由 | 46 |
+| MoE路由 | 47 |
 | 重计算/卸载 | 8 |
 | RL训练回路 | 1 |
 | 观测/评测 | 72 |
@@ -8805,7 +8805,7 @@
 
 ### INF-2448 `op_plugin_bool_add_arithmetic_sum_semantics` op-plugin bool add 算术和写入 bool 字节语义错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：算子/内核 / torch_npu / bool add 内核路由
 - **原因行为**：NPU 对 bool 张量 torch.add 走算术 aclnn add 内核，把整数和直接写入 bool 字节：True+True 得 2（非零字节），CPU 语义为逻辑或（值为 1）；广播、标量、add_、alpha 各形态均受影响。
@@ -8813,10 +8813,11 @@
 - **影响详情**：torch.add(bool,bool).to(int64) 在 NPU 得 2、CPU 得 1；(5,1)+(5,) 广播 25 元素 12 个失配（最大差 1）；eager bool 加法链路（__radd__、sum 后处理）数值全偏。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/Ascend/op-plugin/merge_requests/6187 （open，未合入）：bool 张量 add（含广播/CPU 标量/add_/标量重载）路由到 aclnnLogicalOr/aclnnInplaceLogicalOr。
 - **来源**：https://gitcode.com/Ascend/op-plugin/issues/691；https://gitcode.com/Ascend/op-plugin/merge_requests/6187
+- **关联**：cross:TRN-0660
 
 ### INF-2449 `ops_math_abs_complex64_exponent_factor_normalization` abs complex64 指数因子归一化仅 A∈[1,2) 正确
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：算子/内核 / cann / abs_complex_dag.h 归一化
 - **原因行为**：arch35 complex64 归一化：vA1=(A-2^k)+1.0=A/2^k 正确，vB1=(B-2^k)+1.0 并非 B/2^k，仅 k=0（A∈[1,2)）时成立；跨 binade 输入按错误公式计算模长。
@@ -8824,10 +8825,11 @@
 - **影响详情**：实/虚部量级相差较大或两分量落在不同 binade（A 指数≠0）时偏差显著：A=3.0,B=1.0 kernel 得 4.0（真实 sqrt(10)≈3.162，相对误差 26.5%）；A=4.0,B=2.0 得 5.657（真实 4.472，同样 26.5%）。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/cann/ops-math/merge_requests/7201 （open，未合入）：改为标准数值稳定公式 |z|=vA·sqrt(1+(vB/vA)²)，Reg::Div 直接计算比值；subnormal 2^24 scale up/down 与 B==0 边界保持不变；arch35 二级冒烟（同量级/跨 binade/subnormal/B=0）与 CPU 参考比对通过，complex32 路径无回归。
 - **来源**：https://gitcode.com/cann/ops-math/issues/4607；https://gitcode.com/cann/ops-math/merge_requests/7201
+- **关联**：cross:TRN-0657
 
 ### INF-2451 `ops_nn_maxpool_grad_argmax_nhwc_small_c_decode` MaxPoolGradWithArgmax NHWC 小 C 解码错位梯度散错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：算子/内核 / cann / DoMulCNhwc 块内 C 解码
 - **原因行为**：Argmax 用全局 (h*W+w)*C+c 编码，DoMulCNhwc() 用块内 C 作除数还原 h/w；Tiling 切 C 后块内 C<完整 C，解码错误，梯度散错位置或被 Range Check 丢弃。
@@ -8835,6 +8837,7 @@
 - **影响详情**：NHWC 小 C 场景精度 FAIL：fp32/bf16、int32/int64 共 4 条用例（完整 C=2/3/15/3，块内 C=1/2）命中 MergeHWC 模板（tiling Key 501）全部失败；块内 C==完整 C 的对照 PASS。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/cann/ops-nn/pull/13770 （open，未合入，Tiling 侧规避）：仅当完整 C 超过 BigC 阈值（vRegSize/(2*indexBytes)，int32=32/int64=16）才允许切 C；已完成静态分析，黄区回归与上板验证待做；Kernel 解码逻辑（DoMulCNhwc 用块内 C）根因保留未改。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8366；https://gitcode.com/cann/ops-nn/pull/13770
+- **关联**：cross:TRN-0658
 
 ## 编译器
 
@@ -10637,7 +10640,7 @@
 
 ### INF-2450 `npu_triton_experimental_split_reduction_tail_mask_loss` triton_experimental 分核归约尾块 mask 丢失求和错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：编译器 / torch_npu / 分核归约代码生成
 - **原因行为**：分核归约：numel 整除 block 但 ceil(numel/核数) 不整除时尾块 mask 被当恒真删除，分核改写无法恢复，跨分片重复读取与末片越界；多轴 partial-body 失配仍生成 workspace combine。
@@ -10645,10 +10648,11 @@
 - **影响详情**：最小复现：size=1048576 的 x.sum()，expected 1048576.0 但 got 3625399.0（相对差 2.46）；外轴 sum(dim=0) 4/4 元素全错，最大差 448951（相对差 6.85）。哨兵区暴露 view 边界外读取。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49242 （open，未合入）：load 代码生成前识别分核候选并保留 reduction mask（改写为当前核 hi 边界）；partial-body 改写限定单个未映射归约轴，多轴形式继续普通归约。标量/外轴求和修复后实测通过。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5938；https://gitcode.com/Ascend/pytorch/merge_requests/49242
+- **关联**：cross:TRN-0653
 
 ### INF-2453 `npu_triton_experimental_slice_scatter_out_of_slice_write` triton_experimental slice_scatter 改坏片外数据
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：编译器 / torch_npu / slice_scatter 代码生成
 - **原因行为**：融合的 masked load/select 形式在负偏移钳制后丢失未选中前缀，把 src 写入视图时误改切片之外的元素（x[1:5] 重复修改会把 x[0] 的 0.5 写成 0）。
@@ -10656,17 +10660,19 @@
 - **影响详情**：最小复现：x=arange(8)+0.5、src=full(4,-3)、torch.slice_scatter(x,src,0,1,5) 经 torch.compile 后，切片外 x[0] 由 0.5 变 0；原输入被破坏、输出错误。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49255 （关联 issue 已 closed、PR 带 2026-11-07 完整验证，合入未核实）：先物化输入副本再向指定视图写入 src，保留切片外数据与原输入；正/负边界、步长、空切片、非连续输入及来源别名 2 项 NPU 测试通过。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5946；https://gitcode.com/Ascend/pytorch/merge_requests/49255
+- **关联**：cross:TRN-0655
 
 ### INF-2454 `npu_inductor_pad_lane_div_nan_and_group_fn_sympifyerror` Inductor pad-lane 除法 NaN 与 group_fn 违约
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：编译器 / torch_npu / pad-lane 抽象格与 group_fn
 - **原因行为**：_pad_transform 缺除法族传播：掩码外 lane other=0.0 使 1/0=inf 被误判 finite，守卫错删、NaN 进累加器；group_fn 违反 canonical 契约致融合期 SympifyError。
-- **影响对象**：数值结果；训练信号（数值异常）
+- **影响对象**：梯度；数值结果；训练信号（数值异常）
 - **影响详情**：rank-0 除法反向梯度为 NaN（跨进程复现率约 50%，由 autotune 选择决定）；(10,1,5)÷(10,5) 广播 backward 在 default 后端融合期确定性崩溃（3/3 复现）。同进程单样本均通过，序列状态依赖。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49252 （open，未合入，标题「sound pad-lane division facts and canonical group_fn」）：lattice 补除法族（非精确情形一律 _PAD_TOP、fill 求解器可为除子负载选 other=-inf）+ group_fn 对齐上游 canonical 展平 numel。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5943；https://gitcode.com/Ascend/pytorch/merge_requests/49252
+- **关联**：cross:TRN-0654
 
 ## 运行时/执行
 
@@ -17270,11 +17276,11 @@
 
 ### INF-2452 `vllm_ascend_sw_kv_stale_blocks_cross_request_corruption` vllm-ascend 滑窗 KV 陈旧块跨请求污染输出
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：KV缓存 / vllm / BlockTables 滑窗屏蔽缺失
 - **原因行为**：Ascend 重写 initialize_kv_cache 未传 sliding_window_reach，滑窗屏蔽永不激活，窗口下已释放重分配的块 ID 未置空，attention 读到其他请求 KV。
-- **影响对象**：输出内容；KV状态（静默错误）
+- **影响对象**：跨请求/跨样本数据；输出内容；KV状态（静默错误）
 - **影响详情**：并发 decode 换血负载下部分请求输出损坏：GSM8K 探针 4/6 由对转错，尾部乱码；块表 dump 显示重复块 ID 仅限滑窗 draft 层，首个重复恰出现在首请求越过 4096 窗口边界的解码步。
 - **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/21252 （open，未合入）：镜像上游推导 sliding_window_reach 并以 kernel block size 计算 null-block 数；修复后重复块 ID 消失、6/6 探针对齐基线、输出与无换血基线逐字节一致。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21251；https://github.com/vllm-project/vllm-ascend/pull/21252
@@ -18341,17 +18347,6 @@
 - **影响详情**：prompt_logprobs 全位置恒 (logprob 0.0, rank 5, decoded_token "!")（必现）；PD+Mooncake KV transfer 下 OverflowError 崩溃退出（崩溃前稳定运行 15 天）
 - **改进措施**：检测 prompt_logprobs 各位置值应各不相同，恒同值即中招；崩溃有明确 OverflowError 栈；修复 待定（issue open，未附修复 PR）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21103
-
-### INF-2458 `vllm_eplb_async_worker_error_stall_and_stale_reset_leak` vLLM EPLB worker 异常静默停摆与 reset 泄漏
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
-
-- **原因对象**：调度/服务 / vllm / async EPLB worker
-- **原因行为**：async EPLB worker 异常被吞：step() 不抛、引擎 HEALTHY，EPLB 永久停摆；FT reset 另有 4 种陈旧泄漏（stale error 复写、竞态、信号被重标、per-rank 判定不一致）。
-- **影响对象**：可用性/进度；性能/资源（静默错误）
-- **影响详情**：带 --enable-fault-tolerance 服务时 worker 异常后负载均衡静默失效（专家分布固化、吞吐劣化），引擎健康检查仍 HEALTHY；或 FT 恢复后反复再次故障/集合通信超时。
-- **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm/pull/66146 （open，未合入，2026-11-07 仍在更新）：worker 错误经 #62009 路径上报 FT、reset_eplb_async_state() 清错误；作者 follow-up 注明 4 种 stale 泄漏场景只记录未修（硬化尝试已 revert f38055c02f）。
-- **来源**：https://github.com/vllm-project/vllm/issues/66144；https://github.com/vllm-project/vllm/pull/66146
 
 ## 输出解析
 
@@ -23422,7 +23417,7 @@
 
 ### INF-2455 `humming_mxfp4_e8m0_range_window_reencode_weight_loss` Humming MXFP4 E8M0 窗口重编码静默清零权重
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：量化 / vllm / Humming fused E8M0 重编码
 - **原因行为**：SM90 Humming MXFP4 以 FP8 激活开 fused E8M0 路径，code 钳到 [max-11,max] 并重编码 E2M1：距最大 scale 12-15 binade 块粗化，≥16 binade 解码为 0。
@@ -23433,12 +23428,12 @@
 
 ### INF-2457 `vllm_nvfp4_mxfp4_row_parallel_scale_group_misaligned` NVFP4/MXFP4 行并行加载错配 block scale
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：量化 / vllm / FP4 行并行分片加载
 - **原因行为**：create_weights 按 K_r//G 分配 scale 不检查整除；加载按元素切 codes、按组切 scales，K_r 非 G 倍数时 rank>0 乘错组 scale，rank 0 尾列无 scale。
-- **影响对象**：模型权重；输出内容（静默错误）
-- **影响详情**：加载与推理全程无错无警。Gemma-4-26B-A4B-NVFP4 TP=8：dense down_proj 68.7%、expert w2 70.0% 的非零 code 列用错 scale；GSM8K 从 TP=4 的 24.3% 跌到 1.44%（McNemar p=2.4e-76）。
+- **影响对象**：模型权重；输出内容（质量退化）
+- **影响详情**：Gemma-4-26B-A4B-NVFP4 TP=8 无错无警：dense 49920/63360 列错组+1920 无 scale，expert 1996800/2703360 列错组；非零 code 元素错 scale 68.7%/70.0%；GSM8K 24.3%→1.44%（TP=4→8）。
 - **改进措施**：检测 待定；修复 issue 建议加载期拒绝（复用 verify_group_size_divides_partition，如 WNA16 #46236 与 ModelOpt linear modelopt.py:2139）；ModelOpt MoE 同缺陷已有修复 PR #49951（open）；报告者持有带回归测试的 patch 可提 PR；未核实合入。
 - **来源**：https://github.com/vllm-project/vllm/issues/66211；https://github.com/vllm-project/vllm/pull/49951
 
@@ -23932,11 +23927,11 @@
 
 ### INF-2456 `flashinfer_rope_quantize_neox_vec_boundary_wrong` flashinfer Rope neox 特定 head_size 静默错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-07
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
 
 - **原因对象**：位置编码 / flashinfer / RopeQuantize neox 向量化
 - **原因行为**：head_dim 64/128/256/512 外走 RopeQuantize（vec=16）；neox 按 16 宽向量取旋转伙伴与符号，rotary_dim/2 非 16 倍数时跨 cos/sin 半边界，lane 用错伙伴且加载越界。
-- **影响对象**：隐状态；输出内容（静默错误）
+- **影响对象**：数值结果；隐状态；输出内容（静默错误）
 - **影响详情**：is_neox=True 且 head_size 16/48/80/96 时输出错值最大达 1e37 量级，48/80/96 下同输入两次调用结果不同；interleaved 与 32/64/128/256/512、partial rotary 正确。0.6.18-0.7.3 均在。
 - **改进措施**：检测 待定；修复 issue 建议：neox 路径处理 half_rope_dim%vec_size!=0（小向量或 per-lane 伙伴/符号），或文档声明 head_size 约束；修复未核实（0.7.3 仍在，issue open）。
 - **来源**：https://github.com/flashinfer-ai/flashinfer/issues/9068
@@ -26075,6 +26070,17 @@
 - **改进措施**：检测 调用前自查输出末维==k；memcheck 挂 debug .o 观测越界写；修复 待定（修复面一行：OP_CHECK_IF(outShape.GetDim(dimNum-1)!=k, return GRAPH_FAILED)，三个输出共用同一函数）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7222；https://gitcode.com/cann/ops-transformer/issues/7155
 - **关联**：cross:TRN-0643
+
+### INF-2458 `vllm_eplb_async_worker_error_stall_and_stale_reset_leak` vLLM EPLB worker 异常静默停摆与 reset 泄漏
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-07
+
+- **原因对象**：MoE路由 / vllm / async EPLB worker
+- **原因行为**：async EPLB worker 异常被吞：step() 不抛、引擎 HEALTHY，EPLB 永久停摆；FT reset 另有 4 种陈旧泄漏（stale error 复写、竞态、信号被重标、per-rank 判定不一致）。
+- **影响对象**：性能/资源；可用性/进度（性能退化）
+- **影响详情**：带 --enable-fault-tolerance 服务时 worker 异常后负载均衡静默失效（专家分布固化、吞吐劣化），引擎健康检查仍 HEALTHY；或 FT 恢复后反复再次故障/集合通信超时。
+- **改进措施**：检测 待定；修复 修复 PR https://github.com/vllm-project/vllm/pull/66146 （open，未合入，2026-11-07 仍在更新）：worker 错误经 #62009 路径上报 FT、reset_eplb_async_state() 清错误；作者 follow-up 注明 4 种 stale 泄漏场景只记录未修（硬化尝试已 revert f38055c02f）。
+- **来源**：https://github.com/vllm-project/vllm/issues/66144；https://github.com/vllm-project/vllm/pull/66146
 
 ## 重计算/卸载
 

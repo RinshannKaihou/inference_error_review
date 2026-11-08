@@ -4,7 +4,7 @@ slug: vllm_nvfp4_mxfp4_row_parallel_scale_group_misaligned
 aliases: []
 title: NVFP4/MXFP4 行并行加载错配 block scale
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,8 +15,8 @@ effect:
   objects:
   - 模型权重
   - 输出内容
-  detail: 加载与推理全程无错无警。Gemma-4-26B-A4B-NVFP4 TP=8：dense down_proj 68.7%、expert w2 70.0% 的非零 code 列用错 scale；GSM8K 从 TP=4 的 24.3% 跌到 1.44%（McNemar p=2.4e-76）。
-  visibility: 静默错误
+  detail: Gemma-4-26B-A4B-NVFP4 TP=8 无错无警：dense 49920/63360 列错组+1920 无 scale，expert 1996800/2703360 列错组；非零 code 元素错 scale 68.7%/70.0%；GSM8K 24.3%→1.44%（TP=4→8）。
+  visibility: 质量退化
 mitigation:
   detect: 待定
   fix: 'issue 建议加载期拒绝（复用 verify_group_size_divides_partition，如 WNA16 #46236 与 ModelOpt linear modelopt.py:2139）；ModelOpt MoE 同缺陷已有修复 PR #49951（open）；报告者持有带回归测试的 patch 可提 PR；未核实合入。'
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化
+    rewritten:
+    - detail

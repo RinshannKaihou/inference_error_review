@@ -4,7 +4,7 @@ slug: vllm_ascend_sw_kv_stale_blocks_cross_request_corruption
 aliases: []
 title: vllm-ascend 滑窗 KV 陈旧块跨请求污染输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,6 +13,7 @@ cause:
   behavior: Ascend 重写 initialize_kv_cache 未传 sliding_window_reach，滑窗屏蔽永不激活，窗口下已释放重分配的块 ID 未置空，attention 读到其他请求 KV。
 effect:
   objects:
+  - 跨请求/跨样本数据
   - 输出内容
   - KV状态
   detail: 并发 decode 换血负载下部分请求输出损坏：GSM8K 探针 4/6 由对转错，尾部乱码；块表 dump 显示重复块 ID 仅限滑窗 draft 层，首个重复恰出现在首请求越过 4096 窗口边界的解码步。
@@ -41,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 输出内容
+        to: 跨请求/跨样本数据

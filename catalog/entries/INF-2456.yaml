@@ -4,7 +4,7 @@ slug: flashinfer_rope_quantize_neox_vec_boundary_wrong
 aliases: []
 title: flashinfer Rope neox 特定 head_size 静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 位置编码
@@ -13,6 +13,7 @@ cause:
   behavior: head_dim 64/128/256/512 外走 RopeQuantize（vec=16）；neox 按 16 宽向量取旋转伙伴与符号，rotary_dim/2 非 16 倍数时跨 cos/sin 半边界，lane 用错伙伴且加载越界。
 effect:
   objects:
+  - 数值结果
   - 隐状态
   - 输出内容
   detail: is_neox=True 且 head_size 16/48/80/96 时输出错值最大达 1e37 量级，48/80/96 下同输入两次调用结果不同；interleaved 与 32/64/128/256/512、partial rotary 正确。0.6.18-0.7.3 均在。
@@ -39,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 隐状态
+        to: 数值结果

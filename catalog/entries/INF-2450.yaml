@@ -4,7 +4,7 @@ slug: npu_triton_experimental_split_reduction_tail_mask_loss
 aliases: []
 title: triton_experimental 分核归约尾块 mask 丢失求和错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -30,7 +30,9 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/Ascend/pytorch/merge_requests/49242
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: TRN-0653
 original:
   mechanism: 'triton_experimental 分核（rsplit）归约代码生成两处缺陷。其一：全局 reduction numel 能整除 block，但 ceil(numel/核数) 未必能整除 block；load 生成时尚未标记 rsplit，尾块 mask 被当作恒真删除；后续分核改写只替换循环边界，无法恢复已删除的 load mask，造成跨分片重复读取和末片越界。其二：多轴提升生成逐轴循环、常量边界和广播形式 store，现有 partial-body 改写无法匹配，却仍生成 workspace combine，导致输出错误。最小复现用额外分配 65536 元素哨兵区稳定暴露 view 边界外读取。实测（未修改归约代码的失败日志）：test_scalar_sum_with_guarded_storage Expected 1048576.0 got 3625399.0（相对差 2.4574）；test_outer_sum_with_guarded_storage 4/4 元素失配、最大绝对差 448951、相对差 6.85。发现于 G02 社区跟随测试中 #190068 前反向区域配置用例数值比较失败，抽离嵌套区域后普通大尺寸 sum 也算错（#5638 关联；非上游 PR 错误）。修复 !49242 方向：load 生成前识别分核候选保留 mask；partial-body 改写限定单轴；多轴不启用分核优化。2026-11-07 完整适配验证（联合提交 bd7f724b）：G02 上游 20 方法/24 参数化实例全 PASS、28 项专项回归全 PASS。环境：910B3、CANN 9.1.0、PyTorch 2.15.0.dev20260902、Triton 3.6.0/Triton-Ascend 3.6.0.post2，master 基线 8fdb4b49b5。'
   source: GitCode issue https://gitcode.com/Ascend/pytorch/issues/5938 （open）；修复 PR https://gitcode.com/Ascend/pytorch/merge_requests/49242 （open）
@@ -40,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-07'
+  updates:
+  - date: '2026-11-08'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-08
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
