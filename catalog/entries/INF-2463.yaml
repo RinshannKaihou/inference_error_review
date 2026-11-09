@@ -4,7 +4,7 @@ slug: sglang_amd_mla_decode_ragged_64split_nan_wrong_rows
 aliases: []
 title: sglang AMD MLA decode ragged 批 NaN/错行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 输出分布
   detail: Lk 576/Lv 512 MLA decode 在 ragged 批（≥3 条 9000-token 序列混批）输出 NaN 或错误行，误差约 4（bf16 舍入仅 1e-2）；坏行逐 run 变化（8 seed 全坏）；双服务器 greedy 输出仅 4/64 一致（GQA 24-30/64）。
-  visibility: 不可复现
+  visibility: 数值异常
 mitigation:
   detect: 跑 issue 附 mla_decode_nan_repro.py（ragged MLA 批 × 8 seeds，对 fp32 参考比对）；或双服务器 greedy 一致性探针。
   fix: 待定（issue open，未见修复；触发依赖 64-split 满额混批，临时可限制 kv splits 上限规避——未验证）
@@ -41,3 +41,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-08'
+  audit:
+    round: daily-audit-2026-11-09
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 数值异常
+    uncertain:
+    - detail

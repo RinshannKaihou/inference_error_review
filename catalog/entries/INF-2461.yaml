@@ -4,7 +4,7 @@ slug: ops_nn_indexadd_out_variant_inplace_overwrites_input
 aliases: []
 title: aclnnIndexAdd 出参版原地改写输入 self
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -29,7 +29,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8390
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0677
 original:
   mechanism: 'cann/ops-nn issue #8390（2026-11-08，master d1efef7c）：aclnnIndexAdd 出参版在 self 连续时把结果原地写回输入张量再拷到 out；非连续时先被 Contiguous 拷成副本、原地计算落在副本上——「连续改、非连续不改」证明改写来自实现分支而非接口设计。资料（index/inplace_scatter_add/docs/aclnnIndexAdd.md:80-82）把 self 声明为输入、:130-132 把 out 声明为输出，出参版不应改写输入。报告者在 A2 910B2/CANN 9.3.0 实测 [512,8] fp32、index 512 个 int64、alpha=1、dim=0：用例 1（连续）self 被改写、用例 2（非连续）改写为 0；判据是同一块 device 缓冲区调用前后的原始字节比较，与张量 stride 布局无关。对照 torch.index_add（torch_npu 2.12.0）输入未被改写。与已收 INF-1659（aclnnIndexAdd arch22 索引缺校验致越界写）同算子不同机制：本条是出参版对输入缓冲的别名写，非索引校验缺口。'
   source: GitCode issue https://gitcode.com/cann/ops-nn/issues/8390 （open，2026-11-08 创建；含连续/非连续对照、字节级判据、torch_npu 对照）
@@ -41,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-08'
+  updates:
+  - date: '2026-11-09'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-09
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
