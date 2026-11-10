@@ -4,7 +4,7 @@ slug: triton_ascend_parseDiv_mask_unpredicated
 aliases: []
 title: 除法索引掩码不谓词化掩码外越界读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -13,8 +13,8 @@ cause:
   behavior: MaskState::parseDiv 硬编码 return failure()，除法派生索引的掩码无法转访问范围，load 下发射成无谓词标量 memref.load，掩码仅剩尾部 select，掩码外 lane 仍访存。
 effect:
   objects:
-  - 跨请求/跨样本数据
   - 可用性/进度
+  - 跨请求/跨样本数据
   detail: 生产 vLLM 行 gather kernel（rows=token_start+offsets//WIDTH）：掩码外 lane 仍发 GM 事务，TP 不整除时尾部越界读至多 9KB；落在未映射页即 vector core exception 507035 杀进程。
   visibility: 报错
 mitigation:
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 跨请求/跨样本数据
+        to: 可用性/进度
+    uncertain:
+    - detail

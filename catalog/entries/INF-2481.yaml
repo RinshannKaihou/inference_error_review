@@ -4,7 +4,7 @@ slug: sdpa_decode_mask_batch_index_wrong
 aliases: []
 title: sdpa_decode 掩码批维索引错用 user0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: reader 从 attn_mask dim0 取批数（Bmask），[1,b,nh,s] 文档版式下 Bmask=1，%Bmask 恒 0，所有 user 都读 user 0 的掩码行；校验只查 dim2/dim3 不拒绝。
 effect:
   objects:
+  - 数值结果
   - 输出内容
   detail: 按文档版式 [1,b,nh,s] 传掩码时批量 decode 每个 user 用 user0 的掩码：Llama 3.2 Vision 批量解码交叉注意力会关注 padding tile 或丢真实 tile；同批相同图片或 b=1 不受影响。
   visibility: 静默错误
@@ -38,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 数值结果

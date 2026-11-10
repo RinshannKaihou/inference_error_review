@@ -4,7 +4,7 @@ slug: kimi_mla_float_gate_silent_int8
 aliases: []
 title: Kimi 混合精度 FLOAT gate 静默按 INT8 分配
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -15,8 +15,8 @@ effect:
   objects:
   - 模型权重
   - 输出内容
-  detail: CPU 复现修复前 BF16 gate 值 0.25 静默变 INT8 0、gate scale/offset 哨兵未填；nightly GPQA 接受率 22.26%→1.53%、用例超时。
-  visibility: 静默错误
+  detail: CPU 复现：BF16 gate 值 0.25 被静默转成 INT8 0，gate 的 scale/offset 仍为哨兵未填；nightly 佐证：v0.32 GPQA 93.33% 完成，v0.33 用例超时，draft 接受率 22.26%→1.53%。
+  visibility: 质量退化
 mitigation:
   detect: 待定
   fix: 修复 PR https://github.com/vllm-project/vllm-ascend/pull/21387 （open）：混合精度 gate 与复制 Q/KV 分离、standalone verifier/MTP gate 先于融合重映射加载并保 TP 切分；646 测试通过，NPU 端到端恢复未建立。
@@ -39,3 +39,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 质量退化
+    rewritten:
+    - detail

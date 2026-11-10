@@ -4,7 +4,7 @@ slug: isin_regbase_double_promotion_flip
 aliases: []
 title: IsIn RegBase 推导 double 边界翻转
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -40,3 +40,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

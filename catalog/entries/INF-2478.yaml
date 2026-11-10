@@ -4,10 +4,10 @@ slug: mxfp8_kv_cache_indexed_gather_corruption
 aliases: []
 title: 量化 KV cache 任意槽位索引读返回损坏数据
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: KV缓存
+  - subsystem: 量化
     stack: vllm
     component: 量化 KV 索引读通路
   behavior: mxfp8/fp8 量化 KV cache 按槽位张量 gather 读回位级损坏数据；同一缓存顺序分页读正确、bf16 cache 索引读精确，缺陷仅在量化 cache 张量索引访问路径。
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: KV缓存
+        to: 量化

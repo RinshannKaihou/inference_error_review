@@ -4,7 +4,7 @@ slug: npu_template_gemm_epilogue_missing_cast
 aliases: []
 title: NPU 模板 GEMM 融合 epilogue 缺 fp32 截断 cast
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5960
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0696
 original:
   mechanism: Ascend950PR、torch 2.13.0+cpu、torch_npu 2.13.0.dev20261105、triton-ascend 3.6.0：NPU Inductor max_autotune 生成 Triton 模板 GEMM 并融合 epilogue 时，生成的 triton_tem_fused_* kernel 缺少 fp32 累加器到输出 dtype 的截断 cast（acc.to(tl.float16).to(tl.float32) 模式不存在），epilogue 直接在 fp32 精度下计算写回。根因是 torch_npu/_inductor/codegen/scheduling.py 的 NPUTritonScheduling.codegen_template 复刻上游模板 codegen 但漏掉上游 TritonTemplateKernel.codegen_template_body 在 render() 前的 _compute_fusion_metadata 调用（PyTorch 2.12.0 起引入），导致 store_output 里 _epilogue_nodes_by_subgraph 不存在、has_epilogue_fusion 恒为 False，跳过 acc_dtype≠output_dtype 时的两次 to_dtype。mm 与 addmm（bias 加在 epilogue）均命中。
   source: https://gitcode.com/Ascend/pytorch/issues/5960
@@ -38,3 +40,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - relations
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

@@ -4,7 +4,7 @@ slug: humming_w4a16_group_size_wrong
 aliases: []
 title: Humming W4A16 组尺寸不整除 K 块错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: GPTQ uint4b8 N=256 合成层：G∈{24,40,48,56,80,96,112,160,192,224,320,448} 时 rel L2 0.17~1.10（对称/带零点同界），M=1 时小尺寸直到 112 返回 NaN；G∈{16,32,64}及 128 倍数正确。
+  detail: GPTQ uint4b8、N=256、fp16/bf16 实测：G∈{24,40,48,56,80,96,112,160,192,224,320,448} 输出静默错误，rel L2 0.17~1.10，零点路径更大；M=1时 ≤112 坏尺寸返回 NaN；16/32/64 及 128 倍数正确。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - title

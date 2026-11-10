@@ -4,13 +4,13 @@ slug: detokenize_oov_silent_drop
 aliases: []
 title: /detokenize 词表外 ID 静默丢弃
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 分词/模板
     stack: vllm
     component: detokenize ID 校验
-  behavior: create_detokenize() 把 request.tokens 直接交 tokenize_prompt_async()，不调 validate_token_ids()（生成路径有校验），词表外 ID 被静默丢弃并返回 200。
+  behavior: create_detokenize() 把 request.tokens 直接交 tokenize_prompt_async()，未调用 validate_token_ids()，词表外正数 ID 无校验（负值仍被请求校验拦截）。
 effect:
   objects:
   - 输出内容
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-09'
+  audit:
+    round: daily-audit-2026-11-10
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

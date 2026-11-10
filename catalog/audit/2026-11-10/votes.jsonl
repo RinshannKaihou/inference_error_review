@@ -1,0 +1,237 @@
+{"job": "baseC|INF-2468|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2469|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2471|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2469|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2472|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2470|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2468|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2469|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2474|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2473|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2468|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2471|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2471|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2472|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2475|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2470|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2474|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2477|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2476|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2474|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2472|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2478|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2475|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2475|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2477|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2473|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2477|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2479|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "模型权重", "visibility": "质量退化"}}
+{"job": "baseC|INF-2480|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2481|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2479|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "模型权重", "visibility": "质量退化"}}
+{"job": "baseC|INF-2480|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2482|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2473|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2480|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2481|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2481|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2482|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2483|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2470|glm-5.3-flash", "model": "glm-5.3-flash", "result": null, "attempts": 2, "fail": "rejected", "raw": "{\"kind\": \"故障\", \"subsystem\": \"模型定义\", \"effect\": \"KV状态、输出内容\", \"visibility\": \"静默错误\"}"}
+{"job": "baseC|INF-2478|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "baseC|INF-2482|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2484|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2483|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2485|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2486|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2478|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2479|glm-5.3-flash", "model": "glm-5.3-flash", "result": null, "attempts": 2, "fail": "rejected", "raw": "{\"kind\": \"故障\", \"subsystem\": \"量化\", \"effect\": \"模型权重、输出内容\", \"visibility\": \"质量退化\"}"}
+{"job": "baseC|INF-2476|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseC|INF-2487|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-2484|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2483|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "baseC|INF-2484|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2485|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2488|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2488|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2485|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2486|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseF|INF-2468|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-2488|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "baseC|INF-2487|glm-5.3-flash", "model": "glm-5.3-flash", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseC|INF-2476|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "编译器", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "baseF|INF-2470|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseC|INF-2486|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "数值异常"}}
+{"job": "baseC|INF-2487|qwen3.8-flash", "model": "qwen3.8-flash", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "baseF|INF-2471|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2471|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2472|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2473|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2473|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2469|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "overstated", "quote": "被编译器选错向量化访存模式", "evidence": "报告者判定为编译器为该形态选择了错误的向量化内存访问模式，根因未进一步定位。"}}]}
+{"job": "baseF|INF-2474|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2470|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2469|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "overstated", "quote": "被编译器选错向量化访存模式", "evidence": "报告者判定为编译器为该形态选择了错误的向量化内存访问模式，根因未进一步定位"}, "detail": {"problem": "unsupported", "quote": "rows=pid*BT*2+arange(BT)*2", "evidence": "tile 行地址构成 stride-2 栅格（pooling stride=2：相邻输出行对应相隔 2 的输入行）"}}]}
+{"job": "baseF|INF-2472|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2475|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "触发矩阵 5 种形状全错", "evidence": "换 batch/空间形状均复现"}}]}
+{"job": "baseF|INF-2472|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "fp16 路径 clamp_min_mask 连续块被写成 0（期望 1）、y/loss 同块异常、clamp_max_mask 正常；同输入重复执行输出 MD5 跨轮不一致，单轮亦可能整块塌缩。", "evidence": "fp16 输入用例 ActsULQ_L0_accuracy_perf_c_s_001（shape (33,41,37,1,108,37)）出现 clamp_min_mask 输出部分连续内存块被写成 0（期望 1）、y 与 loss 在同一些块同时异常、clamp_max_mask 正常；同一输入 TTK kernel 通路 --run 10 重复执行，输出 MD5 跨轮不一致，新进程单轮（fresh）执行亦可能整块塌缩"}}]}
+{"job": "baseF|INF-2468|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": true, "behavior": true, "detail": false}, {"component": {"problem": "missing_condition", "quote": "Inductor 父子轴替换等价判断", "evidence": "NPU Inductor 的父子轴替换（parent-child axis substitution）直接比较范围表达式的结构是否相同"}, "behavior": {"problem": "mixed", "quote": "repeat 场景 load 已换子轴、store 仍用旧父轴，行映射错。", "evidence": "漏判导致 repeat 场景中 load 已被替换为子轴、store 仍使用旧父轴，行映射错误。"}}]}
+{"job": "baseF|INF-2470|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "续写后输出与后续状态被改变", "evidence": "缓存前缀之后，给下一段加零值 padding 会改变 KDA 输出及后续 token 使用的状态。"}}]}
+{"job": "baseF|INF-2473|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2476|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "生产 vLLM 行 gather kernel", "evidence": "任何用除法派生行号、靠 mask 防越界的 gather/shape kernel（如 vLLM 序列并行行 gather、padded 窗口）在 NPU 上会真实读取掩码外内存"}}]}
+{"job": "baseF|INF-2477|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2474|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2478|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2475|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "触发矩阵 5 种形状全错", "evidence": "换 batch/空间形状均复现"}}]}
+{"job": "baseF|INF-2475|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "触发矩阵 5 种形状全错", "evidence": "换 batch/空间形状均复现，归约轴不含 dim0 则正确。"}}]}
+{"job": "baseF|INF-2474|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2479|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "nightly GPQA 接受率 22.26%→1.53%", "evidence": "PR 附 nightly 佐证：v0.32 GPQA 93.33% 完成 vs v0.33 用例超时、draft 接受率 91,417/410,732（22.26%）→20,455/1,335,936（1.53%）"}}]}
+{"job": "baseF|INF-2476|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "生产 vLLM 行 gather kernel", "evidence": "任何用除法派生行号、靠 mask 防越界的 gather/shape kernel（如 vLLM 序列并行行 gather、padded 窗口）在 NPU 上会真实读取掩码外内存"}}]}
+{"job": "baseF|INF-2478|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2471|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "舍入边界结果翻转。", "evidence": "在 float32 舍入边界上结果翻转"}}]}
+{"job": "baseF|INF-2480|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2478|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2481|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2479|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "nightly GPQA 接受率 22.26%→1.53%", "evidence": "PR 附 nightly 佐证：v0.32 GPQA 93.33% 完成 vs v0.33 用例超时、draft 接受率 91,417/410,732（22.26%）→20,455/1,335,936（1.53%）"}}]}
+{"job": "baseF|INF-2469|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "overstated", "quote": "被编译器选错向量化访存模式", "evidence": "报告者判定为编译器为该形态选择了错误的向量化内存访问模式，根因未进一步定位"}, "detail": {"problem": "unsupported", "quote": "rows=pid*BT*2+arange(BT)*2 的栅格", "evidence": "原文仅述「当 tile 行地址构成 stride-2 栅格（pooling stride=2：相邻输出行对应相隔 2 的输入行）时」，未出现 pid*BT*2+arange(BT)*2 等具体地址公式"}}]}
+{"job": "baseF|INF-2482|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "默认", "evidence": "对照组 exp_approx_mode=True 仅 0.03% RMS，float64 参考与 CUDA PyTorch SDPA bf16 均无零行"}}]}
+{"job": "baseF|INF-2476|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2483|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2480|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "静默损坏数据", "evidence": "合法的重切分（reshard）pad 因此静默返回损坏数据"}, "detail": {"problem": "mixed", "quote": "（核间数据不搬运）", "evidence": "因为优化工厂只在原核内拷贝、不做跨核搬运"}}]}
+{"job": "baseF|INF-2482|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2484|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2483|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2477|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "mixed", "quote": "负坐标进地址算术时 clamp/masked load/where 三种防护全错且错值位级相同。", "evidence": "kernel 里出现负坐标地址（如带 padding 的池化）时，无论用 clamp、mask 还是 where 防护，load 结果都是错的（且三种写法错得位级一致）"}, "detail": {"problem": "mixed", "quote": "ptr+scalar_base+3D 索引：scalar 偏移被丢、读错地址段；", "evidence": "ptr+scalar_base+3D 索引形态下标量偏移被丢弃，load 读到错误地址段"}}]}
+{"job": "baseF|INF-2481|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "丢真实 tile", "evidence": "交叉注意力因此关注错误 tile（多余 padding 或丢失真实 token）"}}]}
+{"job": "baseF|INF-2485|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "六情形静默错值，1D matmul 输出对但越界改写相邻张量", "evidence": "七个情形中六个输出值静默错误；1D matmul 输出本身正确但紧随其后分配的 guard 张量 8192 值全部被改写（算子写越其输出）"}}]}
+{"job": "baseF|INF-2483|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2484|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2480|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2479|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "nightly GPQA 接受率 22.26%→1.53%", "evidence": "v0.32 GPQA 93.33% 完成 vs v0.33 用例超时、draft 接受率 91,417/410,732（22.26%）→20,455/1,335,936（1.53%）——原文中 22.26%→1.53% 是 draft/spec decode 接受率，GPQA 的结果是完成率对比与超时，未将该接受率归于 GPQA"}}]}
+{"job": "baseF|INF-2486|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "对称/带零点同界", "evidence": "部分和取到错误 scale（零点路径错误更大，错零点移动整组）"}}]}
+{"job": "baseF|INF-2482|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "fp32_dest_acc_en=True 单开同样出零行。", "evidence": "单独开 fp32_dest_acc_en=True（HiFi2、math_approx=True）在混合尺度因果注意力上同样出零行（1/64 行、15.2% RMS；关闭则 0.76% 无零行）。"}}]}
+{"job": "baseF|INF-2468|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": null}, {}]}
+{"job": "baseF|INF-2488|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2487|deepseek-v4.1-flash", "model": "deepseek-v4.1-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "词表外 ID 被静默丢弃并返回 200。", "evidence": "实测：[9707,999999999]→200 且无效 ID 被静默丢弃"}}]}
+{"job": "baseF|INF-2477|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2481|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2485|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "六情形静默错值，1D matmul 输出对但越界改写相邻张量", "evidence": "七个情形中六个输出值静默错误；1D matmul 输出本身正确但紧随其后分配的 guard 张量 8192 值全部被改写（算子写越其输出）。"}}]}
+{"job": "baseF|INF-2484|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "保留输出内存原值", "evidence": "真实输出残留的是该内存的旧内容；结果里最后一个 tile 行不会被计算写回，保留这块内存里原来的任意旧值"}}]}
+{"job": "baseF|INF-2488|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2488|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2485|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "baseF|INF-2487|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": true, "component": false, "behavior": true, "detail": false}, {"title": {"problem": "missing_condition", "quote": "词表外 ID 静默丢弃", "evidence": "调 /detokenize 接口时传入词表外 token ID（越界、负值以外的非法正数），接口返回 HTTP 200，但非法 ID 对应的文本被静默丢掉"}, "behavior": {"problem": "mixed", "quote": "词表外 ID 被静默丢弃并返回 200", "evidence": "实测：[9707,999999999]→200 且无效 ID 被静默丢弃、[151936] 与 [999999999]→200 空串；行为效应：接口返回 HTTP 200，但非法 ID 对应的文本被静默丢掉"}}]}
+{"job": "baseF|INF-2486|qwen3.8-flash", "model": "qwen3.8-flash", "result": [{"title": true, "component": false, "behavior": false, "detail": true}, {"title": {"problem": "missing_condition", "quote": "组尺寸不整除 K 块错值", "evidence": "组边界与 128 行 K-tile 网格可交换（G 整除 128 或是其倍数）时 flush 都落在真实边界；否则 flush 在组中间触发，部分和取到错误 scale"}, "detail": {"problem": "unsupported", "quote": "合成层", "evidence": "实测（GPTQ uint4b8、N=256、两种 K 深度、fp16/bf16、对称/零点）"}}]}
+{"job": "baseF|INF-2487|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "词表外 ID 被静默丢弃并返回 200", "evidence": "接口返回 HTTP 200，但非法 ID 对应的文本被静默丢掉"}}]}
+{"job": "baseF|INF-2486|glm-5.3-flash", "model": "glm-5.3-flash", "result": [{"title": true, "component": false, "behavior": false, "detail": true}, {"title": {"problem": "missing_condition", "quote": "组尺寸不整除 K 块", "evidence": "组边界与 128 行 K-tile 网格可交换（G 整除 128 或是其倍数）时 flush 都落在真实边界；否则 flush 在组中间触发——原文错值条件是\"不可交换\"即 G 不整除 128 且非 128 倍数，标题只保留\"不整除 K 块\"一半限定，漏掉\"非 128 倍数\"（128 倍数实测正确），触发面变宽"}, "detail": {"problem": "unsupported", "quote": "合成层", "evidence": "实测（GPTQ uint4b8、N=256、两种 K 深度、fp16/bf16、对称/零点）——原文只列出测试配置，没有\"合成层\"这一事实"}}]}
+{"job": "panelC|INF-2469|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2469|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2471|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2468|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2468|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2468|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2471|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2471|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2469|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2472|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "panelC|INF-2473|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2476|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "编译器", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "panelC|INF-2470|kimi-k3", "model": "kimi-k3", "result": null, "attempts": 2, "fail": "rejected", "raw": "{\"kind\": \"故障\", \"subsystem\": \"KV缓存\", \"effect\": \"KV状态、输出内容\", \"visibility\": \"静默错误\"}"}
+{"job": "panelC|INF-2477|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2470|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-2477|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2477|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2472|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "panelC|INF-2470|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "KV缓存", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-2480|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2480|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2480|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2472|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "panelC|INF-2482|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2481|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2481|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2481|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2482|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2476|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "可用性/进度", "visibility": "静默错误"}}
+{"job": "panelC|INF-2473|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2482|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2478|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelC|INF-2484|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2484|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2484|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2485|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2485|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2476|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "编译器", "effect": "可用性/进度", "visibility": "报错"}}
+{"job": "panelC|INF-2486|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2485|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2487|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-2486|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelC|INF-2486|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "量化", "effect": "数值结果", "visibility": "静默错误"}}
+{"job": "panelF|INF-2468|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-2478|qwen3.8-max", "model": "qwen3.8-max", "result": {"kind": "故障", "subsystem": "量化", "effect": "KV状态", "visibility": "静默错误"}, "attempts": 2}
+{"job": "panelC|INF-2487|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelC|INF-2473|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "算子/内核", "effect": "数值结果", "visibility": "不可复现"}}
+{"job": "panelF|INF-2470|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2470|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2471|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2471|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2468|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2471|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelC|INF-2487|kimi-k3", "model": "kimi-k3", "result": {"kind": "故障", "subsystem": "分词/模板", "effect": "输出内容", "visibility": "静默错误"}}
+{"job": "panelF|INF-2469|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "overstated", "quote": "被编译器选错向量化访存模式", "evidence": "报告者判定为编译器为该形态选择了错误的向量化内存访问模式，根因未进一步定位"}, "detail": {"problem": "unsupported", "quote": "rows=pid*BT*2+arange(BT)*2", "evidence": "当 tile 行地址构成 stride-2 栅格（pooling stride=2：相邻输出行对应相隔 2 的输入行）时（原文未给出 pid/BT 的具体地址表达式）"}}]}
+{"job": "panelF|INF-2473|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2473|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2472|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2472|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2473|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2469|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": true}, {"behavior": {"problem": "overstated", "quote": "被编译器选错向量化访存模式", "evidence": "报告者判定为编译器为该形态选择了错误的向量化内存访问模式，根因未进一步定位"}, "detail": {"problem": "unsupported", "quote": "rows=pid*BT*2+arange(BT)*2 的栅格", "evidence": "tile 行地址构成 stride-2 栅格（pooling stride=2：相邻输出行对应相隔 2 的输入行）"}}]}
+{"job": "panelF|INF-2477|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2469|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "rows=pid*BT*2+arange(BT)*2 的栅格", "evidence": "原文中不存在该索引表达式；原文仅表述为\"当 tile 行地址构成 stride-2 栅格（pooling stride=2：相邻输出行对应相隔 2 的输入行）时\"，未给出 pid、BT、arange 等具体公式"}}]}
+{"job": "panelF|INF-2476|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2478|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2472|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2480|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2478|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2481|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2476|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "生产 vLLM 行 gather kernel", "evidence": "任何用除法派生行号、靠 mask 防越界的 gather/shape kernel（如 vLLM 序列并行行 gather、padded 窗口）在 NPU 上会真实读取掩码外内存"}}]}
+{"job": "panelF|INF-2480|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2482|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2470|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "续写后输出与后续状态被改变", "evidence": "同一段文本带不同 padding 得到不同输出，且污染后续 token 使用的状态"}}]}
+{"job": "panelF|INF-2481|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2468|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "repeat 场景 load 已换子轴、store 仍用旧父轴，行映射错", "evidence": "漏判导致 repeat 场景中 load 已被替换为子轴、store 仍使用旧父轴，行映射错误"}}]}
+{"job": "panelF|INF-2481|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2477|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2482|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2484|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2482|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2485|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2478|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2485|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "六情形静默错值，1D matmul 输出对但越界改写相邻张量", "evidence": "七个情形中六个输出值静默错误；1D matmul 输出本身正确但紧随其后分配的 guard 张量 8192 值全部被改写"}}]}
+{"job": "panelF|INF-2477|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "负坐标进地址算术时 clamp/masked load/where 三种防护全错且错值位级相同", "evidence": "无论用 clamp、mask 还是 where 防护，load 结果都是错的（且三种写法错得位级一致）"}}]}
+{"job": "panelF|INF-2480|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2485|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2484|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2476|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "panelF|INF-2486|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "contradicts", "quote": "对称/带零点同界", "evidence": "零点路径错误更大，错零点移动整组"}}]}
+{"job": "panelF|INF-2486|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "N=256 合成层", "evidence": "实测（GPTQ uint4b8、N=256、两种 K 深度、fp16/bf16、对称/零点）——原文仅给出实测配置，未说明测试对象是“合成层”"}}]}
+{"job": "panelC|INF-2478|glm-5.3", "model": "glm-5.3", "result": {"kind": "故障", "subsystem": "量化", "effect": "KV状态", "visibility": "静默错误"}}
+{"job": "panelF|INF-2487|qwen3.8-max", "model": "qwen3.8-max", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "mixed", "quote": "词表外 ID 被静默丢弃并返回 200", "evidence": "【行为效应】调 /detokenize 接口时传入词表外 token ID…接口返回 HTTP 200，但非法 ID 对应的文本被静默丢掉"}}]}
+{"job": "panelF|INF-2487|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "词表外 ID 被静默丢弃并返回 200", "evidence": "传入词表外 token ID（越界、负值以外的非法正数），接口返回 HTTP 200，但非法 ID 对应的文本被静默丢掉；实测……[-1] 被请求校验 400"}}]}
+{"job": "panelF|INF-2487|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": true, "detail": false}, {"behavior": {"problem": "missing_condition", "quote": "词表外 ID 被静默丢弃并返回 200", "evidence": "传入词表外 token ID（越界、负值以外的非法正数），接口返回 HTTP 200……[-1] 被请求校验 400"}}]}
+{"job": "panelF|INF-2486|glm-5.3", "model": "glm-5.3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "组尺寸不整除 K 块错值", "evidence": "加载 group size 不整除 128 也非 128 倍数（如 48/96）的 GPTQ W4A16 模型且落到 Humming kernel 时，线性层输出静默错误；机制中亦明确 G 整除 128 或是其倍数（含 256 等 128 倍数）时正确"}}]}
+{"job": "panelF|INF-2484|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}], "attempts": 2}
+{"job": "fix|INF-2475", "model": "qwen3.8-max", "result": {"detail": "910B4 torch.compile 下归约轴含 dim0 且 ≥2 轴的多轴归约（如 x.sum(dim=[0,2,3])）结果为正确值的 48 倍，无异常无崩溃；换 batch/空间形状均复现，归约轴不含 dim0 则正确。"}}
+{"job": "fix|INF-2479", "model": "qwen3.8-max", "result": {"detail": "CPU 复现：BF16 gate 值 0.25 被静默转成 INT8 0，gate 的 scale/offset 仍为哨兵未填；nightly 佐证：v0.32 GPQA 93.33% 完成，v0.33 用例超时，draft 接受率 22.26%→1.53%。"}}
+{"job": "fix|INF-2486", "model": "qwen3.8-max", "result": {"detail": "GPTQ uint4b8、N=256、fp16/bf16 实测：G∈{24,40,48,56,80,96,112,160,192,224,320,448} 输出静默错误，rel L2 0.17~1.10，零点路径更大；M=1时 ≤112 坏尺寸返回 NaN；16/32/64 及 128 倍数正确。"}}
+{"job": "fix|INF-2487", "model": "qwen3.8-max", "result": {"behavior": "create_detokenize() 把 request.tokens 直接交 tokenize_prompt_async()，未调用 validate_token_ids()，词表外正数 ID 无校验（负值仍被请求校验拦截）。"}}
+{"job": "fix|INF-2469", "model": "qwen3.8-max", "result": {"behavior": "tile 行地址构成 stride-2 栅格（pooling stride=2）时，沿列轴单位步长的 2D tl.load 静默产生错误结果：奇数行 lane 返回 mask 的 other 值（含默认 0.0），偶数行正确。", "detail": "910B4 实测：tile 行地址构成 stride-2 栅格（pooling stride=2）且沿列轴单位步长 2D tl.load（带 mask/other）时，奇数行整行等于 other（默认 0.0），逐位稳定复现，无警告无报错；列 mask 为 lane-uniform 时同样复现。"}}
+{"job": "verify|INF-2469|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2479|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2475|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2487|kimi-k3", "model": "kimi-k3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2475|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2479|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
+{"job": "verify|INF-2487|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": true}, {"detail": {"problem": "unsupported", "quote": "[151936]（词表+1）", "evidence": "vocab 151936；[151936] 与 [999999999]→200 空串"}}]}
+{"job": "verify|INF-2486|kimi-k3", "model": "kimi-k3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "不整除 K 块", "evidence": "组边界与 128 行 K-tile 网格可交换（G 整除 128 或是其倍数）时 flush 都落在真实边界；G∈{16,32,64}、全部 128 倍数、单组跨 K 正确（≤4e-4）——128 的倍数（如 256）不整除 128 却正确，标题说法变宽"}}]}
+{"job": "verify|INF-2486|glm-5.3", "model": "glm-5.3", "result": [{"title": true, "component": false, "behavior": false, "detail": false}, {"title": {"problem": "missing_condition", "quote": "组尺寸不整除 K 块", "evidence": "group size 不整除 128 也非 128 倍数（如 48/96）"}}]}
+{"job": "verify|INF-2469|glm-5.3", "model": "glm-5.3", "result": [{"title": false, "component": false, "behavior": false, "detail": false}, {}]}
