@@ -3,21 +3,21 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2488 条；状态：active 2488
+共 2505 条；状态：active 2488、pending_audit 17
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 773 |
-| 编译器 | 172 |
-| 运行时/执行 | 136 |
-| 集合通信 | 40 |
+| 算子/内核 | 779 |
+| 编译器 | 174 |
+| 运行时/执行 | 137 |
+| 集合通信 | 41 |
 | 并行切分 | 31 |
 | KV缓存 | 385 |
-| 调度/服务 | 95 |
+| 调度/服务 | 96 |
 | 输出解析 | 68 |
-| 解码/采样 | 156 |
-| 量化 | 234 |
+| 解码/采样 | 158 |
+| 量化 | 237 |
 | 位置编码 | 44 |
 | 分词/模板 | 34 |
 | 模型定义 | 50 |
@@ -33,7 +33,7 @@
 | 构建/发布 | 5 |
 | 模型自身 | 16 |
 | 外部攻击 | 19 |
-| 待定 | 11 |
+| 待定 | 12 |
 
 ## 硬件
 
@@ -8701,7 +8701,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：超过 256 个成员的 foreach 列表：前面成员算对、尾部成员保持原值静默不算（无错误码），host 侧还有结构体越界写；调用方无感知
 - **改进措施**：检测 调用侧按 256 上限分批；输出与逐个 expm1 对拍；修复 待定（issue open）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/8254
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8254；https://gitcode.com/cann/ops-nn/merge_requests/14059
 
 ### INF-2423 `gmsq_v2_n0_outputscale_unwritten` GMSQ V2 n==0 时 outputScale 整块未写
 
@@ -8973,6 +8973,72 @@
 - **影响详情**：Blackhole p150、c408df62：logical 32 行存成 padded 64 行等 7 用例中 6 例输出静默错值；1D matmul 后分配的 guard 张量 8192 值全被改写；填充规整到下一 tile 的对照全精确。
 - **改进措施**：检测 待定；修复 待定（输入由公开调用 tilize_with_val_padding/reshape 构造即触发；https://github.com/tenstorrent/tt-metal/issues/64826）。
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/64826
+
+### INF-2490 `aclnn_gather_oob_index_silent_value` aclnnGather 越界索引静默返回错误值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：算子/内核 / cann / gather_v3 host 校验缺失
+- **原因行为**：gather_v3.cpp host 侧只校验 dtype/shape 不校验 index 取值范围；kernel 内 CheckIdxValue 的 assert 在生产版本被编译掉，越界 index 不报 161002，静默返回错误值。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：self=[100,200,300,400]、dim=0 时 index=4 返回 100（读到第 0 个元素）、index=99 返回 0.0；GetWorkspaceSize 与执行均返回 0 无告警；文档明确 index 不支持越界应报错；错误值向下游传播。
+- **改进措施**：检测 待定；修复 待定（建议 CheckIdxValue 由 assert 改为返回错误码；无修复 PR）。
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8561
+
+### INF-2493 `lightning_indexer_multiblock_topk_tie_break` LightningIndexer 跨基块 top-K 等分候选丢失
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：算子/内核 / cann / arch22 归并路径 MergeSort
+- **原因行为**：arch22 逐行归并路径 MergeSort 不保持（分数降序、同分索引升序）契约：跨 512 基块归并时后块等分候选顶掉前块等分候选，top-K 索引集合错误。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：actS2>512 且 actS1>4 且 K∈{16,32,64} 时 sparseIndicesOut 与 golden 失配（1000 用例中 23 例、530,843 个发散索引全部 ≥512）；两段接口返回 0 无报错；prefill/长上下文常态命中，decode 不受影响。
+- **改进措施**：检测 待定；修复 待定（建议 MergeSort 比较器改 (value 降序,index 升序) 字典序或在并入 globalTopkUb_ 前对等分候选稳定化，并排查缓存路径/ProcessLD；无修复 PR）。
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7324
+
+### INF-2494 `lightning_indexer_v2_metadata_gqa_zero_load` LightningIndexerV2Metadata GQA 配比静默全零负载
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：算子/内核 / cann / ParamsInit/CalcSplitInfo
+- **原因行为**：groupSize_=nhq/nhk 整除向零截断且无校验：nhq<nhk 时 mBaseSize_=0，除零使 s1GBaseNum 恒 0，isKvSeqAllZero 恒真，调度走全零 KV 捷径产出无效 metadata。
+- **影响对象**：数值结果；可用性/进度（静默错误）
+- **影响详情**：numHeadsQ<numHeadsK（GQA 头数配比写反）时两段接口与同步全返回 0，metadata 输出与全零序列长度输入逐 int 一致（哨兵预填 957/1024 未写），下游 V2 按空负载调度，算力空转/结果为空，极难定位。
+- **改进措施**：检测 待定；修复 待定（建议 910B 分支补 groupSize_==0/非整除校验报参数错误、两版文档补头数配比约束；无修复 PR）。
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7319
+
+### INF-2502 `ttmetal_hw_dims_softmax_mask_geometry_unchecked` tt-metal hw-dims softmax 掩码几何未校验错读
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：算子/内核 / tt-metal / hw-dims softmax 掩码读取游标
+- **原因行为**：hw-dims 路径校验布局/分片/朝向/scale 但不校验掩码宽高与输入/shard 几何；游标按模数前进且仅行尾回绕：窄掩码越界读、错行掩码被静默应用。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：掩码几何与输入/shard 不匹配时越界读掩码内存或把错误掩码行应用到注意力上，scale+mask 在位 softmax 输出错值，无回绕无报错；#64681 明确不改本 hw-dims 路径。
+- **改进措施**：检测 待定；修复 待定（审计 issue open 带源码行号与复现形状，未见修复 PR）。
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/64840
+
+### INF-2504 `flashinfer_trtllm_moe_small_batch_finalize_batchdep` flashinfer trtllm MoE 小批 finalize 输出随批变
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：算子/内核 / flashinfer / 小批 finalize topK 分裂归约
+- **原因行为**：小批 finalize 把 topK 归约拆到 blockDim.y 线程组经共享内存合并部分和，与大批路径的顺序累加求和顺序不同；浮点非结合性使同一 token 的 MoE 输出依赖所在 batch 大小。
+- **影响对象**：输出分布（不可复现）
+- **影响详情**：hidden 4096 时 batch<74 且 4<topK≤64 走该路径：decode 与 prefill logprob KL 达 3.5e-4~1.6e-3（0.7.2 为 0）；useSmallBatch=false 归零；阻塞 SGLang 升级。
+- **改进措施**：检测 待定；修复 待定（issue 列出三选一方案：统一归约顺序/加禁用开关/加 deterministic 参数；0.7.2.post1 revert #6555 或 useSmallBatch=false 可规避，均未进正式修复）。
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/8831
+
+### INF-2505 `ttmetal_norm_factories_2dgrid_dtype_noc_bugs` tt-metal 归一化工厂三缺陷错值/错dtype/挂死
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：算子/内核 / tt-metal / layernorm/groupnorm 工厂
+- **原因行为**：2D 宽分片 post_all_gather 误开 two_stage_reduce（绑不存在 STATS、关 enable_sqrt、坏参数）；interleaved 输出 dtype 被忽略；GroupNorm NOC1 交换错致挂死。
+- **影响对象**：数值结果；可用性/进度（静默错误）
+- **影响详情**：2D 宽分片 post_all_gather layernorm 静默错值（缺 1/sqrt(Var+ε)）；指定 dtype 的 interleaved 归一化静默输出输入 dtype；非矩形 core group 的 GroupNorm NOC1 组播挂死。
+- **改进措施**：检测 待定；修复 待定（审计 issue open 带文件行号，未见修复 PR）。
+- **来源**：https://github.com/tenstorrent/tt-metal/issues/64740
 
 ## 编译器
 
@@ -10902,6 +10968,28 @@
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/5960
 - **关联**：cross:TRN-0696
 
+### INF-2489 `triton_ascend_te_pointwise_four_dtype_silent` triton-ascend 编译路径 4 dtype 组合静默错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：编译器 / torch_npu / TE pointwise codegen 数值通道
+- **原因行为**：torch_npu triton_experimental 编译路径上 abs/int64 整型按 32 位截断、add/bool 结果翻转、hypot/f32 无溢出保护、pow/f64 底数降精度 f32，四机制各异且全部静默。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：torch.compile 后 |−8589934599| 输出 7（低 32 位）、25 元素布尔加 9 个翻转、±FLT_MAX 的 hypot 输出 inf/NaN、f64 pow 只剩 f32 精度；eager 与 CPU 参考零差异，无报错。
+- **改进措施**：检测 待定；修复 待定（issue 建议短期把 4 组合从 triton codegen 注册清单豁免走 extern aclnn 兜底、长期逐机制修 lowering/codegen 并补 dtype 契约单测；无修复 PR）。
+- **来源**：https://github.com/triton-lang/triton-ascend/issues/3076
+
+### INF-2495 `npu_combo_kernel_rsplit_missing_combine` NPU 组合核双归约缺 combine 输出未初始化
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：编译器 / torch_npu / combo codegen rsplit 配对
+- **原因行为**：npu_rsplit_partial=True 有四处赋值，仅一处设置 rsplit_kernel（combine 依赖）；combo 路径无 combine 环节，partial 写入 workspace 后无人读回，输出未初始化。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：同图两个归约轴长度不同的归约（如 r=128 与 r=2048 的 sum(dim=-1)）时第二个归约输出为未初始化显存（maxdiff 178.66、首元素 2.0039、多数元素 0），无任何报错；长度相同或单归约不触发。
+- **改进措施**：检测 待定；修复 待定（issue 给出修复方向：standalone 路径 codegen 后补 _npu_emit_rsplit_combine hook（需扩返回结构）或把 rsplit 判定前移回 codegen_node_schedule；无修复 PR）。
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/5990
+
 ## 运行时/执行
 
 ### INF-0015 `ttmetal_dram_sharded_dup_xcoord_buffer_corruption` TensorAccessor 只按 x 坐标选 bank 致 buffer 损坏
@@ -12417,6 +12505,17 @@
 - **改进措施**：检测 TBO 开/关输出对拍（含 top-5 logprobs）；EAGLE3 解包报错即第二个缺陷特征；修复 修复 PR https://github.com/sgl-project/sglang/pull/48659 （含两个子修复：extend_start_loc rebase 到切片缓冲、辅助态按微批快照合并；修复后 8/8 请求与参考一致含 logprobs，状态未核实合入）
 - **来源**：https://github.com/sgl-project/sglang/issues/48660
 
+### INF-2496 `aicpu_sched_worker_false_success_hang` aicpu_sched worker 假成功致业务静默卡死
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：运行时/执行 / cann / CreateWorker 状态校验
+- **原因行为**：worker 线程初始化失败（事件订阅或消息队列失败）PostSem 后退出，但 threadStatusList_ 仍为 THREAD_RUNNING；CreateWorker 校验被绕过返回成功，事件无人消费任务挂起。
+- **影响对象**：可用性/进度（挂起）
+- **影响详情**：该 AICPU 核订阅的 kernel/msg 类事件从此无人消费，落到该核的任务挂起、host 侧同步等待超时；守护进程自认启动成功，业务卡死且无错误上报，现场排查困难。
+- **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/cann/runtime/merge_requests/6157（初始化失败路径在 PostSem 前将线程状态置 THREAD_EXIT，使 CreateWorker 校验识别已退出 worker 并返回启动失败；合入状态未核实）。
+- **来源**：https://gitcode.com/cann/runtime/issues/1357
+
 ## 集合通信
 
 ### INF-0103 `ttmetal_all_broadcast_writer_accessor_cross_buffer_space` all_broadcast 输出 accessor 误用输入 buffer
@@ -12864,6 +12963,17 @@
 - **影响详情**：AllReduce NDA 精度错误而 ReduceScatter/AllGather 正常；ACK/DATA_SIGNAL/FIN_ACK 握手对称置空不死锁，流程正常完成但结果静默错误
 - **改进措施**：检测 跨 rank AllReduce NDA 数值校验（重点 ≤4MB sequence 路径）；对比 ReduceScatter/AllGather 正常可作定位线索；修复 修复 MR !3919 已挂（移除 5 处包裹共 10 行，纯删除；open，待上板验证）
 - **来源**：https://gitcode.com/cann/hccl/merge_requests/3919
+
+### INF-2503 `sglang_gfx12_custom_allreduce_relaxed_stale` sglang gfx12 定制 all-reduce 松弛旗标读旧值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：集合通信 / sglang / all-reduce start 旗标可见性
+- **原因行为**：1-stage HIP 定制 all-reduce 的 start 旗标以 __ATOMIC_RELAXED 发布并松弛轮询；gfx12 经 PCIe 无缓存一致，旗标先于输入离开本 rank L2 可见，对端读到旧数据。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：两张 R9700（gfx1201）PCIe 互联下 2000 次 all-reduce 约 250 万个错误元素且两 rank 结果互不一致；每次调用前 full device sync+barrier 仍发生，调用方无任何报错。
+- **改进措施**：检测 待定；修复 报告者已在运行的修复：仅 gfx12 device code 改用 release 语义（main 的 custom_all_reduce_hip.cuh:169-171 未改）；上游合入未核实。
+- **来源**：https://github.com/sgl-project/sglang/issues/49657
 
 ## 并行切分
 
@@ -18598,6 +18708,17 @@
 - **改进措施**：检测 prompt_logprobs 各位置值应各不相同，恒同值即中招；崩溃有明确 OverflowError 栈；修复 待定（issue open，未附修复 PR）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21103
 
+### INF-2500 `vllm_mm_lora_unequal_clip_row_mapping` vLLM 多模态 LoRA 不等长 clip 行漏适配
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：调度/服务 / vllm / 多模态 LoRA 行映射
+- **原因行为**：激活 LoRA 映射按 per-item 有效行数生成，而投影消费带 padding stride 的展平张量；不等长 clip 批中部分有效帧的展平索引超出映射覆盖，长 clip 尾部收不到所请求的 LoRA。
+- **影响对象**：隐状态；输出内容（静默错误）
+- **影响详情**：单请求两段 1s/2s 音频（25/50 有效行）批中，长 clip 后 25 个有效行 RMS 对适配参考 2.18（对 base 投影仅 0.00026）即完全未加 LoRA，贪心首 token 改变（分组修复实验 96077→24286）。
+- **改进措施**：检测 待定；修复 待定（issue open；诊断性规避：按等长分组请求或单 clip；生产修复方案与 batching 成本未定）。
+- **来源**：https://github.com/vllm-project/vllm/issues/66801
+
 ## 输出解析
 
 ### INF-0574 `vllm_qwen3_xml_tool_choice_required_silently_acts_as_auto` vLLM qwen3 parser 强制 tool_choice 被静默降级
@@ -21116,6 +21237,28 @@
 - **影响详情**：DSpark draft 以早一层的隐藏态为条件，接受率下降：对齐修复后 TPOT -3.25%（14.35→13.89ms）、加权验证产出 +3.13%（3.445→3.553）；输出仍看似合理，静默劣化
 - **改进措施**：检测 对比 ns=1/ns=3 逐位置接受率（本例 pos1 即掉 22.6 点为 PP+MTP 组合病灶特征）；修复 PR #21023 自带三层层级单测；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/21023 （open，含 unit 级复现；未发布）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21022
+
+### INF-2498 `vllm_multi_module_mtp_slot_state_leak` vLLM 多模块 MTP speculator 槽位残留泄漏
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：解码/采样 / vllm / MTP speculator 槽位缓存
+- **原因行为**：每 request 槽位缓存（draft input ids/hidden states/MM embeds）在槽位复用时无重置、短窗只覆写尾部、拒绝后重灌不查有效数量，前一请求数据进入新请求 draft 上下文并写入其 draft KV。
+- **影响对象**：跨请求/跨样本数据；KV状态（静默错误）
+- **影响详情**：槽位复用且新请求 draft 窗口短于 S-1 或首步全拒绝时，请求 B 的 draft 模型跑在请求 A 的 token ids/hidden states/多模态 embeds 上并写入 B 的后续模块 draft KV，跨请求污染，无报错。
+- **改进措施**：检测 待定；修复 待定（issue open 附 POC，未见修复 PR）。
+- **来源**：https://github.com/vllm-project/vllm/issues/66886
+
+### INF-2501 `flashinfer_radix_topk_row_race_wrong_index` flashinfer radix top-k 跨行竞态写错索引
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：解码/采样 / flashinfer / topk.cuh 行循环共享内存
+- **原因行为**：CTA 组逐行循环里非确定 collect 后无 __syncthreads：快 warp 提前开始下一行 LoadToSharedOrdered 覆写 shared_ordered 而慢 warp 仍在读，写出错误 top-K 索引。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：bf16 B=192 V=65536 k=4096 时 300 种子 8 个出现坏行（9/57600 行，各含一个错误的并列元素），racecheck 报 1-2 hazards；无崩溃无报错；deterministic=True 路径（已有 barrier）不受影响。
+- **改进措施**：检测 待定；修复 一行 __syncthreads() 修复（行循环末尾补 barrier；作者验证修复后 0 hazard、0/300 坏种子、既有 900 测试通过），PR 待维护者意见。
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/9316
 
 ## 量化
 
@@ -23752,6 +23895,39 @@
 - **影响详情**：GPTQ uint4b8、N=256、fp16/bf16 实测：G∈{24,40,48,56,80,96,112,160,192,224,320,448} 输出静默错误，rel L2 0.17~1.10，零点路径更大；M=1时 ≤112 坏尺寸返回 NaN；16/32/64 及 128 倍数正确。
 - **改进措施**：检测 待定；修复 待定（发现于核对 #60608/#59783 回退故事；humming_kernels 0.1.19，vLLM 0.33.0rc1 main fd0c471b 纯 Python 选择代码，https://github.com/vllm-project/vllm/issues/66437）。
 - **来源**：https://github.com/vllm-project/vllm/issues/66437
+
+### INF-2491 `msmodelslim_qwen36_fakequant_transformers_version` msmodelslim 伪量化 eval 依赖版本致乱码
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：量化 / msmodelslim / 模型依赖版本契约（文档）
+- **原因行为**：文档把 Qwen3.6-27B 的 transformers 依赖与同系列模型一并标注 5.2.0，实际需要 5.14.1；5.2.0 下伪量化推理输出乱码，属版本契约错误，仅以文档修复。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：按官方文档安装 transformers==5.2.0 后对 Qwen3.6-27B w8a8 权重执行 msmodelslim eval 伪量化推理，对话输出乱码；按 5.14.1 恢复正常。
+- **改进措施**：检测 待定；修复 文档修复 MR https://gitcode.com/Ascend/msmodelslim/merge_requests/1164（open，!1163 同内容已 closed）：支持列表/快速开始/示例更正为 transformers==5.14.1 并加脚注；一键量化与校准流程依赖仍为 5.2.0；无代码改动。
+- **来源**：https://gitcode.com/Ascend/msmodelslim/merge_requests/1164
+
+### INF-2497 `weight_quant_preprocess_double_transpose_gn` WeightQuantPreprocess 双转置读错 scale G/N
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：量化 / cann / host G/N 取值来源
+- **原因行为**：host 侧 PerGroup 处理从改写后的 weight shape 取 G、N，而非已校验的 weightScale 逻辑 shape [G,N]；weight 与 scale 均转置时读错 G/N，预处理结果不正确。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Ascend960 A16 PerGroup C064 双转置场景下 WeightQuantPreprocess 预处理（scale 重排）结果错误，下游量化矩阵乘按错误 scale 布局读取，量化计算结果静默错误。
+- **改进措施**：检测 待定；修复 修复已归档（issue closed：host 侧改为直接从 weightScale 逻辑 shape [G,N] 读取 G、N，kernel 不改、无新增开关；随哪个 CANN 版本发布未核实）。
+- **来源**：https://gitcode.com/cann/ops-math/issues/4658
+
+### INF-2499 `vllm_fp8_group_quant_reciprocal_gsm8k_drop` vLLM FP8 组量化倒数乘法 GSM8K 回退
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：量化 / vllm / 组量化 kernel 倒数乘法
+- **原因行为**：PR #61343 把 FP8 per-token-group 量化的逐元素除法改为乘预计算倒数（含融合 RMSNorm+量化路径），数值变化伴随 Qwen3.5-122B-A10B-FP8 GSM8K 精度稳定回退。
+- **影响对象**：输出内容（质量退化）
+- **影响详情**：B200 上 0.32.0rc1.dev49→dev50（单 commit 0fae39a01）GSM8K 前 10%（固定 132 题）119/132→114/132，三轮一致；GB200 换回旧 wheel 116→119；PR 自身精度表对 397B 也报方向性下降。
+- **改进措施**：检测 待定；修复 待定（issue open；两条评论未读，维护者是否承认为回归未核实；规避可锁定 0fae39a01 之前的 wheel）。
+- **来源**：https://github.com/vllm-project/vllm/issues/65906
 
 ## 位置编码
 
@@ -27984,3 +28160,14 @@
 - **影响详情**：prompt“你是谁”、temperature=0 返回 50 个无关联英文单词串（非中文也非正常续写），finish_reason=length；HTTP 200、无异常日志，只能肉眼发现。
 - **改进措施**：检测 TP8 + enforce-eager 拉起 BF16 gpt-oss-120b，用 temperature=0 单问句看输出是否为词串；再与 TP1 或默认配置对照；修复 待定（issue closed，正文无修复与规避说明）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/8463
+
+### INF-2492 `vllm_ascend_v030_qwen36_moe_w8a8_garbled` vllm-ascend v0.30 Qwen3.6 MoE W8A8 输出乱码
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-10
+
+- **原因对象**：待定 / vllm / v0.30 W8A8 路径（根因未定位）
+- **原因行为**：Qwen3.6-35B-A3B W8A8（compressed-tensors）在 vllm-ascend 0.30.0rc2 输出乱码，v0.18 同 checkpoint 正常；缺陷在 0.30 新推理路径内，具体模块未定位。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：temperature=0、13 token 纯文本 prompt、enforce_eager、TP=1/TP=2 均输出不可读乱码；0.18 同模型同 tokenizer 正常；0.30 日志显示 llmcompressor 量化自定义融合与 LBNHC KV 布局为新增路径。
+- **改进措施**：检测 待定；修复 降级 vllm-ascend 0.18 可规避（报告者实测同一 checkpoint 正常）；issue open，修复未提交。
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/21462

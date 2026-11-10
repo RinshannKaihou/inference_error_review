@@ -36,6 +36,8 @@ original:
   behavior: 用带混合精度 MLA（量化 Q/KV + FLOAT gate）的 ModelSlim Kimi-K3 checkpoint 在 vllm-ascend v0.33 上部署：gate 权重被静默压成 INT8 零/错值、量化 scale 缺失，模型照常服务但输出质量坍塌——nightly 表现为 spec decode 接受率从 22% 掉到 1.5%、生成超时；无加载报错。
   trigger_surface: vllm-ascend（v0.33 系）+ ModelSlim 量化 Kimi-K3 checkpoint + MLA 层 gate 与 Q/KV 精度不一致（FLOAT gate）。
   discovery: 2026-11-09 每日扫描
+  notes:
+  - '2026-11-10 2026-11-10 回访：修复 PR #21387 已 merged（2026-11-10T09:35Z，Kimi MLA FLOAT gate INT8 错配修复合入）；随版本发布状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -52,3 +54,7 @@ migration:
         to: 质量退化
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - original.notes

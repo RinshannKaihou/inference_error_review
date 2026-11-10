@@ -40,6 +40,7 @@ original:
   discovery: 2026-11-06 每日扫描
   notes:
   - '2026-11-09 2026-11-09 回访：修复 PR #21348 开出（open）——从本组 metadata.pp_rank 推导源 rank、按字段解析替换 @pp_rank（避免 @pp_rank:1 误匹配 :10）、rank 不匹配或扩展出重复键即 fail fast，并附单测；issue #21164 仍 open。'
+  - '2026-11-10 2026-11-10 回访：issue #21164 仍 open，修复 PR #21348 仍 open 未合入，状态与 11-09 相比无变化。'
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -59,4 +60,7 @@ migration:
   - date: '2026-11-09'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-10'
+    fields:
     - original.notes

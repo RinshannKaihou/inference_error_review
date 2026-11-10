@@ -37,6 +37,8 @@ original:
   behavior: 在 Atlas A2 上跑 FIA arch22 kernel、启用 split-KV combine 且需要输出 LSE，并且同一个 BlockEpilogue 实例在 split-KV 任务后紧跟 non-split 任务时，combine 阶段的 LSE 输出会异常（被提前覆写），是否出错取决于竞争窗口、非必现；输出值偶发错、无报错。
   trigger_surface: aclnnFusedInferAttentionScore 系列 + arch22 + LSE_MODE=OUT_ONLY + split-KV combine + BlockEpilogue 跨 split/non-split 任务复用。
   discovery: 2026-11-09 每日扫描
+  notes:
+  - '2026-11-10 2026-11-10 回访：issue #7287 已关闭（2026-11-10）；修复 !15558 补 MTE3_V(EVENT_ID5) 同步对，合入与随版发布状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -52,3 +54,7 @@ migration:
     - qwen3.8-max
     uncertain:
     - visibility
+  updates:
+  - date: '2026-11-10'
+    fields:
+    - original.notes
