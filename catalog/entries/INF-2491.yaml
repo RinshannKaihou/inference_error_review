@@ -4,13 +4,13 @@ slug: msmodelslim_qwen36_fakequant_transformers_version
 aliases: []
 title: msmodelslim 伪量化 eval 依赖版本致乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 量化
+  - subsystem: 构建/发布
     stack: msmodelslim
     component: 模型依赖版本契约（文档）
-  behavior: 文档把 Qwen3.6-27B 的 transformers 依赖与同系列模型一并标注 5.2.0，实际需要 5.14.1；5.2.0 下伪量化推理输出乱码，属版本契约错误，仅以文档修复。
+  behavior: 文档将 Qwen3.6-27B 的 transformers 依赖与同系列模型一并标注 5.2.0，而该模型实际依赖 5.14.1，属版本契约标注错误；修复仅为文档版本更正，不改动一键量化/校准流程的依赖版本（仍 5.2.0）。
 effect:
   objects:
   - 输出内容
@@ -38,3 +38,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 量化
+        to: 构建/发布
+    rewritten:
+    - behavior

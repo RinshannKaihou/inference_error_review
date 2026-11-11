@@ -4,7 +4,7 @@ slug: ttmetal_norm_factories_2dgrid_dtype_noc_bugs
 aliases: []
 title: tt-metal 归一化工厂三缺陷错值/错dtype/挂死
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    issue_unfixed:
+    - behavior

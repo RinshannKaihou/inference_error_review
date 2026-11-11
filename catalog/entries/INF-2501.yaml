@@ -4,17 +4,17 @@ slug: flashinfer_radix_topk_row_race_wrong_index
 aliases: []
 title: flashinfer radix top-k 跨行竞态写错索引
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 解码/采样
+  - subsystem: 算子/内核
     stack: flashinfer
     component: topk.cuh 行循环共享内存
   behavior: CTA 组逐行循环里非确定 collect 后无 __syncthreads：快 warp 提前开始下一行 LoadToSharedOrdered 覆写 shared_ordered 而慢 warp 仍在读，写出错误 top-K 索引。
 effect:
   objects:
   - 数值结果
-  detail: bf16 B=192 V=65536 k=4096 时 300 种子 8 个出现坏行（9/57600 行，各含一个错误的并列元素），racecheck 报 1-2 hazards；无崩溃无报错；deterministic=True 路径（已有 barrier）不受影响。
+  detail: racecheck 对 top_k 的另三个形状与 top_k_ragged_transform 报 1-2 hazards；坏输出仅见 bf16 B=192 V=65536 k=4096：8/300 种子、9/57600 行各一个错 tie 元素，余形状 0/300 潜伏，无崩溃无警告。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -38,3 +38,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 解码/采样
+        to: 算子/内核
+    rewritten:
+    - detail

@@ -4,10 +4,10 @@ slug: vllm_ascend_v030_qwen36_moe_w8a8_garbled
 aliases: []
 title: vllm-ascend v0.30 Qwen3.6 MoE W8A8 输出乱码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 待定
+  - subsystem: 量化
     stack: vllm
     component: v0.30 W8A8 路径（根因未定位）
   behavior: Qwen3.6-35B-A3B W8A8（compressed-tensors）在 vllm-ascend 0.30.0rc2 输出乱码，v0.18 同 checkpoint 正常；缺陷在 0.30 新推理路径内，具体模块未定位。
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 待定
+        to: 量化

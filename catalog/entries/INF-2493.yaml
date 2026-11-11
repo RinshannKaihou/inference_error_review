@@ -4,18 +4,18 @@ slug: lightning_indexer_multiblock_topk_tie_break
 aliases: []
 title: LightningIndexer 跨基块 top-K 等分候选丢失
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: arch22 归并路径 MergeSort
-  behavior: arch22 逐行归并路径 MergeSort 不保持（分数降序、同分索引升序）契约：跨 512 基块归并时后块等分候选顶掉前块等分候选，top-K 索引集合错误。
+  behavior: arch22 逐行归并路径跨 512 基块归并时，后块 0 分等分候选顶掉前块应选候选，top-K 索引集合与 golden 契约（分数降序、同分索引升序）不一致；MergeSort 比较器仅按 value 或非稳定为推断，需内核侧确认。
 effect:
   objects:
   - 数值结果
   - 隐状态
-  detail: actS2>512 且 actS1>4 且 K∈{16,32,64} 时 sparseIndicesOut 与 golden 失配（1000 用例中 23 例、530,843 个发散索引全部 ≥512）；两段接口返回 0 无报错；prefill/长上下文常态命中，decode 不受影响。
+  detail: actS2>512、actS1>4、K∈{16,32,64} 且行内有 ≥K 个等分候选时，aclnnLightningIndexer（910B3/v9.1.0）索引与 golden 失配：23 案 530,843 个多出索引全落在块 1 及以后；接口与同步返回成功，decode 不受影响。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
+    - detail

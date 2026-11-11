@@ -4,7 +4,7 @@ slug: vllm_multi_module_mtp_slot_state_leak
 aliases: []
 title: vLLM 多模块 MTP speculator 槽位残留泄漏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -15,7 +15,7 @@ effect:
   objects:
   - 跨请求/跨样本数据
   - KV状态
-  detail: 槽位复用且新请求 draft 窗口短于 S-1 或首步全拒绝时，请求 B 的 draft 模型跑在请求 A 的 token ids/hidden states/多模态 embeds 上并写入 B 的后续模块 draft KV，跨请求污染，无报错。
+  detail: 开多模块 MTP（num_speculative_tokens>1）时，新请求复用刚结束请求的槽位，draft 模型跑在上一请求残留数据上，draft 质量与接受率受影响，全程无报错；触发依赖槽位复用、短 draft 窗口与拒绝路径的组合。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    issue_unfixed:
+    - behavior

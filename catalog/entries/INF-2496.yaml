@@ -4,17 +4,17 @@ slug: aicpu_sched_worker_false_success_hang
 aliases: []
 title: aicpu_sched worker 假成功致业务静默卡死
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
     stack: cann
     component: CreateWorker 状态校验
-  behavior: worker 线程初始化失败（事件订阅或消息队列失败）PostSem 后退出，但 threadStatusList_ 仍为 THREAD_RUNNING；CreateWorker 校验被绕过返回成功，事件无人消费任务挂起。
+  behavior: worker 线程初始化失败（事件订阅或消息队列初始化失败）时在 PostSem 后退出，但 threadStatusList_ 未回退仍为 THREAD_RUNNING；CreateWorker 校验被绕过，对该 worker 返回成功。
 effect:
   objects:
   - 可用性/进度
-  detail: 该 AICPU 核订阅的 kernel/msg 类事件从此无人消费，落到该核的任务挂起、host 侧同步等待超时；守护进程自认启动成功，业务卡死且无错误上报，现场排查困难。
+  detail: 触发于 aicpu_sched 守护进程启动期 worker 初始化失败（事件订阅 halEschedSubscribeEvent 失败或消息队列初始化失败），低频；服务照常启动成功且无日志报错，落到该 AICPU 核的任务全部挂起，进程不报错不退出，host 侧同步等待超时，业务无进展卡死。
   visibility: 挂起
 mitigation:
   detect: 待定
@@ -38,3 +38,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
+    - detail

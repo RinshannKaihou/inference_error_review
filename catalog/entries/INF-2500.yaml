@@ -4,10 +4,10 @@ slug: vllm_mm_lora_unequal_clip_row_mapping
 aliases: []
 title: vLLM 多模态 LoRA 不等长 clip 行漏适配
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 调度/服务
+  - subsystem: 权重/检查点
     stack: vllm
     component: 多模态 LoRA 行映射
   behavior: 激活 LoRA 映射按 per-item 有效行数生成，而投影消费带 padding stride 的展平张量；不等长 clip 批中部分有效帧的展平索引超出映射覆盖，长 clip 尾部收不到所请求的 LoRA。
@@ -39,3 +39,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-10'
+  audit:
+    round: daily-audit-2026-11-11
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 调度/服务
+        to: 权重/检查点
+    issue_unfixed:
+    - detail
+    uncertain:
+    - effect
