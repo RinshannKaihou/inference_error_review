@@ -40,6 +40,8 @@ original:
   signature: 出参版调用后 self device 字节改变（连续时）；非连续不变——布局依赖的别名写。
   repro: issue 附 repro.cpp（连续/非连续双用例 + 调用前后字节比对）。
   discovery: 2026-11-08 每日扫描
+  notes:
+  - 2026-11-11 2026-11-11 回访：#8390 updated_at 2026-11-11T06:44Z 有新活动、仍 open；GitCode 评论线程仍无低成本入口，评论内容未读，无新证据不改判。
 migration:
   method: scan
   scanned: '2026-11-08'
@@ -47,6 +49,9 @@ migration:
   - date: '2026-11-09'
     fields:
     - relations
+  - date: '2026-11-11'
+    fields:
+    - original.notes
   audit:
     round: daily-audit-2026-11-09
     base:

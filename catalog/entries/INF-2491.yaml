@@ -35,6 +35,8 @@ original:
   behavior: 按 msmodelslim 官方文档搭建 transformers==5.2.0 环境后，对 Qwen3.6-27B 的 w8a8 量化权重跑 msmodelslim eval 伪量化推理评测，对话输出乱码（不可读生成文本）；升级 transformers==5.14.1 或更高版本后同一权重伪量化推理恢复正常输出，其他 Qwen3.5/Qwen3.6 模型仍按 5.2.0 不受影响。
   trigger_surface: msmodelslim eval 伪量化推理 + Qwen3.6-27B w8a8 权重 + transformers==5.2.0（按旧文档安装）；仅此模型此场景，quarot 场景经确认非问题。
   discovery: 2026-11-10 每日扫描
+  notes:
+  - 2026-11-11 2026-11-11 回访：文档版本更正 PR !1164 已 merged（2026-11-11）；一键量化流程默认 transformers 版本是否随之更正未核实。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -54,3 +56,7 @@ migration:
         to: 构建/发布
     rewritten:
     - behavior
+  updates:
+  - date: '2026-11-11'
+    fields:
+    - original.notes

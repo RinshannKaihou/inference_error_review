@@ -35,6 +35,8 @@ original:
   behavior: NPU 上 aicpu_sched 守护进程启动时若某 worker 线程初始化失败，服务照常启动成功（CreateWorker 返回成功、无任何日志报错），随后落到该 AICPU 核的任务全部挂起：进程不报错不退出，host 侧同步等待超时，业务表现为无进展的卡死，现场只能靠排查定位。
   trigger_surface: aicpu_sched 守护进程启动期 worker 初始化失败（halEschedSubscribeEvent 失败或消息队列初始化失败）；低频但命中即整核任务静默挂起。
   discovery: 2026-11-10 每日扫描
+  notes:
+  - '2026-11-11 2026-11-11 回访：issue #1357 已于 2026-11-11 closed；修复 PR !6157 合入与随版发布状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -48,3 +50,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-11'
+    fields:
+    - original.notes

@@ -29,6 +29,8 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/msmodelslim/issues/667
   kind: gitcode_issue
+- url: https://gitcode.com/Ascend/msmodelslim/merge_requests/1168
+  kind: gitcode_pr
 relations: []
 original:
   mechanism: 'Ascend/msmodelslim issue #667（2026-10-31 创建，本轮 10-31 漏项补判；commit db54ee）：msmodelslim/core/quantizer/impl/minmax.py#L126 的 ActPerChannelMinmax.forward 每次调用先 self.minmax_observer.reset() 再 update(x_reshaped)——aggregation_type=max 的跨批统计被清零，只有当前批参与；attention.py#L42 的 KV 量化 wrapper 走该 forward；DynamicCacheQuantizer.deploy 用最后得到的 q_param 构造固定量化 IR。实测连续输入幅值 100 和 1 的两个 KV 样本：L10 first scale≈0.78740156 → L10 final≈0.007874016，前一批最大幅值被丢弃。官方 dynamic_cache 配置正是 per_channel，故该路径为默认部署链路。影响：部署 scale 仅反映最后一批校准样本的幅值分布，真实推理中更大幅值的 KV 激活超出 scale 覆盖即溢出/饱和截断，KV 量化输出质量静默退化。同批 #664/#666 已收（INF-2326/2333），本条为独立机制（观察器生命周期 vs 舍入/布局）。'
@@ -38,6 +40,8 @@ original:
   signature: 多批校准后 scale 逐批跳变、与批次顺序强相关（末批幅值决定一切）；单批校准不可见。
   repro: issue 附仓库根目录完整脚本（连续两样本 L10 first/final scale 输出）。
   discovery: 2026-11-08 每日扫描
+  notes:
+  - 2026-11-11 2026-11-11 回访：修复 PR !1168（open）——ActPerChannelMinmax 相同通道数跨批累积 minmax 统计（通道数变化时重置），新增 9 例真实 CPU 回归（修复前 6 败 3 过、修复后 9/9 过）；跨批幅值 100→1 场景 scale 不再从 0.7874 掉到 0.007874。合入未核实。
 migration:
   method: scan
   scanned: '2026-11-08'
@@ -53,3 +57,8 @@ migration:
     - qwen3.8-max
     uncertain:
     - effect
+  updates:
+  - date: '2026-11-11'
+    fields:
+    - evidence
+    - original.notes

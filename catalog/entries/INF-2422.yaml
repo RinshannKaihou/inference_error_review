@@ -39,6 +39,7 @@ original:
   discovery: 2026-11-05 每日扫描
   notes:
   - '2026-11-10 2026-11-10 回访：公共 tiling 修复 PR !14059（CheckInputTensorlistCount 对 tensor list 成员数>256 报 561002）补齐 A2/A3 公共路径缺口，覆盖全部走 ForeachCommonTiling 的 foreach 算子（eager+图模式）；与 #8254 的 910C 侧尾部未写证据同源，A5/arch35 侧已由 6dd561aca 修复；PR open 未合入。'
+  - '2026-11-11 2026-11-11 回访：issue #8254 已 closed、公共 tiling 修复 PR !14059 已 merged（2026-11-11，A2/A3 全部 foreach 公共路径补齐 + A5/arch35）；随 CANN 版本发布未核实。'
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -57,5 +58,8 @@ migration:
     fields:
     - evidence
   - date: '2026-11-10'
+    fields:
+    - original.notes
+  - date: '2026-11-11'
     fields:
     - original.notes
