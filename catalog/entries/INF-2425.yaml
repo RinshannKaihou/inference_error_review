@@ -30,6 +30,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/issues/66009
   kind: github_issue
 relations: []
+pattern: PAT-INF-0201
 original:
   mechanism: vLLM 0.32.0 + NIXL 1.5.0（UCX CUDA IPC），2×B200 一机 P/D 分离（各 TP=1，kv_buffer_device=cuda），Qwen3.8-Flash-Next（线性注意力+全注意力+PLE 混合）NVFP4 + MTP ns=3 + prefix caching，Dynamo 1.7.0.dev 条件分离编排（前端自持队列，decode 满载时滞留已 prefill 请求）。机制：producer 对已完成请求的 KV 块保留 kv_lease_duration（默认 30s）并靠 consumer 心跳续期；心跳只在请求进入 consumer 调度器后才开始。路由器滞留超过租约时 producer 记录 "Releasing expired KV blocks ... retrieved by 0 remote worker(s)" 并把块复用给新 prefill；consumer 之后仍持 stale remote_block_ids 发起 NIXL 读——kv_transfer_params 对 prefill 块不携带有效期（remote_blocks_expiry_time 仅双向 turn-2 D 块导出），无法区分活租约与过期租约。读取成功且静默加载其他请求的 KV cache 与循环状态（hybrid 模型）。插桩证据（双侧 block id+按请求 NaN，9 req/s、2k token，10 分钟×5 轮）：NaN 请求 100%（48/48、25/25、14/14、42/42、46/46）租约先于读取过期。数 decode 步后该请求 logits 全 NaN；top-k 采样 cooperative_topk 随后 cudaErrorIllegalAddress 崩溃整引擎（#63118）；v0.33 上崩溃变为静默垃圾输出。
   source: https://github.com/vllm-project/vllm/issues/66009
@@ -56,3 +57,7 @@ migration:
       visibility:
         from: 静默错误
         to: 数值异常
+  updates:
+  - date: '2026-11-12'
+    fields:
+    - pattern

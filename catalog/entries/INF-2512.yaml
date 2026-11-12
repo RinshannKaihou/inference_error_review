@@ -4,7 +4,7 @@ slug: swa_block_id_stale_kv_pool_save
 aliases: []
 title: 过期 SWA 块 ID 致 KV Pool 旧键发布
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,8 +13,8 @@ cause:
   behavior: chunked prefill 退休旧 SWA 块换 null block 时 tracker 可保留旧物理块 ID，元数据构建前不刷新组 ID——远端键缺失时按历史键发布该槽当前内容，bulk PUT 不过滤非正块 ID。
 effect:
   objects:
-  - KV状态
   - 跨请求/跨样本数据
+  - KV状态
   detail: v0.30.0 SWA/RSWA + chunked prefill：KV Pool 可把已释放 SWA 槽的当前内容（可能已属其他请求）按旧键发布到远端，无报错；修复含回归测试与 7 项 CPU 诊断，完整 pytest 与 NPU 正确性验证未做。
   visibility: 静默错误
 mitigation:
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: KV状态
+        to: 跨请求/跨样本数据

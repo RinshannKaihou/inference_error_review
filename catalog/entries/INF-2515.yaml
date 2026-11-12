@@ -4,13 +4,13 @@ slug: add_rms_norm_quant_singlen_ub_overrun
 aliases: []
 title: AddRmsNormQuant SingleN UB 记账漏项越界
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: cann
     component: SingleN 模板 UB 布局
-  behavior: initSingleNUbSize 的 optionNum 只记 scales2/zeroPoints2，漏记 hasScales2 必配的 inQueueBeta(4F)，UB 总分配 191KB+4F 超预算致 VEC 越界读写 UB。
+  behavior: initSingleNUbSize 的 optionNum 对 scales2 非空时实配的 inQueueBeta 等（12F）仅记 8F，UB 越界写：numCol≤256 落尾部 1KB 预留区，>256 触发 VEC 异常。
 effect:
   objects:
   - 可用性/进度
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

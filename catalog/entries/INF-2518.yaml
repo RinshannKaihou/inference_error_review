@@ -4,10 +4,10 @@ slug: sglang_eagle_graph_padding_nan_latch
 aliases: []
 title: sglang EAGLE 图 padding 触发 NaN 锁存
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: KV缓存
     stack: sglang
     component: decode 图 padding 行
   behavior: EAGLE+decode CUDA graph 下批大小不在捕获表被 pad 到下一桶：padding 行用 request-pool 行 0 与零填 Mamba 索引，线性注意力后端读该状态行，疑留 NaN 被后续共享（未确认）。
@@ -16,7 +16,7 @@ effect:
   - 输出内容
   - 隐状态
   detail: GLM-5.3-Flash+EAGLE+decode CUDA graphs：一旦出现 pad 批（9→bs-10 图）logits 变 NaN，此后所有请求返回 token id 0 直到重启；flush 无效、无日志、请求 200。需 EAGLE+图+pad 同时。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: logprobs 全 null/最低 token id 的输出模式；SGLANG_VALIDATE_MAMBA_REPLAY_STATE_INDICES=1 验证开关存在但未在报告中试验。
   fix: 规避：--cuda-graph-bs-decode 把运行上限内每个批大小逐桶捕获（1 2 … 16 全捕后原触发场景全部通过）；根因修复待定（issue open，1 条评论未读）
@@ -39,3 +39,23 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: KV缓存
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    uncertain:
+    - effect
+    - detail

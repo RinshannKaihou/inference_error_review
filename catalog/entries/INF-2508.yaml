@@ -4,7 +4,7 @@ slug: mooncake_layerwise_push_early_done
 aliases: []
 title: Mooncake 层间 PUSH 提前报完成漏前缀
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 输出内容
-  detail: prefill PP>1 的 layerwise PUSH：早 stage 写阻塞或写失败时请求仍进 finished_recving 且无 invalid blocks，解码消费不完整前缀 KV；CPU 组件级复现（PP=2 三案例），端到端 NPU 与精度验证未做。
+  detail: prefill PP>1 的 layerwise PUSH：早 stage 写阻塞或写失败时，最终 stage 一 DONE 即 finished_recving，解码消费不完整前缀 KV 且看不到失败上报；CPU 组件级复现（PP=2 两案例、PP=1 对照），端到端 NPU 与精度待验证。
   visibility: 静默错误
 mitigation:
   detect: 待定
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

@@ -3,17 +3,17 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2520 条；状态：active 2505、pending_audit 15
+共 2520 条；状态：active 2520
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
 | 算子/内核 | 782 |
 | 编译器 | 176 |
-| 运行时/执行 | 138 |
+| 运行时/执行 | 137 |
 | 集合通信 | 41 |
 | 并行切分 | 31 |
-| KV缓存 | 388 |
+| KV缓存 | 389 |
 | 调度/服务 | 95 |
 | 输出解析 | 68 |
 | 解码/采样 | 158 |
@@ -9053,7 +9053,7 @@
 
 ### INF-2516 `fia_mla_gsize_transpose_offset_zeroing` FIA MLA gSize 折叠偏移未分解输出清零
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：算子/内核 / cann / arch35 MLA 转置偏移计算
 - **原因行为**：CalcAIVMlaAttentionOutOffset 只实现 gSize==128 与 ≤32 两档分解，32<gSize<128 仍按旧口径算偏移，与写回端按 gSize 分解不一致，head>32 输出清零。
@@ -9064,11 +9064,11 @@
 
 ### INF-2519 `gated_rmsnorm_pdl_branch_early_read` gated RMSNorm PDL 提前读 branch 出 NaN
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-11
+`故障` · `active` · `documented` · `var` · 发现 2026-11-11
 
 - **原因对象**：算子/内核 / flashinfer / Cake PDL 程序序（rows≤128）
 - **原因行为**：Cake PDL 程序（rows≤128）在 griddepcontrol.wait 之前的 prologue 加载 branch（>128 行程序在 wait 后加载）：生产者触发依赖后仍覆写 branch，消费者读到覆写前数据。
-- **影响对象**：隐状态；输出内容（静默错误）
+- **影响对象**：隐状态；输出内容（数值异常）
 - **影响详情**：vLLM Muse Spark 默认参数构建 DSpark draft 辅助隐状态（DP+EP TP=1、批 8-48 行）：draft 收 NaN——greedy 全拒（接受长度 ~1.0）、温度采样全收输出垃圾（AIME25 0% vs 100%）。
 - **改进措施**：检测 独立复现内核（producer launch_dependents 后自旋再覆写 NaN→有限值，正确的 PDL 消费者输出必须有限）在 50 次试验中稳定区分好坏配置；rows 1-128 全坏、129+/cute/关 PDL 全好。；修复 规避：enable_pdl=False 或 backend='cute'（接受长度恢复 ~3.6-4.0、输出正确）。建议修复（issue open，0 评论）：branch 加载移到 griddepcontrol.wait 后并重渲染 cake_muse_spark_norm backend，同时排查其他 Cake PDL 程序同类 prologue 预取生产者输出。
 - **来源**：https://github.com/flashinfer-ai/flashinfer/issues/9343
@@ -11027,7 +11027,7 @@
 
 ### INF-2511 `inductor_erf_dtype_roundtrip` NPU erf 分解 dtype 回转破坏提升契约
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：编译器 / torch_npu / aten.erf 自定义分解
 - **原因行为**：aten.erf 的 NPU 自定义分解对非 fp32 输入先升 fp32 计算再回转 orig_dtype：bool/int64 的 INT_TO_FLOAT 提升结果被强行转回整型，破坏输出 dtype 契约。
@@ -11038,10 +11038,10 @@
 
 ### INF-2517 `layernorm_fusion_eps_detection` LayerNorm 融合 pass epsilon 探测错回退
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：编译器 / cann / LayerNorm 图融合 pass 常量探测
-- **原因行为**：LayerNorm 融合 pass 通过 add0/add1 输入探测 epsilon 而非子图边界第 3 输入；Add 操作数随 config 分支交换时探测落在 mean 端口，inference pass 静默回退默认 1e-7。
+- **原因行为**：融合 pass 用 add0/add1 探测 epsilon 而非子图边界输入；Add 操作数随 config 分支交换时探测可能落在 mean 等非 epsilon 端口，读不到常量时 inference pass 静默回退 1e-7。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：epsilon 为子图外部输入且 Add 操作数交换分支命中时：layernorm_inference_fusion_pass 融合后 epsilon 静默变默认 1e-7 与原图不一致，输出静默偏移；另一 pass 放弃融合。
 - **改进措施**：检测 待定；修复 修复 https://gitcode.com/cann/ops-nn/pull/14106 （epsilon 从匹配子图边界 inputs[kInputEps] 的 NodeIo 精确读取，读取失败时行为明确：前者不融合、后者用默认并打日志）；issue 已 closed，合入与随版发布未核实。
@@ -12572,17 +12572,6 @@
 - **影响详情**：触发于 aicpu_sched 守护进程启动期 worker 初始化失败（事件订阅 halEschedSubscribeEvent 失败或消息队列初始化失败），低频；服务照常启动成功且无日志报错，落到该 AICPU 核的任务全部挂起，进程不报错不退出，host 侧同步等待超时，业务无进展卡死。
 - **改进措施**：检测 待定；修复 修复 PR https://gitcode.com/cann/runtime/merge_requests/6157（初始化失败路径在 PostSem 前将线程状态置 THREAD_EXIT，使 CreateWorker 校验识别已退出 worker 并返回启动失败；合入状态未核实）。
 - **来源**：https://gitcode.com/cann/runtime/issues/1357
-
-### INF-2518 `sglang_eagle_graph_padding_nan_latch` sglang EAGLE 图 padding 触发 NaN 锁存
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
-
-- **原因对象**：运行时/执行 / sglang / decode 图 padding 行
-- **原因行为**：EAGLE+decode CUDA graph 下批大小不在捕获表被 pad 到下一桶：padding 行用 request-pool 行 0 与零填 Mamba 索引，线性注意力后端读该状态行，疑留 NaN 被后续共享（未确认）。
-- **影响对象**：输出内容；隐状态（静默错误）
-- **影响详情**：GLM-5.3-Flash+EAGLE+decode CUDA graphs：一旦出现 pad 批（9→bs-10 图）logits 变 NaN，此后所有请求返回 token id 0 直到重启；flush 无效、无日志、请求 200。需 EAGLE+图+pad 同时。
-- **改进措施**：检测 logprobs 全 null/最低 token id 的输出模式；SGLANG_VALIDATE_MAMBA_REPLAY_STATE_INDICES=1 验证开关存在但未在报告中试验。；修复 规避：--cuda-graph-bs-decode 把运行上限内每个批大小逐桶捕获（1 2 … 16 全捕后原触发场景全部通过）；根因修复待定（issue open，1 条评论未读）
-- **来源**：https://github.com/sgl-project/sglang/issues/49881
 
 ## 集合通信
 
@@ -17715,37 +17704,48 @@
 
 ### INF-2508 `mooncake_layerwise_push_early_done` Mooncake 层间 PUSH 提前报完成漏前缀
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：KV缓存 / vllm / layerwise connector 完成门控
 - **原因行为**：各 prefill stage 自行入队 KV 传输；完成回调与失败清理被 last_layer_idx=-1 门控在最终 stage，wait_for_save() 为空、接收侧计数无 PP quorum——一个 DONE 即判整体完成。
 - **影响对象**：KV状态；输出内容（静默错误）
-- **影响详情**：prefill PP>1 的 layerwise PUSH：早 stage 写阻塞或写失败时请求仍进 finished_recving 且无 invalid blocks，解码消费不完整前缀 KV；CPU 组件级复现（PP=2 三案例），端到端 NPU 与精度验证未做。
+- **影响详情**：prefill PP>1 的 layerwise PUSH：早 stage 写阻塞或写失败时，最终 stage 一 DONE 即 finished_recving，解码消费不完整前缀 KV 且看不到失败上报；CPU 组件级复现（PP=2 两案例、PP=1 对照），端到端 NPU 与精度待验证。
 - **改进措施**：检测 待定；修复 issue 已 closed（2026-11-11，关闭说明/关联修复未读）；该行为随 PR #21517（Mooncake layerwise connector prefill 侧流水线并行支持）引入，PR head 2e8033a75。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21558
 
 ### INF-2512 `swa_block_id_stale_kv_pool_save` 过期 SWA 块 ID 致 KV Pool 旧键发布
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：KV缓存 / vllm / KV Pool tracker SWA 组 ID
 - **原因行为**：chunked prefill 退休旧 SWA 块换 null block 时 tracker 可保留旧物理块 ID，元数据构建前不刷新组 ID——远端键缺失时按历史键发布该槽当前内容，bulk PUT 不过滤非正块 ID。
-- **影响对象**：KV状态；跨请求/跨样本数据（静默错误）
+- **影响对象**：跨请求/跨样本数据；KV状态（静默错误）
 - **影响详情**：v0.30.0 SWA/RSWA + chunked prefill：KV Pool 可把已释放 SWA 槽的当前内容（可能已属其他请求）按旧键发布到远端，无报错；修复含回归测试与 7 项 CPU 诊断，完整 pytest 与 NPU 正确性验证未做。
 - **改进措施**：检测 待定；修复 主线修复 #20853（head b1a0e9b664bd3d2b17a0413949010c4e1d6eee29 的最终净变更：构建 running-request 元数据前从当前 KVCacheManager 请求表刷新可缓存 SWA/RSWA 组 ID、bulk PUT 跳过非正块 ID）；v0.30.0 backport https://github.com/vllm-project/vllm-ascend/pull/21556 与 v0.32.0rc !21557 均 open。
 - **来源**：https://github.com/vllm-project/vllm-ascend/pull/21556
 
 ### INF-2513 `nixl_n_children_early_kv_release` NixlConnector n>1 子请求读复用 KV 块
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-11
+`故障` · `active` · `documented` · `var` · 发现 2026-11-11
 
 - **原因对象**：KV缓存 / vllm / pull worker 通知计数释放
 - **原因行为**：n 个子请求共享 remote_request_id 各自发读通知；_get_new_notifs 按 req_id 计数不区分发送者，达 expected_consumers（TP 拓扑而非 n）即释放——首子读完即释放，晚子读到复用块。
 - **影响对象**：KV状态；输出内容（静默错误）
-- **影响详情**：Nixl pull 模式 n>1：晚到子请求解码自已被复用重写的块，HTTP 200 返回无关文本（复现 16 子中 8/9 个丢密钥，~5.4s 传输差窗口），唯一信号是 prefill 侧每晚到子一行 KV blocks 日志；warm pod 全对。
+- **影响详情**：Nixl pull n>1：晚到子请求把复用重写的块当 KV 解码，客户端拿到 200 和无关文本；prefill 侧并发负载复用释放块、冷 pod 首请求传输差可达 5 秒级最易触发；线索仅 prefill 日志每请求 n-1 条『Potentially invalid KV blocks』。
 - **改进措施**：检测 prefill 侧日志『Potentially invalid KV blocks for unrecognized request ... were retrieved by a decode worker. They may have expired.』（每个晚到子请求一条）。；修复 待定（issue open、0 评论；曾以 GHSA-grjf-r4cj-w3ch 私报，vLLM 漏洞管理组判为超安全范围、要求按正确性 bug 公开）
 - **来源**：https://github.com/vllm-project/vllm/issues/67065
 - **关联**：var:INF-2425
+
+### INF-2518 `sglang_eagle_graph_padding_nan_latch` sglang EAGLE 图 padding 触发 NaN 锁存
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
+
+- **原因对象**：KV缓存 / sglang / decode 图 padding 行
+- **原因行为**：EAGLE+decode CUDA graph 下批大小不在捕获表被 pad 到下一桶：padding 行用 request-pool 行 0 与零填 Mamba 索引，线性注意力后端读该状态行，疑留 NaN 被后续共享（未确认）。
+- **影响对象**：输出内容；隐状态（数值异常）
+- **影响详情**：GLM-5.3-Flash+EAGLE+decode CUDA graphs：一旦出现 pad 批（9→bs-10 图）logits 变 NaN，此后所有请求返回 token id 0 直到重启；flush 无效、无日志、请求 200。需 EAGLE+图+pad 同时。
+- **改进措施**：检测 logprobs 全 null/最低 token id 的输出模式；SGLANG_VALIDATE_MAMBA_REPLAY_STATE_INDICES=1 验证开关存在但未在报告中试验。；修复 规避：--cuda-graph-bs-decode 把运行上限内每个批大小逐桶捕获（1 2 … 16 全捕后原触发场景全部通过）；根因修复待定（issue open，1 条评论未读）
+- **来源**：https://github.com/sgl-project/sglang/issues/49881
 
 ## 调度/服务
 
@@ -21342,11 +21342,11 @@
 
 ### INF-2506 `vllm_ascend_v032_mtp_acceptance_regression` vllm-ascend v0.32 MTP 接受率静默回退
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：解码/采样 / vllm / MTP draft 路径（根因未定位）
 - **原因行为**：v0.30.0-a5→v0.32.0rc-a5 同 checkpoint 同 CLI 下 MTP draft/target 一致性回退，唯一变量是镜像；变更点未定位，候选面含 draft 权重处理、采样/top-k、量化融合。
-- **影响对象**：性能/资源（质量退化）
+- **影响对象**：性能/资源（性能退化）
 - **影响详情**：950DT、Qwen3.8-27B w8a8c8-mxfp8、mxfp8 KV、MTP：仅换镜像接受率 ~49%→41.6%、吞吐 ~7.4k→4933 tok/s；无报错，输出正确性影响未证实（MTP 验证仍在）。
 - **改进措施**：检测 待定；修复 待定（issue open；报告者可同日 A/B 与 per-step draft/verify token dump 协助定位；另 v0.32 model_runner.py v1 路径 ~L1600 无条件 synchronize 为独立 perf 项，报告者本地带补丁）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21529
@@ -24022,7 +24022,7 @@
 
 ### INF-2507 `msmodelslim_partial_dequant_config_ignored` msmodelslim 部分层反量化配置静默失效
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：量化 / cann / 权重转换 linears 配置应用
 - **原因行为**：mixed linears 配置（部分层 FLOAT、其余保持 MXFP4）未被完整应用：未设置转换的 MXFP4 层也被默认反量化，生成的权重描述文件全部标 FLOAT。
@@ -24033,7 +24033,7 @@
 
 ### INF-2510 `add_rms_norm_quant_host_check_gaps` AddRmsNormQuant host 校验缺失 rc=0 静默放行
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：量化 / cann / aclnn host 参数校验
 - **原因行为**：两条 host 校验缺失：zp2-only 组合应返 161002 却 rc=0 放行且 y2Out 不写；scales1 shape 与 gamma 不一致不校验，kernel 按归一化尾轴长度消费声明范围外 scales。
@@ -24044,7 +24044,7 @@
 
 ### INF-2514 `nvfp4_routed_moe_hidden_unaligned` NVFP4 路由 MoE 隐维不对齐静默错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：量化 / flashinfer / trtllm_fp4_routed_moe
 - **原因行为**：per-token NVFP4 路径在 hidden_size 为 128 倍数但非 256 倍数（如 2688）时无有效配置也不拒绝，静默错值；vLLM 靠 pad 到 256/512 规避，直传 2688 即 garbage。
@@ -24055,10 +24055,10 @@
 
 ### INF-2515 `add_rms_norm_quant_singlen_ub_overrun` AddRmsNormQuant SingleN UB 记账漏项越界
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：量化 / cann / SingleN 模板 UB 布局
-- **原因行为**：initSingleNUbSize 的 optionNum 只记 scales2/zeroPoints2，漏记 hasScales2 必配的 inQueueBeta(4F)，UB 总分配 191KB+4F 超预算致 VEC 越界读写 UB。
+- **原因行为**：initSingleNUbSize 的 optionNum 对 scales2 非空时实配的 inQueueBeta 等（12F）仅记 8F，UB 越界写：numCol≤256 落尾部 1KB 预留区，>256 触发 VEC 异常。
 - **影响对象**：可用性/进度；数值结果（报错）
 - **影响详情**：A2 上 numRow≤40（SingleN 模板）且 scales2 非空：fp16 组合 numCol>256 同步报 507035 AI Core fault（两段 rc 均 0）；numCol≤256 越界写落 UB 尾部 1KB 预留区静默存活；全 bf16 组合任意 numCol 即崩。
 - **改进措施**：检测 msSanitizer memcheck 在 bf16[8x1] 合法组合用例上抓到现行：illegal write of size 32 at 0x33280 on UB（超出 910B3 UB 预算 196608），同用例另报 GM 侧 illegal read；设备侧错误串『The address for the VEC instruction to read/write UB is out of bounds』。；修复 修复 PR https://gitcode.com/cann/ops-nn/merge_requests/14264（account for all SingleN UB buffers，open，未发布）。
@@ -24565,7 +24565,7 @@
 
 ### INF-2509 `mrope_pcp_position_misalign` M-RoPE PCP 位置准备错位精度暴跌
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：位置编码 / vllm / RopeState 位置准备 PCP 路径
 - **原因行为**：prepare_positions 假设 rank 本地行与全局请求 1:1 连续映射；PCP 切成非连续片段且位置非单调时，M-RoPE 3D 位置按错误全局偏移重建，图像 H/W 坐标与视觉 token 错位。
@@ -26755,11 +26755,11 @@
 
 ### INF-2520 `inkling_router_bf16_ties` Inkling BF16 router 先并列后 Top-K 失真
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-11
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-11
 
 - **原因对象**：MoE路由 / transformers / InklingTopkRouter 精度路径
 - **原因行为**：InklingTopkRouter 在 BF16 下做 sigmoid 与 bias 加法（bias/scale 参数加载时也舍入到 BF16），不同分数 Top-K 前并列，专家选择改变，无 NaN。
-- **影响对象**：输出内容（静默错误）
+- **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：bf16 加载或 BF16 autocast：8 个精确可表示的 sigmoid 分数全为 1.0，Top-2 专家集 CPU {5,6}/CUDA {0,1}，FP32 应为 {6,7}；三层小模型 19/48 token 专家集变而 loss 仅差 ~4.8e-7（合成，全模型未测）。
 - **改进措施**：检测 对比 FP32 路由决策（报告者用精确可表示的 logits 断言排除 GEMM 舍入）。；修复 issue 内给出三步修复方案（FP32 投影/sigmoid/bias 关 autocast、e_score_correction_bias 与 gate.global_scale 进 _keep_in_fp32_modules_strict、路由系数末步回转隐状态 dtype），作者待维护者意见后提 PR；未开 PR。SGLang 同名模型已用 FP32 输出 gate projection 作对照。
 - **来源**：https://github.com/huggingface/transformers/issues/50599

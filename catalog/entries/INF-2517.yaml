@@ -4,13 +4,13 @@ slug: layernorm_fusion_eps_detection
 aliases: []
 title: LayerNorm 融合 pass epsilon 探测错回退
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: cann
     component: LayerNorm 图融合 pass 常量探测
-  behavior: LayerNorm 融合 pass 通过 add0/add1 输入探测 epsilon 而非子图边界第 3 输入；Add 操作数随 config 分支交换时探测落在 mean 端口，inference pass 静默回退默认 1e-7。
+  behavior: 融合 pass 用 add0/add1 探测 epsilon 而非子图边界输入；Add 操作数随 config 分支交换时探测可能落在 mean 等非 epsilon 端口，读不到常量时 inference pass 静默回退 1e-7。
 effect:
   objects:
   - 数值结果
@@ -40,3 +40,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

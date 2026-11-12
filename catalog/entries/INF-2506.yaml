@@ -4,7 +4,7 @@ slug: vllm_ascend_v032_mtp_acceptance_regression
 aliases: []
 title: vllm-ascend v0.32 MTP 接受率静默回退
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -15,7 +15,7 @@ effect:
   objects:
   - 性能/资源
   detail: 950DT、Qwen3.8-27B w8a8c8-mxfp8、mxfp8 KV、MTP：仅换镜像接受率 ~49%→41.6%、吞吐 ~7.4k→4933 tok/s；无报错，输出正确性影响未证实（MTP 验证仍在）。
-  visibility: 质量退化
+  visibility: 性能退化
 mitigation:
   detect: 待定
   fix: 待定（issue open；报告者可同日 A/B 与 per-step draft/verify token dump 协助定位；另 v0.32 model_runner.py v1 路径 ~L1600 无条件 synchronize 为独立 perf 项，报告者本地带补丁）
@@ -38,3 +38,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 性能退化

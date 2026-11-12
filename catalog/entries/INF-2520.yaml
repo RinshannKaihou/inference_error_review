@@ -4,7 +4,7 @@ slug: inkling_router_bf16_ties
 aliases: []
 title: Inkling BF16 router 先并列后 Top-K 失真
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -13,6 +13,7 @@ cause:
   behavior: InklingTopkRouter 在 BF16 下做 sigmoid 与 bias 加法（bias/scale 参数加载时也舍入到 BF16），不同分数 Top-K 前并列，专家选择改变，无 NaN。
 effect:
   objects:
+  - 数值结果
   - 输出内容
   detail: bf16 加载或 BF16 autocast：8 个精确可表示的 sigmoid 分数全为 1.0，Top-2 专家集 CPU {5,6}/CUDA {0,1}，FP32 应为 {6,7}；三层小模型 19/48 token 专家集变而 loss 仅差 ~4.8e-7（合成，全模型未测）。
   visibility: 静默错误
@@ -38,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-11'
+  audit:
+    round: daily-audit-2026-11-12
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: 数值结果
