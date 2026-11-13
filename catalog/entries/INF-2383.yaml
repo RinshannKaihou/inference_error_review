@@ -37,6 +37,7 @@ original:
   discovery: 2026-11-03 每日扫描
   notes:
   - 2026-11-04 回访 2026-11-04：#65325/#65324 仍 open
+  - '2026-11-13 回访：vllm #65325 仍 open（2026-11-13 GitHub HTML 核对）；core API 403 未能读评论与关闭说明。'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -54,5 +55,8 @@ migration:
     - detail
   updates:
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-13'
     fields:
     - original.notes

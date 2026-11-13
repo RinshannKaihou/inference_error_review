@@ -37,6 +37,8 @@ original:
   behavior: 用 flashinfer 的 apply_rope_with_cos_sin_cache_inplace(is_neox=True) 且模型 head_size 为 16/48/80/96（RopeQuantize 路由）时，RoPE 输出静默错误：误差最大可达 1e37 量级（对比 float32 参考），且 head_size 48/80/96 下同一输入连续两次调用结果不同（run-unstable）；head_size 16 误差约 4.5 但两次调用一致。无任何报错；is_neox=False（interleaved）与 head_size 32/64/128/256/512、partial rotary（head_size 128 + rotary_dim 48/80/96）均正确。0.6.18 到 0.7.3（2026-11-04 发布）都存在。
   trigger_surface: flashinfer 0.6.18-0.7.3（含 main 593b960）apply_rope_with_cos_sin_cache_inplace + is_neox=True + head_size=rotary_dim∈{16,48,80,96}（非 2 的幂、走 RopeQuantize 路由）；BF16/FP16 均触发；专用 kernel 覆盖的 head_size 与 interleaved 布局不触发。
   discovery: 2026-11-07 每日扫描
+  notes:
+  - '2026-11-13 回访：flashinfer #9068 已 closed，stateReason=COMPLETED；修复 PR 与发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -54,3 +56,7 @@ migration:
       effect:
         from: 隐状态
         to: 数值结果
+  updates:
+  - date: '2026-11-13'
+    fields:
+    - original.notes

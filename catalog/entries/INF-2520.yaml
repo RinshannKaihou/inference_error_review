@@ -36,6 +36,8 @@ original:
   behavior: Inkling 模型以 bfloat16 加载（或 FP32 权重开 BF16 autocast）后，MoE router 打分在 Top-K 前被 BF16 舍入成并列值：同一输入选出的专家集合与 FP32 路由不同（示例中 8 个分数全为 1.0，CPU 与 CUDA 的并列解序还不一致），模型照常运行、无 NaN 无报错，小模型上 loss 变化极小，但专家分派已系统性偏离 FP32 语义。
   trigger_surface: transformers Inkling MoE 模型 + dtype=bfloat16 加载或 BF16 autocast；CPU/CUDA 均复现；FP32 路由为对照。
   discovery: 2026-11-11 每日扫描
+  notes:
+  - '2026-11-13 回访：transformers #50599 已 closed，stateReason=COMPLETED（关闭/合并日期未取得）；修复内容与发布版本未核实。'
 migration:
   method: scan
   scanned: '2026-11-11'
@@ -53,3 +55,7 @@ migration:
       effect:
         from: 输出内容
         to: 数值结果
+  updates:
+  - date: '2026-11-13'
+    fields:
+    - original.notes
