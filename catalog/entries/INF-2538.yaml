@@ -38,6 +38,12 @@ original:
   behavior: 多机/非对称组网下调用 GetNetLayers 查询本 rank 的通信层级时，返回的层数比列表实际元素多；调用方按这个数量遍历列表就会读出 vector 之外的垃圾层号，后续拓扑判断/集群监控拿到不存在的层，可能配置错通信路径或崩溃。对称组网完全正常，所以只在部分 rank 挂不同层级的集群里出现。
   trigger_surface: cann/hcomm HcclRankGraphGetLayers / IRankGraph::GetNetLayers；非对称组网（不同 rank 所属网络层集合不一致）；CANN 9.x。
   discovery: 2026-11-13 每日扫描
+  notes:
+  - '2026-11-13 2026-11-13 回访：hcomm #1279 已 closed（2026-11-12T09:04Z），修复 !6618 状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-13'
+  updates:
+  - date: '2026-11-13'
+    fields:
+    - original.notes

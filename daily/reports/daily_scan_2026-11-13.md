@@ -74,3 +74,79 @@
 - `catalog_tool.py stats`：**2,538 条**（active 2,520，pending_audit 18）；故障 2,521 / 结论 8 / 方法 8 / 指针 1。
 - `build`：ok，生成 `views/CATALOG.zh.md`、`views/fault_catalog.csv`、`views/fault_catalog.xlsx`。
 - `validate`：`ok: true`，errors 0，warnings 65（既有），pending_audit 18。
+
+---
+
+# 每日扫描日报 2026-11-13（第二轮，UTC 23:00Z 批次）
+
+> 同日 01:43Z 已有一轮（批次 `batch-20261112T230012798508-dpkqr9fa`，窗口止 2026-11-12T23:00Z，即上文）。本轮为该批次之后的增量：窗口 **2026-11-12T22:00:12Z → 2026-11-13T23:00:12Z**，与上一轮在 11-12 22:00–23:00 有一小时重叠。
+
+## 0. Git 前置检查
+
+- 分支 `main`，上游 `origin/main`；`git status --porcelain -uall` 为空；`git fetch origin main` 成功；HEAD 与 `origin/main` 一致（`5255d67653aab947821713525c1300bab19a6210`）。通过，开始扫描。
+- Cron 前置脚本 NPU 批次完整：**22/22 源全部 complete，failures 为空**。`registry_hash 2f6422d0a3d93e14cefe3f2ae3eb409684dc34184969178ccdff1f581d8d94d`（22 源），`cached: false`，批次 generated 2026-11-13T23:00:12Z；实际采集止于 23:00:12Z，不声称覆盖到本次运行时刻。
+
+## 1. NPU 新增来源（共享批次）
+
+- 批次：`/root/.hermes/profiles/third/cache/fault_scan_sources/batch-20261113T230012845926-n2ctjrgj`；inference 候选索引 **33,475 条**（19 个推理适用仓库的滚动缓存，issues + PRs）。
+- 逐仓账本 `fetched` 合计 **3,566 条**（issues+pulls 全量检索，22 源）；其中训练专属 3 源（MindSpeed 16、MindSpeed-LLM 21、MindSpeed-RL 0）不进入 inference 判定，推理适用 19 源共 **3,529 条**。逐仓：Ascend/pytorch 489（issues 233 + pulls 256）、op-plugin 131（110+21）、torchair 86（5+81）、cann/ops-transformer 363（110+253）、cann/ops-nn 1339（1073+266）、cann/ops-math 185（60+125）、cann/ge 43（3+40）、cann/runtime 89（11+78）、cann/hccl 117（27+90）、cann/hcomm 202（59+143）、mindspore 19（1+18）、mindformers 4（0+4）、msprobe 18（10+8）、mssanitizer 16（2+14）、msmodelslim 8（3+5）、vllm-ascend 352、sgl-kernel-npu 21、triton-ascend 47；MindSpeed 16（5+11）、MindSpeed-LLM 21（7+14）、MindSpeed-RL 0、MindIE-LLM 0。所有分页 `validated_pages` 与 `total_page` 一致，无 incomplete。
+- **本轮新项判定窗口**：`created_at` ≥ 2026-11-12T22:00:12Z 共 **717 条**（issue 245 + PR 472），**全部标题过目**；强关键词标题命中 113 条，逐条读批次缓存正文/摘要，深读约 20 条。未为 GitCode/AtomGit 额外拉 API。
+- 查重：拟收/拟拒 URL 全部执行 `catalog_tool.py find '<完整URL>'` 与近 14 天日报完整 URL 检索（0 命中，说明本轮候选均未在 10-30 以来的日报出现）；同族既有条目走 update 补证据，不另占新号。
+
+### 新增条目（NPU 来源 7 条，待审计）
+
+| 编号 | 来源 | 机制摘要 |
+|---|---|---|
+| INF-2539 | [hccl#961](https://gitcode.com/cann/hccl/issues/961)、[!4058](https://gitcode.com/cann/hccl/pull/4058) | AIV Reduce/AllReduce 归约前用 push 语义跨卡写 scratch，再本地归约；16 卡 fp32 256B 下部分 rank 结果错误，补齐 32B 粒度错误不变，改为接收方跨卡读一次通过。master #3856 已修，9.2.0 基线 `c0c93df8` 不含该修复，!4058 反合并补 13 例 UT。 |
+| INF-2540 | [ops-math !7391](https://gitcode.com/cann/ops-math/merge_requests/7391)、[#4530](https://gitcode.com/cann/ops-math/issues/4530) | `aclnnIsInf` 元素数超 2^31 时 host 计数、tiling 字段与 kernel `CopyOut` offset 的 32 位回绕：out 尾部不写（n=2^31+8192 时 7296 个，首个 2147484544），并越界写进只读输入 x（3648 个，首个 1073750464）；两段 rc=0。修复统一改 64 位，910B3/CANN 9.3.0 实测归零（含 2^32 用例）。 |
+| INF-2542 | [ops-transformer#7497](https://gitcode.com/cann/ops-transformer/issues/7497)、[!15878](https://gitcode.com/cann/ops-transformer/pull/15878) | 950DT 上 FP8 E4M3 QuantLightningIndexer：同一 query/有效 K/权重/因果范围，只把 TND query 长度从 314 改为 5688，倒数第二行 TopK 由 2047 变 2048。arch35 单行路径分别累加奇偶 head、双行路径顺序累加，FP32 舍入差改变 BF16 排序分数；完整/分块 prefill 差异可传播到生成 token。 |
+| INF-2543 | [Ascend/pytorch#6095](https://gitcode.com/Ascend/pytorch/issues/6095) | torchtitan `_RotatePairs.rotate` 的 bf16/int32 位打包 RoPE，在 cos/sin 为 `stride[-1]==2` 的 slice（`cache.unflatten(-1,(-1,2))[...,0]`）时经 inductor 编译后 q/k 整张量全 NaN；eager 正确，cos/sin contiguous 后恢复。8×910B4 单卡复现。 |
+| INF-2544 | [Ascend/pytorch#6088](https://gitcode.com/Ascend/pytorch/issues/6088)、[!49637](https://gitcode.com/Ascend/pytorch/pull/49637) | `NPUTritonKernel` 继承上游 `TritonKernel.scan`，按 `ndim-num_reduction_dims` 假定归约轴在 tile 末位；NPU linearized 布局把归约树放在非最末 `tensor_dim` 时仍扫 axis1，cummax/cummin/cumprod/logcumsumexp 沿 dim=0 错值（cummax max_abs_diff≈3.5），4D mid-dim 编译崩溃；最内维正确。 |
+| INF-2545 | [runtime#1375](https://gitcode.com/cann/runtime/issues/1375) | 910B 的 `Stream::Query` Stars 分支只比较 SQ head/tail，`sqHead==sqTail` 即返回 COMPLETE；入队置位同步但推进 SQ 异步，窗口内 SQ 为空被误判完成。2GB D2D 后 6µs 查询 COMPLETE、同步仍阻塞 28.8ms，20/20 命中；按 COMPLETE 复用 buffer 会读到未写完数据。 |
+| INF-2549 | [Ascend/pytorch#6080](https://gitcode.com/Ascend/pytorch/issues/6080)、[op-plugin !6218](https://gitcode.com/Ascend/pytorch/pull/6218) | `unique_consecutive` 无 dim 时按 `self.sizes()` 分配 `y_inverse`，0 维输入把 rank-0 张量交给 `aclnnUniqueConsecutive`，该算子不写 rank-0 inverse，分配器旧内存原样返回（哨兵 99344109427201，6 种 dtype 复现）；CPU 恒为 0，TestInductorOpInfoNPU 6 例失败。修复改 rank-1 视图。 |
+
+### 既有条目补证据（同机制，不另立号）
+
+- **INF-2521**（自动生成 aclnn 出参 stride 静默半写）：新增 18 条同族 URL —— ops-nn [#8746](https://gitcode.com/cann/ops-nn/issues/8746)/[#8747](https://gitcode.com/cann/ops-nn/issues/8747)/[#8748](https://gitcode.com/cann/ops-nn/issues/8748)/[#8769](https://gitcode.com/cann/ops-nn/issues/8769)/[#8796](https://gitcode.com/cann/ops-nn/issues/8796)/[#8800](https://gitcode.com/cann/ops-nn/issues/8800)、ops-transformer [#7488](https://gitcode.com/cann/ops-transformer/issues/7488)/[#7489](https://gitcode.com/cann/ops-transformer/issues/7489)/[#7490](https://gitcode.com/cann/ops-transformer/issues/7490)/[#7491](https://gitcode.com/cann/ops-transformer/issues/7491)/[#7493](https://gitcode.com/cann/ops-transformer/issues/7493)/[#7494](https://gitcode.com/cann/ops-transformer/issues/7494)/[#7495](https://gitcode.com/cann/ops-transformer/issues/7495)/[#7496](https://gitcode.com/cann/ops-transformer/issues/7496)/[#7522](https://gitcode.com/cann/ops-transformer/issues/7522)/[#7534](https://gitcode.com/cann/ops-transformer/issues/7534)/[#7552](https://gitcode.com/cann/ops-transformer/issues/7552)、ops-math [#4730](https://gitcode.com/cann/ops-math/issues/4730) + note。其中 #8800 方向相反（资料标 √ 支持非连续 output，实测只写 8/16、9/24、2/32，#8747/#8750/#8796 则为标 × 却放行）；#7496 是版本回归（CANN 9.3.0 把原先的拒绝变成静默错值）；#4730 aclnnHansEncode 三个出参同族。主来源仍是 #8663 族，这 18 条只作补充证据。
+- **INF-2390**（epsilon 声明 double 按 float 截断）：新增 [#8791](https://gitcode.com/cann/ops-nn/issues/8791)（AddLayerNorm）、[#8795](https://gitcode.com/cann/ops-nn/issues/8795)（RmsNorm）、[#8799](https://gitcode.com/cann/ops-nn/issues/8799)（BatchNorm）、[#8802](https://gitcode.com/cann/ops-nn/issues/8802)（FastLayerNorm）+ note：同一窄化机制扩展到 4 个算子，1e-46（FastLayerNorm 1e-50）起与 eps=0.0 位级一致，全零行/通道输出 NaN。
+
+### NPU 留观/不收（本轮判定）
+
+- **机制明确但影响未实测/触发窄**：ops-nn **#8762**（BatchNormExt2 归约误差未补偿、预乘倒数常数系统性偏差、±FLT_MAX 上溢；BN3D 统计量 dtype 校验被 `PrecisionReduceFlag` 放行——多项混合，未给任务级错值证据）、**#8759**（tensor_scatter_sub 静态守卫/tiling 累乘溢出返回成功；以静态分析和补码模型为主，未板端复现）、**#8751**（mat_mul_v3 bias fp32 未拦截）、**#8788/#8789**（AddLayerNormQuant 平台门禁/quantMode 支持面矛盾，fail-loud 161002）、**#8797**（ReluGradV2 Proto dtype 范围）、**#8760**（Unique valueOut 未校验）、**#8766/#8761**（搬运次数/质量加固）；ops-transformer **#7527**（MQFA 空 tensor tilingdata，正文仅截图）、**#7529/#7530/#7531/#7532**（FusedFloydAttentionGrad 反向形状校验/文档，训练面）、**#7552** 已归 INF-2521；ops-math **#4738**（Sort arch35 -0.0 符号恢复与 32 位归并偏移，-0.0 属极小数值差异，偏移需超 2^32）、**#4743**（StatelessBernoulli 零维物化，closed，布局校验为主）、**#4731**（Xlog1py 已撤回误报，仅作排除证据）；hcomm **#1307**（启动失败后 watchdog SIGSEGV，fail-loud）、**#1308**（对端掉 rank 后 destroy 不返回，挂起）、**#1317/#1319**（DPU kernel timeout/检视意见）；hccl **#959/#960/#963**（合入后检视意见跟踪，未确认运行时故障）；torchair **#974**（GMMFR MXFP4 单位轴转置的 scale 布局规范化，closed，修复 !4001；无错值量级）；Ascend/pytorch **#6083**（窗函数默认 dtype 缺失，fail-loud）、**#6084**（rsplit 逐核 workspace bf16 致 2 ULP 尾差，微小数值差异不收）、**#6090**（scan 4D mid-dim 编译崩溃，fail-loud）、**#6091**（masked_fill_ dtype 契约 fail-loud + uint8 最近邻上采样忽略 scales——后者静默但影响窄）、**#6097**（npu_format_cast segfault）、**#6100**（FA 五返回值解包，编译失败）、**#6103**（max/min over dim dtype 回退 fail-loud）；vllm-ascend **#21818**（1P1D A2 w4a8 返回乱码，权重 sha256 一致，根因未定位）、**#21816**（650E PD 分离 UB_TCP 建联失败）、**#21821**（Mooncake transfer failed）、**#21807/#21760/#21840**（吞吐/TTFT/host 开销，纯性能）、**#21765-#21767**（RFC）；msprobe **#694**、mssanitizer **#475**（工具域）；op-plugin **#707/#709**（tiling 数据/UT 失败，fail-loud）；triton-ascend **#3153**（bool AND 作 load mask 触发 TTIR 校验失败，fail-loud）；sgl-kernel-npu 本轮为 build/refactor/CI（#1028-#1036），无故障面。
+- **训练域（移交训练扫描）**：ops-nn #8758（SoftmaxFocalLoss A5 调度/FP32 归约）、#8773/#8774/#8775（Grad/ST 资产）；ops-math #7389/#7397/#7411/#7412（Pdist/Reciprocal/golden/acosh_grad）；ops-transformer #7498/#7536/#7543（gmm/alltoall 需求与标杆）、!15920（FAG Rdv）；Ascend/pytorch #6052/#6073 等梯度域。
+
+## 2. GitHub 常规 7 仓 + arXiv
+
+- 认证状态：环境无 `GITHUB_TOKEN`（未认证）；search 请求间隔 8 秒，全部带 `created:>=2026-11-06`（UTC 7 日前）。
+- **API 账本**：search 7 仓 × 3 关键词组 = **21/21 HTTP 200**，`per_page=100` 单页，total 均 <100，无分页未覆盖。计数（correctness / silent wrong output / NaN）：vllm 18/16/5，sglang 19/4/11，transformers 4/3/2，TRT-LLM 0/0/1，triton 0/2/1，tt-metal 10/9/6，flashinfer 3/4/5。core 额度启动时 55/60 可用（used 5），7 条正文单点补拉全 200；评论线程未拉。
+- **新增条目（GitHub 来源 6 条）**：INF-2541 [vllm-ascend#21797](https://github.com/vllm-project/vllm-ascend/issues/21797)（v0.30.0 默认设备侧多模态预处理使 rollout↔train logprob MAE 0.0138→0.0479、greedy 0.6005→0.5720，关开关恢复）；INF-2546 [sglang#50377](https://github.com/sgl-project/sglang/issues/50377)（tool-call 参数允许 NaN/Infinity → arguments 非法 JSON；set 字面量 TypeError，非流式丢弃全部 call）；INF-2547 [triton#12740](https://github.com/triton-lang/triton/issues/12740)（bf16 atomic_add 被 LLVM AtomicExpand 展开后旧值不复取，128 线程加 1.0 只剩 1.0）；INF-2548 [triton#12741](https://github.com/triton-lang/triton/issues/12741)（f64→bf16 rtz 在 sm_80/89 上 LLVM 报错被忽略，16/16 写成 -5.3e36）；INF-2550 [vllm#67411](https://github.com/vllm-project/vllm/issues/67411)+[#67401](https://github.com/vllm-project/vllm/issues/67401)（fused_add_rms_norm / rotary_embedding 未校验最内维 stride，4035/4096、512/512 超差，max 8~9）；INF-2551 [sglang#50249](https://github.com/sgl-project/sglang/issues/50249)（Intel XPU GDN recompute_w_u 在 K!=V 时留未初始化 u，NaN~1e38，A100 正确）。
+- **本轮 GitHub 留观**：triton **#12757**（Blackwell bf16/fp16 下转置操作数×标量累加错值，已缩到 64×64 tile 与 tile 内二次 dot 形态，但根因未定位，按规范留观）；tt-metal #65495（SFPI ICE 编译失败，fail-loud）、#65347（性能 PR）；sglang #50241（AMD 确定性 tracking）、#50336（MoE offload RFC）、#49985（steering vector feature）；vllm #67384/#67169/#67357（ROCm 性能/RFC）。
+- **与既往判定比对（维持，无新证据不改判）**：vllm #67065=INF-2513、#66886=INF-2498、#66144=INF-2458、#66801=INF-2500、#66610=INF-2487、#66437=INF-2486、#66074=INF-2455、#66211=INF-2457、#66573 留观、#66435 fail-loud、#67334/#67019/#66942/#66782/#66794 RFC；sglang #48964=INF-2447、#49657=INF-2503、#49185/#49198=INF-2464、#49881=INF-2518、#50037=INF-2532、#50669 留观；transformers #50440=INF-2465、#50599=INF-2520（closed）、#50484=INF-2470、#50612/#50545 训练域；flashinfer #9396=INF-2530、#9372=INF-2531、#9333=INF-2514、#9343=INF-2519、#9068=INF-2456（closed）；tt-metal #64834=INF-2480、#64811=INF-2481、#64411=INF-2482、#64678=INF-2483、#64827=INF-2484、#64826=INF-2485、#64740=INF-2505、#64840=INF-2502；TRT-LLM、triton 其余 0 命中。
+- **arXiv**：2 组短语查询（“silent data corruption”+LLM、bit flip+inference，`sortBy=submittedDate`）HTTP 200 有效；返回 8 + 25 篇，最新为 2610.37033（2026-10-27）/2610.33475（2026-10-24），全部 ID 均见于既往日报，**无新论文**。
+
+## 3. 回访（近 7 日条目 + 旧源轮巡）
+
+- **INF-2521**：补 18 条同族证据 + note（见 §1）。
+- **INF-2390**：补 4 条 epsilon 同机制证据 + note（见 §1）。
+- **INF-2538**（hcomm#1279 GetNetLayers 越界读）：来源已 closed（2026-11-12T09:04Z）；修复 !6618 状态未核实。已 note。
+- **INF-2527**（ops-transformer#7469 MoeInitRouting 漏专家 scale 偏移）：issue 已 closed；修复 !15813 于 2026-11-12 merged（199/199 回归），发布未核实。已 note。
+- **INF-2508**（vllm-ascend#21558 Mooncake layerwise PUSH 提前报完成）：已 closed，`state_reason=not_planned`（2026-11-11T07:57Z），关闭说明未读；修复未采纳/未核实。已 note。
+- **INF-2383**（vllm#65325 level-2 sleep 排队请求）：仍 open（updated 2026-11-03T07:15Z），窗口内无新活动；评论仍未读。已 note。
+- 另核对：hcomm#1278（INF-2529）open、hcomm#1279（INF-2538）closed、ops-nn#8713（INF-2524）/ #8738（INF-2526）仍 open、ops-transformer#7469（INF-2527）closed、msmodelslim#694（INF-2528）open，与昨日注记一致，无新证据不改判。
+
+## 4. 未覆盖范围与缺口
+
+- GitCode/AtomGit issue/PR **评论线程未拉取**（无低成本批量入口）：#8750/#8800 的 ViewCopy 根因讨论、#961 的 9.2.0 验收、#7497 的修复评审、#1375 的维护者回应均只读正文。
+- NPU 717 条新项全部标题过目；113 条强关键词命中逐条读标题/摘要，深读约 20 条正文；其余 604 条弱命中（test/docs/CI/feature/perf/重构）按标题归档未逐条深读；472 条 PR 未读 diff。
+- 部分候选仅按索引/摘要判定：#8762、#8759、#4738、#7527、#974、#12757，均在上文标注留观及原因，未声称已验证。
+- GitHub 评论线程未读；search 三词组之外关键词面（量化/KV/logprob 等）依赖既往轮次与 NPU 批次，未逐日重扫。
+
+## 5. 小结
+
+13 条新条目入库（待审计）：NPU 7 条（INF-2539/2540/2542/2543/2544/2545/2549）+ GitHub 6 条（INF-2541/2546/2547/2548/2550/2551），其中 1 条 var 关系（INF-2550→INF-2530，回显目标标题“FlashInfer JIT silu_and_mul 忽略行 stride”已核对）。2 条既有条目补证据（INF-2521 加 18 条同族、INF-2390 加 4 条 epsilon 同机制），4 条状态注记（INF-2538/2527/2508/2383）。重点新面：**AIV reduce push 语义小消息错值**、**is_inf 超 2^31 偏移回绕写坏输入**、**FP8 indexer TopK 随 Q 长度变**、**Inductor RoPE 位操作非连续全 NaN**、**scan 族非最内维错值**、**aclrtStreamQuery 提前 COMPLETE**、**0 维 unique_consecutive 未初始化 inverse**、**设备侧多模态预处理破坏 logprob 一致**、**tool-call 非法 JSON 参数**、**Triton bf16 atomic_add 丢更新 / f64→bf16 rtz 写垃圾**、**vLLM 自定义算子最内维 stride 未校验**、**XPU GDN 未初始化 u**。留观重点：#21797 之外 #21818 乱码根因未定、triton #12757 Blackwell dot 错值未定位、#8762/#8759 静态分析未板验。
+
+## 6. 编目与校验
+
+- `catalog_tool.py stats`：**2,551 条**（active 2,520，pending_audit 31）；故障 2,534 / 结论 8 / 方法 8 / 指针 1。
+- `build`：ok，生成 `views/CATALOG.zh.md`、`views/fault_catalog.csv`、`views/fault_catalog.xlsx`。
+- `validate`：`ok: true`，errors 0。

@@ -40,6 +40,40 @@ evidence:
   kind: gitcode_issue
 - url: https://gitcode.com/cann/ops-nn/issues/8746
   kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/issues/8747
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/issues/8748
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/issues/8769
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/issues/8796
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-nn/issues/8800
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7488
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7489
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7490
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7491
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7493
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7494
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7495
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7496
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7522
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7534
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-transformer/issues/7552
+  kind: gitcode_issue
+- url: https://gitcode.com/cann/ops-math/issues/4730
+  kind: gitcode_issue
 relations:
 - kind: cross
   target: TRN-0755
@@ -49,6 +83,13 @@ original:
   behavior: 推理服务把输出写进预分配 buffer 的切片或带 stride 的视图时（例如往 paged KV/拼接 logits/loss 缓冲的某一段写结果，或把 TopKTopPSample 的索引写进大 buffer 的一半），接口两段都返回成功，但结果按连续布局落到 buffer 开头：按自己的 stride 读回时一半位置还是旧值、另一半错位；采样算子的有效值可能只剩一半，生成的 token 因此改变。日志没有任何报错，只有把同一调用改成连续出参再逐元素对拍才能发现。
   trigger_surface: CANN ops-nn 无 op_host/op_api 的自动生成接口（RmsNorm、GemmaRmsNorm、RmsNormGrad、AddLayerNormGrad、CrossEntropyLoss、MaskedSoftmaxWithRelPosBias、TopKTopPSample、ExpandIntoJaggedPermute、SwiGlu/SituGlu、Foreach*ScalarList 等）；出参为非连续 view（stride 有空洞但 max_offset < storage numel）；Atlas A2/A3、CANN 9.2.0/9.3.0。
   discovery: 2026-11-13 每日扫描
+  notes:
+  - '2026-11-13 2026-11-13 回访：同族新增 18 单（ops-nn #8746/#8747/#8748/#8769/#8796/#8800、ops-transformer #7488/#7489/#7490/#7491/#7493/#7494/#7495/#7496/#7522/#7534/#7552、ops-math #4730）。其中 #8800 为 aclnnBatchNorm 资料标 √ 却静默漏写（反向口径），#7496 为版本回归（原拒绝改为静默错值），#4730 aclnnHansEncode 三个出参同族。'
 migration:
   method: scan
   scanned: '2026-11-13'
+  updates:
+  - date: '2026-11-13'
+    fields:
+    - evidence
+    - original.notes

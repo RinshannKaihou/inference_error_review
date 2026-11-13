@@ -36,6 +36,8 @@ original:
   behavior: 开启 prefill 流水线并行（PP>1）的 Mooncake layerwise KV 传输场景：最后一个 prefill stage 完成传输就上报整请求 KV 完成，前面 stage 还没写完（甚至写失败）时 decode 侧即认为收完并恢复解码，请求在不完整的前缀 KV 上继续生成，输出错误内容且看不到失败上报；组件级测试里 stage0 阻塞约 6 秒的案例中 decode 已在只有 Layer1 的目的端恢复。
   trigger_surface: 'vllm-ascend Mooncake layerwise PUSH + prefill pipeline parallelism>1（PR #21517 引入的路径）；早 stage 写慢或写失败时触发；PP=1 不受影响。'
   discovery: 2026-11-11 每日扫描
+  notes:
+  - '2026-11-13 2026-11-13 回访：vllm-ascend #21558 已 closed，state_reason=not_planned（2026-11-11T07:57Z），关闭说明未读，修复未采纳/未核实。'
 migration:
   method: scan
   scanned: '2026-11-11'
@@ -48,3 +50,7 @@ migration:
     panel: []
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-13'
+    fields:
+    - original.notes
