@@ -3,18 +3,18 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2551 条；状态：active 2551
+共 2559 条；状态：active 2551、pending_audit 8
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 795 |
-| 编译器 | 181 |
-| 运行时/执行 | 139 |
+| 算子/内核 | 798 |
+| 编译器 | 182 |
+| 运行时/执行 | 140 |
 | 集合通信 | 44 |
 | 并行切分 | 31 |
-| KV缓存 | 389 |
-| 调度/服务 | 96 |
+| KV缓存 | 391 |
+| 调度/服务 | 97 |
 | 输出解析 | 69 |
 | 解码/采样 | 159 |
 | 量化 | 244 |
@@ -8544,7 +8544,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：全零 x 下 epsilon=1e-46（合法 double）时 rstd 返回 inf（期望约 1e23，在 fp32 值域内），y 输出 0；epsilon=1e-6 正常，同装置对照排除传参错误
 - **改进措施**：检测 全零 x + 极小 epsilon 对照 rstd 输出（1e-6 正常 / 1e-46 inf）；修复 待定（issue 2026-11-04 新开；建议 norm/ 下 .Float epsilon 类属性一并排查）
-- **来源**：https://gitcode.com/cann/ops-nn/issues/8096；https://gitcode.com/cann/ops-nn/issues/8694；https://gitcode.com/cann/ops-nn/issues/8731；https://gitcode.com/cann/ops-nn/issues/8745；https://gitcode.com/cann/ops-nn/issues/8791；https://gitcode.com/cann/ops-nn/issues/8795；https://gitcode.com/cann/ops-nn/issues/8799；https://gitcode.com/cann/ops-nn/issues/8802
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8096；https://gitcode.com/cann/ops-nn/issues/8694；https://gitcode.com/cann/ops-nn/issues/8731；https://gitcode.com/cann/ops-nn/issues/8745；https://gitcode.com/cann/ops-nn/issues/8791；https://gitcode.com/cann/ops-nn/issues/8795；https://gitcode.com/cann/ops-nn/issues/8799；https://gitcode.com/cann/ops-nn/issues/8802；https://gitcode.com/cann/ops-nn/issues/8805；https://gitcode.com/cann/ops-nn/issues/8828
 
 ### INF-2391 `chunkcat_empty_input_skip_out_validation` ChunkCat 空输入早退跳过 out 校验返回脏数据
 
@@ -9083,7 +9083,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：非连续出参两段均返回 0/0，写入落在 storage 连续前缀：按自身 stride 读回时一半位置仍是旧值、另一半错位；TopKTopPSample 64 个有效值只剩 32 个；资料标 × 的接口同样放行而非返回 161002。
 - **改进措施**：检测 出参构造 stride 带空洞的合法 view（max_offset<storage numel），与连续基线逐元素比对并按 stride 读回；输入非连续与连续基线作对照。；修复 逐算子修补中：!14347 拒绝 DynamicBlockQuant 非连续出参、!14290 修正 RmsNorm 文档；系统性 op_api 生成修复未核实。
-- **来源**：https://gitcode.com/cann/ops-nn/issues/8663；https://gitcode.com/cann/ops-nn/issues/8674；https://gitcode.com/cann/ops-nn/issues/8685；https://gitcode.com/cann/ops-nn/issues/8688；https://gitcode.com/cann/ops-nn/issues/8702；https://gitcode.com/cann/ops-nn/issues/8736；https://gitcode.com/cann/ops-nn/issues/8746；https://gitcode.com/cann/ops-nn/issues/8747；https://gitcode.com/cann/ops-nn/issues/8748；https://gitcode.com/cann/ops-nn/issues/8769；https://gitcode.com/cann/ops-nn/issues/8796；https://gitcode.com/cann/ops-nn/issues/8800；https://gitcode.com/cann/ops-transformer/issues/7488；https://gitcode.com/cann/ops-transformer/issues/7489；https://gitcode.com/cann/ops-transformer/issues/7490；https://gitcode.com/cann/ops-transformer/issues/7491；https://gitcode.com/cann/ops-transformer/issues/7493；https://gitcode.com/cann/ops-transformer/issues/7494；https://gitcode.com/cann/ops-transformer/issues/7495；https://gitcode.com/cann/ops-transformer/issues/7496；https://gitcode.com/cann/ops-transformer/issues/7522；https://gitcode.com/cann/ops-transformer/issues/7534；https://gitcode.com/cann/ops-transformer/issues/7552；https://gitcode.com/cann/ops-math/issues/4730
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8663；https://gitcode.com/cann/ops-nn/issues/8674；https://gitcode.com/cann/ops-nn/issues/8685；https://gitcode.com/cann/ops-nn/issues/8688；https://gitcode.com/cann/ops-nn/issues/8702；https://gitcode.com/cann/ops-nn/issues/8736；https://gitcode.com/cann/ops-nn/issues/8746；https://gitcode.com/cann/ops-nn/issues/8747；https://gitcode.com/cann/ops-nn/issues/8748；https://gitcode.com/cann/ops-nn/issues/8769；https://gitcode.com/cann/ops-nn/issues/8796；https://gitcode.com/cann/ops-nn/issues/8800；https://gitcode.com/cann/ops-transformer/issues/7488；https://gitcode.com/cann/ops-transformer/issues/7489；https://gitcode.com/cann/ops-transformer/issues/7490；https://gitcode.com/cann/ops-transformer/issues/7491；https://gitcode.com/cann/ops-transformer/issues/7493；https://gitcode.com/cann/ops-transformer/issues/7494；https://gitcode.com/cann/ops-transformer/issues/7495；https://gitcode.com/cann/ops-transformer/issues/7496；https://gitcode.com/cann/ops-transformer/issues/7522；https://gitcode.com/cann/ops-transformer/issues/7534；https://gitcode.com/cann/ops-transformer/issues/7552；https://gitcode.com/cann/ops-math/issues/4730；https://gitcode.com/cann/ops-nn/issues/8814；https://gitcode.com/cann/ops-nn/issues/8819；https://gitcode.com/cann/ops-nn/issues/8689；https://gitcode.com/cann/ops-nn/issues/8750
 - **关联**：cross:TRN-0755
 
 ### INF-2522 `add_rms_norm_empty_tensor_early_return_unwritten` AddRmsNorm 空 tensor 早退致输出全未写
@@ -9220,6 +9220,40 @@
 - **影响详情**：K!=V 时 u 的部分元素为未初始化值（NaN 及最高约 1e38），污染后续 chunk 输出；同源码 A100 逐位正确；该 kernel 在 XPU 还慢 6.9x。
 - **改进措施**：检测 K!=V 的 GDN 模型在 XPU 上跑 chunk prefill，先 memset u 的分配区再比对；A100 同源码作对照，检查 NaN/1e38 与输出逐位一致。；修复 未核实修复 PR；规避：XPU 回退 #47944 或补全 recompute_w_u 的 masked store。
 - **来源**：https://github.com/sgl-project/sglang/issues/50249
+
+### INF-2555 `ops_transformer_sparse_flash_mla_metadata_validation_not_reported` SparseFlashMlaMetadata 校验失败仍返回 0
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+
+- **原因对象**：算子/内核 / cann / SMLA metadata AICPU
+- **原因行为**：AICPU Compute 对 sequsedQ 越界/负值等元素级非法输入返回 KERNEL_STATUS_PARAM_INVALID，但该状态未映射成 aclnn 错误码，两段接口仍返回 0。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：sequsedQ=[2048]*4、[-1,1,1,1] 等输入两段 0/0，metadata 的 2048 个 int32 全部保留调用方哨兵；下游按未初始化 metadata 调度 sparse MLA。
+- **改进措施**：检测 对 metadata 预填两种互斥 canary，传非法 sequsedQ/sequsedOriKv/cmpResidualKv 后检查 canary 是否被写、返回码是否非 0；先用合法输入自证尺子。；修复 待定：issue 要求把 KERNEL_STATUS_PARAM_INVALID 上报为 aclnn 失败码，与第一段对非法标量返回 161002 对齐；未核实修复 PR。
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7578
+
+### INF-2556 `mhc_pre_sinkhorn_normout_odd_slices_never_written` MhcPreSinkhorn 列归一 slice 从未写出
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-14
+
+- **原因对象**：算子/内核 / cann / mhc_pre_sinkhorn m_split
+- **原因行为**：stage2 只对偶数 slice 做 CopyOut；列归一结果留在 combFragLocal 后直接写 stage3 workspace，normOut 奇数 slice 在整个分支里没有写路径。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：needBackward=true 且 B·S 非空时 681/681 用例 normOut 奇数 slice 为 0.0 或 1e9 量级残留；偶数 slice 与 golden 误差 ≤6e-8，两段返回 0。
+- **改进措施**：检测 needBackward=true 跑非空 B·S，对 normOut 每个 slice 预填 canary 并检查是否被写；同时核对同目录 m_k_split 实现的奇数写出分支作为对照。；修复 待定：issue 定位到 mhc_pre_sinkhorn_m_split_core.h stage2 缺奇数 slice CopyOut、tiling 固定 SetTilingKey(0)；未核实修复 PR。
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7565；https://gitcode.com/cann/ops-transformer/issues/7566
+- **关联**：var:INF-1699
+
+### INF-2557 `ops_math_slice_with_axes_nonconstant_params_ignored` SliceWithAxes 非常量 offsets/size 被忽略
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+
+- **原因对象**：算子/内核 / cann / slice_with_axes tiling
+- **原因行为**：GetConstIntToShape 取不到常量时跳过切片参数，保留零 offsets 与完整输入 shape，kernel 只读 tiling 的 fullOffsets/outShape。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：offsets/size 由运行时张量给出时算子按整块输入拷出：切片起点和长度都错，返回成功、无告警；仅常量参数的用例表现正常。
+- **改进措施**：检测 用非常量 offsets/size 输入（值依赖张量）与等值常量版本对拍；检查 tiling 日志里的 fullOffsets/outShape 是否退化为 0/全 shape。；修复 待定：issue 给出行号定位（slice_with_axes_def.cpp:41-52、tiling GetParams:132-157、kernel arch35 slice_with_axes.h:239-272），未核实修复 PR。
+- **来源**：https://gitcode.com/cann/ops-math/issues/4752
 
 ## 编译器
 
@@ -11249,6 +11283,17 @@
 - **改进措施**：检测 sm_80/sm_89 上用 fp_downcast_rounding='rtz' 做 f64→bf16 cast，与 numpy 参考对拍；同时抓取编译 stderr 中的 LLVM error。；修复 未核实修复 PR；规避为不用 rtz 转 bf16（默认 rtz 之外的舍入路径正确），或升级到会拒绝该 cast 的版本。
 - **来源**：https://github.com/triton-lang/triton/issues/12741
 
+### INF-2553 `triton_experimental_linearize_rewrites_compare_constant` linearize 文本改写误改比较常量致越界读
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+
+- **原因对象**：编译器 / torch_npu / TE linearize pass
+- **原因行为**：_apply_linearize 用文本替换改归约维槽位；npu_triton_helpers.lt(x, 0) 的常量 0 也命中 ', 0)' 被替换成 real_reduction_dim，负下标回绕判据失效。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：合法下标 0 被判为负、加上整个维度后越界读；950DT 上 fractional_max_pool2d values maxdiff 16/32、indices 不一致，两段无报错；关 linearize 后 maxdiff 0。
+- **改进措施**：检测 对同一 lowering 分别在 codegen_linearize=True/False 下编译，逐元素对比生成的 tmp = npu_triton_helpers.lt(..., 0) 是否被改写。；修复 PR #49690（open，2026-11-14 未合入，未核实发布）：在文本改写处排除 npu_triton_helpers.lt/gt/eq/le/ge/ne。
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/6112；https://gitcode.com/Ascend/pytorch/merge_requests/49690；https://gitcode.com/Ascend/pytorch/issues/6106
+
 ## 运行时/执行
 
 ### INF-0015 `ttmetal_dram_sharded_dup_xcoord_buffer_corruption` TensorAccessor 只按 x 坐标选 bank 致 buffer 损坏
@@ -12796,6 +12841,17 @@
 - **影响详情**：下发 2GB D2D 后 6µs 查询即返回 COMPLETE，紧接 SynchronizeStream 阻塞约 28.8ms，20/20 命中；按 COMPLETE 复用 buffer 会读到 DMA 未写完的数据。
 - **改进措施**：检测 aclrtMemcpyAsync 2GB D2D 后立即 aclrtStreamQuery，同时记录 aclrtSynchronizeStream 耗时；查询 COMPLETE 而同步仍阻塞 >1ms 即命中。；修复 未核实修复 PR；报告给出修复建议（sqHead==sqTail 时再比较 lastTaskId_ 与已发送/已回收任务 id，或有未完成任务则返回 RT_ERROR_STREAM_NOT_COMPLETE）。规避：不要用 aclrtStreamQuery 判完成。
 - **来源**：https://gitcode.com/cann/runtime/issues/1375
+
+### INF-2559 `triton_experimental_same_name_kernel_xblock_state_reuse` 同进程同名 kernel 不同 XBLOCK 结果错
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+
+- **原因对象**：运行时/执行 / torch_npu / triton launcher 运行期状态
+- **原因行为**：同一进程两次编译同一算子生成同名 kernel（仅 XBLOCK 8/16 不同）；编译产物 hash、launcher cache hash、autotune 配置与 run 实参全同，运行期仍按名称复用了前一个 kernel 的状态。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：先编 1×1 再编 2×2 后，2×2 的 2×2 fractional_max_pool2d maxdiff=7，连调 3 次持续复现；单独编 2×2 时 maxdiff=0。
+- **改进措施**：检测 同一进程内按不同 shape 顺序编译同一算子，比较 kernel hash/launcher cache hash 相同但输出不同；清 PyCodeCache.modules 与关 use_fast_triton_launcher 均无效。；修复 待定：issue 下一步用同一 TTIR 两次 launch 判定在 torch_npu launcher 还是 triton-ascend 运行时，未核实修复 PR。
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/6114
 
 ## 集合通信
 
@@ -18004,6 +18060,28 @@
 - **改进措施**：检测 logprobs 全 null/最低 token id 的输出模式；SGLANG_VALIDATE_MAMBA_REPLAY_STATE_INDICES=1 验证开关存在但未在报告中试验。；修复 规避：--cuda-graph-bs-decode 把运行上限内每个批大小逐桶捕获（1 2 … 16 全捕后原触发场景全部通过）；根因修复待定（issue open，1 条评论未读）
 - **来源**：https://github.com/sgl-project/sglang/issues/49881
 
+### INF-2552 `vllm_ascend_310p_gdn_ragged_mtp_state_flatten` 310P GDN ragged MTP 压平 state 表取错请求
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+
+- **原因对象**：KV缓存 / vllm / 310P 独立 GDN 算子 state 索引
+- **原因行为**：按当前 query 长度压平 [B,W] state 索引表会丢弃历史槽；accepted_prev 大于 current_len 时读 row_start+accepted_prev-1 落到其它请求的 state，写回也错。
+- **影响对象**：KV状态；跨请求/跨样本数据（静默错误）
+- **影响详情**：310P GDN + ragged MTP 验证，接受 token 数超过当前 query 长度时用到别的请求历史 state 并写回；原实现直接拒绝该合法输入，仅去掉 guard 仍会选错 state。
+- **改进措施**：检测 构造 accepted_prev>current_len 的 ragged MTP batch，混排不同请求、打乱物理 state 槽，与 FP32 CPU recurrence 逐元素比较输出和整个 state pool。；修复 PR #21864（open，原 #18730 重提；未核实合入与发布）：保留完整 [B,W] state 索引表，host tiling 传行 stride，按 row_start+accepted_prev-1 读历史、row_start+current_token_offset 写当前。
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/21864；https://github.com/vllm-project/vllm-ascend/issues/17856；https://github.com/vllm-project/vllm-ascend/pull/18730
+
+### INF-2554 `vllm_ascend_mooncake_push_kv_slot_reuse_race` Mooncake Push 未在 KV 槽复用前 fencing
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+
+- **原因对象**：KV缓存 / vllm / Mooncake Push 共享 KV 槽
+- **原因行为**：共享层 KV 通过轮转 NPU 槽逐层写出时，Push 的 WRITE 可能在模型推进到下一层后才提交；源页先被复用覆盖，WRITE 读到的 KV 已不是原层内容。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：P/D 分离 + AscendStore 逐层 prefill offload + MooncakePushConnector 时，前缀命中的共享层 KV 在 WRITE 完成前被复用，decode 端收到的 KV 错误，输出静默偏离。
+- **改进措施**：检测 对 shared-layer offload 的每个 WRITE future 在复用前检查完成状态；对比同一 prompt 开/关 layerwise offload 的 decode 输出与 KV 内容。；修复 PR #21891（open，依赖 #21256；未核实合入与发布）：在 layer hook 提交 shared-layer 读，复用前 fence WRITE futures，并把 KDA 层名传入 save hook。
+- **来源**：https://github.com/vllm-project/vllm-ascend/pull/21891；https://github.com/vllm-project/vllm-ascend/pull/21256
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -19077,6 +19155,17 @@
 - **影响详情**：rollout 与训练重算 logprob 的 MAE 0.0138→0.0479、prob diff 0.0055→0.0172、greedy 准确率 0.6005→0.5720；首步解码即分叉，关掉开关恢复。
 - **改进措施**：检测 同一批图文 prompt 分别用设备侧与 CPU 预处理跑 rollout，与训练侧 HF 处理器重算的 chosen-token logprob 比对 MAE/pearson，并在视觉塔前 dump 预处理边界统计。；修复 修复 PR 未核实；规避为 --no-mm_device_do_normalize 回到 CPU 预处理（MAE 0.0143、准确率 0.6020）。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21797
+
+### INF-2558 `sglang_npu_kvpool_smaller_than_input_silent_clip` SGLang KV 池不足输入长度时静默只出 1 token
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+
+- **原因对象**：调度/服务 / sglang / NPU scheduler token 裁剪
+- **原因行为**：max_total_num_tokens 小于 input_len+max_new_tokens 时调度器既不拒绝也不告警，直接把 max_new_tokens 夹到约 1。
+- **影响对象**：输出内容；指标/日志（质量退化）
+- **影响详情**：A2 32GB 上 Qwen3.8-27B hybrid 的 pool=45184，128K 请求返回 1 token；benchmark 报 8/8 成功、总生成 8 token、TPOT 0.00，看似正常。
+- **改进措施**：检测 比较 num_prompts*output_len 与 benchmark 的 Total generated tokens；在 server 侧对 input_len+max_new_tokens > max_total_num_tokens 打 warning 或返回错误。；修复 待定：issue 建议 server 侧校验并告警、benchmark 检查总生成 token 数；规避为调大 --max-mamba-cache-size、关闭 DP attention 以扩大 KV pool，未核实修复 PR。
+- **来源**：https://github.com/sgl-project/sglang/issues/50443
 
 ## 输出解析
 
