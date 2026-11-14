@@ -4,7 +4,7 @@ slug: toolcall_parser_nonfinite_json_arguments
 aliases: []
 title: tool-call 解析器输出非法 JSON 参数
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 输出解析
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 输出内容
-  detail: 参数含 NaN/Infinity 时 arguments 不是合法 JSON，orjson 拒收（agent 回传即 400）；set 字面量触发 TypeError：流式抛错、非流式丢弃全部 tool call 并回退原始标记文本。
+  detail: 参数含 NaN/Infinity 时 arguments 非合法 JSON，orjson.loads 抛 ValueError，agent 回传该轮消息即被拒；set 字面量使 json.dumps 抛 TypeError：流式下异常逃出，非流式丢弃全部 tool call，原始标记文本当正文返回。
   visibility: 静默错误
 mitigation:
   detect: 构造参数为 NaN/Infinity/1e999 与 {1,2,3} 的 tool call，用 orjson.loads 校验 arguments；流式与非流式各跑一遍，检查是否丢 call 或抛 TypeError。
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

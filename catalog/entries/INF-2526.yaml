@@ -4,10 +4,10 @@ slug: fast_hadamard_quant_group_tensor_shape_unvalidated
 aliases: []
 title: FastHadamardQuant 分组参数未校验越界读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 算子/内核
+  - subsystem: 量化
     stack: cann
     component: FastHadamardQuant 分组量化
   behavior: Host 用 group_size 算 groupsPerRow=n/groupSize，不校验 scale/offset 的 rank、组数与 batch 维；二维 scale 按行 stride 读取，仅 1 个 scale 时越界。
@@ -40,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      subsystem:
+        from: 算子/内核
+        to: 量化

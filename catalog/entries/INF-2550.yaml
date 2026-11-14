@@ -4,7 +4,7 @@ slug: vllm_custom_ops_innermost_stride_unchecked
 aliases: []
 title: vLLM 自定义算子未校验最内维 stride
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2530
+pattern: PAT-INF-0205
 original:
   mechanism: vLLM 的两个自定义 CUDA 算子都只校验/传递部分 stride：fused_add_rms_norm 的 host 代码有 STD_TORCH_CHECK(residual.stride(-1)==1)，但没有检查 input.stride(-1)，kernel 用 input[blockIdx.x*input_stride+idx] 寻址（input_stride=input.stride(-2)，idx 沿特征维连续），转置或列切片输入的地址即错，且转置时 input_stride==1 使不同 block 的写区间重叠；rotary_embedding 的 wrapper 传 token stride 和（3D 时）head stride，kernel 始终假定最内维连续、2D 展平时 head block 连续。实测：fused_add_rms_norm fp32 转置 input（stride 1,4）input max diff 8.748、4035/4096 超差、residual max diff 4.885；列切片（stride 2048,2）max diff 9.425、4022/4096 超差；bf16 转置同样复现。rotary_embedding 2D 转置 q max diff 9.14（512/512 超 1e-4）、k 8.22（256/256）；3D shape (4,2,64) stride (512,256,4) 仅末维 stride=4 时 q/k 仍 512/512、256/256 全错。对照：2D/3D 连续、行 padding、head padding 均为 0 或 1e-7 量级。
   source: https://github.com/vllm-project/vllm/issues/67411 ｜https://github.com/vllm-project/vllm/issues/67401
@@ -42,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  updates:
+  - date: '2026-11-14'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

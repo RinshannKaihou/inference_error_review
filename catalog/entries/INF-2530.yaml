@@ -4,7 +4,7 @@ slug: flashinfer_jit_silu_and_mul_row_stride_ignored
 aliases: []
 title: FlashInfer JIT silu_and_mul 忽略行 stride
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -29,6 +29,7 @@ evidence:
 - url: https://github.com/flashinfer-ai/flashinfer/issues/9396
   kind: github_issue
 relations: []
+pattern: PAT-INF-0205
 original:
   mechanism: 'flashinfer issue #9396（flashinfer 0.7.4、commit 77039051b0be921788dc2784ec41423b558878ec、RTX 4070 Laptop SM89、CUDA 13.3）：flashinfer.activation.silu_and_mul 的公共 JIT C++ 路径（区别于 flashinfer.triton.activation）在 Python wrapper 只校验最后一维为偶数和输出 shape，不校验输入/输出 stride；生成的 JIT kernel 使用线性寻址：输入行起点 token_idx*2*d、up 半区起点 token_idx*2*d+d、输出行起点 token_idx*d。docstring 只写输入 shape (..., 2*hidden_size) 与输出 shape，未声明必须连续。对于最后一维仍连续、但行 stride 带空洞的 view，wrapper 接受张量，kernel 却按连续行起点读写：输出写会落到 backing storage 的逻辑 view 之外 padding 区域。复现用 H=1024、rows=4 的行 stride 视图，连续对照全部正确、非连续全部错位；环境为本地 venv，作者未在干净上游环境复现。期望：支持 stride 时按 stride 寻址，否则入口拒绝非连续布局，不能静默出错或写逻辑 view 外。'
   source: https://github.com/flashinfer-ai/flashinfer/issues/9396
@@ -38,3 +39,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  updates:
+  - date: '2026-11-14'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

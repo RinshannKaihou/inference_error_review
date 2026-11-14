@@ -30,6 +30,7 @@ evidence:
 - url: https://github.com/vllm-project/vllm/issues/66801
   kind: github_issue
 relations: []
+pattern: PAT-INF-0204
 original:
   mechanism: 'vLLM 0.34.0rc1.dev139+gd9f94a98b、NVIDIA A10、transformers 5.22.2、enable_tower_connector_lora=True。机制：active LoRA 映射使用 per-item 有效计数（[25,50] 覆盖 75 条），而 embedding_projection 消费带 padded stride 的展平张量（最后一个有效帧在展平索引 99）→ 覆盖差集内的有效帧走 base 投影。诊断实验：把不等长编码 item 分组并逐组刷新激活映射后，同权重同 prompt 全部 50 行匹配适配参考、贪心首 token 从 96077 变为 24286，定位失败于映射而非 LoRA 本身。两请求编码器批中 audio_tower.output_proj 同形态。相关 #61608；完整预训练权重与 HTTP serving 未测，为 reduce checkpoint 上的受控测量。'
   source: https://github.com/vllm-project/vllm/issues/66801
@@ -57,3 +58,7 @@ migration:
     - detail
     uncertain:
     - effect
+  updates:
+  - date: '2026-11-14'
+    fields:
+    - pattern

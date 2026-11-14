@@ -4,7 +4,7 @@ slug: hcomm_getnetlayers_count_mismatch_oob
 aliases: []
 title: GetNetLayers 层数不一致越界读
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 集合通信
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 可用性/进度
-  detail: 本 rank 仅 layer0、远端仅 layer1 时 netLayerNum=2 而列表仅 1 个元素；cluster_monitor/my_rank/coll_comm 按 netLayerNum 遍历读越界，得到垃圾层号；UT 修复后 netLayerNum=1。
+  detail: 非对称组网（部分 rank 在超节点内有 layer0+layer1，另一部分仅挂外层网络）下 netLayerNum 大于 netLayers 实际元素数，cluster_monitor.cc、my_rank.cc、coll_comm.cc 按该数量遍历越界，读出垃圾层号；对称组网下不出现。
   visibility: 静默错误
 mitigation:
   detect: 构造非对称拓扑（本 rank 仅 layer0、远端仅 layer1）后调用 HcclRankGraphGetLayers，检查 netLayerNum 是否等于返回列表元素数；按 netLayerNum 遍历看是否读到垃圾层号。
@@ -47,3 +47,18 @@ migration:
   - date: '2026-11-13'
     fields:
     - original.notes
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - effect
+    - behavior

@@ -4,13 +4,13 @@ slug: triton_bf16_atomic_add_lost_updates
 aliases: []
 title: Triton bf16 atomic_add 丢更新
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
     stack: triton
     component: AtomicExpand 展开
-  behavior: bf16 atomic_add 被 LLVM AtomicExpand 展开成 32 位 cmpxchg 循环，指针带 align 16 时从循环前的 load 提取旧值、重试不复取，覆盖并发更新。
+  behavior: Triton main、sm_80/sm_89 上 bf16 tl.atomic_add 被 AtomicExpand 展开为 32 位 cmpxchg 循环；指针带 align 16 时旧值仅循环前提取一次、重试不复取，并发更新被覆盖。
 effect:
   objects:
   - 数值结果
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    uncertain:
+    - detail

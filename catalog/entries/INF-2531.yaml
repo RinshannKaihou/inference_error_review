@@ -4,7 +4,7 @@ slug: flashinfer_gdn_prefill_nan_cross_sequence_leak
 aliases: []
 title: GDN prefill NaN 跨序列污染前序状态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: packed varlen 的最后一个不完整 chunk 把下一序列首行当 padding，用乘 0 mask；NaN/Inf 乘 0 仍是 NaN，k/v 的 NaN 因此进入前一序列输出与最终状态。
 effect:
   objects:
+  - 跨请求/跨样本数据
   - KV状态
   - 输出内容
   detail: 两序列 100+128 token 打包，第二序列首 token 的 k 或 v 为 NaN 时，第一序列输出与整个 final state 含 NaN；q/g/beta 不泄漏；带/不带 state checkpoint 均复现。
@@ -39,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: KV状态
+        to: 跨请求/跨样本数据

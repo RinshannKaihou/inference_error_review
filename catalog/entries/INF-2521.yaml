@@ -4,7 +4,7 @@ slug: aclnn_autogen_out_stride_silent_halfwrite
 aliases: []
 title: 自动生成 aclnn 出参 stride 静默半写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 非连续出参两段返回 0/0，写入落在连续前缀：一半位置保留调用方哨兵、按 stride 读回错位；TopKTopPSample 64 个有效值只剩 32 个；资料标 × 的接口也不返回 161002。
+  detail: 非连续出参两段均返回 0/0，写入落在 storage 连续前缀：按自身 stride 读回时一半位置仍是旧值、另一半错位；TopKTopPSample 64 个有效值只剩 32 个；资料标 × 的接口同样放行而非返回 161002。
   visibility: 静默错误
 mitigation:
   detect: 出参构造 stride 带空洞的合法 view（max_offset<storage numel），与连续基线逐元素比对并按 stride 读回；输入非连续与连续基线作对照。
@@ -93,3 +93,12 @@ migration:
     fields:
     - evidence
     - original.notes
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

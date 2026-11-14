@@ -4,7 +4,7 @@ slug: sglang_xpu_gdn_recompute_w_u_uninitialized
 aliases: []
 title: XPU GDN recompute_w_u 留未初始化 u
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -38,3 +38,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

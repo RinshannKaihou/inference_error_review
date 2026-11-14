@@ -4,7 +4,7 @@ slug: unique_consecutive_0d_uninitialized_inverse
 aliases: []
 title: unique_consecutive 0 维输入 inverse 未初始化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: 标量输入 return_inverse=True 时 inverse 为垃圾值（哨兵 99344109427201 原样吐出，6 种 dtype 均可复现），CPU 恒为 0；TestInductorOpInfoNPU 6 例失败。
+  detail: 标量输入 return_inverse=True 时 inverse 为分配器旧内存值：脏分配器下六种 dtype 分别吐出 0 或 99344109427201，不弄脏分配器时间歇复现（干净零页看着像对的）；TestInductorOpInfoNPU 6 例首错为此。
   visibility: 静默错误
 mitigation:
   detect: 标量输入 + return_inverse=True，先分配并释放填充 0x5A5A5A5A5A5A 的块再调用，断言 inverse==0；同时跑 1 维视图对照。
@@ -38,3 +38,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail
+    uncertain:
+    - visibility

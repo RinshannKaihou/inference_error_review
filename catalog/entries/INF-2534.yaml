@@ -4,7 +4,7 @@ slug: rope_int64_mode_tiling_narrow_truncation
 aliases: []
 title: RoPE int64 mode 截断致非法值当 0
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 位置编码
@@ -40,3 +40,10 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

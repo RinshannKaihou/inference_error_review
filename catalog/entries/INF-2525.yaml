@@ -4,13 +4,13 @@ slug: scatter_a5_folding_rescue_underflow_blind
 aliases: []
 title: Scatter A5 浮点折叠救援漏中间下溢
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: scatter_reduce 浮点折叠
-  behavior: scatter_reduce_common_sort.h 浮点折叠在 f32 域连乘，中间积溢出/冲洗后靠 RescueNonFiniteSeg 重算；判据只看最终值是否落 dtype 边界带，中间冲洗而最终回摆的元素不救。
+  behavior: index/scatter_reduce_common 浮点折叠在 f32 域直接连乘，中间部分积溢出或冲洗成亚正规后由 RescueNonFiniteSeg 重算；判据只看最终值是否落进 dtype 边界带，中间冲洗而最终回摆的元素不救。
 effect:
   objects:
   - 数值结果
@@ -31,6 +31,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1978
+pattern: PAT-INF-0203
 original:
   mechanism: 'cann/ops-nn issue #8673（Ascend950DT_9592、A5/arch35，ScatterMul/ScatterDiv/ScatterMax/ScatterMin 共用 index/scatter_reduce_common）：浮点折叠在 f32 累加域直接连乘，长链下中间部分积必然溢出成 ±inf 或冲洗进亚正规丢有效位，而参考实现算的是与序无关的数学真值；为弥补分歧，代码里有 RescueNonFiniteSeg：当折叠结果非有限、或为零而原值非零、或窄回值贴近输出 dtype 边界带时，回读 outputGm_ 原值逐列逐条在缩放域重算。其触发判据（输出 dtype 边界带 + 链长≤1 跳过/≥16 必算）按用例调出，只在最终值落进边界带时触发，对中间部分积冲洗、最终值回摆到中段的元素完全隐身：L1_736（var (5,43303,15) fp16、sliceSize=649545、indices 仅 210）实测 43 个此类元素，相对误差 0.3%~90%。同一宽切片实测 3.16 s，而 updates 读一遍的搬运下界约 134 µs（4000 GB/s），约 23600×，其中 2.728 亿次 GM 标量读来自救援。另并行轴判据只看 M<=blockNum、列块宽度先顶满 UB 再轮转发核、host/内核两份 UB 账本；同族的 ScatterList_L0_012（var (4,4,270646) int8、dyn_tiling_key=106）在 mssanitizer 下报 illegal write of size 16854 @ GM，病灶在 NegLargeE(key106) 分段写点未按张量真实剩余元素钳位。golden 侧 scatter_div 用 Σlog2+exp2 在 |Σ|>1024 饱和、inf×0 产 NaN，zero_cnt 用 subtract.reduceat 计数错误。'
   source: https://gitcode.com/cann/ops-nn/issues/8673
@@ -40,3 +41,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-13'
+  updates:
+  - date: '2026-11-14'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-14
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
