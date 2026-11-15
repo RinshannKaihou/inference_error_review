@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2559 条；状态：active 2551、pending_audit 8
+共 2559 条；状态：active 2559
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -9223,7 +9223,7 @@
 
 ### INF-2555 `ops_transformer_sparse_flash_mla_metadata_validation_not_reported` SparseFlashMlaMetadata 校验失败仍返回 0
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-14
 
 - **原因对象**：算子/内核 / cann / SMLA metadata AICPU
 - **原因行为**：AICPU Compute 对 sequsedQ 越界/负值等元素级非法输入返回 KERNEL_STATUS_PARAM_INVALID，但该状态未映射成 aclnn 错误码，两段接口仍返回 0。
@@ -9234,19 +9234,19 @@
 
 ### INF-2556 `mhc_pre_sinkhorn_normout_odd_slices_never_written` MhcPreSinkhorn 列归一 slice 从未写出
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-14
+`故障` · `active` · `documented` · `var` · 发现 2026-11-14
 
 - **原因对象**：算子/内核 / cann / mhc_pre_sinkhorn m_split
 - **原因行为**：stage2 只对偶数 slice 做 CopyOut；列归一结果留在 combFragLocal 后直接写 stage3 workspace，normOut 奇数 slice 在整个分支里没有写路径。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：needBackward=true 且 B·S 非空时 681/681 用例 normOut 奇数 slice 为 0.0 或 1e9 量级残留；偶数 slice 与 golden 误差 ≤6e-8，两段返回 0。
+- **影响详情**：needBackward=true 且 B·S 非空时 681/681 用例 normOut 奇数 slice 全未写，读回 0.0 或 1e9 量级残留（case 612/528）；偶数 slice 与 golden 一致；接口返回成功、无告警；与 dtype、B/S、迭代次数无关。
 - **改进措施**：检测 needBackward=true 跑非空 B·S，对 normOut 每个 slice 预填 canary 并检查是否被写；同时核对同目录 m_k_split 实现的奇数写出分支作为对照。；修复 待定：issue 定位到 mhc_pre_sinkhorn_m_split_core.h stage2 缺奇数 slice CopyOut、tiling 固定 SetTilingKey(0)；未核实修复 PR。
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7565；https://gitcode.com/cann/ops-transformer/issues/7566
 - **关联**：var:INF-1699
 
 ### INF-2557 `ops_math_slice_with_axes_nonconstant_params_ignored` SliceWithAxes 非常量 offsets/size 被忽略
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-14
 
 - **原因对象**：算子/内核 / cann / slice_with_axes tiling
 - **原因行为**：GetConstIntToShape 取不到常量时跳过切片参数，保留零 offsets 与完整输入 shape，kernel 只读 tiling 的 fullOffsets/outShape。
@@ -11285,7 +11285,7 @@
 
 ### INF-2553 `triton_experimental_linearize_rewrites_compare_constant` linearize 文本改写误改比较常量致越界读
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-14
 
 - **原因对象**：编译器 / torch_npu / TE linearize pass
 - **原因行为**：_apply_linearize 用文本替换改归约维槽位；npu_triton_helpers.lt(x, 0) 的常量 0 也命中 ', 0)' 被替换成 real_reduction_dim，负下标回绕判据失效。
@@ -12844,10 +12844,10 @@
 
 ### INF-2559 `triton_experimental_same_name_kernel_xblock_state_reuse` 同进程同名 kernel 不同 XBLOCK 结果错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-14
 
 - **原因对象**：运行时/执行 / torch_npu / triton launcher 运行期状态
-- **原因行为**：同一进程两次编译同一算子生成同名 kernel（仅 XBLOCK 8/16 不同）；编译产物 hash、launcher cache hash、autotune 配置与 run 实参全同，运行期仍按名称复用了前一个 kernel 的状态。
+- **原因行为**：同一进程内同一算子两次编译生成同名 kernel（仅 XBLOCK 8/16 不同），kernel hash、launcher cache_hash、autotune 配置与 run 实参全同，后一个 kernel 持续输出错误结果。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：先编 1×1 再编 2×2 后，2×2 的 2×2 fractional_max_pool2d maxdiff=7，连调 3 次持续复现；单独编 2×2 时 maxdiff=0。
 - **改进措施**：检测 同一进程内按不同 shape 顺序编译同一算子，比较 kernel hash/launcher cache hash 相同但输出不同；清 PyCodeCache.modules 与关 use_fast_triton_launcher 均无效。；修复 待定：issue 下一步用同一 TTIR 两次 launch 判定在 torch_npu launcher 还是 triton-ascend 运行时，未核实修复 PR。
@@ -18062,7 +18062,7 @@
 
 ### INF-2552 `vllm_ascend_310p_gdn_ragged_mtp_state_flatten` 310P GDN ragged MTP 压平 state 表取错请求
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-14
 
 - **原因对象**：KV缓存 / vllm / 310P 独立 GDN 算子 state 索引
 - **原因行为**：按当前 query 长度压平 [B,W] state 索引表会丢弃历史槽；accepted_prev 大于 current_len 时读 row_start+accepted_prev-1 落到其它请求的 state，写回也错。
@@ -18073,7 +18073,7 @@
 
 ### INF-2554 `vllm_ascend_mooncake_push_kv_slot_reuse_race` Mooncake Push 未在 KV 槽复用前 fencing
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-14
 
 - **原因对象**：KV缓存 / vllm / Mooncake Push 共享 KV 槽
 - **原因行为**：共享层 KV 通过轮转 NPU 槽逐层写出时，Push 的 WRITE 可能在模型推进到下一层后才提交；源页先被复用覆盖，WRITE 读到的 KV 已不是原层内容。
@@ -19158,11 +19158,11 @@
 
 ### INF-2558 `sglang_npu_kvpool_smaller_than_input_silent_clip` SGLang KV 池不足输入长度时静默只出 1 token
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-14
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-14
 
 - **原因对象**：调度/服务 / sglang / NPU scheduler token 裁剪
 - **原因行为**：max_total_num_tokens 小于 input_len+max_new_tokens 时调度器既不拒绝也不告警，直接把 max_new_tokens 夹到约 1。
-- **影响对象**：输出内容；指标/日志（质量退化）
+- **影响对象**：输出内容；指标/日志（静默错误）
 - **影响详情**：A2 32GB 上 Qwen3.8-27B hybrid 的 pool=45184，128K 请求返回 1 token；benchmark 报 8/8 成功、总生成 8 token、TPOT 0.00，看似正常。
 - **改进措施**：检测 比较 num_prompts*output_len 与 benchmark 的 Total generated tokens；在 server 侧对 input_len+max_new_tokens > max_total_num_tokens 打 warning 或返回错误。；修复 待定：issue 建议 server 侧校验并告警、benchmark 检查总生成 token 数；规避为调大 --max-mamba-cache-size、关闭 DP attention 以扩大 KV pool，未核实修复 PR。
 - **来源**：https://github.com/sgl-project/sglang/issues/50443

@@ -4,7 +4,7 @@ slug: mhc_pre_sinkhorn_normout_odd_slices_never_written
 aliases: []
 title: MhcPreSinkhorn 列归一 slice 从未写出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: needBackward=true 且 B·S 非空时 681/681 用例 normOut 奇数 slice 为 0.0 或 1e9 量级残留；偶数 slice 与 golden 误差 ≤6e-8，两段返回 0。
+  detail: needBackward=true 且 B·S 非空时 681/681 用例 normOut 奇数 slice 全未写，读回 0.0 或 1e9 量级残留（case 612/528）；偶数 slice 与 golden 一致；接口返回成功、无告警；与 dtype、B/S、迭代次数无关。
   visibility: 静默错误
 mitigation:
   detect: needBackward=true 跑非空 B·S，对 normOut 每个 slice 预填 canary 并检查是否被写；同时核对同目录 m_k_split 实现的奇数写出分支作为对照。
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1699
+pattern: PAT-INF-0206
 original:
   mechanism: cann/ops-transformer 的 aclnnMhcPreSinkhorn（Atlas A2 910B3、CANN 9.3.0-910b-weekly.20261104）在 needBackward=true 且 B·S 非空时，910b tiling 恒走 m_split 分支。op_kernel/mhc_pre_sinkhorn_m_split_core.h 的 stage2：L467-475 CopyOut 写 slice 0（首轮行归一）；L496 DivABABrcInline 把首轮列归一结果只存入 combFragLocal，无 CopyOut；迭代循环 L518-544 写 slice 2*iter（偶数），L560-561 列归一结果仍只存 combFragLocal；L568 的 CopyOut 写的是 stage3 workspace combFragGm，不是 normOut。对照同目录 mhc_pre_sinkhorn_m_k_split_core.h L587-596 存在 needGrad_ 下的奇数 slice 写出，证明是 m_split 分支遗漏。ATK 1000 规则用例实测 681/681 needBackward=true 且非空用例的 normOut 奇数 slice 全未写（case 612 精确 0.0，case 528 为 1e9 残留），偶数 slice 与 golden 一致；唯一 PASS 的 needBackward=true 用例都是 B·S=0 空张量。dtype（fp32/bf16/fp16）、B/S/numIters 组合不影响触发。
   source: https://gitcode.com/cann/ops-transformer/issues/7565 ｜同批 https://gitcode.com/cann/ops-transformer/issues/7566
@@ -42,3 +43,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-14'
+  updates:
+  - date: '2026-11-15'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-15
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

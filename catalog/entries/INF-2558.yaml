@@ -4,7 +4,7 @@ slug: sglang_npu_kvpool_smaller_than_input_silent_clip
 aliases: []
 title: SGLang KV 池不足输入长度时静默只出 1 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 调度/服务
@@ -16,7 +16,7 @@ effect:
   - 输出内容
   - 指标/日志
   detail: A2 32GB 上 Qwen3.8-27B hybrid 的 pool=45184，128K 请求返回 1 token；benchmark 报 8/8 成功、总生成 8 token、TPOT 0.00，看似正常。
-  visibility: 质量退化
+  visibility: 静默错误
 mitigation:
   detect: 比较 num_prompts*output_len 与 benchmark 的 Total generated tokens；在 server 侧对 input_len+max_new_tokens > max_total_num_tokens 打 warning 或返回错误。
   fix: 待定：issue 建议 server 侧校验并告警、benchmark 检查总生成 token 数；规避为调大 --max-mamba-cache-size、关闭 DP attention 以扩大 KV pool，未核实修复 PR。
@@ -39,3 +39,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-14'
+  audit:
+    round: daily-audit-2026-11-15
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 质量退化
+        to: 静默错误
