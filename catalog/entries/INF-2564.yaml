@@ -35,6 +35,8 @@ original:
   behavior: 310P 上开压缩 SplitFuse 做长上下文 prefill 时，一旦序列长度越过 2048 边界（实测 2049、32774），部分 query 行会把因果截断之后 4~19 个位置的 V 算进来：Q/K 全零、只有未来 V 被扰动时，这些行的输出从 0 变成非零。模型仍正常出 token、无报错、无 NaN，但 attention 结果违反因果性，表现为长 prompt 的回答内容悄悄跑偏；只有把 mask 与 V 单独做探针、并比对 legacy 路径才能看见。
   trigger_surface: Ascend 310P3（Atlas 300I DUO）+ CANN 9.2.1 + vllm-ascend 压缩 SplitFuse；context length 2049（或 32774 等跨 2048 边界）；FP16、block 64/128、head_dim 256/128；固定 [2048,2048] mask、mask_type=5。
   discovery: 2026-11-15 每日扫描
+  notes:
+  - 2026-11-16 回访（2026-11-16）：vllm-project/vllm-ascend#21902 仍 open（updated 2026-11-16T11:59:43Z，批次索引），未见修复 PR 或发布说明；结论不变。
 migration:
   method: scan
   scanned: '2026-11-15'
@@ -48,3 +50,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-16'
+    fields:
+    - original.notes
