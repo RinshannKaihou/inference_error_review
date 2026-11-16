@@ -4,7 +4,7 @@ slug: ops_transformer_moe_token_permute_v2_out_rows_silent_truncation
 aliases: []
 title: MoeTokenPermuteV2 出参行数偏小静默截断
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -38,3 +38,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-15'
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

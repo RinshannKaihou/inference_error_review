@@ -3,12 +3,12 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2567 条；状态：active 2558、pending_audit 8、retired 1
+共 2567 条；状态：active 2566、retired 1
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 802 |
+| 算子/内核 | 803 |
 | 编译器 | 182 |
 | 运行时/执行 | 141 |
 | 集合通信 | 44 |
@@ -17,7 +17,7 @@
 | 调度/服务 | 97 |
 | 输出解析 | 69 |
 | 解码/采样 | 159 |
-| 量化 | 246 |
+| 量化 | 245 |
 | 位置编码 | 46 |
 | 分词/模板 | 34 |
 | 模型定义 | 50 |
@@ -9257,18 +9257,18 @@
 
 ### INF-2561 `ops_transformer_mixed_quant_sparse_flash_mla_metadata_prefill_dependent` 混合量化 SparseFlashMla metadata 依赖缓冲区初值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-15
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-15
 
 - **原因对象**：算子/内核 / cann / 混合量化 MLA metadata
-- **原因行为**：调度为空时 BalanceSchedule/GenMetadata 仍无条件返回 true、Compute 返回 OK；metadata 是否写入取决于出参缓冲区预填值的符号位。
+- **原因行为**：源码侧 BalanceSchedule/GenMetadata 无条件 return true、Compute 返回 KERNEL_STATUS_OK；metadata 是否写出取决于出参缓冲区预填值的符号位。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：合法 28 参数下预填 0x00/0x5A 时 1360 个 int32 正常写（15 个不同值），预填 0xA5/0xFF 时整份未写；T1=batch×maxSeqlenQ 为 1024 倍数且 cmpTopk>0、cmpMaskMode==0 触发，两段 rc=0。
+- **影响详情**：合法输入、ParamsCheck 三步全过、两段接口返回 0：预填 0x00/0x5A 时写出 15 个不同值，预填 0xA5/0xFF 时 1360 个 int32 整份未写；T1=batch×maxSeqlenQ 为 1024 倍数且 cmpTopk>0、cmpMaskMode==0 触发。
 - **改进措施**：检测 metaData 预填两种互斥 canary（0xA5A5A5A5 / 0x5A5A5A5A）各跑一次，比对是否被写；扫 T1=1023/1024/1025/1040。；修复 待定（issue #7581 open；master 新增 ShouldUseFd 分支但空调度仍静默成功，需按 master 复测触发组合）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7581
 
 ### INF-2562 `ops_transformer_moe_token_unpermute_with_ep_range_start_subtracted` MoeTokenUnpermuteWithEp range 起点非 0 时错址
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-15
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-15
 
 - **原因对象**：算子/内核 / cann / MoeTokenUnpermuteWithEp
 - **原因行为**：kernel 用 (sortedIndices 的全局行号 − range.start) 乘 hidden_size 取址，range 起点非 0 时整体读到前一段 token 行。
@@ -9279,7 +9279,7 @@
 
 ### INF-2563 `ops_transformer_moe_token_permute_v2_out_rows_silent_truncation` MoeTokenPermuteV2 出参行数偏小静默截断
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-15
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-15
 
 - **原因对象**：算子/内核 / cann / MoeTokenPermuteV2 参数校验
 - **原因行为**：只校验 permuteTokensOut 的 dtype 不校验 shape；kernel 按调用方声明行数写，行数小于文档 M 时其余行不写、两段返回 0。
@@ -9290,7 +9290,7 @@
 
 ### INF-2564 `vllm_ascend_310p_splitfuse_future_v_at_2049` 310P 压缩 SplitFuse 在 2049 上下文读到未来 V
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-15
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-15
 
 - **原因对象**：算子/内核 / vllm / 310P compressed attention
 - **原因行为**：上下文长度 2049 时压缩 SplitFuse 的因果掩码只挡住 +1..+3，因果截断后 +4..+19 的未来 V 被计入当前 query 行；2048 正常。
@@ -9298,6 +9298,17 @@
 - **影响详情**：Q/K 全零、只把截断后 +4..+19 的 16 个 V 改成 64：目标行 0→0.5674（应保持 0），2048 时仍 0；block128/head_dim128 变体 23/384 行同样读到未来 key；无报错。
 - **改进措施**：检测 固定 [2048,2048] 上三角 mask + mask_type=5，Q/K 置零，只扰因果截断之后的 V，并对最后一行做阳性对照；对比 legacy 与 compressed 两条路径。；修复 待定（issue #21902 open；报告者附独立复现脚本）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/21902
+
+### INF-2566 `vllm_alibi_slopes_dropped_flashinfer_fp8_kv` vLLM ALiBi 模型在 FlashInfer+FP8 KV 下丢偏置
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-15
+
+- **原因对象**：算子/内核 / vllm / attention backend 选择
+- **原因行为**：后端选择不把 ALiBi 作为条件；FlashInferImpl 保存 alibi_slopes 但从不传给 kernel，模型按无位置偏置的注意力计算。
+- **影响对象**：数值结果；输出分布；输出内容（静默错误）
+- **影响详情**：BLOOM-560m + --kv-cache-dtype fp8（SM89）prompt NLL 0.207→3.648；强制 TRITON_ATTN 为 0.218，说明 FP8 cache 本身正常；无 warning。
+- **改进措施**：检测 同一 ALiBi 模型分别用 FlashAttention 与 FlashInfer+FP8 KV 跑固定 prompt，比 prompt_logprobs/NLL；检查后端选择日志。；修复 #66950 让 FlashInfer 对 ALiBi 直接报错（open，未发布）；把 ALiBi 纳入后端选择条件的修复未核实
+- **来源**：https://github.com/vllm-project/vllm/issues/67772
 
 ## 编译器
 
@@ -12897,16 +12908,16 @@
 - **改进措施**：检测 同一进程内按不同 shape 顺序编译同一算子，比较 kernel hash/launcher cache hash 相同但输出不同；清 PyCodeCache.modules 与关 use_fast_triton_launcher 均无效。；修复 待定：issue 下一步用同一 TTIR 两次 launch 判定在 torch_npu launcher 还是 triton-ascend 运行时，未核实修复 PR。
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/6114
 
-### INF-2566 `vllm_alibi_slopes_dropped_flashinfer_fp8_kv` vLLM ALiBi 模型在 FlashInfer+FP8 KV 下丢偏置
+### INF-2567 `vllm_fp8_dynamic_amax_stale_padding_rows` vLLM FP8 动态 per-tensor amax 混入 padding 行
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-15
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-15
 
-- **原因对象**：运行时/执行 / vllm / attention backend 选择
-- **原因行为**：后端选择不把 ALiBi 作为条件；FlashInferImpl 保存 alibi_slopes 但从不传给 kernel，模型按无位置偏置的注意力计算。
-- **影响对象**：输出分布；输出内容（静默错误）
-- **影响详情**：BLOOM-560m + --kv-cache-dtype fp8（SM89）prompt NLL 0.207→3.648；强制 TRITON_ATTN 为 0.218，说明 FP8 cache 本身正常；无 warning。
-- **改进措施**：检测 同一 ALiBi 模型分别用 FlashAttention 与 FlashInfer+FP8 KV 跑固定 prompt，比 prompt_logprobs/NLL；检查后端选择日志。；修复 #66950 让 FlashInfer 对 ALiBi 直接报错（open，未发布）；把 ALiBi 纳入后端选择条件的修复未核实
-- **来源**：https://github.com/vllm-project/vllm/issues/67772
+- **原因对象**：运行时/执行 / vllm / V2 model runner 输入缓冲
+- **原因行为**：CUDA graph 补到捕获尺寸却只写有效 token 行，padding 行保留上一请求的 input_ids/positions；动态 per-tensor FP8 整块求 amax 时计入这些陈旧行。
+- **影响对象**：输出分布；数值结果（不可复现）
+- **影响详情**：同一 prompt+seed 的 greedy logits 随引擎请求历史变化；padding 行的大离群值抬高 amax、压缩有效 token 量化精度；无报错无 NaN。
+- **改进措施**：检测 同一 prompt 在不同请求历史/不同 padding 长度下重跑，比较 greedy logits 与每层 amax；把 padding 行预填大离群值做阳性对照。；修复 待定（issue #67802 open；报告者给出 model_runner.py:1450、input_batch.py:329-475 等根因行号）
+- **来源**：https://github.com/vllm-project/vllm/issues/67802
 
 ## 集合通信
 
@@ -24534,7 +24545,7 @@
 
 ### INF-2560 `ops_transformer_dequant_rope_quant_kvcache_nkv1_scale_skipped` DequantRopeQuantKvcache Nkv=1 跳过 K/V 量化
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-15
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-15
 
 - **原因对象**：量化 / cann / DequantRopeQuantKvcache
 - **原因行为**：Nkv==1 特化分支跳过整条 scaleK/scaleV/offset 量化通路，kCacheRef/vCacheRef 直接写 clamp(round(kOut))，未除以 scale 也未加 offset。
@@ -24542,17 +24553,6 @@
 - **影响详情**：Nkv=1、scaleK=4 时 kCache 写 10（应 2），scale=0.5 时写 10（应 20）；Nkv=2/4 同配置正确；两段 rc=0 无告警。
 - **改进措施**：检测 kCacheRef/vCacheRef 预填 -128 哨兵，按 Nkv=1/2/4 × scale 0.5/1/4 × 有无 offset 扫，与 clamp(round(x/scale)+offset) 对拍。；修复 待定（issue #7589 open，未附修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7589
-
-### INF-2567 `vllm_fp8_dynamic_amax_stale_padding_rows` vLLM FP8 动态 per-tensor amax 混入 padding 行
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-15
-
-- **原因对象**：量化 / vllm / V2 model runner 输入缓冲
-- **原因行为**：CUDA graph 补到捕获尺寸却只写有效 token 行，padding 行保留上一请求的 input_ids/positions；动态 per-tensor FP8 整块求 amax 时计入这些陈旧行。
-- **影响对象**：输出分布；数值结果（静默错误）
-- **影响详情**：同一 prompt+seed 的 greedy logits 随引擎请求历史变化；padding 行的大离群值抬高 amax、压缩有效 token 量化精度；无报错无 NaN。
-- **改进措施**：检测 同一 prompt 在不同请求历史/不同 padding 长度下重跑，比较 greedy logits 与每层 amax；把 padding 行预填大离群值做阳性对照。；修复 待定（issue #67802 open；报告者给出 model_runner.py:1450、input_batch.py:329-475 等根因行号）
-- **来源**：https://github.com/vllm-project/vllm/issues/67802
 
 ## 位置编码
 
@@ -28191,7 +28191,7 @@
 
 ### INF-2565 `ops_math_ut_compare_dtype_mismatch_false_pass` ops-math UT 比对脚本 dtype 错配并空目录假绿
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-15
+`故障` · `active` · `documented` · `var` · 发现 2026-11-15
 
 - **原因对象**：观测/评测 / cann / real_div、diag_part UT
 - **原因行为**：compare_data.py 把 int32 输出按 float32 解析、空目录/空列表直接判 PASSED；diag_part 驱动把 fp32/int32 硬编码成 float16 生成数据。

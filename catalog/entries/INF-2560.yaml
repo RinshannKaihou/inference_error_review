@@ -4,7 +4,7 @@ slug: ops_transformer_dequant_rope_quant_kvcache_nkv1_scale_skipped
 aliases: []
 title: DequantRopeQuantKvcache Nkv=1 跳过 K/V 量化
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -39,3 +39,13 @@ original:
 migration:
   method: scan
   scanned: '2026-11-15'
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max

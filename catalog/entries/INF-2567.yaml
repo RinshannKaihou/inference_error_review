@@ -4,10 +4,10 @@ slug: vllm_fp8_dynamic_amax_stale_padding_rows
 aliases: []
 title: vLLM FP8 动态 per-tensor amax 混入 padding 行
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 量化
+  - subsystem: 运行时/执行
     stack: vllm
     component: V2 model runner 输入缓冲
   behavior: CUDA graph 补到捕获尺寸却只写有效 token 行，padding 行保留上一请求的 input_ids/positions；动态 per-tensor FP8 整块求 amax 时计入这些陈旧行。
@@ -16,7 +16,7 @@ effect:
   - 输出分布
   - 数值结果
   detail: 同一 prompt+seed 的 greedy logits 随引擎请求历史变化；padding 行的大离群值抬高 amax、压缩有效 token 量化精度；无报错无 NaN。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 同一 prompt 在不同请求历史/不同 padding 长度下重跑，比较 greedy logits 与每层 amax；把 padding 行预填大离群值做阳性对照。
   fix: '待定（issue #67802 open；报告者给出 model_runner.py:1450、input_batch.py:329-475 等根因行号）'
@@ -39,3 +39,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-15'
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 量化
+        to: 运行时/执行
+      visibility:
+        from: 静默错误
+        to: 不可复现

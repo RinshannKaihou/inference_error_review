@@ -4,15 +4,16 @@ slug: vllm_alibi_slopes_dropped_flashinfer_fp8_kv
 aliases: []
 title: vLLM ALiBi 模型在 FlashInfer+FP8 KV 下丢偏置
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 运行时/执行
+  - subsystem: 算子/内核
     stack: vllm
     component: attention backend 选择
   behavior: 后端选择不把 ALiBi 作为条件；FlashInferImpl 保存 alibi_slopes 但从不传给 kernel，模型按无位置偏置的注意力计算。
 effect:
   objects:
+  - 数值结果
   - 输出分布
   - 输出内容
   detail: BLOOM-560m + --kv-cache-dtype fp8（SM89）prompt NLL 0.207→3.648；强制 TRITON_ATTN 为 0.218，说明 FP8 cache 本身正常；无 warning。
@@ -39,3 +40,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-15'
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 运行时/执行
+        to: 算子/内核
+      effect:
+        from: 输出分布
+        to: 数值结果

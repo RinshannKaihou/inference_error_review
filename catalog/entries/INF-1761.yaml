@@ -29,6 +29,7 @@ evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/5511
   kind: gitcode_issue
 relations: []
+pattern: PAT-INF-0207
 original:
   mechanism: 'cann/ops-nn issue 5511（2026-09-03，closed）：ops-nn 仓 tests/ut/op_kernel/*/[op]_data/compare_data.py 系列脚本普遍写成 sorted(glob(*golden*.bin)) 与 sorted(glob(*output*.bin)) 后 for gold, out in zip(...) 逐对比对，zip 在两侧数量不一致时静默截断，多出的 output 文件（kernel 额外产出或命名错误的产物）不被检查也不报错，脚本照样 PASSED。作者复刻 fused_sgd 脚本逻辑实测：2 个 golden + 3 个 output（第 3 个内容为垃圾 999.0）判定 PASSED。全仓 123 个 compare_data.py 中 90 个为该模式且无数量校验，覆盖 optim/loss/pooling/quant/matmul/experimental，含 fused_sgd、advance_step、logit、avg_pool1_d、nll_loss、huber_loss、cross_entropy_grad 等主力算子；ops-test-kit 仓已在框架层修过同款（issue #94）。'
   source: 2026-09-03 GitCode cann/ops-nn issue https://gitcode.com/cann/ops-nn/issues/5511 （closed）
@@ -47,3 +48,7 @@ migration:
     panel: []
     rewritten:
     - detail
+  updates:
+  - date: '2026-11-16'
+    fields:
+    - pattern

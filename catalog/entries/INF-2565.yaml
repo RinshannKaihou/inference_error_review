@@ -4,7 +4,7 @@ slug: ops_math_ut_compare_dtype_mismatch_false_pass
 aliases: []
 title: ops-math UT 比对脚本 dtype 错配并空目录假绿
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 观测/评测
@@ -33,6 +33,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1761
+pattern: PAT-INF-0207
 original:
   mechanism: 'cann/ops-math 的 UT 比对脚本族（issue #4777、#4778，2026-11-15）存在两类静默假绿：real_div 与 real 的 compare_data.py 把 int32 输出按 float32 解析，且用例目录为空时直接返回 PASSED；diag_part 的 UT 驱动把 fp32/int32 的数据生成硬编码成 float16，compare_data 对空列表也判 PASSED。两者都属于“脚本报 PASSED 但没有比对真实输出”，与 ops-nn #5511（INF-1761，zip 截断漏检）同属 compare_data 脚本族、机制不同：前者是 dtype 解析错配与空集短路，后者是文件数不一致时 zip 静默截断。修复 PR #7468（real_div/real）与 #7469（diag_part）均为 open，未合入。'
   source: https://gitcode.com/cann/ops-math/issues/4777 https://gitcode.com/cann/ops-math/issues/4778 （均 open，2026-11-15）
@@ -42,3 +43,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-15'
+  updates:
+  - date: '2026-11-16'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-16
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
