@@ -4,7 +4,7 @@ slug: cann_qkv_rms_rope_cache_slotmapping_oob_cross_tensor
 aliases: []
 title: QkvRmsNormRopeCache slotMapping 越界跨张量写
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -15,7 +15,7 @@ effect:
   objects:
   - KV状态
   - 跨请求/跨样本数据
-  detail: slot=-1 写 kCache slot31、vCache 整批不写；slot=32 时 kCache 全不写、vCache slot0 被写；同输入 6 次 kCache 得 5 种签名，合法 slot 恒 1 种；rc=0/0。
+  detail: slot=[0..7] 正常写 0..7；[-1]*8 写 kCache slot31、vCache 整批不写；[32]*8 kCache 一个 slot 未写、vCache slot0 被写；[33]*8 写 vCache slot1；同输入 6 次 kCache 得 5 种签名；rc=0/0。
   visibility: 静默错误
 mitigation:
   detect: slotMapping 注入 -1/32/33，kCache/vCache 预填 0 后按 slot 统计是否被写；重复 6 次比较签名。
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-17
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - detail

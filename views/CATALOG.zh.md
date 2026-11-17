@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2582 条；状态：active 2566、pending_audit 15、retired 1
+共 2582 条；状态：active 2581、retired 1
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -9312,32 +9312,32 @@
 
 ### INF-2568 `cann_msa_index_score_sparse3_mask_ignored` MsaIndexScore sparse_mode=3 无视 mask
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / MsaIndexScore
 - **原因行为**：sparse_mode=3 分支把 atten_mask 入参直接丢弃（kernel 中 (void)attenMask），tiling 只校验形状，mask 内容不参与可见性判定。
 - **影响对象**：数值结果；输出分布（静默错误）
-- **影响详情**：全 0、全 1、上三角三种 mask 输出逐字节相同（score[0][0][blk1]=12416，等于 rightDownCausal 界）；不传 mask 时为 16384，证明比对链路敏感；bf16/fp16 两组均复现，两段 rc=0。
+- **影响详情**：sparseMode=3 且 mask 非空时，全0/全1/上三角三组输出 FNV-1a64 同为 9c5eb0d6ea069383、score[0][0][blk1]=12416；sparseMode=0 不传 mask 为 16384。bf16/fp16 均复现，两段接口均成功、无日志告警。
 - **改进措施**：检测 同一输入分别传全 0、全 1、上三角 mask，输出哈希应不同；当前三者逐字节相同。；修复 待定（issue open，未附修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7674
 
 ### INF-2569 `cann_block_sparse_attention_empty_selection_uninitialized_out` BlockSparseAttention 空选择返回未初始化输出
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / BlockSparseAttention
 - **原因行为**：blockSparseMask 全零（每个 batch 选中 0 个 KV 块）时，kernel 的 curSelectNum==0 分支直接 continue，attentionOut 与 softmaxLse 都不写。
-- **影响对象**：数值结果；输出分布（静默错误）
-- **影响详情**：V1/V2/V3 各 1000 case 实测 51、58、32 例 FAIL；V3 脏值 0.977~1.997e11，而输入值域 [-1,1]；同输入复跑 74→64、6 次 5 种签名；0/1 混合 mask 部分选择 40/40 全对。
+- **影响对象**：数值结果；输出分布（不可复现）
+- **影响详情**：blockSparseMask 全零（空选择）时：V1 51/70、V2 58/70（三次 58/48/51）、V3 32/40 FAIL，V3 最脏 ~1.997e11；V1 同配置脏残值 0.00766 低于门限名义 PASS；0/1 混合 mask 部分选择 40 条全 PASS。
 - **改进措施**：检测 blockSparseMask 全零 + 输出预填哨兵，读回若仍为哨兵或出现值域外大数即命中；需重复运行观察非确定性。；修复 待定（issue open，未附修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7689
 
 ### INF-2570 `cann_nsa_compress_attention_infer_first_call_corrupt` NsaCompressAttentionInfer 进程内首调局部错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / NsaCompressAttentionInfer
-- **原因行为**：多 token 且 numHeads 较大时，进程内第一次调用的输出有空闲/未初始化片段被写成常量 0.0 或 128.0，后续调用恢复正常，具体根因未定位。
+- **原因行为**：多 token（S>1）且 numHeads 较大时，每个进程第一次调用返回局部错误输出，错误元素只取精确 0.0 与 128.0，同进程第二次起恢复正常，根因未定位。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：首调 0.03%~0.35% 元素恒为 0.0/128.0，落在 DV=128 边界；20 个新进程 14 次首调错；单 token 对照组 20/20 正确；2/20 伴随 507015 且整行 0。
 - **改进措施**：检测 常量 1.0 输入（解析解 attentionOut 恒 1）跑新进程首调，统计不等于 1 的元素；必须每次新进程，第二次调用会掩盖。；修复 待定（issue open，未附修复 PR）
@@ -9345,7 +9345,7 @@
 
 ### INF-2571 `cann_causal_conv1d_fn_single_token_prefill_update_kernel` CausalConv1dFn 单 token prefill 误选 update
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / CausalConv1dFn
 - **原因行为**：tiling 的 InferIsFnMode 3D 分支把所有序列长度 1 判为 update 模式，Fn 接口因此派发 update kernel，后者无条件读取缓存历史。
@@ -9356,10 +9356,10 @@
 
 ### INF-2574 `ops_math_reduce_v2_large_out_unwritten` Reduce V2 大输出 axes=1 时整块不写
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / aclnnReduceSumV2 等五算子
-- **原因行为**：ReduceSum/Mean/Min/Max/Prod 的 V2 kernel 在 axes=1 且输出元素数超过各自阈值时走空分支，两段接口返回 0 但一个字节都不写。
+- **原因行为**：experimental reduce V2 系列（Sum/Mean/Min/Max/Prod）在 axes=1、输出元素数达到各自阈值时，两段接口返回 0，out 完全未写。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：ReduceSumV2 ≥2304(fp32)/≥2050(fp16)、Mean/Min/Max ≥2304、Prod ≥4096 时 out 全保留 -777/0xDEADBEEF；R=2049 及以下正常；五份 kernel 独立实现。
 - **改进措施**：检测 out 预填 -777/0xDEADBEEF，扫 R=2048/2049/2304/4096；读回仍为哨兵即命中。；修复 待定（两条 issue 均 open，未附修复 PR）
@@ -9367,7 +9367,7 @@
 
 ### INF-2575 `cann_linspace_int_output_fp32_compute` aclnnLinspace 整数输出按 fp32 计算错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / aclnnLinspace
 - **原因行为**：OutPromoteType 把 INT64 降为 FLOAT，INT32 kernel 模板也是 <int32_t,float>，整条等差序列在 float32 域计算后截断。
@@ -9378,10 +9378,10 @@
 
 ### INF-2576 `cann_topk_v2_d_tolerance_ties_wrong_index` TopKV2D 近值按容差判并列致错误索引
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / TopKV2D AICPU
-- **原因行为**：排序、单调分组、选择和堆路径统一用数值容差 IsValueEqual 判并列，把接近但不相等的值合并，索引与值不再对应。
+- **原因行为**：AICPU TopKV2D 的排序、单调分组、选择与堆路径统一以数值容差 IsValueEqual 判并列，把接近但不相等的值当作相等处理。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：[1,1+2e-6,1+4e-6] k=1 largest 返回 index=0（应 2）；k=2 时 values[j]≠input[indices[j]]；修复版 4/4 组通过，原版 0/4；FLOAT/DOUBLE 均受影响。
 - **改进措施**：检测 构造相差 1~2 ULP 的近似值，检查 top-k 索引与值是否仍与输入对应；比较 values[j] 与 input[indices[j]]。；修复 修复提交 f13883ba（报告者给出，仓内 UT 本轮未运行，发布状态未核实）
@@ -9389,7 +9389,7 @@
 
 ### INF-2577 `ttmetal_int32_maxmin_pad_sentinel_numeric_zero` ttnn INT32 max/min 非 32 倍数维归约返回 0
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / tt-metal / ttnn.max/min reduce
 - **原因行为**：INT32 max/min 的 padding 哨兵以 float 位模式存放，permute/transpose 改用 pack_scalar_into_uint32 数值转换，INT32_MIN+1 与 INT32_MAX 都变成 0。
@@ -9400,7 +9400,7 @@
 
 ### INF-2578 `flashinfer_cutlass_fused_moe_noncontiguous_stride_misread` cutlass_fused_moe 非连续输入按紧凑步长误读
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / flashinfer / cutlass_fused_moe
 - **原因行为**：cutlass_fused_moe 假定 input 行步长等于 hidden size，不检查 stride；非连续视图按紧凑偏移取行。
@@ -9411,12 +9411,12 @@
 
 ### INF-2580 `cann_gsa_metadata_random_nowrite_zero_output` GSAMetadata 前置算子随机不写出致全零
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：算子/内核 / cann / BlockSparseAttnMetadata
-- **原因行为**：aclnnGenericBlockSparseAttentionMetadata 的 AICPU 写出未与 stream 完成时序对齐，调用返回 SUCCESS 但输出缓冲区未写，metadata header 全部缺失。
-- **影响对象**：数值结果；输出分布（静默错误）
-- **影响详情**：200 例中 24 例 SUCCESS 但 attentionOut/lse 全零；随机探针 12/41（29%）不写、同进程两次调用结果翻转；独立容器 14/90；失败集合每轮不同。
+- **原因行为**：aclnnGenericBlockSparseAttentionMetadata 随机不写出，metadata header 全缺失；主算子仍返回 SUCCESS 且不写输出，attentionOut/softmaxLse 全零
+- **影响对象**：数值结果；输出分布（不可复现）
+- **影响详情**：24/200 例 SUCCESS 但 attentionOut/softmaxLse 全零、lse 停在预分配 0.0；随机值探针 12/41 不写，同 case 两次调用翻转；队列级复跑 18/24 转 PASS，失败子集每轮不同；910b3+CANN 9.3.0 weekly，无输入侧触发条件。
 - **改进措施**：检测 校验 metadata header（magic/version/usedSize/configSignature）是否写出，并对同一 case 同进程重复调用两次；当前可出现一次写一次不写。；修复 待定（issue open，报告者建议 metadata 写出与 stream 完成同步后再返回）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7699
 
@@ -18260,12 +18260,12 @@
 
 ### INF-2582 `cann_qkv_rms_rope_cache_slotmapping_oob_cross_tensor` QkvRmsNormRopeCache slotMapping 越界跨张量写
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：KV缓存 / cann / QkvRmsNormRopeCache
 - **原因行为**：kernel 按 b=slot/BlockSize、o=slot%BlockSize 直接取址，不校验 slotMapping 是否落在 [0,BlockNum*BlockSize-1]，负值与越界值被回绕或跨张量寻址。
 - **影响对象**：KV状态；跨请求/跨样本数据（静默错误）
-- **影响详情**：slot=-1 写 kCache slot31、vCache 整批不写；slot=32 时 kCache 全不写、vCache slot0 被写；同输入 6 次 kCache 得 5 种签名，合法 slot 恒 1 种；rc=0/0。
+- **影响详情**：slot=[0..7] 正常写 0..7；[-1]*8 写 kCache slot31、vCache 整批不写；[32]*8 kCache 一个 slot 未写、vCache slot0 被写；[33]*8 写 vCache slot1；同输入 6 次 kCache 得 5 种签名；rc=0/0。
 - **改进措施**：检测 slotMapping 注入 -1/32/33，kCache/vCache 预填 0 后按 slot 统计是否被写；重复 6 次比较签名。；修复 待定（issue open，未附修复 PR；报告者要求越界返回 161002 或至少钳制）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7648
 
@@ -20142,7 +20142,7 @@
 
 ### INF-2579 `vllm_rust_qwen3_coder_missing_close_swallows_param` vLLM Rust qwen3_coder 缺闭合标签吞参数
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：输出解析 / vllm / Rust qwen_coder parser
 - **原因行为**：Rust 前端 qwen_coder.rs 在缺 </parameter> 时不把下一个 <parameter= 当作值终止符，继续把标签和后续内容并入当前值。
@@ -24688,21 +24688,21 @@
 
 ### INF-2572 `cann_npu_quant_matmul_m_tier_bitwise_inconsistent` npu_quant_matmul w8a8 跨 M 档不逐位一致
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：量化 / torch_npu / npu_quant_matmul
-- **原因行为**：npu_quant_matmul 的 tiling 随批大小 M 换档，不同档使用不同的累加/切分顺序，同一输入行在 M≤256 与 M≥257 得到不同 bf16 结果。
-- **影响对象**：输出分布；数值结果（静默错误）
-- **影响详情**：27B w8a8 模型 hidden=5120 NZ：冷启动 M≈693 与缓存命中 M≈53 的同 token 行输出不逐位一致；48 层 GDN 放大后 logprob band mean 4.8e-3、max 1.9e-1；档界 T_max=257。
+- **原因行为**：npu_quant_matmul 对逐位相同的输入行，M≤256 与 M≥257 两档输出不逐位一致；同档内任意 M、任意行位置逐位一致，差异确定、不随 seed 变化，npu_dynamic_quant 全形状 M-不变。
+- **影响对象**：数值结果；输出分布（不可复现）
+- **影响详情**：Ascend910B4+CANN 9.1.0/9.2.0+torch_npu 2.10，w8a8 int8 权重 NZ、输出 bf16，档界 T_max=257；prefix cache 冷/温两路对同一 token 给出不同 logprob，margin 窄会翻转工具调用，关闭该缓存即不可见。
 - **改进措施**：检测 同一段 N 行输入分别置于 M≤256 与 M≥257 的批尾，逐字节比较输出；同档内应一致，跨档不一致即命中。；修复 应用层零填充 +256 行抬档规避（prefill +2.7~3.2ms/step），非根因修复；issue open，报告者请求 batch-invariant 选项或可强制 tiling。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/8881
 
 ### INF-2573 `cann_ascend_quant_v3_nz_zero_byte_write` AscendQuantV3 NZ 合法形态零字节写出
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：量化 / cann / aclnnAscendQuantV3
-- **原因行为**：NZ 通路 CalcTilingNz 只计算 E/K/N/needCoreNum 四个字段，其余 22 个工作区/tiling 字段保持 0，kernel 40 个 block 空转退出。
+- **原因行为**：NZ 通路 CalcTilingNz 只算、WriteTilingDataNz 只写 E/K/N/needCoreNum 四个标量，其余 22 个 uint32 全为 0；kernel numBlocks=40 发射成功，y 零字节写出。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：x fp32 NZ、dstType=3、y INT32、round 下两段 rc=0/0，y 的 1024B 缓冲 0x99 哨兵全保留；K=4/15/16/17/32/64 六点全零写出；ND 同数据输出 0x76543210 正确。
 - **改进措施**：检测 y 的 NZ 存储缓冲预填 0x99，执行后反向 cast 回读；仍为 0x99999999 即未写。；修复 待定（issue open，未附修复 PR）
@@ -24710,11 +24710,11 @@
 
 ### INF-2581 `cann_qkv_rms_rope_cache_mx_e8m0_zero_scale_nan` QkvRmsNormRopeCache MX 小 amax 静默 NaN
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-16
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-16
 
 - **原因对象**：量化 / cann / QkvRmsNormRopeCache
 - **原因行为**：M-RoPE MX 路径把 D32 block 的 amax 编码成 E8M0 时，极小 amax 得到码字 0（应为 max(-127,ceil(log2(a/448)))+127），x/0 产出 FP8 NaN。
-- **影响对象**：KV状态；数值结果（静默错误）
+- **影响对象**：数值结果；KV状态（数值异常）
 - **影响详情**：amax≤2^-118.19（另一提交实测 e_b=-125/-126）时 qScale/kScaleCache 恒 0，qOut/kCache 全 0x7E/0xFE；amax 更大时正确；两段 rc=0/0。
 - **改进措施**：检测 扫 amax=2^k（k=-110…-130），核对 E8M0 码字是否等于 max(-127,ceil(log2(a/448)))+127，并统计 qOut 的 0x7E/0xFE。；修复 待定（两条 issue 均 open，未附修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7637；https://gitcode.com/cann/ops-transformer/issues/7646

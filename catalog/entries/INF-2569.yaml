@@ -4,7 +4,7 @@ slug: cann_block_sparse_attention_empty_selection_uninitialized_out
 aliases: []
 title: BlockSparseAttention 空选择返回未初始化输出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,8 +15,8 @@ effect:
   objects:
   - 数值结果
   - 输出分布
-  detail: V1/V2/V3 各 1000 case 实测 51、58、32 例 FAIL；V3 脏值 0.977~1.997e11，而输入值域 [-1,1]；同输入复跑 74→64、6 次 5 种签名；0/1 混合 mask 部分选择 40/40 全对。
-  visibility: 静默错误
+  detail: blockSparseMask 全零（空选择）时：V1 51/70、V2 58/70（三次 58/48/51）、V3 32/40 FAIL，V3 最脏 ~1.997e11；V1 同配置脏残值 0.00766 低于门限名义 PASS；0/1 混合 mask 部分选择 40 条全 PASS。
+  visibility: 不可复现
 mitigation:
   detect: blockSparseMask 全零 + 输出预填哨兵，读回若仍为哨兵或出现值域外大数即命中；需重复运行观察非确定性。
   fix: 待定（issue open，未附修复 PR）
@@ -39,3 +39,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-17
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    rewritten:
+    - detail

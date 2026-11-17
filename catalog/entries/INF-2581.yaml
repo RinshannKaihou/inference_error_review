@@ -4,7 +4,7 @@ slug: cann_qkv_rms_rope_cache_mx_e8m0_zero_scale_nan
 aliases: []
 title: QkvRmsNormRopeCache MX 小 amax 静默 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
@@ -13,10 +13,10 @@ cause:
   behavior: M-RoPE MX 路径把 D32 block 的 amax 编码成 E8M0 时，极小 amax 得到码字 0（应为 max(-127,ceil(log2(a/448)))+127），x/0 产出 FP8 NaN。
 effect:
   objects:
-  - KV状态
   - 数值结果
+  - KV状态
   detail: amax≤2^-118.19（另一提交实测 e_b=-125/-126）时 qScale/kScaleCache 恒 0，qOut/kCache 全 0x7E/0xFE；amax 更大时正确；两段 rc=0/0。
-  visibility: 静默错误
+  visibility: 数值异常
 mitigation:
   detect: 扫 amax=2^k（k=-110…-130），核对 E8M0 码字是否等于 max(-127,ceil(log2(a/448)))+127，并统计 qOut 的 0x7E/0xFE。
   fix: 待定（两条 issue 均 open，未附修复 PR）
@@ -41,3 +41,22 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-17
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: KV状态
+        to: 数值结果
+      visibility:
+        from: 静默错误
+        to: 数值异常
+    issue_unfixed:
+    - behavior

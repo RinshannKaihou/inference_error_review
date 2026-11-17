@@ -4,13 +4,13 @@ slug: cann_nsa_compress_attention_infer_first_call_corrupt
 aliases: []
 title: NsaCompressAttentionInfer 进程内首调局部错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: NsaCompressAttentionInfer
-  behavior: 多 token 且 numHeads 较大时，进程内第一次调用的输出有空闲/未初始化片段被写成常量 0.0 或 128.0，后续调用恢复正常，具体根因未定位。
+  behavior: 多 token（S>1）且 numHeads 较大时，每个进程第一次调用返回局部错误输出，错误元素只取精确 0.0 与 128.0，同进程第二次起恢复正常，根因未定位。
 effect:
   objects:
   - 数值结果
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-17
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior

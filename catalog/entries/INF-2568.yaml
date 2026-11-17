@@ -4,7 +4,7 @@ slug: cann_msa_index_score_sparse3_mask_ignored
 aliases: []
 title: MsaIndexScore sparse_mode=3 无视 mask
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - 输出分布
-  detail: 全 0、全 1、上三角三种 mask 输出逐字节相同（score[0][0][blk1]=12416，等于 rightDownCausal 界）；不传 mask 时为 16384，证明比对链路敏感；bf16/fp16 两组均复现，两段 rc=0。
+  detail: sparseMode=3 且 mask 非空时，全0/全1/上三角三组输出 FNV-1a64 同为 9c5eb0d6ea069383、score[0][0][blk1]=12416；sparseMode=0 不传 mask 为 16384。bf16/fp16 均复现，两段接口均成功、无日志告警。
   visibility: 静默错误
 mitigation:
   detect: 同一输入分别传全 0、全 1、上三角 mask，输出哈希应不同；当前三者逐字节相同。
@@ -39,3 +39,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-17
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

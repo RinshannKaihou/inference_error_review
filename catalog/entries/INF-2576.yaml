@@ -4,13 +4,13 @@ slug: cann_topk_v2_d_tolerance_ties_wrong_index
 aliases: []
 title: TopKV2D 近值按容差判并列致错误索引
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: TopKV2D AICPU
-  behavior: 排序、单调分组、选择和堆路径统一用数值容差 IsValueEqual 判并列，把接近但不相等的值合并，索引与值不再对应。
+  behavior: AICPU TopKV2D 的排序、单调分组、选择与堆路径统一以数值容差 IsValueEqual 判并列，把接近但不相等的值当作相等处理。
 effect:
   objects:
   - 数值结果
@@ -38,3 +38,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-17
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

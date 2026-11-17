@@ -4,13 +4,13 @@ slug: cann_ascend_quant_v3_nz_zero_byte_write
 aliases: []
 title: AscendQuantV3 NZ 合法形态零字节写出
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 量化
     stack: cann
     component: aclnnAscendQuantV3
-  behavior: NZ 通路 CalcTilingNz 只计算 E/K/N/needCoreNum 四个字段，其余 22 个工作区/tiling 字段保持 0，kernel 40 个 block 空转退出。
+  behavior: NZ 通路 CalcTilingNz 只算、WriteTilingDataNz 只写 E/K/N/needCoreNum 四个标量，其余 22 个 uint32 全为 0；kernel numBlocks=40 发射成功，y 零字节写出。
 effect:
   objects:
   - 数值结果
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-16'
+  audit:
+    round: daily-audit-2026-11-17
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - behavior
