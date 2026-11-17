@@ -52,9 +52,9 @@ import catalog_tool as T  # noqa: E402
 
 API = "https://st8tp3ajl0df3n8b8l8qu.apigateway-cn-beijing.volceapi.com/v1/chat/completions"
 BASE = ("glm-5.3-flash", "deepseek-v4.1-flash", "qwen3.8-flash")
-PANEL = ("kimi-k3", "glm-5.3", "qwen3.8-max")
-FIXER, VERIFIERS = "qwen3.8-max", ("kimi-k3", "glm-5.3")
-MODEL_OPTS = {"kimi-k3": {"temperature": 1.0}}
+PANEL = ("kimi-k3.1-pro", "glm-5.3", "qwen3.8-max")
+FIXER, VERIFIERS = "qwen3.8-max", ("kimi-k3.1-pro", "glm-5.3")
+MODEL_OPTS = {"kimi-k3.1-pro": {"temperature": 1.0}}
 TEXT_FIELDS = ("title", "component", "behavior", "detail")
 CAT_FIELDS = ("kind", "subsystem", "effect", "visibility")
 PROBLEMS = ("unsupported", "contradicts", "overstated", "missing_condition", "mixed")
