@@ -164,7 +164,11 @@ def out(obj, code=0):
 # ---------------------------------------------------------------- evidence
 
 def norm_url(u):
-    return re.sub(r"[#?].*$", "", u).rstrip("/").lower()
+    u = re.sub(r"[#?].*$", "", u or "").rstrip("/")
+    u = re.sub(r"^https?://atomgit\.com/", "https://gitcode.com/", u, flags=re.I)
+    u = re.sub(r"^(https?://gitcode\.com/[^/]+/[^/]+)/(?:pulls?|merge_requests)/(\d+)$",
+               r"\1/merge_requests/\2", u, flags=re.I)
+    return u.lower()
 
 
 REPO_ALIASES = {"tensorrt-llm": ("tensorrt-llm", "trt-llm", "trtllm"), "text-generation-inference": ("tgi", "text-generation-inference"),
@@ -172,10 +176,10 @@ REPO_ALIASES = {"tensorrt-llm": ("tensorrt-llm", "trt-llm", "trtllm"), "text-gen
 
 
 def gh_refs(urls):
-    """{(repo_short, number)} for GitHub issue/PR URLs."""
+    """{(repo_short, number)} for GitHub and GitCode/AtomGit issue/PR/MR URLs."""
     out = set()
     for u in urls:
-        m = re.search(r"github\.com/[^/]+/([^/]+)/(?:issues|pull)/(\d+)", u or "")
+        m = re.search(r"(?:github|gitcode|atomgit)\.com/[^/]+/([^/]+)/(?:issues|pulls?|merge_requests)/(\d+)", u or "", re.I)
         if m:
             out.add((m.group(1).lower(), m.group(2)))
     return out
@@ -291,8 +295,8 @@ def check_entry(e, voc, strict_lengths=False):
         enum(lab.get(k), allowed, f"labels.{k}")
     errors += [f"labels.{k} 已取消，删掉该键" for k in RETIRED_LABELS if k in lab]
     stage = lab.get("stage")
-    if not is_ph(stage) and (not isinstance(stage, list) or not set(stage) <= set(STAGES)):
-        errors.append(f"labels.stage={stage!r} 非法")
+    if not is_ph(stage) and (not isinstance(stage, list) or not stage or not set(stage) <= set(STAGES)):
+        errors.append(f"labels.stage={stage!r} 非法（应为非空阶段列表或 N/A）")
     disc = lab.get("discovered")
     if not is_ph(disc) and not DATE_RE.match(str(disc)):
         errors.append(f"labels.discovered={disc!r} 不是日期")
@@ -309,9 +313,16 @@ def check_entry(e, voc, strict_lengths=False):
                 errors.append(f"evidence 项非法: {item}")
             elif clean_url(item["url"]) != item["url"]:
                 errors.append(f"evidence 链接带了多余字符（应为 {clean_url(item['url'])}），用 repair-evidence 修复")
+    var_targets = []
     for r in e["relations"] or []:
         if r.get("kind") not in ("var", "cross"):
             errors.append(f"relation kind 非法: {r}")
+        elif r.get("kind") == "var" and r.get("target"):
+            var_targets.append(r["target"])
+    if len(var_targets) > 1:
+        errors.append(f"每个条目最多只能有一条 var 出边，现有 {var_targets}")
+    if var_targets and lab.get("coverage") == "NEW":
+        warnings.append("存在已解析的 var 关系，但 labels.coverage 仍为 'NEW'（应为 'var'）")
     return errors, warnings
 
 
@@ -448,6 +459,19 @@ def cmd_new(a):
     errors += rel_errors
     if labels.get("coverage") == "var" and not any(r.get("kind") == "var" for r in relations):
         errors.append("coverage=var 时 relations 必须写 [{\"kind\": \"var\", \"target\": \"<已有条目的新编号或旧编号>\"}]")
+    if any(r.get("kind") == "var" and r.get("target") for r in relations) and labels.get("coverage") == "NEW":
+        labels["coverage"] = "var"
+    sib_info = sibling()
+    sib_warns = []
+    if evidence and sib_info:
+        ev_norms = {norm_url(x["url"]) for x in evidence if x.get("url")}
+        cross_targets = {r.get("target") for r in relations if r.get("kind") == "cross"}
+        for sid, se in sorted(sib_info["entries"].items()):
+            if se.get("status") in ("merged", "retired") or sid in cross_targets:
+                continue
+            se_urls = {norm_url(x["url"]) for x in (se.get("evidence") or []) if isinstance(x, dict) and x.get("url")}
+            if ev_norms & se_urls:
+                sib_warns.append(f"另一编目已有同源条目 {sid}（{se.get('title')}）：若属同机制请补充 cross:{sid}")
 
     mitigation = data.get("mitigation") if isinstance(data.get("mitigation"), dict) else {}
     entry = {
@@ -473,7 +497,7 @@ def cmd_new(a):
         errors.append(f"slug {entry['slug']} 已存在，换一个")
     errs, warns = check_entry(entry, voc, strict_lengths=True)
     errors += errs
-    warns += [f"labels.{k} 已取消，已丢弃" for k in dropped]
+    warns += [f"labels.{k} 已取消，已丢弃" for k in dropped] + sib_warns
     if errors:
         out({"ok": False, "errors": errors, "warnings": warns}, 2)
     shown = {"relations": rel_echo} if rel_echo else {}
@@ -512,6 +536,7 @@ def cmd_update(a):
         out({"ok": False, "errors": [f"{a.id} 不存在（用 find 查编号）"]}, 2)
     e = load_yaml(path)
     changed = []
+    ev_warns = []
     for url in a.add_evidence or []:
         items = evidence_of(url)
         if not items:
@@ -519,13 +544,23 @@ def cmd_update(a):
         if not isinstance(e["evidence"], list):
             e["evidence"] = []
         known = {norm_url(x["url"]) for x in e["evidence"] if x.get("url")}
+        all_entries = load_entries()
         for it in items:
-            if norm_url(it["url"]) not in known:
+            nu = norm_url(it["url"])
+            owners = [oid for oid, oe in all_entries.items()
+                      if oid != a.id and oe.get("status") not in ("merged", "retired")
+                      and isinstance(oe.get("evidence"), list)
+                      and nu in {norm_url(x["url"]) for x in oe["evidence"] if x.get("url")}]
+            if owners:
+                ev_warns.append(f"链接 {it['url']} 已被 {', '.join(owners)} 引用")
+            if nu not in known:
                 e["evidence"].append(it)
+                known.add(nu)
                 changed.append("evidence")
     if a.note:
         notes = e["original"].setdefault("notes", [])
-        notes.append(f"{today()} {a.note}")
+        clean_note = re.sub(r"^20\d\d-\d\d-\d\d\s+", "", a.note.strip())
+        notes.append(f"{today()} {clean_note}")
         changed.append("original.notes")
     for item in a.set or []:
         if "=" not in item:
@@ -587,6 +622,7 @@ def cmd_update(a):
     if not changed:
         out({"ok": False, "errors": ["没有要修改的内容"]}, 2)
     errs, warns = check_entry(e, voc)
+    warns = ev_warns + warns
     if errs:
         out({"ok": False, "errors": errs}, 2)
     e.setdefault("migration", {}).setdefault("updates", []).append({"date": today(), "fields": sorted(set(changed))})
@@ -600,13 +636,15 @@ def cmd_update(a):
 def cmd_find(a):
     q = a.query.strip()
     ql = q.lower()
-    gh = re.fullmatch(r"([\w.\-]+/[\w.\-]+)#(\d+)", q)
+    qn = norm_url(q) if q.startswith("http") else None
+    gh = re.fullmatch(r"([\w.\-]+/[\w.\-]+)[#!]\s*(\d+)", q)
     hits = []
     for eid, e in load_entries().items():
         urls = [x.get("url", "") for x in e["evidence"]] if isinstance(e["evidence"], list) else []
         if (q == eid or q in e.get("legacy_ids", []) or ql in str(e.get("slug", "")).lower()
                 or any(ql in u.lower() for u in urls)
-                or (gh and any(re.search(rf"github\.com/{re.escape(gh.group(1))}/(issues|pull)/{gh.group(2)}\b", u, re.I) for u in urls))
+                or (qn and qn in {norm_url(u) for u in urls if u})
+                or (gh and any(re.search(rf"(?:github|gitcode|atomgit)\.com/{re.escape(gh.group(1))}/(issues|pulls?|merge_requests)/{gh.group(2)}\b", u, re.I) for u in urls))
                 or (gh and mentions(e, gh.group(1).split("/")[1].lower(), gh.group(2)))
                 or ql in str(e.get("title", "")).lower() or ql in str(e["original"].get("source", "")).lower()):
             hits.append({"id": eid, "status": e["status"], "slug": e["slug"], "title": e["title"],
@@ -757,10 +795,16 @@ def cmd_validate(a):
             errors.append(f"{eid}: 命名空间应为 {cfg['namespace']}")
         for r in e["relations"] or []:
             t = r.get("target")
-            if t and t.startswith(cfg["namespace"] + "-") and t not in entries:
-                errors.append(f"{eid}: relation 目标不存在 {t}")
-            elif t and sib and t.startswith(sib["ns"] + "-") and t not in sib["entries"]:
-                warnings.append(f"{eid}: cross 目标 {t} 在另一编目中不存在")
+            if t and t.startswith(cfg["namespace"] + "-"):
+                if t not in entries:
+                    errors.append(f"{eid}: relation 目标不存在 {t}")
+                elif e.get("status") not in ("merged", "retired") and entries[t].get("status") in ("merged", "retired"):
+                    errors.append(f"{eid}: {r['kind']} 目标 {t} 状态为 {entries[t].get('status')}，请更新关联或同步处理本条目")
+            elif t and sib and t.startswith(sib["ns"] + "-"):
+                if t not in sib["entries"]:
+                    warnings.append(f"{eid}: cross 目标 {t} 在另一编目中不存在")
+                elif e.get("status") not in ("merged", "retired") and sib["entries"][t].get("status") in ("merged", "retired"):
+                    errors.append(f"{eid}: cross 目标 {t} 在另一编目中已 {sib['entries'][t].get('status')}，请同步退役或更新关联")
             if "target_raw" in r:
                 warnings.append(f"{eid}: {r['kind']} 目标无法解析 {r['target_raw']}")
     pats = load_patterns()
@@ -774,6 +818,8 @@ def cmd_validate(a):
         if p.get("status") == "merged":
             if not p.get("merged_into"):
                 errors.append(f"{pid}: status=merged 但缺 merged_into")
+            continue
+        if p.get("status") == "retired":
             continue
         ms = p.get("members") or []
         if len(ms) < 2:
@@ -813,7 +859,7 @@ def cmd_validate(a):
         fresh, mine = os.path.join(tmp, "fault_catalog.xlsx"), os.path.join(VIEWS, "fault_catalog.xlsx")
         if os.path.exists(fresh) and (not os.path.exists(mine) or xlsx_rows(mine) != xlsx_rows(fresh)):
             errors.append("views/fault_catalog.xlsx 与条目不一致：先运行 python3 tools/catalog_tool.py build")
-    res = {"ok": not errors, "entries": len(entries), "patterns": len([p for p in pats.values() if p.get("status") != "merged"]),
+    res = {"ok": not errors, "entries": len(entries), "patterns": len([p for p in pats.values() if p.get("status") not in ("merged", "retired")]),
            "errors": errors[:200], "n_errors": len(errors),
            "n_warnings": len(warnings), "pending_audit": sum(e["status"] == "pending_audit" for e in entries.values())}
     if a.verbose:
@@ -953,16 +999,17 @@ def cmd_pattern_sync(a):
     """
     entries, pats = load_entries(), load_patterns()
     trees, _ = pattern_trees(entries)
-    live_pats = {i: p for i, p in pats.items() if p.get("status") != "merged"}
-    used, assign, created, absorbed, changed = set(), {}, [], [], []
-    # 按与既有模式的成员重叠度匹配，保证编号稳定
+    live_pats = {i: p for i, p in pats.items() if p.get("status") not in ("merged", "retired")}
+    used, assign, created, absorbed, retired_pats, changed = set(), {}, [], [], [], []
+    # 按与既有模式的成员重叠度匹配，保证编号稳定（同重叠度优先保留编号更小的旧模式）
     for tree in sorted(trees, key=lambda t: (-len(t["members"]), t["members"][0])):
         ms = set(tree["members"])
-        cands = sorted(((len(ms & set(p.get("members") or [])), i) for i, p in live_pats.items()
+        cands = sorted(((len(ms & set(p.get("members") or [])), -int(i.rsplit("-", 1)[1]), i)
+                        for i, p in live_pats.items()
                         if i not in used and ms & set(p.get("members") or [])), reverse=True)
         if cands:
-            pid = cands[0][1]
-            for _, other in cands[1:]:
+            pid = cands[0][2]
+            for _, _, other in cands[1:]:
                 absorbed.append((other, pid))
                 used.add(other)
         else:
@@ -974,6 +1021,13 @@ def cmd_pattern_sync(a):
             created.append(pid)
         used.add(pid)
         assign[pid] = tree
+    want = {m: pid for pid, tree in assign.items() for m in tree["members"]}
+    for orphan in sorted(set(live_pats) - used):
+        targets = sorted({want[m] for m in (live_pats[orphan].get("members") or []) if m in want})
+        if len(targets) == 1:
+            absorbed.append((orphan, targets[0]))
+        else:
+            retired_pats.append(orphan)
     # 写模式文件
     if not a.dry_run:
         os.makedirs(PATTERNS, exist_ok=True)
@@ -993,8 +1047,13 @@ def cmd_pattern_sync(a):
             doc = dict(pats[old], status="merged", merged_into=into, members=[], representative=None)
             with open(os.path.join(PATTERNS, f"{old}.yaml"), "w", encoding="utf-8") as fh:
                 fh.write(dump_yaml(doc))
+    for old in retired_pats:
+        if not a.dry_run:
+            doc = {k: v for k, v in pats[old].items() if k != "merged_into"}
+            doc.update(status="retired", members=[], representative=None)
+            with open(os.path.join(PATTERNS, f"{old}.yaml"), "w", encoding="utf-8") as fh:
+                fh.write(dump_yaml(doc))
     # 写条目的 pattern 字段
-    want = {m: pid for pid, tree in assign.items() for m in tree["members"]}
     touched = []
     for eid, e in sorted(entries.items()):
         now, should = e.get("pattern"), want.get(eid)

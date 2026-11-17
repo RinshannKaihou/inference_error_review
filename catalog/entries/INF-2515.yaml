@@ -4,7 +4,7 @@ slug: add_rms_norm_quant_singlen_ub_overrun
 aliases: []
 title: AddRmsNormQuant SingleN UB 记账漏项越界
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 量化
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-11'
-remarks: ''
+remarks: UB 超限直接触发 507035 崩溃退出（fail-loud），未超限路径精度正常
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8642
   kind: gitcode_issue
@@ -51,3 +51,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - behavior
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

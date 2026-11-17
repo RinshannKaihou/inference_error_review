@@ -36,7 +36,7 @@ original:
   trigger_surface: CANN 9.3.0 ops-transformer master f5e07d37；aclnnScatterPaKvCacheWithKScale SIMT 路径（headSize<128B 等不满足 SIMD 条件）+ cache 元素数 ≥ 2^32。
   discovery: 2026-11-04 每日扫描
   notes:
-  - '2026-11-05 2026-11-05 回访：#7088 仍 open；修复 MR !15405（Fixes #7063/#7086/#7087/#7088）已挂出，use32 判定改为按各 tensor 最大访问偏移 uint64 上界，MR open 未合入'
+  - '2026-11-05 回访：回访：#7088 仍 open；修复 MR !15405（Fixes #7063/#7086/#7087/#7088）已挂出，use32 判定改为按各 tensor 最大访问偏移 uint64 上界，MR open 未合入'
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -56,5 +56,8 @@ migration:
         to: 算子/内核
   updates:
   - date: '2026-11-05'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

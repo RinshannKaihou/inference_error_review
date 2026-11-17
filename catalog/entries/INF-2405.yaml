@@ -22,7 +22,7 @@ mitigation:
   fix: 待定（issue open 未见修复）
 labels:
   stage: N/A
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-05'
 remarks: ''
@@ -46,3 +46,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

@@ -4,7 +4,7 @@ slug: ops_nn_maxpool3d_valid_ignores_dilation
 aliases: []
 title: MaxPool3D VALID 形状推导忽略 dilation
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-10-21'
-remarks: ''
+remarks: 非大模型（CV/传统ML/3D/RNN）算子缺陷，脱离 LLM 训推主路径
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/6227
   kind: gitcode_issue
@@ -57,3 +57,6 @@ migration:
   - date: '2026-11-16'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - status

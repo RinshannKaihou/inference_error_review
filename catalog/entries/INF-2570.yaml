@@ -21,7 +21,7 @@ mitigation:
   fix: 待定（issue open，未附修复 PR）
 labels:
   stage: N/A
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-16'
 remarks: ''
@@ -47,3 +47,7 @@ migration:
     panel: []
     rewritten:
     - behavior
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

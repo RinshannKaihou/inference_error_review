@@ -38,7 +38,7 @@ original:
   trigger_surface: CANN 9.2.0/9.3.0（两者一致）；aclnnCumsum fp32 1 维 dim=0；元素数 > 2^30（约 4GiB fp32）；A3 910_9362 真机两段式直调复现。
   discovery: 2026-11-05 每日扫描
   notes:
-  - 2026-11-06 回访 2026-11-06：#4574 仍 open（批次快照 11-06T07:31 有更新，状态未变，无修复 MR 迹象）
+  - 2026-11-06 回访：#4574 仍 open（批次快照 11-06T07:31 有更新，状态未变，无修复 MR 迹象）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -47,6 +47,9 @@ migration:
     fields:
     - relations
   - date: '2026-11-06'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

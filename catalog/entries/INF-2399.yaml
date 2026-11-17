@@ -38,7 +38,7 @@ original:
   trigger_surface: flashinfer main/0.7.2.post1 + trtllm-gen bmm fdba669-16ba8ed；SM100（GB200）；enable_pdl 开启（默认）+ 2560~8192 token 非图调用。
   discovery: 2026-11-04 每日扫描
   notes:
-  - 2026-11-05 2026-11-05 回访：#8607 仍 open，无状态变化
+  - 2026-11-05 回访：回访：#8607 仍 open，无状态变化
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -65,3 +65,6 @@ migration:
   - date: '2026-11-12'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - original.notes

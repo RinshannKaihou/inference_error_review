@@ -29,7 +29,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7319
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0714
 original:
   mechanism: Ascend 910B3、镜像 cann:9.1.0-910b-torch2.10.0_npu-atk26.7.8（v9.1.0 tag 实装，master 00d581ae 同逻辑），复现 2026-11-09。lightning_indexer_v2_metadata/op_kernel_aicpu/lightning_indexer_v2_metadata_aicpu.cpp：L246 groupSize_=nhq/nhk 整除向零截断；L248-250 ASCEND910B 分支 mBaseSize_=s1BaseSize_*groupSize_ 无任何校验；全文件唯一 groupSize_ 判断在 950/960 分支 L252 且只是调参缩小分块，910B 不走；L321-322 除以/模 mBaseSize_=0（AArch64 整除除零不陷入、结果退化为 0）使 s1GBaseNum 恒 0；L325-327 条件永假使 isKvSeqAllZero 保持初值 true，GenMetaData 走全零 KV 序列捷径。v9.1.0 与 master 文档均未写头数配比约束。ctypes 三 case 探针（2026-11-09）：D(nhq=2/nhk=1) 输出有效调度；E(nhq=1/nhk=2，序列长度真实非零) 与 F(全零长度参照) 输出前 16 int 完全一致、哨兵 0xDEADBEEF 下 957/1024 未写；两段接口与同步全程返回 0。1000 用例套件生成约束 nhq%nhk==0 完全排除触发域（851 可比用例位级一致）。非整除配比（如 3/2）同样无校验（未实测）。
   source: https://gitcode.com/cann/ops-transformer/issues/7319
@@ -51,3 +53,7 @@ migration:
     - qwen3.8-max
     rewritten:
     - component
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

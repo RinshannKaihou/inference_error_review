@@ -4,7 +4,7 @@ slug: hcomm_aiv_alltoallv_16card_hang_driver_fw
 aliases: []
 title: 910C AIV AllToAllV 16 卡集体挂死
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 集合通信
@@ -24,7 +24,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-13'
-remarks: ''
+remarks: 16 卡 AllToAllV 600s 超时报错退出（fail-loud 集合通信超时）
 evidence:
 - url: https://gitcode.com/cann/hcomm/issues/1278
   kind: gitcode_issue
@@ -45,3 +45,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

@@ -4,7 +4,7 @@ slug: triton_ascend_parseDiv_mask_unpredicated
 aliases: []
 title: 除法索引掩码不谓词化掩码外越界读
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 编译器
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-09'
-remarks: ''
+remarks: 触发 507035 AI Core 异常显式崩溃退出（fail-loud），无静默错误输出
 evidence:
 - url: https://github.com/triton-lang/triton-ascend/issues/3043
   kind: github_issue
@@ -55,3 +55,7 @@ migration:
         to: 可用性/进度
     uncertain:
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

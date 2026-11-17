@@ -40,7 +40,7 @@ original:
   trigger_surface: vllm-ascend main（vLLM 0.31.0）；GLM-5.3-Flash 原生 FP8 检查点 + 嵌套包装模型；Ascend 950DT TP=8。其他 exact 匹配已成功的检查点不受影响。
   discovery: 2026-11-04 每日扫描
   notes:
-  - '2026-11-05 2026-11-05 回访：#20860 已 closed（2026-11-05T08:59Z，修复 #20861 后续未核实是否合入/发布；closed 不自动证明已修复）'
+  - '2026-11-05 回访：回访：#20860 已 closed（2026-11-05T08:59Z，修复 #20861 后续未核实是否合入/发布；closed 不自动证明已修复）'
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -66,5 +66,8 @@ migration:
     - detail
   updates:
   - date: '2026-11-05'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

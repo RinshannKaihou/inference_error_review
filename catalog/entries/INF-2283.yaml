@@ -40,7 +40,7 @@ original:
   repro: issue 附对照实测。
   discovery: 2026-10-29 每日扫描
   notes:
-  - 2026-11-15 2026-11-15 回访补充：同族 aclnnAtan（非 inplace）fp32 大值区同样饱和到 1.5707354546；#4764 给出更细的触发面——|x|>=16384 起恒定、1e5 偏差 427 ULP、1e8/±inf 511 ULP，而同机 Tanh/Log/Sqrt/Erf 均正确；官方 202 个用例 range_values 全在 [-5,5]，未覆盖该区。机制判断仍为区间近似未做范围规约，具体坐标未定位，confidence 维持 documented。
+  - 2026-11-15 回访：回访补充：同族 aclnnAtan（非 inplace）fp32 大值区同样饱和到 1.5707354546；#4764 给出更细的触发面——|x|>=16384 起恒定、1e5 偏差 427 ULP、1e8/±inf 511 ULP，而同机 Tanh/Log/Sqrt/Erf 均正确；官方 202 个用例 range_values 全在 [-5,5]，未覆盖该区。机制判断仍为区间近似未做范围规约，具体坐标未定位，confidence 维持 documented。
 migration:
   method: scan
   scanned: '2026-10-29'
@@ -58,4 +58,7 @@ migration:
   - date: '2026-11-15'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-17'
+    fields:
     - original.notes

@@ -4,7 +4,7 @@ slug: mm_device_do_normalize_logprob_parity_break
 aliases: []
 title: 设备侧多模态预处理破坏 logprob 一致
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 调度/服务
@@ -26,7 +26,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-13'
-remarks: 影响面是 RL rollout↔train 的 logprob 一致性；训练库未收录该来源（find 0），本条按推理侧预处理数值缺陷记录。
+remarks: 纯训练期反向/梯度/RL故障，已迁入训练编目 TRN-0802
 evidence:
 - url: https://github.com/vllm-project/vllm-ascend/issues/21797
   kind: github_issue
@@ -56,3 +56,7 @@ migration:
         to: 输入编码
     uncertain:
     - behavior
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

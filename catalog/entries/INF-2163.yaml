@@ -38,7 +38,7 @@ original:
   trigger_surface: CANN 9.2.0 / Atlas A2 910B2；aclnnMhcPre；alpha shape=[2] 且 hRes 传非空张量。
   discovery: 2026-10-24 每日扫描
   notes:
-  - '2026-11-14 2026-11-14 回访：来源 issue #6658 状态 closed（批次 updated 2026-11-11T04:24:43Z）。关闭原因、修复 PR 与发布版本未核实；closed 不证明已修复，条目结论不变。'
+  - '2026-11-14 回访：回访：来源 issue #6658 状态 closed（批次 updated 2026-11-11T04:24:43Z）。关闭原因、修复 PR 与发布版本未核实；closed 不证明已修复，条目结论不变。'
 migration:
   method: scan
   scanned: '2026-10-24'
@@ -47,6 +47,9 @@ migration:
     fields:
     - relations
   - date: '2026-11-14'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

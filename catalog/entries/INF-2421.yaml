@@ -35,6 +35,8 @@ original:
   behavior: HCCL AllReduce 在 NDA（跨 DIE 互连）小数据量路径上，特定合入后版本把中间两个跨 rank 搬运模板在 kernel 编译时误裁剪成空操作：集合通信流程正常走完、不挂起不报错，但数据根本没有跨 rank 搬运，AllReduce 结果静默错误。同版本的 ReduceScatter/AllGather 不受影响，可作定位线索。修复 MR 已提交（纯删除 10 行 guard），待上板验证。
   trigger_surface: cann/hccl master（#3652 之后、!3919 合入前）；AllReduce sequence NDA 小数据量路径（≤4MB）；NDA 环境经 STARS(AICPU_TS) kernel 侧执行。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访：修复 MR !3919 仍 open 未合入（11-06T04:11 更新），发布状态未核实
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,3 +50,10 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes

@@ -37,7 +37,7 @@ original:
   trigger_surface: vllm-ascend 0.30.0rc2（另请确认 release 分支）；enable_balance_scheduling + 外部 KV connector 同步层wise 装载 + prefix caching + async 调度。
   discovery: 2026-11-03 每日扫描
   notes:
-  - '2026-11-04 回访 2026-11-04：源 #20725 仍 open（11-04T08:42 更新）'
+  - '2026-11-04 回访：源 #20725 仍 open（11-04T08:42 更新）'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -53,5 +53,8 @@ migration:
     - qwen3.8-max
   updates:
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

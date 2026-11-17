@@ -36,7 +36,7 @@ original:
   trigger_surface: MindSpore（issue 未标注具体版本，最新版本未修复）；PyNative/图模式通用；字符串枚举入参（norm/reduction 等）传入跨枚举取值。
   discovery: 2026-11-03 每日扫描
   notes:
-  - 2026-11-04 回访 2026-11-04：#7063 仍 open（11-03T08:45 后无更新）
+  - 2026-11-04 回访：#29710 仍 open
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -56,5 +56,8 @@ migration:
         to: 算子/内核
   updates:
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

@@ -39,8 +39,8 @@ original:
   trigger_surface: vLLM-Ascend main（commit d606456c4e）/ vLLM 0.31.0；block-FP8 checkpoint；真实 TP 切分的 dense 线性层且每 rank 行/列数非 block_n(128)/block_k 整数倍（TP=8 切 1536 行输出为例）；报告说明当前已发布模型在用 TP 度下恰好不触发
   discovery: 2026-11-02 每日扫描
   notes:
-  - '2026-11-03 回访 2026-11-03：修复 #20653 仍 open（11-03 05:38 更新），源 #20652 仍 open，未合入未发布。'
-  - '2026-11-04 回访 2026-11-04：修复 #20653 仍 open（11-04T04:38 更新），未合入'
+  - '2026-11-03 回访：修复 #20653 仍 open（11-03 05:38 更新），源 #20652 仍 open，未合入未发布。'
+  - '2026-11-04 回访：修复 #20653 仍 open（11-04T04:38 更新），未合入'
 migration:
   method: scan
   scanned: '2026-11-02'
@@ -60,5 +60,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

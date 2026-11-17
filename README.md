@@ -10,6 +10,7 @@
 |---|---|
 | [`catalog/entries/`](catalog/entries) | **唯一编目真源**：每条一个 YAML，只能用 `tools/catalog_tool.py` 读写；字段见 [`catalog/SCHEMA.md`](catalog/SCHEMA.md)，受控词表见 [`catalog/vocab.yaml`](catalog/vocab.yaml) |
 | [`catalog/patterns/`](catalog/patterns) | 故障模式层，由条目的 `var` 关系派生（`catalog_tool.py pattern-sync`，审计任务自动运行） |
+| [`catalog/rejected.md`](catalog/rejected.md) / [`catalog/blindspots.md`](catalog/blindspots.md) | 2026-10-13 切换后的被拒候选与观测/评测盲区记录（补充冻结档案附录 C/D） |
 | [`views/`](views) | 由条目生成的浏览视图：`CATALOG.zh.md`、`fault_catalog.csv`、`fault_catalog.xlsx`（`catalog_tool.py build`，不要手改） |
 | [`daily/reports/`](daily/reports) | 每日扫描日报 `daily_scan_YYYY-MM-DD.md` |
 | [`daily_scan.prompt.md`](daily_scan.prompt.md) | 每日扫描执行规范 |

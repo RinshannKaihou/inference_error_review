@@ -38,7 +38,7 @@ original:
   trigger_surface: CANN 9.2.0；aclnnSituGlu；A2 910B3；out 与 x 非切割轴不一致 / 空 x+非空 out / beta、linearBeta 超 float 表示域或 ≥1e4 / 非连续 out 视图。
   discovery: 2026-11-05 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：修复 PR !14239（WIP open）按四类缺陷整改——out 非切分维 shape 校验+空 x 校验（消除越界写/留脏/静默成功）、非连续 out 视图拒绝、beta/linearBeta float32 可计算域校验（561002）、TanhScale 级数分支修复 β>=1e4 小输入整体归零；910B3 单算子包自验（越界/留脏/空 x 用例均 561002、金丝雀无改写、β=1e4~1e8 小输入 maxRel<=1.3e-07）+12 例 tiling UT。合入未核实。
+  - 2026-11-11 回访：回访：修复 PR !14239（WIP open）按四类缺陷整改——out 非切分维 shape 校验+空 x 校验（消除越界写/留脏/静默成功）、非连续 out 视图拒绝、beta/linearBeta float32 可计算域校验（561002）、TanhScale 级数分支修复 β>=1e4 小输入整体归零；910B3 单算子包自验（越界/留脏/空 x 用例均 561002、金丝雀无改写、β=1e4~1e8 小输入 maxRel<=1.3e-07）+12 例 tiling UT。合入未核实。
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -56,4 +56,7 @@ migration:
   - date: '2026-11-11'
     fields:
     - evidence
+    - original.notes
+  - date: '2026-11-17'
+    fields:
     - original.notes

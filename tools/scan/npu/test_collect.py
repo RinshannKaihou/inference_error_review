@@ -11,7 +11,7 @@ import hashlib
 import unittest
 
 HERE = Path(__file__).resolve().parent
-SCRATCH = Path('/root/.hermes/profiles/third/cache/scratch/npu-collector-tests')
+SCRATCH = Path(os.environ.get('NPU_TEST_SCRATCH') or (Path(tempfile.gettempdir()) / 'npu-collector-tests'))
 
 
 class ValidationTests(unittest.TestCase):
@@ -178,6 +178,29 @@ class StateTests(unittest.TestCase):
                                       registry=self.registry, now=self.now)
         self.assertNotEqual(Path(result['batch']).parent, self.root)
         self.assertEqual(json.loads((self.root / 'state.json').read_text()), self.state)
+
+    def test_independent_scope_watermarks_preserve_missed_training_window(self):
+        # Day 1: both scopes ack at 2026-10-08T02:00:00Z (1h overlap -> since 01:00Z > seed 00:00Z)
+        self.collect.ack_scope('inference', '2026-10-08T02:00:00Z', self.root)
+        self.collect.ack_scope('training', '2026-10-08T02:00:00Z', self.root)
+        # Day 2 batch adds row 002 at 2026-10-12T12:00:00Z; only inference acks Day 2
+        row2 = self.collect.normalize(self.source, dict(number='002', title='Grad NaN', body='b2', state='open',
+            created_at='2026-10-12T10:00:00Z', updated_at='2026-10-12T12:00:00Z'), 'issue', self.batch)
+        Path(row2['body_path']).parent.mkdir(parents=True, exist_ok=True)
+        Path(row2['body_path']).write_text('b2')
+        existing = (self.batch / 'training.jsonl').read_text()
+        for name in ('normalized', 'inference', 'training'):
+            (self.batch / (name + '.jsonl')).write_text(json.dumps(row2) + '\n' + existing)
+        manifest = json.loads((self.batch / 'manifest.json').read_text())
+        manifest['counts'] = dict(inference=2, training=2)
+        self.collect.dump(self.batch / 'manifest.json', manifest)
+        self.collect.ack_scope('inference', '2026-10-14T00:00:00Z', self.root)
+        inf_res = self.collect.run('inference', None, self.root, registry=self.registry, now=self.now)
+        trn_res = self.collect.run('training', None, self.root, registry=self.registry, now=self.now)
+        self.assertEqual(inf_res['delta_count'], 0)
+        self.assertEqual(trn_res['delta_count'], 1)
+        delta_rows = [json.loads(x) for x in Path(trn_res['delta_candidates']).read_text().splitlines()]
+        self.assertEqual([r['number'] for r in delta_rows], ['002'])
 
 
 class DetailAndNetworkTests(unittest.TestCase):

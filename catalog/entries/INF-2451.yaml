@@ -4,7 +4,7 @@ slug: ops_nn_maxpool_grad_argmax_nhwc_small_c_decode
 aliases: []
 title: MaxPoolGradWithArgmax NHWC 小 C 解码错位梯度散错
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -24,7 +24,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-07'
-remarks: ''
+remarks: 非大模型（CV/传统ML/3D/RNN）算子缺陷，脱离 LLM 训推主路径
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8366
   kind: gitcode_issue
@@ -46,6 +46,9 @@ migration:
   - date: '2026-11-08'
     fields:
     - relations
+  - date: '2026-11-17'
+    fields:
+    - status
   audit:
     round: daily-audit-2026-11-08
     base:

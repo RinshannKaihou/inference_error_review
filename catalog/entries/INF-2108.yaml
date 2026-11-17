@@ -20,7 +20,7 @@ mitigation:
   detect: 构造早期主导 key（首 key 分数远高于后续全零 key）的单序列 prefill 用例与 FP64 参考比对。
   fix: 待定（issue open 0 评论，根因未定位）
 labels:
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-10-21'
   stage: N/A
@@ -38,7 +38,7 @@ original:
   trigger_surface: A100（SM80）实测、flashinfer main 23f3e8f6/0.7.2 JIT、BatchPrefillWithRaggedKVCacheWrapper backend='fa2'、disable_split_kv=True、早期 dominant key 模式。
   discovery: 2026-10-21 每日扫描
   notes:
-  - '2026-11-06 回访 2026-11-06：#6908 已修复 FA2 prefill 的 history rescale FMA 收缩（先乘后减→(m_prev-m)*sm_scale），但同一表达式仍留在 main 的 MLA 路径（mla.cuh:522/:557、mla_hopper.cuh:610），#8790 报告未在 MLA 路径复现、review #6908 时发现；大 logits 下 running 分母与输出逐 tile 收缩（NaN 输出、-inf LSE），普通 logits 仅 LSE 漂移'
+  - '2026-11-06 回访：#6908 已修复 FA2 prefill 的 history rescale FMA 收缩（先乘后减→(m_prev-m)*sm_scale），但同一表达式仍留在 main 的 MLA 路径（mla.cuh:522/:557、mla_hopper.cuh:610），#8790 报告未在 MLA 路径复现、review #6908 时发现；大 logits 下 running 分母与输出逐 tile 收缩（NaN 输出、-inf LSE），普通 logits 仅 LSE 漂移'
 migration:
   method: scan
   scanned: '2026-10-21'
@@ -56,3 +56,9 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

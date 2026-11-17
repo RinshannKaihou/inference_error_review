@@ -4,7 +4,7 @@ slug: rope_int64_mode_tiling_narrow_truncation
 aliases: []
 title: RoPE int64 mode 截断致非法值当 0
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 位置编码
@@ -24,7 +24,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-13'
-remarks: ''
+remarks: C++ aclnn 直调契约外非法入参（GIGO 负向测试），正常 PyTorch/LLM 框架路径不可达
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7470
   kind: gitcode_issue
@@ -47,3 +47,7 @@ migration:
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - status

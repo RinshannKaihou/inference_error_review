@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/Ascend/pytorch/issues/5990
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0719
 original:
   mechanism: Ascend 910B4 / CANN 9.2.0 / torch 2.16.0a0+gitff4f371 / torch_npu 2.16.0+git111ec0d / triton-ascend 3.6.0。rsplit 的 partial/combine 成对：_npu_emit_rsplit_combine 生成 combine kernel、_npu_call_rsplit_kernels 调用，触发依赖 codegen_node_schedule 里的 rsplit_kernel 变量；但 npu_rsplit_partial=True 有四处赋值——triton.py:5976（codegen_node_schedule，接 combine）、7139/7636/7638（_apply_linearize 三处，置位不设 rsplit_kernel）。本用例经 generate_combo_kernel_code→_codegen_standalone_kernel（torch/_inductor/codegen/simd.py:4772，probe 证实 codegen_node_schedule 未被调用），该层无 rsplit 两段式概念。生成的 triton_unk_fused_1 把 partial 写进 ws_ptr（分配 12288=256×48）但全部 kernel 只有两个、无读 workspace 的 combine kernel，out_ptr0 从头到尾未被写。对 combine 构建失败的防御（error loud in debug）只在 rsplit_kernel 已非空时生效。对应用例 test_combo_kernel_per_config_subkernel_red_per（test/inductor/test_combo_kernels.py，NPU 失败于 Tensor-likes are not close）。与 rsplit 既有修复补丁（P9）无关：关掉后同样复现，fresh cache 稳定复现。
   source: https://gitcode.com/Ascend/pytorch/issues/5990
@@ -48,3 +50,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

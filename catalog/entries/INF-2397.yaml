@@ -31,7 +31,9 @@ evidence:
   kind: gitcode_issue
 - url: https://atomgit.com/mindspore/mindformers/merge_requests/8893
   kind: gitcode_pr
-relations: []
+relations:
+- kind: cross
+  target: TRN-0619
 original:
   mechanism: MindFormers master 79caac2a（独立验证源 52f614ee）：PyNative GPTModel 普通 MLA、TND 与 EOD 掩码压缩场景下，若 DSA 稀疏损失配置为 true，_preprocess_input_labels_and_masks 提前返回空 attention mask——判断只看 DSA 标志不检查实际 attention variant。MLA FlashAttention V4 随后读整段序列而自回归位置应仅访问因果前缀。组件对照环境 910B3、CANN 9.1.0 B243、MindSpore 2.10.0 6b7c4b02、HP-MS r1.0.0。最小复现：同随机种子调用 local_v4_varlen_flash_attention 两次（TND、sparse_mode=3、BF16、Q/K [4096,32,192]、V [4096,32,128]、384 个 4096 端点），空 mask 首对首 token/head0 与因果前缀参考最大绝对差 0.90191650（与全序列参考仅 0.00003401），压缩因果 mask 则与因果前缀参考差 0；输出及梯度均差异，末 token 两分支一致。修复 MR 8893（open）把省略 mask 分支限制到实际 DSA 稀疏路径。
   source: https://atomgit.com/mindspore/mindformers/issues/2624 修复 https://atomgit.com/mindspore/mindformers/merge_requests/8893
@@ -55,3 +57,7 @@ migration:
       effect:
         from: 隐状态
         to: 数值结果
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

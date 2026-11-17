@@ -4,7 +4,7 @@ slug: msmodelslim_qwen36_fakequant_transformers_version
 aliases: []
 title: msmodelslim 伪量化 eval 依赖版本致乱码
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 构建/发布
@@ -24,7 +24,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-10'
-remarks: ''
+remarks: 纯 README 依赖版本号文档笔误，零代码缺陷
 evidence:
 - url: https://gitcode.com/Ascend/msmodelslim/merge_requests/1164
   kind: gitcode_pr
@@ -36,7 +36,7 @@ original:
   trigger_surface: msmodelslim eval 伪量化推理 + Qwen3.6-27B w8a8 权重 + transformers==5.2.0（按旧文档安装）；仅此模型此场景，quarot 场景经确认非问题。
   discovery: 2026-11-10 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：文档版本更正 PR !1164 已 merged（2026-11-11）；一键量化流程默认 transformers 版本是否随之更正未核实。
+  - 2026-11-11 回访：回访：文档版本更正 PR !1164 已 merged（2026-11-11）；一键量化流程默认 transformers 版本是否随之更正未核实。
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -60,3 +60,9 @@ migration:
   - date: '2026-11-11'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - status

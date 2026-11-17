@@ -37,8 +37,8 @@ original:
   trigger_surface: vllm-ascend 0.30.0（v0.30.0 分支仍存在）；四条件缺一即不触发：hybrid GDN（mamba align）、MTP（accepted 产生非零偏移）、async 调度（武装 defer_block_free）、consumer connector + KV 压力（请求被暂停而非抢占）；910B3×2 TP=2、Qwen3.8-27B qwen3_5_mtp 复现
   discovery: 2026-11-02 每日扫描
   notes:
-  - '2026-11-03 回访 2026-11-03：源 #20677 仍 open（11-03 12:42 更新），无修复动向。'
-  - '2026-11-04 回访 2026-11-04：源 #20677 仍 open（11-04T03:51 更新），无修复动向'
+  - '2026-11-03 回访：源 #20677 仍 open（11-03 12:42 更新），无修复动向。'
+  - '2026-11-04 回访：源 #20677 仍 open（11-04T03:51 更新），无修复动向'
 migration:
   method: scan
   scanned: '2026-11-02'
@@ -61,5 +61,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

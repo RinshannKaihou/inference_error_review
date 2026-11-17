@@ -36,8 +36,8 @@ original:
   trigger_surface: vLLM-Ascend v0.23.0.post1（修复 open 未发布）；310P3 TP1；未量化 Qwen2 FP16（含 Distill Qwen-1.5B，Llama-8B 另测）；未掩码 QK > 65504 的输入；CANN 9.1.0
   discovery: 2026-11-02 每日扫描
   notes:
-  - '2026-11-03 回访 2026-11-03：修复 #20595 仍 open（11-02 后无更新），未合入。'
-  - '2026-11-04 回访 2026-11-04：修复 #20595 仍 open（11-02 后无更新）'
+  - '2026-11-03 回访：修复 #20595 仍 open（11-02 后无更新），未合入。'
+  - '2026-11-04 回访：修复 #20595 仍 open（11-02 后无更新）'
 migration:
   method: scan
   scanned: '2026-11-02'
@@ -56,5 +56,8 @@ migration:
     fields:
     - original.notes
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

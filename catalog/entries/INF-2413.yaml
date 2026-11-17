@@ -35,6 +35,8 @@ original:
   behavior: 在昇腾 NPU 上用 torch.compile 编译含 argmin/argmax 的低精度（fp16/bf16）归约代码：返回的极值是对的，但索引是错的——多块场景 argmax 恒返回 0（指向的元素根本不是最大值），argmin 返回的索引也不指向最小值。无任何报错，数据静默错误。当前 torch_npu 默认把这两个算子踢出 triton 编译路径兜底，触发需手动加回注册清单。
   trigger_surface: triton-ascend 3.6.0；910B4；fp16/bf16 argmin/argmax 走 triton_experimental codegen（torch_npu 默认已排除兜底，需手动 GENERATE_LIST.extend）；numel>单块容量时 argmax 恒 0。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访：#2981 仍 open 无状态变化
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -48,3 +50,10 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes

@@ -203,12 +203,37 @@ def fetch_list(source, endpoint, start, end, raw_dir, progress):
         page += 1
 
 
-def summary(batch, scope, cached):
+def summary(batch, scope, cached, scope_since=None):
     data = json.loads((batch / 'manifest.json').read_text())
-    return dict(batch=str(batch), candidates=str(batch / (scope + '.jsonl')),
+    scope_file = batch / (scope + '.jsonl')
+    delta_file = batch / (scope + '_delta.jsonl')
+    lines = scope_file.read_text(encoding='utf-8').splitlines() if scope_file.exists() else []
+    if scope_since:
+        since_dt = moment(scope_since)
+        delta_lines = [ln for ln in lines if moment(json.loads(ln)['updated_at']) >= since_dt]
+    else:
+        delta_lines = lines
+    delta_file.write_text(''.join(ln + '\n' for ln in delta_lines), encoding='utf-8')
+    return dict(batch=str(batch), candidates=str(scope_file), delta_candidates=str(delta_file),
+                delta_count=len(delta_lines), scope_since=scope_since,
                 normalized=str(batch / 'normalized.jsonl'), scope=scope, cached=cached,
                 candidate_count=data['counts'][scope], **{k: data[k] for k in
                 ('complete', 'coverage', 'failures', 'registry_hash', 'generated_at', 'registry_sources', 'selected_sources')})
+
+
+def ack_scope(scope, until, output):
+    root = output.resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / '.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        state = json.loads((root / 'state.json').read_text()) if (root / 'state.json').exists() else dict(watermarks={})
+        sw = dict(state.get('scope_watermarks') or {})
+        moment(until)  # validate ISO timestamp
+        sw[scope] = until
+        state['scope_watermarks'] = sw
+        dump(root / 'state.next', state)
+        os.replace(root / 'state.next', root / 'state.json')
+        return dict(complete=True, scope=scope, scope_watermark=until)
 
 
 def run(scope, only, output, force=False, registry=HERE / 'sources.json', now=None):
@@ -227,12 +252,14 @@ def run(scope, only, output, force=False, registry=HERE / 'sources.json', now=No
         fcntl.flock(lock, fcntl.LOCK_EX)
         now = now or datetime.now(timezone.utc)
         state = json.loads((root / 'state.json').read_text()) if (root / 'state.json').exists() else dict(watermarks={})
+        sw = dict(state.get('scope_watermarks') or {})
+        scope_since = stamp(moment(sw[scope]) - timedelta(hours=1)) if scope in sw else None
         previous = Path(state['batch']) if state.get('batch') else None
         if previous and not force:
             old = json.loads((previous / 'manifest.json').read_text())
             age = (now - moment(old['generated_at'])).total_seconds()
             if old['complete'] and old['registry_hash'] == registry_hash and 0 <= age < config['cache_hours'] * 3600:
-                return summary(previous, scope, True)
+                return summary(previous, scope, True, scope_since=scope_since)
         stage = Path(tempfile.mkdtemp(prefix='.building-', dir=root))
         final = root / ('batch-' + now.strftime('%Y%m%dT%H%M%S%f') + '-' + stage.name.removeprefix('.building-'))
         rows, coverage, failures = {}, [], []
@@ -283,9 +310,9 @@ def run(scope, only, output, force=False, registry=HERE / 'sources.json', now=No
                         registry_sources=len(config['sources']), selected_sources=len(sources))
         dump(stage / 'manifest.json', manifest)
         os.replace(stage, final)
-        dump(root / 'state.next', dict(batch=str(final), watermarks=watermarks))
+        dump(root / 'state.next', dict(batch=str(final), watermarks=watermarks, scope_watermarks=sw))
         os.replace(root / 'state.next', root / 'state.json')
-        return summary(final, scope, False)
+        return summary(final, scope, False, scope_since=scope_since)
 
 
 def parse_url(value, sources):
@@ -373,18 +400,28 @@ def detail(value, output, registry):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', nargs='?', choices=['detail'])
+    parser.add_argument('command', nargs='?', choices=['detail', 'ack'])
     parser.add_argument('url', nargs='?')
     parser.add_argument('--scope', choices=['inference', 'training'])
+    parser.add_argument('--until', help='ack 子命令：确认该 scope 已完成扫描的批次 generated_at 时间戳')
     parser.add_argument('--only', help='隔离采集单仓，不修改正式全仓缓存/水位')
     parser.add_argument('--force', action='store_true')
     parser.add_argument('--registry', type=Path, default=HERE / 'sources.json')
     parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    if (args.command == 'detail' and not args.url) or (not args.command and not args.scope):
-        parser.error('需要 --scope inference|training，或 detail <完整URL>')
+    if args.command == 'detail' and not args.url:
+        parser.error('detail 需要 <完整URL>')
+    if args.command == 'ack' and (not args.scope or not args.until):
+        parser.error('ack 需要 --scope inference|training --until <ISO时间戳>')
+    if not args.command and not args.scope:
+        parser.error('需要 --scope inference|training，或 detail <完整URL>，或 ack --scope ... --until ...')
     try:
-        result = detail(args.url, args.output_dir, args.registry) if args.command else run(args.scope, args.only, args.output_dir, args.force, args.registry)
+        if args.command == 'detail':
+            result = detail(args.url, args.output_dir, args.registry)
+        elif args.command == 'ack':
+            result = ack_scope(args.scope, args.until, args.output_dir)
+        else:
+            result = run(args.scope, args.only, args.output_dir, args.force, args.registry)
     except ERRORS + (FetchError,) as exc:
         result = dict(complete=False, error=type(exc).__name__, message=str(exc))
     print(json.dumps(result, ensure_ascii=False, separators=(',', ':')))

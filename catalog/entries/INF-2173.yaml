@@ -39,7 +39,7 @@ original:
   signature: 未写行数恒等于 end；哨兵预填保留；两段 rc=0。
   discovery: 2026-10-25 每日扫描
   notes:
-  - 2026-11-15 2026-11-15 回访：#6622 状态 closed（updated 2026-11-10T18:24:45Z），未见关联修复 PR 与发布版本；closed 不证明已修复，条目结论与 confidence 不变。
+  - 2026-11-15 回访：回访：#6622 状态 closed（updated 2026-11-10T18:24:45Z），未见关联修复 PR 与发布版本；closed 不证明已修复，条目结论与 confidence 不变。
 migration:
   method: scan
   scanned: '2026-10-25'
@@ -61,5 +61,8 @@ migration:
     - detail
   updates:
   - date: '2026-11-15'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

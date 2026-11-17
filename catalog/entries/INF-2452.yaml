@@ -40,7 +40,7 @@ original:
   trigger_surface: vllm-ascend + 投机解码（draft 含滑窗注意力层）+ 并发 decode 换血负载；管理块释放重分配后滑窗边界以下块未被屏蔽。触发配置：滑窗层（如 DFlash 式 draft 5 层 SWA、窗口 4096）+ 请求持续完成使块回收再分配。无滑窗层模型不受影响。
   discovery: 2026-11-07 每日扫描
   notes:
-  - '2026-11-08 回访 2026-11-08：#21251 仍 open 无状态变化，修复 PR #21252 仍 open（批次快照）'
+  - '2026-11-08 回访：#21251 仍 open 无状态变化，修复 PR #21252 仍 open（批次快照）'
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -57,5 +57,8 @@ migration:
         to: 跨请求/跨样本数据
   updates:
   - date: '2026-11-08'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

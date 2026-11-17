@@ -29,7 +29,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-transformer/issues/7324
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0715
 original:
   mechanism: Atlas A2（910B3）、镜像 cann:9.1.0-910b-torch2.10.0_npu-atk26.7.8（受测实装对应 ops-transformer v9.1.0 tag，master 00d581ae 对照），复现 2026-11-09。arch22 Vector 核逐行归并路径（v9.1.0 lightning_indexer_service_vector.h:372-379）：actS1>4 或 sparseCount>2K 时 SortAll+MergeSort 并入 virTopK=2048 宽累加器；官方 pytest golden 契约为 [-score,index] 字典序 stable=True（分数降序、同分索引升序）。四点行为证据锁定该路径：单基块（actS2≤512）919 例 0 例此类失败且独立对照 4 种子 128/128 行 PASS；23 案 530,843 个 NPU 多出索引的 512 分块直方图中块 0 出现 0 次（全部落在块 1 及以后）；失配行全部是等分行（负权重×relu 钳零形成 ≥K 个 0 分候选池）、非等分行 0 失配；decode（actS1≤4 缓存路径）25 例 0 失败。MergeSort 比较器仅按 value 或非稳定为推断（需内核侧确认）；诚实注记：K=128/K=2048 同走该路径未复现失败（0/10），K 与归约宽度交互未能静态推导。复现脚本 repro_lightning_indexer_multiblock_topk.py（纯 ctypes+numpy）：S2=1024 缺陷组 4 种子 45-50/128 行失配、S2=512 对照组全 PASS。等分候选来自负权重、MoE 路由权重、量化后权重等现实数据，并非构造输入。
   source: https://gitcode.com/cann/ops-transformer/issues/7324
@@ -49,3 +51,7 @@ migration:
     rewritten:
     - behavior
     - detail
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

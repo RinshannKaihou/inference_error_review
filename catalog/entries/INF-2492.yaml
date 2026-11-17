@@ -21,7 +21,7 @@ mitigation:
   fix: 降级 vllm-ascend 0.18 可规避（报告者实测同一 checkpoint 正常）；issue open，修复未提交。
 labels:
   stage: N/A
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-10'
 remarks: ''
@@ -52,3 +52,7 @@ migration:
       subsystem:
         from: 待定
         to: 量化
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

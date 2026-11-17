@@ -19,7 +19,7 @@ effect:
   visibility: 质量退化
 mitigation:
   detect: 连续跑两个已知幅值（100、1）的 KV 样本过 DynamicCacheQuantizer，检查 scale 是否只剩末批统计；issue 附最小复现脚本。
-  fix: 待定（issue open，未见修复；正确行为应跨批累积 min/max 或在 deploy 前聚合全部校准统计）
+  fix: 已有修复 PR/MR：https://gitcode.com/Ascend/msmodelslim/merge_requests/1168（发布状态待核实）
 labels:
   stage: N/A
   confidence: documented
@@ -41,7 +41,7 @@ original:
   repro: issue 附仓库根目录完整脚本（连续两样本 L10 first/final scale 输出）。
   discovery: 2026-11-08 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：修复 PR !1168（open）——ActPerChannelMinmax 相同通道数跨批累积 minmax 统计（通道数变化时重置），新增 9 例真实 CPU 回归（修复前 6 败 3 过、修复后 9/9 过）；跨批幅值 100→1 场景 scale 不再从 0.7874 掉到 0.007874。合入未核实。
+  - 2026-11-11 回访：回访：修复 PR !1168（open）——ActPerChannelMinmax 相同通道数跨批累积 minmax 统计（通道数变化时重置），新增 9 例真实 CPU 回归（修复前 6 败 3 过、修复后 9/9 过）；跨批幅值 100→1 场景 scale 不再从 0.7874 掉到 0.007874。合入未核实。
 migration:
   method: scan
   scanned: '2026-11-08'
@@ -62,3 +62,9 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - mitigation.fix

@@ -36,7 +36,7 @@ original:
   trigger_surface: ttnn 0.81.1（main 同）；Blackhole P150；TILE 布局 permute 且 tile 填充体积 ≥ 2^32（约 n≥2048 的 4 维场景）。
   discovery: 2026-11-04 每日扫描
   notes:
-  - 2026-11-05 2026-11-05 回访：#63940 仍 open，main 未修
+  - 2026-11-05 回访：回访：#63940 仍 open，main 未修
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -49,5 +49,8 @@ migration:
     panel: []
   updates:
   - date: '2026-11-05'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

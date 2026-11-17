@@ -148,6 +148,14 @@ class AuditRunTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("ZZZ-0001", res["errors"][0])
 
+    def test_holds_pending_audit_on_pure_perf_or_unfixed_faithfulness(self):
+        perf = {"*|C": [reply(dict(CAT_OK, visibility="性能退化"))], "*|F": [reply(F_OK)]}
+        code, res = self.audit(perf)
+        self.assertEqual(code, 0, res)
+        self.assertEqual(res["held_pending"], 1)
+        self.assertEqual(self.entry()["status"], "pending_audit")
+        self.assertIn("pure_perf_regression", self.entry()["migration"]["audit"]["held"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,7 +23,7 @@ mitigation:
   fix: 待定（回退 v0.5.22 可规避；#44098 嫌疑待验证，报告者愿意无补丁复测）
 labels:
   stage: N/A
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-06'
 remarks: 跨请求状态污染域，与已收 INF-2414（vllm-ascend#21103）不同库不同机制。
@@ -38,7 +38,7 @@ original:
   trigger_surface: sglang v0.5.23/nightly+GLM-5.3 类 mamba/KDA 混合模型+MTP（speculative_attention_mode=prefill）+~1M token 深度 chunked prefill；v0.5.22 干净
   discovery: 2026-11-06 每日扫描
   notes:
-  - 2026-11-07 2026-11-07 回访：sglang#48964 仍 open（11-06 创建），本轮搜索窗口内无根因定位新评论，维持留观根因。
+  - 2026-11-07 回访：回访：sglang#48964 仍 open（11-06 创建），本轮搜索窗口内无根因定位新评论，维持留观根因。
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -62,3 +62,9 @@ migration:
   - date: '2026-11-07'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

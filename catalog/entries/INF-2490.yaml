@@ -28,7 +28,9 @@ remarks: ''
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8561
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0711
 original:
   mechanism: 昇腾 910B3、CANN 9.2.0，cann/ops-nn master e91941a02 已复核。缺陷位置 index/gather_v3/op_host/op_api/gather_v3.cpp：host 只校验 dtype/shape。kernel 内 CheckIdxValue 的 assert 实际触发过（plog 记录 gather_v3_base.h:137 Assertion '(0 <= val && val < this->gxSize_)' failed. Index 99 out of range[0 4)!）但生产版本编译掉、执行未被阻止。文档《aclnnGather》参数说明写明 index 取值范围 [-self.shape[dim], self.shape[dim]-1]、不支持越界（预期报 161002）。C++ 两段接口复现：legal [0,2,3]→[100,300,400] 正确；oob=4→[100]；oob=99→[0]；两次调用 ret 均为 0。
   source: https://gitcode.com/cann/ops-nn/issues/8561
@@ -48,3 +50,7 @@ migration:
     - kimi-k3
     - glm-5.3
     - qwen3.8-max
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - relations

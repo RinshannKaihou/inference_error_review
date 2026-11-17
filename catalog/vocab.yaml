@@ -104,6 +104,14 @@ stack:
   - mindspeed
   - mindspeed-llm
   - mindspeed-rl
+  # v1.4 新增：NPU 推理/编译/观测细分仓
+  - vllm-ascend
+  - sgl-kernel-npu
+  - triton-ascend
+  - torchair
+  - msmodelslim
+  - msprobe
+  - mssanitizer
 
 # 故障影响·对象 —— 哪个“东西”变错了（可多选，1–3 个，按主次排序）。
 effect_object:

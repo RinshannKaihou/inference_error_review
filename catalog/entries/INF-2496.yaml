@@ -4,7 +4,7 @@ slug: aicpu_sched_worker_false_success_hang
 aliases: []
 title: aicpu_sched worker 假成功致业务静默卡死
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -24,7 +24,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-10'
-remarks: ''
+remarks: aicpu_sched 初始化挂死属编排/运行时死锁（fail-loud/hang，记入 blindspots.md）
 evidence:
 - url: https://gitcode.com/cann/runtime/issues/1357
   kind: gitcode_issue
@@ -36,7 +36,7 @@ original:
   trigger_surface: aicpu_sched 守护进程启动期 worker 初始化失败（halEschedSubscribeEvent 失败或消息队列初始化失败）；低频但命中即整核任务静默挂起。
   discovery: 2026-11-10 每日扫描
   notes:
-  - '2026-11-11 2026-11-11 回访：issue #1357 已于 2026-11-11 closed；修复 PR !6157 合入与随版发布状态未核实。'
+  - '2026-11-11 回访：回访：issue #1357 已于 2026-11-11 closed；修复 PR !6157 合入与随版发布状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-10'
@@ -54,3 +54,9 @@ migration:
   - date: '2026-11-11'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - status

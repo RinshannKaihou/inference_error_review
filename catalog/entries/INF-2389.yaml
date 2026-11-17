@@ -38,7 +38,7 @@ original:
   trigger_surface: CANN 9.3.0 ops-nn master 0fc301c67；aclnnIndexAddV2；index 长度 0（source dim 维同为 0）；fp32/fp16、mode 0/1、dim 0/-1 均触发。
   discovery: 2026-11-04 每日扫描
   notes:
-  - 2026-11-05 2026-11-05 回访：#8102 仍 open（11-05T06:44 有更新，状态未核）
+  - 2026-11-05 回访：回访：#8102 仍 open（11-05T06:44 有更新，状态未核）
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -47,6 +47,9 @@ migration:
     fields:
     - relations
   - date: '2026-11-05'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

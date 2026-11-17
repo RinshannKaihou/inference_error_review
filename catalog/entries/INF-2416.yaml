@@ -22,7 +22,7 @@ mitigation:
   fix: 待定（issue open，未附修复 PR）
 labels:
   stage: N/A
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-05'
 remarks: ''
@@ -36,6 +36,8 @@ original:
   behavior: PD 分离部署的 vLLM-Ascend 服务上请求 /v1/completions 并带 prompt_logprobs 参数：返回 200 正常，但 prompt_logprobs 字段全是同一个垃圾值（logprob 0.0、rank 5、token "!"），完全不可用；在带 Mooncake KV 传输的完整架构下同请求还会触发 token id 溢出异常，整个推理引擎崩溃重启。服务此前已稳定跑 15 天，仅这个参数组合触发。
   trigger_surface: vllm-ascend 0.30.0rc2 / vLLM 0.30.0；PD 分离 + GLM-5.3-Flash-w8a8 + MTP；/v1/completions + prompt_logprobs；崩溃需 Mooncake KV transfer 路径。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访：#21103 仍 open（11-06T09:00 更新，状态未变）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -52,3 +54,13 @@ migration:
     uncertain:
     - subsystem
     - effect
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

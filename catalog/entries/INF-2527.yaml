@@ -33,6 +33,8 @@ evidence:
 relations:
 - kind: var
   target: INF-1588
+- kind: cross
+  target: TRN-0757
 pattern: PAT-INF-0202
 original:
   mechanism: 'cann/ops-transformer issue #7469（Ascend950DT_9574、CANN 9.3.0、TTK 3.0.0）：MoeInitRoutingV3/V4 的 INT8 动态量化 quant_mode=1 传入按专家配置的 smooth scale 时，H 维分块路径在取 scale 时只算 j*perLoopCols，遗漏 expertIdx*H 基址，所有专家都读取第 0 行 scale，导致 expandedX 精度失败；V3/V4 复用同一 kernel 文件，均受影响。复现用例 aclnnMoeInitRoutingV3_L1_0844：BF16 输入 x=(1,14788)、expertIdx=(1,7)、FP32 scale=(3775,14788)、expertNum=7758、有效专家区间 [2789,6564)、quantMode=1、expertTokensNumFlag=False，调用完成但 expandedX 精度失败；定位到 H 分块路径按 scale[0] 计算。修复提交 b698ccaef64c7b567c757832acdd2fa8a99940b6、PR !15813：H 分块按 expertIdx*H + j*perLoopCols 读取 smooth scale，与不分块路径一致；INT4 共享 scale 路径的 expertIdx 仍为 0。2026-11-12 回归 V3 Kernel 62/62、V3 E2E 62/62、V4 Kernel 32/32、V4 ACLNN 43/43，合计 199/199 PASS，Kernel 内存越界检查通过；本轮未重跑 GEIR/E2E 图模式。'
@@ -41,7 +43,7 @@ original:
   trigger_surface: cann/ops-transformer MoeInitRoutingV3/V4；INT8 动态量化 quant_mode=1；按专家配置 smooth scale；H 维触发分块（大 H）；Ascend950DT、CANN 9.3.0。
   discovery: 2026-11-13 每日扫描
   notes:
-  - '2026-11-13 2026-11-13 回访：ops-transformer #7469 已 closed；修复 !15813 于 2026-11-12 merged（199/199 回归），发布未核实。'
+  - '2026-11-13 回访：回访：ops-transformer #7469 已 closed；修复 !15813 于 2026-11-12 merged（199/199 回归），发布未核实。'
 migration:
   method: scan
   scanned: '2026-11-13'
@@ -52,6 +54,12 @@ migration:
   - date: '2026-11-14'
     fields:
     - pattern
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - relations
   audit:
     round: daily-audit-2026-11-14
     base:

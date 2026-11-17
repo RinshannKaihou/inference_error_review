@@ -37,7 +37,7 @@ original:
   trigger_surface: 'vllm-ascend Mooncake layerwise PUSH + prefill pipeline parallelism>1（PR #21517 引入的路径）；早 stage 写慢或写失败时触发；PP=1 不受影响。'
   discovery: 2026-11-11 每日扫描
   notes:
-  - '2026-11-13 2026-11-13 回访：vllm-ascend #21558 已 closed，state_reason=not_planned（2026-11-11T07:57Z），关闭说明未读，修复未采纳/未核实。'
+  - '2026-11-13 回访：回访：vllm-ascend #21558 已 closed，state_reason=not_planned（2026-11-11T07:57Z），关闭说明未读，修复未采纳/未核实。'
 migration:
   method: scan
   scanned: '2026-11-11'
@@ -52,5 +52,8 @@ migration:
     - detail
   updates:
   - date: '2026-11-13'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

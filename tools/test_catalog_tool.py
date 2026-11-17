@@ -256,6 +256,42 @@ class CatalogToolTest(unittest.TestCase):
             code, res = self.run_tool("validate")
             self.assertTrue(any("fault_catalog.xlsx" in m for m in res["errors"]))
 
+    def test_gitcode_atomgit_url_normalization_and_retired_target_validation(self):
+        e1 = good_entry(slug="gc_one", original=dict(good_entry()["original"],
+                        source="https://atomgit.com/cann/ops-transformer/pull/15813"))
+        code, r1 = self.run_tool("new", stdin=json.dumps(e1))
+        self.assertEqual(code, 0, r1)
+        e2 = good_entry(slug="gc_two", original=dict(good_entry()["original"],
+                        source="https://gitcode.com/cann/ops-transformer/merge_requests/15813"))
+        code, r2 = self.run_tool("new", stdin=json.dumps(e2))
+        self.assertEqual(code, 2)
+        self.assertIn(r1["id"], r2["errors"][0])
+        _, found = self.run_tool("find", "https://gitcode.com/cann/ops-transformer/merge_requests/15813")
+        self.assertEqual([h["id"] for h in found["hits"]], [r1["id"]])
+        # Doubled date stripped on --note
+        self.run_tool("update", r1["id"], "--note", "2026-11-08 回访：仍 open")
+        note = self.entry(r1["id"])["original"]["notes"][0]
+        self.assertEqual(len([tok for tok in note.split() if tok.startswith("2026-")]), 1)
+        # Retiring target triggers validate error on active caller
+        e3 = good_entry(slug="gc_var", labels=dict(good_entry()["labels"], coverage="NEW"),
+                        relations=[{"kind": "var", "target": r1["id"]}],
+                        original=dict(good_entry()["original"], source="https://gitcode.com/cann/ops-nn/issues/99999"))
+        code, r3 = self.run_tool("new", stdin=json.dumps(e3))
+        self.assertEqual(code, 0, r3)
+        self.assertEqual(self.entry(r3["id"])["labels"]["coverage"], "var")
+        self.run_tool("pattern-sync")
+        self.run_tool("update", r1["id"], "--set", "status=retired")
+        self.run_tool("build")
+        code, vres = self.run_tool("validate")
+        self.assertEqual(code, 1)
+        self.assertTrue(any("retired" in m for m in vres["errors"]))
+        # Dissolving the pattern retires the orphan pattern shell cleanly
+        self.run_tool("update", r3["id"], "--set", "status=retired")
+        self.run_tool("pattern-sync")
+        self.run_tool("build")
+        code, vres2 = self.run_tool("validate")
+        self.assertEqual(code, 0, vres2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -27,12 +27,11 @@ import sys
 # Re-exec with the system interpreter instead of failing, so `python3 tools/...` works from any caller.
 try:
     import yaml  # noqa: F401
-    import requests  # noqa: F401
 except ImportError:
     for _alt in ("/usr/bin/python3", "/usr/local/bin/python3"):
         if os.path.exists(_alt) and os.path.realpath(_alt) != os.path.realpath(sys.executable):
             os.execv(_alt, [_alt] + sys.argv)
-    sys.exit("needs PyYAML / requests: python3 -m pip install pyyaml requests")
+    sys.exit("needs PyYAML: python3 -m pip install pyyaml requests")
 
 import argparse
 import json
@@ -45,12 +44,10 @@ import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
-import requests
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import catalog_tool as T  # noqa: E402
 
-API = "https://st8tp3ajl0df3n8b8l8qu.apigateway-cn-beijing.volceapi.com/v1/chat/completions"
+API = os.environ.get("JUDGE_API_URL", "")
 BASE = ("glm-5.3-flash", "deepseek-v4.1-flash", "qwen3.8-flash")
 PANEL = ("kimi-k3.1-pro", "glm-5.3", "qwen3.8-max")
 FIXER, VERIFIERS = "qwen3.8-max", ("kimi-k3.1-pro", "glm-5.3")
@@ -113,12 +110,16 @@ def user_f(e, fields=None):
 
 def call(model, system, user, key):
     """-> (content, None), or (None, last error) after 4 attempts."""
+    url = os.environ.get("JUDGE_API_URL") or API
+    if not url:
+        return None, "JUDGE_API_URL not set"
+    import requests
     body = {"model": model, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "max_tokens": 32768, "temperature": 0.0, **MODEL_OPTS.get(model, {})}
     err = None
     for attempt in range(4):
         try:
-            r = requests.post(API, headers={"Authorization": f"Bearer {key}"}, json=body, timeout=900)
+            r = requests.post(url, headers={"Authorization": f"Bearer {key}"}, json=body, timeout=900)
             if r.status_code == 200:
                 return r.json()["choices"][0]["message"].get("content") or "", None
             err = f"http {r.status_code}"
@@ -318,6 +319,7 @@ def cmd_run(a):
             fixes[i] = ok
     log.close()
 
+    ns = T.config()["namespace"]
     stats, records = Counter(), {}
     stats["void_replies"] = sum(v is None for res in (votes, proposed, verified) for v in res.values())
     for i in targets:
@@ -335,31 +337,59 @@ def cmd_run(a):
             e["effect"]["objects"] = ([corrected["effect"]["to"]] + [o for o in old if o != corrected["effect"]["to"]])[:3]
         if "visibility" in corrected:
             e["effect"]["visibility"] = corrected["visibility"]["to"]
+        applied_fixes = {}
         for f, text in fixes.get(i, {}).items():
             if f == "title":
                 e["title"] = text
-            elif f == "component" and isinstance(e["cause"]["objects"], list) and len(e["cause"]["objects"]) == 1:
-                e["cause"]["objects"][0]["component"] = text
+                applied_fixes[f] = text
+            elif f == "component" and isinstance(e["cause"]["objects"], list):
+                if len(e["cause"]["objects"]) == 1:
+                    e["cause"]["objects"][0]["component"] = text
+                    applied_fixes[f] = text
+                else:
+                    parts = [p.strip() for p in text.split("；") if p.strip()]
+                    if len(parts) == len(e["cause"]["objects"]) and all(len(p) <= T.LIMITS["component"] for p in parts):
+                        for obj, p in zip(e["cause"]["objects"], parts):
+                            obj["component"] = p
+                        applied_fixes[f] = text
             elif f == "behavior":
                 e["cause"]["behavior"] = text
+                applied_fixes[f] = text
             elif f == "detail":
                 e["effect"]["detail"] = text
-        unfixed = [f for f in to_fix.get(i, []) if f not in fixes.get(i, {})]
-        e["status"] = "active"
+                applied_fixes[f] = text
+        unfixed = [f for f in to_fix.get(i, []) if f not in applied_fixes]
+        held = []
+        if i not in rounds:
+            if unfixed:
+                held.append("issue_unfixed")
+            if ns == "INF" and d["effect"]["status"] in FINAL and d["effect"]["final"] in ("梯度", "训练信号"):
+                held.append("training_effect_in_inference")
+            raw_txt = render_original(e)
+            if (d["visibility"]["status"] in FINAL and d["visibility"]["final"] == "性能退化"
+                    and e.get("kind") == "故障"
+                    and not re.search(r"draft|mtp|eagle|dflash|投机|推测解码", raw_txt, re.I)):
+                held.append("pure_perf_regression")
+        if held:
+            e["status"] = "pending_audit"
+            stats["held_pending"] += 1
+        else:
+            e["status"] = "active"
         mig = e.setdefault("migration", {})
         record = {
             "round": rounds.get(i, f"daily-audit-{day}"), "base": list(BASE), "panel": list(PANEL) if i in need_panel else [],
-            **({"corrected": corrected} if corrected else {}), **({"rewritten": sorted(fixes[i])} if i in fixes else {}),
-            **({"issue_unfixed": unfixed} if unfixed else {}), **({"uncertain": uncertain} if uncertain else {}),
+            **({"corrected": corrected} if corrected else {}), **({"rewritten": sorted(applied_fixes)} if applied_fixes else {}),
+            **({"issue_unfixed": unfixed} if unfixed else {}), **({"held": held} if held else {}),
+            **({"uncertain": uncertain} if uncertain else {}),
             **({"uncertain_short": short} if short else {}),
             **({"previous": mig["audit"]} if i in rounds and mig.get("audit") else {})}
         mig["audit"] = record
-        changed = sorted({FIELD_PATHS[f] for f in [*corrected, *fixes.get(i, {})]})
+        changed = sorted({FIELD_PATHS[f] for f in [*corrected, *applied_fixes]})
         if i in rounds and changed:
             mig.setdefault("updates", []).append({"date": day, "fields": changed})
         records[i] = record
         stats["corrected_fields"] += len(corrected)
-        stats["rewritten_fields"] += len(fixes.get(i, {}))
+        stats["rewritten_fields"] += len(applied_fixes)
         stats["unfixed_fields"] += len(unfixed)
         stats["uncertain_fields"] += len(uncertain)
         stats["uncertain_short_fields"] += len(short)

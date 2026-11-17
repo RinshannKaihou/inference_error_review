@@ -21,7 +21,7 @@ mitigation:
   fix: 待定（issue open；报告者可同日 A/B 与 per-step draft/verify token dump 协助定位；另 v0.32 model_runner.py v1 路径 ~L1600 无条件 synchronize 为独立 perf 项，报告者本地带补丁）
 labels:
   stage: N/A
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-11'
 remarks: ''
@@ -49,3 +49,7 @@ migration:
       visibility:
         from: 质量退化
         to: 性能退化
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

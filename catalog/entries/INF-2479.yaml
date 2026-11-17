@@ -37,7 +37,7 @@ original:
   trigger_surface: vllm-ascend（v0.33 系）+ ModelSlim 量化 Kimi-K3 checkpoint + MLA 层 gate 与 Q/KV 精度不一致（FLOAT gate）。
   discovery: 2026-11-09 每日扫描
   notes:
-  - '2026-11-10 2026-11-10 回访：修复 PR #21387 已 merged（2026-11-10T09:35Z，Kimi MLA FLOAT gate INT8 错配修复合入）；随版本发布状态未核实。'
+  - '2026-11-10 回访：回访：修复 PR #21387 已 merged（2026-11-10T09:35Z，Kimi MLA FLOAT gate INT8 错配修复合入）；随版本发布状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -56,5 +56,8 @@ migration:
     - detail
   updates:
   - date: '2026-11-10'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

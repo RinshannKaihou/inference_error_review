@@ -4,7 +4,7 @@ slug: fp8_silent_bf16_fallback
 aliases: []
 title: 原生 FP8 checkpoint 在 A2/A3 静默以 BF16 运行
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 量化
@@ -19,13 +19,13 @@ effect:
   visibility: 性能退化
 mitigation:
   detect: 对比加载后权重大小/显存占用；查 fp8_block.py mxfp8_method 是否 None
-  fix: 待定（报告者准备 fail-fast PR，未见提交）；规避：A2/A3 使用 BF16 发布版或 ModelSlim/LLM-Compressor 量化 checkpoint
+  fix: 已有修复 PR/MR：https://github.com/vllm-project/vllm-ascend/pull/21516（发布状态待核实）
 labels:
   stage: N/A
   confidence: documented
   coverage: NEW
   discovered: '2026-11-06'
-remarks: ''
+remarks: A2/A3 无硬件 FP8 GEMM 文档化回退 BF16 占显存，非静默计算故障
 evidence:
 - url: https://github.com/vllm-project/vllm-ascend/issues/21157
   kind: github_issue
@@ -39,7 +39,7 @@ original:
   trigger_surface: A2/A3（910B/910C）+原生 block-wise FP8 checkpoint（quant_method=fp8+weight_block_size）；950 正常
   discovery: 2026-11-06 每日扫描
   notes:
-  - 2026-11-11 2026-11-11 回访：修复 PR !21516（open）——在 scheme 构造期（vLLM config 查找与权重缓冲分配之前）拒绝非 950 设备的原生 block-FP8 路径并给出改用 BF16/ModelSlim/LLM-Compressor checkpoint 的指引；linear/MoE 构造器回归测试（修复前 NotImplementedError 未抛出）+ Atlas 800T A2 实机 is_950 检查验证。合入未核实。
+  - 2026-11-11 回访：回访：修复 PR !21516（open）——在 scheme 构造期（vLLM config 查找与权重缓冲分配之前）拒绝非 950 设备的原生 block-FP8 路径并给出改用 BF16/ModelSlim/LLM-Compressor checkpoint 的指引；linear/MoE 构造器回归测试（修复前 NotImplementedError 未抛出）+ Atlas 800T A2 实机 is_950 检查验证。合入未核实。
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -62,3 +62,12 @@ migration:
     fields:
     - evidence
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - mitigation.fix
+  - date: '2026-11-17'
+    fields:
+    - status

@@ -21,7 +21,7 @@ mitigation:
   fix: 待定（issue 2026-11-04 新开，向维护者求证 FLASHMLA+hybrid 线性注意力 recurrent state page 已知问题）
 labels:
   stage: N/A
-  confidence: documented
+  confidence: speculative
   coverage: NEW
   discovered: '2026-11-04'
 remarks: ''
@@ -36,7 +36,7 @@ original:
   trigger_surface: vLLM 0.30.0 + FLASHMLA + TP16/EP；Kimi-K3 hybrid（24 full-attn+69 GDN）；~9700 token prompt + 特定前缀；max_model_len 1M。根因未定位（已排除外部 KV 连接器/驱动/采样）。
   discovery: 2026-11-04 每日扫描
   notes:
-  - 2026-11-05 2026-11-05 回访：#65680 仍 open，根因未定位状态未变
+  - 2026-11-05 回访：回访：#65680 仍 open，根因未定位状态未变
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -56,3 +56,9 @@ migration:
   - date: '2026-11-05'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - labels.confidence

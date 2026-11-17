@@ -1,7 +1,6 @@
 id: PAT-INF-0207
 title: 待定
 shared_mechanism: 待定
-representative: INF-1761
-members:
-- INF-1761
-- INF-2565
+representative: null
+members: []
+status: retired

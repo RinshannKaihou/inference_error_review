@@ -36,7 +36,7 @@ original:
   trigger_surface: CANN 9.3.0 ops-math master（2026-11-04）；aclnnChunkCat；空 tensorList 或全空 tensor 输入。
   discovery: 2026-11-04 每日扫描
   notes:
-  - 2026-11-05 2026-11-05 回访：#4460 仍 open（11-05T11:28 有更新，状态未核）
+  - 2026-11-05 回访：回访：#4460 仍 open（11-05T11:28 有更新，状态未核）
 migration:
   method: scan
   scanned: '2026-11-04'
@@ -52,5 +52,8 @@ migration:
     - qwen3.8-max
   updates:
   - date: '2026-11-05'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

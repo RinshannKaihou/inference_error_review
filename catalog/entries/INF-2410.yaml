@@ -35,6 +35,8 @@ original:
   behavior: 量化 batch matmul 的量化参数张量如果是切片/视图等非连续布局（stride≠1），算子不报错、正常返回，但内部把内存里相邻的元素当成逻辑相邻来读——本该用第 i 个 scale 的地方用了第 2i 个。实测输出在两组 scale 之间交错取值，整批量化结果静默算错。文档明确标支持非连续输入，用户无从预期。
   trigger_surface: CANN 9.3.0；aclnnBatchMatmulQuant；quantParam 真非连续（stride≠1，如按通道分片加载的上游切片）；A3 910_9362。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访：#8260 仍 open（11-06T03:01 更新，状态未变）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -52,3 +54,10 @@ migration:
       subsystem:
         from: 算子/内核
         to: 量化
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes

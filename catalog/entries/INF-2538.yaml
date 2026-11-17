@@ -39,12 +39,15 @@ original:
   trigger_surface: cann/hcomm HcclRankGraphGetLayers / IRankGraph::GetNetLayers；非对称组网（不同 rank 所属网络层集合不一致）；CANN 9.x。
   discovery: 2026-11-13 每日扫描
   notes:
-  - '2026-11-13 2026-11-13 回访：hcomm #1279 已 closed（2026-11-12T09:04Z），修复 !6618 状态未核实。'
+  - '2026-11-13 回访：回访：hcomm #1279 已 closed（2026-11-12T09:04Z），修复 !6618 状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-13'
   updates:
   - date: '2026-11-13'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes
   audit:

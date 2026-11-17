@@ -37,7 +37,7 @@ original:
   trigger_surface: vLLM GDN Triton/FLA prefill；Hopper H20（sm90）；triton 3.6；autotune 选中 BK<K 且 num_warps>=4 的配置。
   discovery: 2026-11-03 每日扫描
   notes:
-  - 2026-11-04 回访 2026-11-04：#65385 仍 open
+  - 2026-11-04 回访：#65385 仍 open
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -58,5 +58,8 @@ migration:
     - effect
   updates:
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

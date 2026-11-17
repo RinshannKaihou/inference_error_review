@@ -35,6 +35,8 @@ original:
   behavior: MoE 分组 matmul+SwiGLU+量化融合算子在某个专家/分组的输出宽度 N 为 0 时：接口返回成功，主输出确实没东西可写（空），但每个 token 的反量化 scale 输出（outputScale，256 个元素非空）也整块没写——读回全是未初始化显存里的旧值。下游拿这些垃圾 scale 去反量化，数值静默错误，日志里一行错误都没有。
   trigger_surface: CANN 9.3.0.B020；aclnnGroupedMatmulSwigluQuantV2（ND 入口）；weightScale 最后一维 n==0（输出 [m,0] 但 outputScale [m] 非空）；A5 950PR 实测（根因守卫为 DAV_3510 专属）。
   discovery: 2026-11-05 每日扫描
+  notes:
+  - 2026-11-06 回访：#7164 仍 open（11-06T02:15 更新，状态未变）
 migration:
   method: scan
   scanned: '2026-11-05'
@@ -49,3 +51,10 @@ migration:
       subsystem:
         from: 量化
         to: 算子/内核
+  updates:
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes

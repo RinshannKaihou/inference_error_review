@@ -4,7 +4,7 @@ slug: vllm_eplb_async_worker_error_stall_and_stale_reset_leak
 aliases: []
 title: vLLM EPLB worker 异常静默停摆与 reset 泄漏
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: MoE路由
@@ -25,7 +25,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-07'
-remarks: ''
+remarks: 异步 EPLB 负载均衡线程停摆，计算结果无损的纯性能问题
 evidence:
 - url: https://github.com/vllm-project/vllm/issues/66144
   kind: github_issue
@@ -39,7 +39,7 @@ original:
   trigger_surface: vLLM --enable-fault-tolerance + EPLB（async worker）+ worker 线程异常（如 collective 超时/stream sync 失败）；停摆在任何 worker 异常时出现，陈旧泄漏 4 场景仅在 FT reset/retry 路径出现；#66146 合入前 main 均存在。
   discovery: 2026-11-07 每日扫描
   notes:
-  - '2026-11-08 回访 2026-11-08：#66144 仍 open；修复 PR #66146 open 无变化（search 快照）'
+  - '2026-11-08 回访：#66144 仍 open；修复 PR #66146 open 无变化（search 快照）'
 migration:
   method: scan
   scanned: '2026-11-07'
@@ -64,3 +64,9 @@ migration:
   - date: '2026-11-08'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - status

@@ -39,7 +39,7 @@ original:
   trigger_surface: vllm-ascend v0.30.0；DeepSeek-V4.1-Flash W8A8 QuaRot export；检查点镜像缺 optional/quarot.safetensors（quant_description 声明了该文件）。
   discovery: 2026-11-03 每日扫描
   notes:
-  - '2026-11-04 回访 2026-11-04：源 #20829 与修复 #20830 均仍 open，无合入动向'
+  - '2026-11-04 回访：源 #20829 与修复 #20830 均仍 open，无合入动向'
 migration:
   method: scan
   scanned: '2026-11-03'
@@ -52,5 +52,8 @@ migration:
     panel: []
   updates:
   - date: '2026-11-04'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

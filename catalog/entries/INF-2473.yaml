@@ -38,7 +38,7 @@ original:
   trigger_surface: aclnnFusedInferAttentionScore 系列 + arch22 + LSE_MODE=OUT_ONLY + split-KV combine + BlockEpilogue 跨 split/non-split 任务复用。
   discovery: 2026-11-09 每日扫描
   notes:
-  - '2026-11-10 2026-11-10 回访：issue #7287 已关闭（2026-11-10）；修复 !15558 补 MTE3_V(EVENT_ID5) 同步对，合入与随版发布状态未核实。'
+  - '2026-11-10 回访：回访：issue #7287 已关闭（2026-11-10）；修复 !15558 补 MTE3_V(EVENT_ID5) 同步对，合入与随版发布状态未核实。'
 migration:
   method: scan
   scanned: '2026-11-09'
@@ -56,5 +56,8 @@ migration:
     - visibility
   updates:
   - date: '2026-11-10'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
     fields:
     - original.notes

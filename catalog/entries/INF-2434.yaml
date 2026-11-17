@@ -4,7 +4,7 @@ slug: layernorm_eps_negative_nan_family
 aliases: []
 title: LayerNorm 族 eps<0 放行静默输出全 NaN（三算子同型）
 kind: 故障
-status: active
+status: retired
 cause:
   objects:
   - subsystem: 算子/内核
@@ -24,7 +24,7 @@ labels:
   confidence: documented
   coverage: NEW
   discovered: '2026-11-06'
-remarks: '同型三单 #8304/#8309/#8310，本条以首单 LayerNorm 为代表收录，其余两单作同族证据；触发面为调用方参数错误（非法 eps），非正常负载。'
+remarks: C++ aclnn 直调契约外非法入参（GIGO 负向测试），正常 PyTorch/LLM 框架路径不可达
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8304
   kind: gitcode_issue
@@ -48,6 +48,9 @@ migration:
   - date: '2026-11-07'
     fields:
     - relations
+  - date: '2026-11-17'
+    fields:
+    - status
   audit:
     round: daily-audit-2026-11-07
     base:

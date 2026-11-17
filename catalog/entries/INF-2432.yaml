@@ -28,7 +28,9 @@ remarks: 与 INF-2408（#8260 BatchMatmulQuant 非连续 quantParam）不同算�
 evidence:
 - url: https://gitcode.com/cann/ops-nn/issues/8346
   kind: gitcode_issue
-relations: []
+relations:
+- kind: cross
+  target: TRN-0646
 original:
   mechanism: Ascend 910B3+CANN 9.3.0+torch_npu 2.14.0（Python 3.14）：torch_npu.npu_weight_quant_batchmatmul 走 A16W8 PerGroup（antiquantGroupSize=128，取值在 [32,k-1] 且为 32 倍数，符合文档）ND 路径时结果与 FP64 反量化参考 NRMS≈0.1935、allclose(rtol=0.02,atol=0.00390625)=False。M=19456 缩小到 256（x 8×256，weight 256×256，k=256，group=128）仍 NRMS≈0.1806，排除大 shape/尾块特例；同一接口切 PerChannel（antiquantGroupSize=0）NRMS≈0.00166、allclose=True 作对照；输入构造（bf16 x、int8 ND weight [K,M]、bf16 antiquantScale [K/G,M]）全部符合官方文档约束。怀疑 WeightQuantBatchMatmulV2 PerGroup ND 路径反量化/数值实现缺陷，或该场景实际未支持但未返回错误。最小独立脚本仅用公开 API 与随机数据，torch.manual_seed(20261106) 可复现。
   source: https://gitcode.com/cann/ops-nn/issues/8346
@@ -36,7 +38,7 @@ original:
   trigger_surface: torch_npu.npu_weight_quant_batchmatmul A16W8+PerGroup（antiquantGroupSize≠0）+ND 格式；910B3、CANN 9.3.0、torch_npu 2.14.0
   discovery: 2026-11-06 每日扫描
   notes:
-  - 2026-11-07 2026-11-07 回访：issue 11-07T00:19 有更新，仍 open，无状态变化。
+  - 2026-11-07 回访：回访：issue 11-07T00:19 有更新，仍 open，无状态变化。
 migration:
   method: scan
   scanned: '2026-11-06'
@@ -56,3 +58,9 @@ migration:
   - date: '2026-11-07'
     fields:
     - original.notes
+  - date: '2026-11-17'
+    fields:
+    - original.notes
+  - date: '2026-11-17'
+    fields:
+    - relations
