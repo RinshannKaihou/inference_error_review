@@ -4,7 +4,7 @@ slug: vllm_ascend_missing_causal_conv1d_update_kernel_layout_confusion
 aliases: []
 title: vllm-ascend 缺失 conv 更新内核致 GDN/KDA 静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: INF-0194
+pattern: PAT-INF-0041
 original:
   mechanism: 'PR #20377 在 vllm_ascend/patch/worker/patch_triton.py 增加 `from vllm_ascend.ops.triton.mamba.causal_conv1d import causal_conv1d_update_npu as _cc1d_update_npu; _cc1d.causal_conv1d_update = _cc1d_update_npu`，但同一提交只在 causal_conv1d.py 增加了 GDN 专用的 causal_conv1d_update_varlen，从未实现 causal_conv1d_update_npu。import 在每次启动时失败，rebind 从未生效，APIServer 与 EngineCore 各打印一次回退警告。回退后的 upstream `causal_conv1d_update` 把 conv_state 严格解释为 mamba 布局 `(cache_lines, dim, state_len)`、权重 `(dim, width)`；GDN/KDA 层实际使用 dim-last 状态 `(cache_lines, state_len, dim)` 与 `(width, dim)` 权重，dim 与 history stride 交换。kernel 级 MCVE：把 dim-last 输入 transpose 到 mamba 布局跑 upstream 包装再转回作 ground truth，直接以 dim-last 输入调用 upstream 包装得 maxdiff=239（正确值 O(1–10)），实现提议的 causal_conv1d_update_npu 后 maxdiff=0；生产 `validate_data=False`，无断言。环境 vllm-ascend nightly-main（vLLM 0.33.0）、torch_npu 2.10.0.post7、CANN 9.2.1、Atlas 800I A2（910B2）。'
   source: https://github.com/vllm-project/vllm-ascend/issues/23084（open，2026-11-24，含 kernel 级 MCVE、maxdiff=239 与修复建议）
@@ -41,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-26'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []

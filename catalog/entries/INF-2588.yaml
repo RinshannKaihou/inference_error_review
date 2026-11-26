@@ -4,13 +4,13 @@ slug: cann_kv_rms_norm_rope_cache_v2_index_rank_unchecked
 aliases: []
 title: KvRmsNormRopeCacheV2 index 秩未校验致错位
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: cann
     component: KvRmsNormRopeCacheV2
-  behavior: index 只按 1–2 维契约使用，host 端未校验 rank；传 3/4 维（仅多前置 1 维、元素值顺序不变）时两段接口仍返回 0，kernel 按二维步长取址，kCache/ckvCache 写入与基线错位。
+  behavior: 资料规定 index 支持 1–2 维，但 op_api 未校验 index rank；3/4 维 index（仅多前置 1 维）仍被接受且返回成功，导致 kCache/ckvCache 写入错位。
 effect:
   objects:
   - KV状态
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1573
+pattern: PAT-INF-0209
 original:
   mechanism: '`aclnnKvRmsNormRopeCacheV2` 的资料规定 `index` 支持 1–2 维（Norm 场景为二维 `[Bkv, Skv]`），错误码表 561002 明确包含「参数 index 的 shape 校验非法」；但 op_api 未校验 index rank。实测 A3（Ascend 910_93）/CANN 9.3.0.P009、ops-transformer master 91de0d99：同一 seed、同一 host 数据，只给 index 增加前置 1 维，2 维 `int64[1x8]` 基线 cache 与参考逐元素一致；3 维 `int64[1x1x8]` 两段 rc=0，kCacheRef 512 / ckvCacheRef 4088 个元素与基线不同；4 维 `int64[1x1x1x8]` rc=0，448/3580 个元素不同；kRopeOut/cKvOut 无差异，说明纯出参与 index 无关。cache 出参预填 0x5A5A，差异按逐元素统计，canary 证明是写入错位而非未写。'
   source: https://gitcode.com/cann/ops-transformer/issues/8709（open，2026-11-26，含 A3 逐元素差异表与 SELFPROOF）
@@ -41,3 +42,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-26'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

@@ -4,7 +4,7 @@ slug: cann_moe_finalize_routing_v4_fp16_accum_cancellation
 aliases: []
 title: MoeFinalizeRoutingV4 fp16 大 K 累加灾难性抵消
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: INF-1582
+pattern: PAT-INF-0210
 original:
   mechanism: '`aclnnMoeFinalizeRoutingV4` 在 fp16 输入、K=96 的合法用例上输出 0.0，而按资料公式（以及仓内官方 golden 的 fp32 中间量口径）应为 32.0。输入 expandedX fp16 `[96,4]`：前 32 行 1024.0、中 32 行 1.0、后 32 行 -1024.0；expandedRowIdx=0..95，k=96，NUM_ROWS=1，无 scales/bias；数学结果 32×1024+32×1−32×1024=32.0。fp16 顺序累加在 32768 上加 1 全被舍入掉，再减 32768 得 0.0。K 较大（16–256）时 fp16 累加会吞掉小项，输出与资料公式/官方 golden 出现数量级偏差；两段式返回 0，调用方只能从模型精度异常发现。环境 Ascend 910B2（A2/arch22）、CANN 9.3.0、ops-transformer master e16a9ddc0edb69ef7a70e4b6e32d647f47f049aa。'
   source: https://gitcode.com/cann/ops-transformer/issues/8666（open，2026-11-25，含 K=96 最小复现与 fp16 累加分析）
@@ -41,3 +42,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-26'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max

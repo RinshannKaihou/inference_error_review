@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2192
+pattern: PAT-INF-0213
 original:
   mechanism: '`aclnnFlashAttentionScore` 在 Ascend950PR、fp16、`scaleValue=0`、`headNum=16`、`Skv=129` 时，GetWorkspaceSize 与 execute 都返回 0，但输出与公式定义的均匀注意力不符：`scale=0` 时 scores 恒 0，softmax 在 Skv 轴均匀，`attentionOut[b,n,i,:]` 应等于 `value[b,n,:,:]` 在 Skv 轴的算术平均；实测与 mean(V) 最大偏差 0.095181，192000/262144 个元素偏差 > 1e-2。对照：fp16、Nq=16、Skv=128、scale=0 时偏差 0.000000；fp32、Skv=129 也不复现。即缺陷随 `Skv%128` 与 headNum 变化，不是固定倍数，df 与 FIA V5 #6739 的固定 0.5×mean(V) 不同。环境 Ascend950PR、CANN 9.3.0、ops-transformer master a739e89cc1ba834107d072b8c20ccc8358887c19。'
   source: https://gitcode.com/cann/ops-transformer/issues/8413（open，2026-11-23，含 Skv=128/129 对照与逐元素偏差）
@@ -41,3 +42,18 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-26'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    issue_unfixed:
+    - behavior
+    held:
+    - issue_unfixed

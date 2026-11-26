@@ -4,19 +4,19 @@ slug: vllm_ascend_pd_prefix_cache_kv_transfer_corruption
 aliases: []
 title: vllm-ascend PD 前缀缓存 KV 传输致输出损坏
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: vllm-ascend
     component: MooncakeConnectorV1 P→D
-  behavior: P/D 两侧都开 prefix caching 且经 MooncakeConnectorV1 传输时，P 侧命中前缀缓存后产生的 KV 经 P→D 传到 D 被错误复用；单独直连 P 或 D 均正确，缺陷只在 PD 代理链路出现。
+  behavior: P/D 均启用 prefix caching 时，污染被锁定在 P→D KV 传输与前缀缓存命中路径，疑似 D 侧缓存与传输 KV 交互，致重复相同长 prompt 间歇性输出损坏；直连未复现。
 effect:
   objects:
   - KV状态
   - 输出内容
   detail: DeepSeek-V4.1-Flash W8A8 重复同一 25.9K prompt，经 PD 代理 2-3/5 次输出空内容/重复背景/多语言乱码/截断 tool-call 参数；8.5K prompt 4/6、短 prompt 0/13；直连 D 5/5 正确。
-  visibility: 静默错误
+  visibility: 不可复现
 mitigation:
   detect: 同 prompt 经 PD 代理与直连 D 对照；关闭 D 侧 prefix caching 做差分；检查 tool-call JSON 非法告警
   fix: 待定（open；issue 怀疑 D 侧 cache 与传输 KV 交互，尚未给出修复 PR）
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      visibility:
+        from: 静默错误
+        to: 不可复现
+    rewritten:
+    - behavior

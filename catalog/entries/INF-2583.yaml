@@ -4,13 +4,13 @@ slug: cann_aclnn_matmul_aclgraph_boundary_row_mismatch
 aliases: []
 title: ACLGraph 捕获 MatMul 边界行与 eager 不一致
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: cann
     component: aclnnMatmul ACLGraph
-  behavior: 同一 BF16 MatMul（输入与调用参数逐位相同）在 ACLGraph 捕获/重放与 eager 下选择不同 tiling/累加路径；M=8 verify block 的最后一行输出结构性偏离，eager 与 admitted 一致。
+  behavior: 相同输入与调用参数下，ACLGraph 捕获/重放的 BF16 MatMul 在 M=8 边界行输出与 eager 结构性不同，指向内部 tiling/累加，而非输入、参数或精度舍入。
 effect:
   objects:
   - 数值结果
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

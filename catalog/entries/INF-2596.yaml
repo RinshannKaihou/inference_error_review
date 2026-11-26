@@ -4,18 +4,18 @@ slug: vllm_activation_gating_noncontiguous_silent_wrong
 aliases: []
 title: vLLM 激活/门控算子非连续输入静默错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: vllm
     component: SiluAndMul 等 CUDA 激活族
-  behavior: 8 个 CUDA 激活/门控 launcher 不做 stride 校验，直接把张量传给按连续布局读写的 kernel；同值 strided 输入时结果与参考无关，strided 输出时只写一半单元并越界改写父 buffer。
+  behavior: vLLM CUDA 激活/门控族 launcher 未校验 contiguity/stride，非连续输入或 strided 输出被直传给按连续布局读写的 kernel。
 effect:
   objects:
   - 数值结果
   - 跨请求/跨样本数据
-  detail: T=8/H2=256 fp16，输入 stride 4 的同值视图 rel error 1.82（连续对照 0.0004）；输出视图 parent[...,::2] 只写 1024/2048 单元，另有 1024 个 view 外 parent 单元被覆盖；8 个输入、7 个输出算子复现。
+  detail: 非连续输入或 strided 输出视图时：同值但内层步长4的输入视图相对浮点参考误差1.82（连续对照0.0004）；NaN填充父视图[...,::2]作输出仅写1024/2048逻辑单元，其余NaN，另1024个视图外父单元被覆盖，等效越界。8输入、7输出复现。
   visibility: 静默错误
 mitigation:
   detect: 对每个激活算子用 stride 2/4/8 与 token-strided 的同值视图对照连续输出；输出视图用 NaN 预填 parent 检查未写单元与越界覆盖
@@ -39,3 +39,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior
+    - detail

@@ -4,7 +4,7 @@ slug: vllm_ascend_staged_metadata_h2d_race_kv_hit_wrong_answer
 aliases: []
 title: vllm-ascend 元数据 H2D 无序致 KV 命中答错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 运行时/执行
@@ -13,8 +13,8 @@ cause:
   behavior: apply_write 以 non_blocking H2D 拷贝请求元数据后启动 apply-write kernel，但 Ascend 不保证同 stream 保序；kernel 可能读到上一轮的元数据。
 effect:
   objects:
-  - KV状态
   - 输出内容
+  - KV状态
   detail: DeepSeek-V4-Flash-DSpark W4A8 + Ascend KV Pool 下，命中前缀缓存的请求间歇答错（如 secret number 变 1、重复文本），9/9 次 engine 运行至少一次；改阻塞拷贝后 5/5 正确。
   visibility: 静默错误
 mitigation:
@@ -39,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-26
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: KV状态
+        to: 输出内容
+    uncertain:
+    - visibility
