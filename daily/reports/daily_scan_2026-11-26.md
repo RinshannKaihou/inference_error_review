@@ -117,3 +117,92 @@
 - 回访修改：INF-1534、INF-1749、INF-2564（各追加 notes）。
 - `catalog_tool.py build` 生成 `views/` 成功；`validate` 返回 `ok: true`，entries **2600**、patterns **202**、errors 0、warnings 46、pending_audit 18。
 - 编目统计：故障 2583、结论 8、方法 8、指针 1；active 2508、merged 15、retired 59、pending_audit 18。
+
+---
+
+# 第二轮扫描 2026-11-26 23:00 UTC 批次
+
+## 7. Git 前置检查与共享采集批次
+
+- 分支 `main`、上游 `origin/main`；`git status --porcelain -uall` 为空；`git fetch origin main` 成功；HEAD 与 `origin/main` 一致（`98d494739b3f4289ffeb51dc9c0304e3c49fee83`，上一条为 `daily audit 2026-11-26: inference`）。通过后开始。
+- 批次：`/root/.hermes/profiles/third/cache/fault_scan_sources/batch-20261126T230012802031-0fr6ru25`，`generated_at=2026-11-26T23:00:12Z`，`registry_hash=2f6422d0…8d94d`，22 源，`complete=true`，`cached=false`，`failures=[]`。
+- 窗口：`2026-11-26T03:55:12Z → 2026-11-26T23:00:12Z`（约 19 小时；消费水位 `2026-11-26T04:55:12Z`，含 1 小时重叠）。
+- 候选索引 `inference.jsonl` 47,560 条；`inference_delta.jsonl` **3,245 条**（issue 827 + PR 2,418）。
+- 与 04:55Z 批次相比：本轮 **22/22 源全部 complete**，无分页缺口；上轮 `Ascend/pytorch` 与 `cann/ops-transformer` 的 pulls 尾部缺页已补齐。
+
+### 逐仓覆盖（窗口内 issue+PR）
+
+| 平台 | 仓库 | fetched | complete |
+|---|---|---:|---|
+| gitcode | Ascend/pytorch | 259（65/194） | 是 |
+| gitcode | Ascend/op-plugin | 39（11/28） | 是 |
+| gitcode | Ascend/torchair | 119（11/108） | 是 |
+| gitcode | cann/ops-transformer | 681（257/424） | 是 |
+| gitcode | cann/ops-nn | 618（183/435） | 是 |
+| gitcode | cann/ops-math | 199（70/129） | 是 |
+| gitcode | cann/ge | 162（49/113） | 是 |
+| gitcode | cann/runtime | 135（14/121） | 是 |
+| gitcode | cann/hccl | 134（27/107） | 是 |
+| gitcode | cann/hcomm | 246（66/180） | 是 |
+| gitcode | mindspore/mindspore | 17（7/10） | 是 |
+| gitcode | mindspore/mindformers | 14（0/14） | 是 |
+| gitcode | Ascend/msprobe | 12（5/7） | 是 |
+| gitcode | Ascend/mssanitizer | 16（3/13） | 是 |
+| gitcode | Ascend/MindSpeed 三仓 | 26/28/0 | 是（训练域，不判定） |
+| gitcode | Ascend/MindIE-LLM | 2（1/1） | 是 |
+| gitcode | Ascend/msmodelslim | 20（3/17） | 是 |
+| github | vllm-project/vllm-ascend | 476 | 是 |
+| github | sgl-project/sgl-kernel-npu | 17 | 是 |
+| github | triton-lang/triton-ascend | 68 | 是 |
+
+## 8. NPU 判定（第二轮）
+
+- 筛选：827 条 issue 中 485 条带关键词命中；按精度/静默/NaN/溢出/不一致等高信号缩到 270 条标题级复核，约 15 条读批次正文（含 kernel 行号、复现脚本与 SELFPROOF）；2,418 条 PR 仅标题级分类。
+- 新增 **15 条**（`pending_audit`、`documented`，本轮未本地复现）：
+
+| 编号 | 来源 | 机制摘要 | 关系 |
+|---|---|---|---|
+| INF-2601 | [ops-transformer#8877](https://gitcode.com/cann/ops-transformer/issues/8877) | 950PR pertensor 量化 MC2 让 bias 在反量化前入 matmul，被 x1Scale*x2Scale 缩放（16.0→0.0625），真实 scale 下等于静默丢 bias。 | — |
+| INF-2602 | [ops-transformer#8870](https://gitcode.com/cann/ops-transformer/issues/8870) | RecurrentGatedDeltaRule fp32 state、Dk%16≠0 时 CopyInState 行内 32B 空隙未写，initcheck 报 2080B 未初始化读；残留 NaN 时零输入出 NaN。 | — |
+| INF-2603 | [ops-transformer#8857](https://gitcode.com/cann/ops-transformer/issues/8857) / [#8841](https://gitcode.com/cann/ops-transformer/issues/8841) / [#8737](https://gitcode.com/cann/ops-transformer/issues/8737) | MC2 算子 AIV 分支接受 x2 转置/隔列视图后按连续行主序读 storage，rc=0 但结果偏离 13–30。 | — |
+| INF-2604 | [ops-transformer#8846](https://gitcode.com/cann/ops-transformer/issues/8846) | FfnWorkerBatching 的 out_num 未文档化，out_num=0 时 144 个 token 全部静默丢弃。 | cross TRN-0424 |
+| INF-2605 | [ops-transformer#8830](https://gitcode.com/cann/ops-transformer/issues/8830) | AttentionWorkerCombine needSchedule=1 时每核区间最后一行整行清零（A2 47 行 / A3 40 行）。 | — |
+| INF-2606 | [Ascend/pytorch#6486](https://gitcode.com/Ascend/pytorch/issues/6486) | triton_experimental int64 豁免过窄，abs 大整数截成低 32 位（2^40→0、2^31→-2147483648）。 | — |
+| INF-2607 | [vllm-ascend#23400](https://github.com/vllm-project/vllm-ascend/issues/23400) | FIA 在 ntok=4、TND_NTD/sparse_mode=3 verify 批对有限 q/k 间歇输出全 NaN（约 50% 步骤）。 | — |
+| INF-2608 | [ops-nn#10335](https://gitcode.com/cann/ops-nn/issues/10335) / [#10332](https://gitcode.com/cann/ops-nn/issues/10332) / [#10337](https://gitcode.com/cann/ops-nn/issues/10337) | RegBase RMSNorm 系归约 FP32 平方/累加溢出，1e19–1e20 输入使 rstd 下溢为 0、量化输出整行 0；倒数槽 8 个而每核 9 行。 | cross TRN-0397 |
+| INF-2609 | [Ascend/pytorch#6461](https://gitcode.com/Ascend/pytorch/issues/6461) | triton_experimental 多维 scan dim fixup 漏三种形态，cumsum/cumprod 扫错轴（int32 100/125 元素错）。 | var INF-2544 |
+| INF-2610 | [vllm-ascend#23399](https://github.com/vllm-project/vllm-ascend/issues/23399) | FIA verify 步按 2048 宽 mask 块对齐读，越过 actual_seq_kvlen 读到未写 KV 的 NaN，输出整块 NaN。 | var INF-2154 |
+| INF-2611 | [triton-ascend#3322](https://github.com/triton-lang/triton-ascend/issues/3322) / [#3356](https://github.com/triton-lang/triton-ascend/issues/3356) | libdevice/tl.exp 等对次正规结果或输入 FTZ：exp(-88)→0、最小次正规 sqrt→NaN。 | — |
+| INF-2612 | [sglang#51531](https://github.com/sgl-project/sglang/issues/51531) | `--mamba-ssm-dtype bfloat16` 使 GDN 状态误差沿步累积，MATH-500 0.663→0.584（−0.079±0.015）。 | — |
+| INF-2613 | [flashinfer#9887](https://github.com/flashinfer-ai/flashinfer/issues/9887) | min_p pivot=0 把零概率槽全标 valid，逆 CDF 未选中回退 last_valid_id=d-1，生产返回 201023。 | var INF-2593 |
+| INF-2614 | [flashinfer#10073](https://github.com/flashinfer-ai/flashinfer/issues/10073) | merge_state 不校验 dtype：s 非 fp32 时 LSE 不写回、v dtype 混用按 v_a 重解释（至 400/NaN）、int32 mask 只合并首行。 | — |
+| INF-2615 | [transformers#51216](https://github.com/huggingface/transformers/issues/51216) | 批内混用含/不含 decoder_start_token 的前缀时整体跳过前置，缺 token 请求静默错生成（score 差 13.03）。 | — |
+
+留观 / 不收（NPU）：[ops-math#5295](https://gitcode.com/cann/ops-math/issues/5295)（LogicalOr complex 判真错，非 LLM 路径，留观）；[ops-math#5305](https://gitcode.com/cann/ops-math/issues/5305)（col2_im 传统 CV 算子，记 rejected.md R.4）；[hccl#1001](https://gitcode.com/cann/hccl/issues/1001)（样例把 NaN 判为通过，记 blindspots.md）。标题级留观：[ops-transformer#8834](https://gitcode.com/cann/ops-transformer/issues/8834)、[#8862](https://gitcode.com/cann/ops-transformer/issues/8862)、[#8849](https://gitcode.com/cann/ops-transformer/issues/8849)、[#8855](https://gitcode.com/cann/ops-transformer/issues/8855)、[#8828](https://gitcode.com/cann/ops-transformer/issues/8828)、[#8844](https://gitcode.com/cann/ops-transformer/issues/8844)、[ops-nn#10334](https://gitcode.com/cann/ops-nn/issues/10334)、[#10328](https://gitcode.com/cann/ops-nn/issues/10328)、[#10326](https://gitcode.com/cann/ops-nn/issues/10326)、[#10322](https://gitcode.com/cann/ops-nn/issues/10322)、[#10316](https://gitcode.com/cann/ops-nn/issues/10316)、[Ascend/pytorch#6479](https://gitcode.com/Ascend/pytorch/issues/6479)、[#6478](https://gitcode.com/Ascend/pytorch/issues/6478)。
+
+## 9. GitHub 7 仓（第二轮）
+
+- 认证：`gh_api.py` 从 profile `.env` 读取 `GITHUB_TOKEN`，`/rate_limit` 与全部请求 `authenticated: true`；Search 间隔 ≥2 秒。
+- **API 账本**：7 仓 × 3 关键词组（correctness/silent/NaN）= **21/21 HTTP 200**，`created:>=2026-11-19`（`cutoff=$(date -u -d '7 days ago' +%F)`），`per_page=100`、`--max-pages 2`，21 次均单页 `complete=true`，无分页缺口。
+- 计数（correctness/silent/NaN）：vllm 25/38/3，sglang 7/17/1，transformers 3/14/3，TRT-LLM 1/0/1，triton 1/6/2，tt-metal 3/18/10，flashinfer 6/6/4；去重 **150 个 issue**。
+- 新增 2 条：INF-2616（[triton#12861](https://github.com/triton-lang/triton/issues/12861)，tl.topk K<N 时窄类型静默改位宽/符号，uint8(200) 取反 K=16→55、K=8→-201）、INF-2617（[tt-metal#67315](https://github.com/tenstorrent/tt-metal/issues/67315)，gather/nonzero 用 tile_size/tile_hw 推元素字节数，bfloat8_b 2048 输出 2038 错）。
+- 维持原判定：[transformers#51079](https://github.com/huggingface/transformers/issues/51079)（INF-2595）、[vllm#69663](https://github.com/vllm-project/vllm/issues/69663)（INF-2596）、[flashinfer#9981](https://github.com/flashinfer-ai/flashinfer/issues/9981)（INF-2593）、[triton#12860](https://github.com/triton-lang/triton/issues/12860)（INF-1766 同族归并）。
+- 有正文但未收录：flashinfer#9827（Trace 参考含未用槽）、#9905（KDA warp 乱序未给端到端影响）、transformers#51114（异步批读未初始化输入，根因未定位）、#51120（多模态 position_ids 轴错，未给实测）、sglang#51990（双流 MoE 竞争，未给复现）、tt-metal#66392/#67038/#67316、vllm#69183，均列下一轮候选。
+
+## 10. arXiv（第二轮）
+
+- 查询 1 `("silent data corruption" OR "bit flip") AND ("large language model" OR inference)`：HTTP 200，20 条有效 entry；近 7 日 4 条（[2611.34684](http://arxiv.org/abs/2611.34684v1)、[2611.34630](http://arxiv.org/abs/2611.34630v1)、[2611.32503](http://arxiv.org/abs/2611.32503v1)、[2611.32128](http://arxiv.org/abs/2611.32128v1)），均为分析/攻击类，无新产品故障机制，不新建条目。
+- 查询 2 `("KV cache" OR "numerical correctness") AND inference AND (fault OR corruption)`：HTTP 200，25 条有效 entry；近 7 日 1 条 [2611.25945 BlockJack](http://arxiv.org/abs/2611.25945v1)（paged KV 地址翻译重定向攻击），留观。
+
+## 11. 旧来源回访（第二轮）
+
+- [vllm-ascend#22798](https://github.com/vllm-project/vllm-ascend/issues/22798)（INF-2600）：2026-11-26T12:06:50Z 已 `closed/completed`，但无修复 PR、无维护者说明，唯一评论为 2026-11-23 `PTAL`；按规则 closed 不证明修复或发布，已 `update --note` 记录，结论不变。
+- [flashinfer#6860](https://github.com/flashinfer-ai/flashinfer/issues/6860)（INF-2154）：仍 open，`updated_at` 停在 2026-10-20，无新评论；结论不变。
+- [vllm-ascend#22199](https://github.com/vllm-project/vllm-ascend/issues/22199)（INF-2597）、[#22944](https://github.com/vllm-project/vllm-ascend/issues/22944)（INF-2599）、[vllm#69663](https://github.com/vllm-project/vllm/issues/69663)（INF-2596）：均仍 open、`updated_at` 未变。
+- 同机制并入：[vllm#69154](https://github.com/vllm-project/vllm/issues/69154)（GLM-5.3-Flash FP8 + MTP5 + prefix caching，输出退化 `locklock…`、接受率塌 0）已 `update INF-2093 --add-evidence` 并补 note，未另占号。无来源勘误。
+
+## 12. 写入、盲区与缺口（第二轮）
+
+- 新增 17 条：**INF-2601–INF-2617**，均 `pending_audit`，交 2026-11-27 02:00 UTC 审计。`effect.objects` 按物理因果直接度排序，无重复枚举。
+- `blindspots.md` 新增：hccl#1001（NaN 判通过）、flashinfer#9829（fused_add_rmsnorm 参考漏 residual）；`rejected.md` 新增：ops-math#5305（col2_im，传统 CV）。
+- 未覆盖：827 条 issue 中约 255 条关键词候选仅标题级；2,418 条 PR 仅标题分类；GitHub 仅 correctness/silent/NaN 三组关键词、未补 precision/wrong-value；arXiv 各取 20/25 条未回溯；上轮遗留的 ops-transformer#8693/#8746/#8756、ops-nn#9859/#9885/#10176、ops-math#5209/#5230/#5238 仍为待补查候选，未深读正文。
