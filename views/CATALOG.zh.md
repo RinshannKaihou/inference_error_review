@@ -3,29 +3,29 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2582 条；状态：active 2508、merged 15、retired 59
+共 2600 条；状态：active 2508、merged 15、pending_audit 18、retired 59
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 813 |
+| 算子/内核 | 822 |
 | 编译器 | 182 |
-| 运行时/执行 | 141 |
+| 运行时/执行 | 142 |
 | 集合通信 | 44 |
-| 并行切分 | 31 |
-| KV缓存 | 392 |
+| 并行切分 | 32 |
+| KV缓存 | 394 |
 | 调度/服务 | 97 |
 | 输出解析 | 70 |
-| 解码/采样 | 159 |
-| 量化 | 248 |
+| 解码/采样 | 160 |
+| 量化 | 250 |
 | 位置编码 | 46 |
 | 分词/模板 | 34 |
-| 模型定义 | 50 |
+| 模型定义 | 51 |
 | 权重/检查点 | 51 |
 | 数据管线 | 5 |
 | 优化器 | 4 |
 | 损失计算 | 3 |
-| MoE路由 | 49 |
+| MoE路由 | 50 |
 | 重计算/卸载 | 8 |
 | RL训练回路 | 1 |
 | 观测/评测 | 73 |
@@ -5766,7 +5766,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：含 -0.0 与 +0.0 或 NaN 的浮点行排序/topk 后不再是输入排列：一个元素出现两次、另一个丢失（如 [1,-0.0,0.0,-2]→[-2,-0.0,-0.0,1]；[nan,1]→[nan,nan]）；tl.sort/tl.topk/tl.bitonic_merge 均中
 - **改进措施**：检测 比较输出与输入的位模式多重集（按 int 视图排序）可检出；修复 待定（修复需在比较中处理相等不可区分对；issue 提出于 main@6fe3348e6）
-- **来源**：https://github.com/triton-lang/triton/issues/12397
+- **来源**：https://github.com/triton-lang/triton/issues/12397；https://github.com/triton-lang/triton/issues/12860
 
 ### INF-1767 `ops_transformer_flashattn_dn_tnd_tail_overwrite` FlashAttn arch92 DN TND 尾块多写跨 batch 污染
 
@@ -9436,6 +9436,109 @@
 - **改进措施**：检测 校验 metadata header（magic/version/usedSize/configSignature）是否写出，并对同一 case 同进程重复调用两次；当前可出现一次写一次不写。；修复 待定（issue open，报告者建议 metadata 写出与 stream 完成同步后再返回）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7699
 
+### INF-2583 `cann_aclnn_matmul_aclgraph_boundary_row_mismatch` ACLGraph 捕获 MatMul 边界行与 eager 不一致
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / cann / aclnnMatmul ACLGraph
+- **原因行为**：同一 BF16 MatMul（输入与调用参数逐位相同）在 ACLGraph 捕获/重放与 eager 下选择不同 tiling/累加路径；M=8 verify block 的最后一行输出结构性偏离，eager 与 admitted 一致。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：Qwen3-4B 投机解码 target 第0层 MLP gate_up（M=8、N=19456）graph 行7 sum=-17576.46 vs eager -5.55，量级差约3000倍；同层 attention 输出 graph/eager 逐位相同；多卡稳定复现。
+- **改进措施**：检测 对 ACLGraph 捕获与 eager 的同一 MatMul 逐行比对输入/参数/输出 sha256；重点检查 M 非对齐的最后一行；修复 待定（issue closed，正文未给修复 PR/版本；--deterministic_level 仅作用于 ATC 编译期，不适用运行期 aclnn+ACLGraph）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/9827
+
+### INF-2585 `cann_embedding_negative_index_nan_rows` aclnnEmbedding 负索引未拦截静默产 NaN 行
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / cann / aclnnEmbedding
+- **原因行为**：CheckParams 只查空指针/dtype/最大维/out 维匹配，不查 indices 值域；负索引被直接送进 GatherV2/Embedding，负地址行读成 NaN，正向越界则按资料声明输出随机值。
+- **影响对象**：数值结果；输出内容（数值异常）
+- **影响详情**：weight [8,16] FLOAT、indices 4 个 INT64，负值用例两段 rc=0，输出对应行全 NaN（NaN 数=负索引数×16），canary 残留 0/64 证明已写入；正向越界不产生 NaN。
+- **改进措施**：检测 构造 indices 含 -1/-2 的用例，断言应返回 161002；检查输出是否出现整行 NaN；修复 待定（open；issue 建议在 CheckParams 补 [0, weight.shape[0]) 值域检查）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8965
+- **关联**：var:INF-1983
+
+### INF-2586 `cann_expm1_a3_tiny_input_zero` aclnnExpm1 A3 极小输入静默退化为 0
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / cann / aclnnExpm1
+- **原因行为**：A3（910_93）上 aclnnExpm1 实际按 exp(x)-1 计算，未走 expm1 专用小值展开；|x|<2^-24 时结果被 1.0f 的 ULP 锁死为 0，相对误差 100%。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：|x|<2^-24 的 406 点中 404 点（99.5%）输出 0；|x|<2e-6 的 197 点 maxRelErr=100%，host expf(x)-1 同点仅 1.11e-7；各区间 maxAbsErr 恒约 2^-23，与 x 量级无关。
+- **改进措施**：检测 用 expm1f 作参考，覆盖 |x|∈[1e-30,1e-4]；检查输出是否被量化到 2^-23 格点、|x|<6e-8 是否为 0；修复 待定（open；issue 要求恢复 expm1 专用实现，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-math/issues/5050
+
+### INF-2587 `cann_flash_attention_score_scale_zero_wrong` FlashAttentionScore scale=0 非对齐 Skv 静默错值
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / cann / aclnnFlashAttentionScore
+- **原因行为**：950PR fp16、scaleValue=0、headNum>=16 且 Skv%128!=0 时，kernel 的 tiling/累加偏离均匀 softmax，输出整块偏离 mean(V)；Skv 是 128 倍数或 fp32 不触发。
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：Skv=129、Nq=16 fp16 时 max|out-mean(v)|=0.095181，192000/262144 元素偏差>1e-2；Skv=128 对照偏差 0.000000；两段 rc=0。
+- **改进措施**：检测 scale=0 时用 mean(V) 作解析参考；覆盖 Skv=128/129、headNum=8/16、fp16/fp32；修复 待定（open；issue 关联 FIA V5 #6739 但表现不同，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8413
+- **关联**：var:INF-2192
+
+### INF-2589 `cann_maximum_minimum_int_narrow_cast_before_compare` Maximum/Minimum 整数先窄化后比较致错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / cann / aclnnMaximum/Minimum
+- **原因行为**：950 RegBase 的 GetComputeType 对同 dtype 输入、out dtype 不安全的组合，把 computeType 置为 out dtype 并跳过结果转换；输入先 Cast 窄化再比较，顺序与文档相反。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：self=other=INT16、out=INT8、元素 200/100 时 API 通过，200 先变 -56，max 得 100；文档语义应 max(200,100)=200 再转 INT8 得 -56。INT64→INT32 的 min 也出现 0 vs -1 分歧。
+- **改进措施**：检测 构造同 dtype 输入 + 可窄化/变号 out dtype 的对照（200/100→INT8、2^32-1/0→INT32），与 max-then-cast 参考比较；修复 待定（open；issue 给出 GetComputeType 修复方案 computeType=inDtype、needOutputCast，未见 MR/发布）
+- **来源**：https://gitcode.com/cann/ops-math/issues/5253
+
+### INF-2591 `cann_moe_finalize_routing_v4_fp16_accum_cancellation` MoeFinalizeRoutingV4 fp16 大 K 累加灾难性抵消
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / cann / aclnnMoeFinalizeRoutingV4
+- **原因行为**：fp16 路径用 half 精度顺序累加 K 个 expandedX 行；大值互相抵消时小项在 32768 上加 1 被舍入掉，最终结果与资料公式/fp32 中间量口径出现数量级偏差。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：K=96、前32行 1024/中32行 1/后32行 -1024 的合法输入，数学结果 32.0，实测输出 0.0；两段返回 0，调用方只能从模型精度异常发现。
+- **改进措施**：检测 构造 K 个大值正负抵消、小项夹在中间的用例，与 fp32 参考对照；检查输出是否为 0 或数量级偏差；修复 待定（open；issue 建议改为 fp32 中间累加，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8666
+- **关联**：var:INF-1582
+
+### INF-2592 `cann_sparse_flash_attention_v2_950pr_ignores_value` SparseFlashAttentionV2 950PR 静默忽略 value
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / cann / SparseFlashAttentionV2
+- **原因行为**：950PR 的 attentionMode=2 实现不读非空 value 张量，V 恒取 key；value 传全 0/全 1/等于 key 三种数据时 attentionOut 逐字节相同，只改 key 才变化。
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：T1=2/T2=64/D=512/K=8 fp16，value=all0 与 all1 的 attentionOut sha256 相同；只改 key 时 max|diff|=1.024e3，证明探针有效；两段 rc=0，无告警。
+- **改进措施**：检测 固定 q/k，仅替换 value 数据，比较 attentionOut 位模式；同时替换 key 作阳性对照；修复 待定（open；master 0feb6ec0 上 arch35 仍无 valueGm，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/7825
+
+### INF-2596 `vllm_activation_gating_noncontiguous_silent_wrong` vLLM 激活/门控算子非连续输入静默错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / vllm / SiluAndMul 等 CUDA 激活族
+- **原因行为**：8 个 CUDA 激活/门控 launcher 不做 stride 校验，直接把张量传给按连续布局读写的 kernel；同值 strided 输入时结果与参考无关，strided 输出时只写一半单元并越界改写父 buffer。
+- **影响对象**：数值结果；跨请求/跨样本数据（静默错误）
+- **影响详情**：T=8/H2=256 fp16，输入 stride 4 的同值视图 rel error 1.82（连续对照 0.0004）；输出视图 parent[...,::2] 只写 1024/2048 单元，另有 1024 个 view 外 parent 单元被覆盖；8 个输入、7 个输出算子复现。
+- **改进措施**：检测 对每个激活算子用 stride 2/4/8 与 token-strided 的同值视图对照连续输出；输出视图用 NaN 预填 parent 检查未写单元与越界覆盖；修复 待定（open；issue 建议在 wrapper 加 stride/contiguity 校验或 .contiguous()，参照 PR #67434）
+- **来源**：https://github.com/vllm-project/vllm/issues/69663
+
+### INF-2598 `vllm_ascend_missing_causal_conv1d_update_kernel_layout_confusion` vllm-ascend 缺失 conv 更新内核致 GDN/KDA 静默错值
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / vllm-ascend / causal_conv1d_update
+- **原因行为**：causal_conv1d_update_npu 未实现，import 失败后回退到只支持 dim-first 的 upstream 包装；GDN/KDA 的 dim-last 状态被按 mamba 布局读，stride 交换。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：GDN/KDA（Kimi K3、Qwen3-Next 等）每步 decode 的卷积窗口从错误位置读取，输出偏差实测 maxdiff=239（正确值 O(1–10)），无断言；同一调用偶发 RuntimeError，失败在崩溃与静默错值间漂移。
+- **改进措施**：检测 用 transpose 到 mamba 布局的参考实现对照 dim-last 状态；检查启动警告 'causal_conv1d_update is unavailable'；修复 待定（issue 建议实现 layout-dispatching 的 causal_conv1d_update_npu 并阻断 import 失败回退；open，未核实修复）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/23084
+- **关联**：var:INF-0194
+
 ## 编译器
 
 ### INF-0009 `kernel_sync_semantic_silent_error` Triton 多 warpgroup 同步与内联汇编复制执行致静默错值
@@ -13050,6 +13153,17 @@
 - **改进措施**：检测 同一 prompt 在不同请求历史/不同 padding 长度下重跑，比较 greedy logits 与每层 amax；把 padding 行预填大离群值做阳性对照。；修复 待定（issue #67802 open；报告者给出 model_runner.py:1450、input_batch.py:329-475 等根因行号）
 - **来源**：https://github.com/vllm-project/vllm/issues/67802
 
+### INF-2600 `vllm_ascend_staged_metadata_h2d_race_kv_hit_wrong_answer` vllm-ascend 元数据 H2D 无序致 KV 命中答错
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：运行时/执行 / vllm-ascend / StagedWriteTensor H2D
+- **原因行为**：apply_write 以 non_blocking H2D 拷贝请求元数据后启动 apply-write kernel，但 Ascend 不保证同 stream 保序；kernel 可能读到上一轮的元数据。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：DeepSeek-V4-Flash-DSpark W4A8 + Ascend KV Pool 下，命中前缀缓存的请求间歇答错（如 secret number 变 1、重复文本），9/9 次 engine 运行至少一次；改阻塞拷贝后 5/5 正确。
+- **改进措施**：检测 对比池命中请求与本地 prefix cache 输出；对 apply_write 前后加同步或阻塞拷贝做差分；修复 待定（issue 给出阻塞 H2D 的止血对照 5/5 正确；open，无修复 PR）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/22798
+
 ## 集合通信
 
 ### INF-0103 `ttmetal_all_broadcast_writer_accessor_cross_buffer_space` all_broadcast 输出 accessor 误用输入 buffer
@@ -13887,6 +14001,17 @@
 - **影响详情**：三种失效：首请求 hang 至 HCCL 超时引擎死亡；HCCL EI0019/集合死锁；竞态下首请求从 prefill 首 token 起乱码。DP4×TP4/EP16+DSpark 在 Atlas 900 A3 复现。仅影响 inputs_embeds 型模型。
 - **改进措施**：检测 首请求 HCCL 执行超时日志与 EI0019 报错可诊断；首 token 乱码需输出侧检查；修复 修复 PR https://github.com/vllm-project/vllm-ascend/pull/20113 （open，2026-10-28）：dummy join（镜像 LM-head join，零 token 按组定容量入交换）、draft 模型 embedding 回退标准 TP 布局、load_model 后预热交换提前建 HCCL communicator；复现与修复均在 Atlas 900 A3 验证；未合入未发布）
 - **来源**：https://github.com/vllm-project/vllm-ascend/pull/20113
+
+### INF-2597 `vllm_ascend_async_eplb_weight_copy_race` vllm-ascend 异步 EPLB 权重拷贝污染在途前向
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：并行切分 / vllm-ascend / async EPLB rebalance
+- **原因行为**：async rebalance 的 commit 用 non_blocking copy_ 写回专家权重，未与在途前向（含 multistream 旁路流与 graph replay）做流序同步，前向可读到撕裂权重。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：DeepSeek-V4-Flash W8A8 TP8+EP8、16 冗余专家、step=30 时 gsm8k 从 95.6 降到 89.3；禁 rearrange 或加 torch.npu.synchronize() 回到 95.3
+- **改进措施**：检测 对比 EPLB rearrange on/off 的 gsm8k；在 move_from_buffer 前后加 synchronize 做差分；检查 commit 后静态权重指纹（全绿仍可能中招）；修复 待定（open；issue 给出 synchronize 止血实验，未给修复 PR）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/22199
 
 ## KV缓存
 
@@ -14741,7 +14866,7 @@
 - **影响对象**：输出内容（静默错误）
 - **影响详情**：外部 KV connector + kv_load_failure_policy=recompute 且 load 失败、overlap 调度（含多 token 推测异步帧）时，最终结果与全量重算不等价；无 crash，隐藏在罕见失败回退路径中。
 - **改进措施**：检测 待定；修复 待定
-- **来源**：https://github.com/vllm-project/vllm/pull/53298；https://github.com/vllm-project/vllm/pull/53730
+- **来源**：https://github.com/vllm-project/vllm/pull/53298；https://github.com/vllm-project/vllm/pull/53730；https://github.com/vllm-project/vllm/issues/69632
 
 ### INF-0533 `vllm_kv_offload_sub_block_ptr_padded_page_oob` vLLM KV offload 裸指针假设无 padding 布局致启动崩溃
 
@@ -18289,6 +18414,29 @@
 - **影响详情**：slot=[0..7] 正常写 0..7；[-1]*8 写 kCache slot31、vCache 整批不写；[32]*8 kCache 一个 slot 未写、vCache slot0 被写；[33]*8 写 vCache slot1；同输入 6 次 kCache 得 5 种签名；rc=0/0。
 - **改进措施**：检测 slotMapping 注入 -1/32/33，kCache/vCache 预填 0 后按 slot 统计是否被写；重复 6 次比较签名。；修复 待定（issue open，未附修复 PR；报告者要求越界返回 161002 或至少钳制）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7648
+
+### INF-2588 `cann_kv_rms_norm_rope_cache_v2_index_rank_unchecked` KvRmsNormRopeCacheV2 index 秩未校验致错位
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+
+- **原因对象**：KV缓存 / cann / KvRmsNormRopeCacheV2
+- **原因行为**：index 只按 1–2 维契约使用，host 端未校验 rank；传 3/4 维（仅多前置 1 维、元素值顺序不变）时两段接口仍返回 0，kernel 按二维步长取址，kCache/ckvCache 写入与基线错位。
+- **影响对象**：KV状态；数值结果（静默错误）
+- **影响详情**：A3/CANN 9.3.0 实测 index=[1,1,8] 时 kCacheRef 512、ckvCacheRef 4088 个元素与 2 维基线不同，[1,1,1,8] 时 448/3580 个不同；kRopeOut/cKvOut 无差异，rc=0 无告警。
+- **改进措施**：检测 同 seed 分别传 2/3/4 维 index，逐元素比较 kCache/ckvCache；断言 3/4 维应返回 561002；修复 待定（open；issue 要求按错误码表补 index shape 校验，未见修复 MR）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8709
+- **关联**：var:INF-1573
+
+### INF-2599 `vllm_ascend_pd_prefix_cache_kv_transfer_corruption` vllm-ascend PD 前缀缓存 KV 传输致输出损坏
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：KV缓存 / vllm-ascend / MooncakeConnectorV1 P→D
+- **原因行为**：P/D 两侧都开 prefix caching 且经 MooncakeConnectorV1 传输时，P 侧命中前缀缓存后产生的 KV 经 P→D 传到 D 被错误复用；单独直连 P 或 D 均正确，缺陷只在 PD 代理链路出现。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：DeepSeek-V4.1-Flash W8A8 重复同一 25.9K prompt，经 PD 代理 2-3/5 次输出空内容/重复背景/多语言乱码/截断 tool-call 参数；8.5K prompt 4/6、短 prompt 0/13；直连 D 5/5 正确。
+- **改进措施**：检测 同 prompt 经 PD 代理与直连 D 对照；关闭 D 侧 prefix caching 做差分；检查 tool-call JSON 非法告警；修复 待定（open；issue 怀疑 D 侧 cache 与传输 KV 交互，尚未给出修复 PR）
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/22944
 
 ## 调度/服务
 
@@ -21949,6 +22097,18 @@
 - **改进措施**：检测 构造 correct_len<gamma 的 DSpark 输出，检查 bonus 之后是否清零；给 return_logprob 请求用词表边界外的 draft token 观察 compute_spec_logprobs 是否按越界索引 gather。；修复 修复 PR https://github.com/sgl-project/sgl-kernel-npu/pull/1025 （open，未发布）：按 col<GAMMA 且 col<correct_len 屏蔽 draft 加载、尾部位清零，同步 Torch 参考与 64 个回归；SGLang 主仓 #37472 已 merged c4b6338f。
 - **来源**：https://github.com/sgl-project/sgl-kernel-npu/pull/1025；https://github.com/sgl-project/sglang/commit/c4b6338f3e7d5282420fa730c04c0a9006d026a4
 
+### INF-2593 `flashinfer_topk_topp_zero_threshold_token0` FlashInfer top_k/top_p 零阈值静默返回 token 0
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+
+- **原因对象**：解码/采样 / flashinfer / top_k/top_p sampling
+- **原因行为**：top_k/top_p 的 probs/logits kernel 把 k=0 或 p<=0 当作空候选集，未走 no-filter/greedy 语义，返回 index 0；top_k_renorm_probs(k=0) 返回全零分布。
+- **影响对象**：输出内容（静默错误）
+- **影响详情**：4×1000 随机分布、argmax=[850,471,775,228]，k=0 时 4 行恒返回 token 0（不在 row0 top-2）；p=0 同样恒 0；k=0 的 renorm 输出 4000/4000 为 0；重复采样只有 1 个唯一值。
+- **改进措施**：检测 k=0/p=0 的负向用例断言报错或退化为 greedy；检查 top_k_renorm_probs(k=0) 是否为全零；与 min_p=0 的正确 no-filter 行为对照；修复 待定（open；issue 建议显式拒绝 k<=0/p<=0，p==0 退化为 greedy，renorm(k=0) 返回 NaN 或 identity）
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/9981
+- **关联**：var:INF-1045
+
 ## 量化
 
 ### INF-0109 `vllm_xpu_battlemage_persistent_vram_state_corruption_token0` vLLM XPU 并发 decode 后持久损坏，输出全为 token 0
@@ -24745,6 +24905,28 @@
 - **改进措施**：检测 扫 amax=2^k（k=-110…-130），核对 E8M0 码字是否等于 max(-127,ceil(log2(a/448)))+127，并统计 qOut 的 0x7E/0xFE。；修复 待定（两条 issue 均 open，未附修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/7637；https://gitcode.com/cann/ops-transformer/issues/7646
 
+### INF-2584 `cann_dynamic_block_quant_nonfinite_minscale_saturation` DynamicBlockQuant minScale 非有限值致 INT8 饱和
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：量化 / cann / aclnnDynamicBlockQuant
+- **原因行为**：minScale 只校验 <0；NaN 与 +Inf 均放行。+Inf 激活钳制分支后 1/+Inf=0，scaleOut=0，y 全部饱和到 INT8 上限；NaN 则静默退化为不启用上界。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：x=[8,256] fp16（1.0~4.0）、dstType=INT8、minScale=+Inf 时两段 rc=0，y=0x7f（127）、scaleOut=0；合法基线 y=0x20/0x77、scaleOut=0.0315；-1/-Inf 正确返回 561002。
+- **改进措施**：检测 minScale 传 NaN/+Inf 的负向用例；断言返回 161002；检查 scaleOut 是否为 0 且 y 是否全为 INT8 上限；修复 待定（open；issue 建议用 isfinite 校验非有限值）
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8997
+
+### INF-2594 `msmodelslim_hif4_weight_scale_packing_order` HiF4 导出 weight_scale 打包顺序与设备解码不一致
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：量化 / msmodelslim / HiF4 weight_scale 导出
+- **原因行为**：HiF4 W4A4/W4A8 导出时把 Lv1 放在最高字节、Lv2/Lv3 标志从 bit7 起写；设备按小端布局从 bit0 读三级 scale，读出的缩放因子错位。
+- **影响对象**：模型权重；数值结果（静默错误）
+- **影响详情**：固定输入导出 weight_scale 应为 C0 AA 01 04，实测 80 20 55 C0；AscendV1 与 MindIE 导出的 W4A4_HIFP4、W4A8_HIFP4_MXFP8 权重均受影响，加载后量化模型数值错误。
+- **改进措施**：检测 对固定权重导出后按小端逐字节核对 weight_scale 的 Lv1/Lv2/Lv3 位域；与设备解码器/参考反量化结果对照；修复 修复 PR https://gitcode.com/Ascend/msmodelslim/merge_requests/1216 已提交（自测与 183 项 CPU 单测通过；是否合入/发布未核实）；文档待补小端布局与旧权重需重导
+- **来源**：https://gitcode.com/Ascend/msmodelslim/issues/728；https://gitcode.com/Ascend/msmodelslim/merge_requests/1216
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -25209,7 +25391,7 @@
 - **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：A2 上传 mode=2/3 两段接口返回 0，输出与 mode=0（half）逐字节相同（mode=1 vs 0 输出不同，排除数据巧合）；文档明确 A2 仅支持 0/1、承诺 161002。调用方拿到 half 位置编码，精度异常时才暴露；同代码 A2 与 950 语义不同且都返回成功。
 - **改进措施**：检测 同输入分别跑 mode=0/1/2/3 比较输出位模式；mode=2/3 与 mode=0 逐字节相同即命中（数据需保证模式间语义不同）。；修复 待定（issue 建议复用 IsAscend950() 在入口拒绝并补 UT；open 未见修复 MR）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/6454
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/6454；https://gitcode.com/cann/ops-transformer/issues/7800
 
 ### INF-2150 `vllm_evs_mrope_recompute_chunk_boundary_wrong` vLLM EVS 视频剪枝 chunk 边界内 M-RoPE 位置静默错
 
@@ -26205,6 +26387,18 @@
 - **改进措施**：检测 同输入 mask=None 与压缩因果 mask 双跑 local_v4_varlen_flash_attention 对比（首 token 差 0.90）；修复 修复 MR https://atomgit.com/mindspore/mindformers/merge_requests/8893 （open，未发布）：将省略 mask 分支限制到实际 DSA 稀疏路径
 - **来源**：https://atomgit.com/mindspore/mindformers/issues/2624；https://atomgit.com/mindspore/mindformers/merge_requests/8893
 - **关联**：cross:TRN-0619
+
+### INF-2595 `transformers_qwen2_eager_fp16_leftpad_nan` Qwen2 eager fp16 左 padding 全掩码行 NaN
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+
+- **原因对象**：模型定义 / transformers / Qwen2 eager attention
+- **原因行为**：eager attention 把 fp16 加性 mask（-65504）加到 fp16 scores；全掩码行任一分值低于约 -16 即舍入为 -inf，softmax 变 NaN，下一层 padding key 污染整条序列。
+- **影响对象**：输出分布；输出内容（数值异常）
+- **影响详情**：Qwen2.5-0.5B fp16/eager、34 个左 pad token 时最后 token logits 为 NaN，generate() 返回 [0,0,0,0,0]；pad 22–40 触发、0–21 有限；SDPA/bf16 正常；fp32 加 mask 或清零全掩码行权重可修复。
+- **改进措施**：检测 左 padding 批在 eager fp16 下检查 logits 是否有限；覆盖 pad 数 22–40；与 SDPA/bf16 对照；修复 待定（open；报告者给出两种已验证修复：mask 在 fp32 相加、或将无允许 key 的 query 行 softmax 权重清零；尚无 PR）
+- **来源**：https://github.com/huggingface/transformers/issues/51079
+- **关联**：var:INF-2158
 
 ## 权重/检查点
 
@@ -27469,6 +27663,18 @@
 - **影响详情**：bf16 加载或 BF16 autocast：8 个精确可表示的 sigmoid 分数全为 1.0，Top-2 专家集 CPU {5,6}/CUDA {0,1}，FP32 应为 {6,7}；三层小模型 19/48 token 专家集变而 loss 仅差 ~4.8e-7（合成，全模型未测）。
 - **改进措施**：检测 对比 FP32 路由决策（报告者用精确可表示的 logits 断言排除 GEMM 舍入）。；修复 issue 内给出三步修复方案（FP32 投影/sigmoid/bias 关 autocast、e_score_correction_bias 与 gate.global_scale 进 _keep_in_fp32_modules_strict、路由系数末步回转隐状态 dtype），作者待维护者意见后提 PR；未开 PR。SGLang 同名模型已用 FP32 输出 gate projection 作对照。
 - **来源**：https://github.com/huggingface/transformers/issues/50599
+
+### INF-2590 `cann_moe_finalize_routing_v3_expert_ranges_ignored` MoeFinalizeRoutingV3 专家区间被静默忽略
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：MoE路由 / cann / MoeFinalizeRoutingV3/V4
+- **原因行为**：A2 membase 路径的 tiling 与 kernel 完全不读 zero/copy/constantExpertRange 及 x/alpha/v 可选参数；接口接受这些参数但按普通专家聚合，输出与纯 V2 逐位一致。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：三区间 zero=0,1/copy=1,2/constant=2,4 时两段返回 0，输出 [[4,4],[6,6]] 而非公式要求 [[30,30],[200,200]]；非法区间也不报错。
+- **改进措施**：检测 传任一非空专家区间，断言输出与不传时不同；非法区间应返回 161002；修复 待定（open；需补 A2 实现或把资料改为不支持；训练库同机制条目 TRN-0378）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8343
+- **关联**：cross:TRN-0378
 
 ## 重计算/卸载
 
