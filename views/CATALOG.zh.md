@@ -3,29 +3,29 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2617 条；状态：active 2541、merged 15、pending_audit 2、retired 59
+共 2630 条；状态：active 2541、merged 15、pending_audit 15、retired 59
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 831 |
-| 编译器 | 185 |
+| 算子/内核 | 837 |
+| 编译器 | 186 |
 | 运行时/执行 | 142 |
-| 集合通信 | 44 |
+| 集合通信 | 45 |
 | 并行切分 | 32 |
-| KV缓存 | 395 |
+| KV缓存 | 398 |
 | 调度/服务 | 97 |
 | 输出解析 | 70 |
 | 解码/采样 | 162 |
 | 量化 | 252 |
 | 位置编码 | 46 |
 | 分词/模板 | 34 |
-| 模型定义 | 51 |
+| 模型定义 | 52 |
 | 权重/检查点 | 51 |
 | 数据管线 | 5 |
 | 优化器 | 4 |
 | 损失计算 | 3 |
-| MoE路由 | 50 |
+| MoE路由 | 51 |
 | 重计算/卸载 | 8 |
 | RL训练回路 | 1 |
 | 观测/评测 | 73 |
@@ -9098,7 +9098,7 @@
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：非连续出参两段均返回 0/0，写入落在 storage 连续前缀：按自身 stride 读回时一半位置仍是旧值、另一半错位；TopKTopPSample 64 个有效值只剩 32 个；资料标 × 的接口同样放行而非返回 161002。
 - **改进措施**：检测 出参构造 stride 带空洞的合法 view（max_offset<storage numel），与连续基线逐元素比对并按 stride 读回；输入非连续与连续基线作对照。；修复 逐算子修补中：!14347 拒绝 DynamicBlockQuant 非连续出参、!14290 修正 RmsNorm 文档；系统性 op_api 生成修复未核实。
-- **来源**：https://gitcode.com/cann/ops-nn/issues/8663；https://gitcode.com/cann/ops-nn/issues/8674；https://gitcode.com/cann/ops-nn/issues/8685；https://gitcode.com/cann/ops-nn/issues/8688；https://gitcode.com/cann/ops-nn/issues/8702；https://gitcode.com/cann/ops-nn/issues/8736；https://gitcode.com/cann/ops-nn/issues/8746；https://gitcode.com/cann/ops-nn/issues/8747；https://gitcode.com/cann/ops-nn/issues/8748；https://gitcode.com/cann/ops-nn/issues/8769；https://gitcode.com/cann/ops-nn/issues/8796；https://gitcode.com/cann/ops-nn/issues/8800；https://gitcode.com/cann/ops-transformer/issues/7488；https://gitcode.com/cann/ops-transformer/issues/7489；https://gitcode.com/cann/ops-transformer/issues/7490；https://gitcode.com/cann/ops-transformer/issues/7491；https://gitcode.com/cann/ops-transformer/issues/7493；https://gitcode.com/cann/ops-transformer/issues/7494；https://gitcode.com/cann/ops-transformer/issues/7495；https://gitcode.com/cann/ops-transformer/issues/7496；https://gitcode.com/cann/ops-transformer/issues/7522；https://gitcode.com/cann/ops-transformer/issues/7534；https://gitcode.com/cann/ops-transformer/issues/7552；https://gitcode.com/cann/ops-math/issues/4730；https://gitcode.com/cann/ops-nn/issues/8814；https://gitcode.com/cann/ops-nn/issues/8819；https://gitcode.com/cann/ops-nn/issues/8689；https://gitcode.com/cann/ops-nn/issues/8750
+- **来源**：https://gitcode.com/cann/ops-nn/issues/8663；https://gitcode.com/cann/ops-nn/issues/8674；https://gitcode.com/cann/ops-nn/issues/8685；https://gitcode.com/cann/ops-nn/issues/8688；https://gitcode.com/cann/ops-nn/issues/8702；https://gitcode.com/cann/ops-nn/issues/8736；https://gitcode.com/cann/ops-nn/issues/8746；https://gitcode.com/cann/ops-nn/issues/8747；https://gitcode.com/cann/ops-nn/issues/8748；https://gitcode.com/cann/ops-nn/issues/8769；https://gitcode.com/cann/ops-nn/issues/8796；https://gitcode.com/cann/ops-nn/issues/8800；https://gitcode.com/cann/ops-transformer/issues/7488；https://gitcode.com/cann/ops-transformer/issues/7489；https://gitcode.com/cann/ops-transformer/issues/7490；https://gitcode.com/cann/ops-transformer/issues/7491；https://gitcode.com/cann/ops-transformer/issues/7493；https://gitcode.com/cann/ops-transformer/issues/7494；https://gitcode.com/cann/ops-transformer/issues/7495；https://gitcode.com/cann/ops-transformer/issues/7496；https://gitcode.com/cann/ops-transformer/issues/7522；https://gitcode.com/cann/ops-transformer/issues/7534；https://gitcode.com/cann/ops-transformer/issues/7552；https://gitcode.com/cann/ops-math/issues/4730；https://gitcode.com/cann/ops-nn/issues/8814；https://gitcode.com/cann/ops-nn/issues/8819；https://gitcode.com/cann/ops-nn/issues/8689；https://gitcode.com/cann/ops-nn/issues/8750；https://gitcode.com/cann/ops-math/issues/5310；https://gitcode.com/cann/ops-transformer/issues/8894
 - **关联**：cross:TRN-0755
 
 ### INF-2522 `add_rms_norm_empty_tensor_early_return_unwritten` AddRmsNorm 空 tensor 早退致输出全未写
@@ -9477,7 +9477,7 @@
 - **原因对象**：算子/内核 / cann / aclnnFlashAttentionScore
 - **原因行为**：Ascend950PR fp16、scaleValue=0、headNum>=16 且 Skv 非128倍数时，输出与公式定义的均匀注意力不符，整块偏离 mean(V)；Skv=128 或 fp32 不复现。
 - **影响对象**：数值结果；输出内容（静默错误）
-- **影响详情**：Skv=129、Nq=16 fp16 时 max|out-mean(v)|=0.095181，192000/262144 元素偏差>1e-2；Skv=128 对照偏差 0.000000；两段 rc=0。
+- **影响详情**：scale=0、Skv 非 128 倍数（如 129）、Nq=16 fp16 时注意力静默算错：max|out-mean(v)|=0.095181，192000/262144 元素偏差>1e-2；Skv=128 对照 0；两段 rc=0。
 - **改进措施**：检测 scale=0 时用 mean(V) 作解析参考；覆盖 Skv=128/129、headNum=8/16、fp16/fp32；修复 待定（open；issue 关联 FIA V5 #6739 但表现不同，未见修复 MR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/8413
 - **关联**：var:INF-2192
@@ -9557,9 +9557,9 @@
 - **原因对象**：算子/内核 / cann / MC2 AIV 分支 x2 stride
 - **原因行为**：AllGatherMatmulV2、MatmulAlltoAllV2、QuantMatmulAlltoAllV2 的 AIV 分支接受 x2 转置/隔列视图，不做 stride 换算，直接按连续行主序读 storage。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：x2 非连续视图下四个 shape 两段 rc=0；fp16 8×256×4 与 AG@x2ᵀ maxdiff 13.3、与连续读 storage maxdiff 0.0036，bf16 32×256×16 为 23.2/0.0306；同视图交 aclnnMatmul 报 161002。
+- **影响详情**：转置/非连续权重视图进 MC2 矩阵乘后结果静默错：四个 shape 两段 rc=0，fp16 8×256×4 与 AG@x2ᵀ maxdiff 13.3、与连续读 storage 0.0036；bf16 23.2/0.0306；同视图 aclnnMatmul 报 161002。
 - **改进措施**：检测 用 shape=(n,k)、strides=(1,k) 的合法转置视图构造 x2，与 AG(x1)@x2ᵀ 及「连续读 storage」两套解析式同时对比；后者吻合而前者不吻合即为本条。；修复 待定（三条 issue 均 open；建议不支持非连续输入时首段返回 161002，未核实修复）
-- **来源**：https://gitcode.com/cann/ops-transformer/issues/8857；https://gitcode.com/cann/ops-transformer/issues/8841；https://gitcode.com/cann/ops-transformer/issues/8737
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8857；https://gitcode.com/cann/ops-transformer/issues/8841；https://gitcode.com/cann/ops-transformer/issues/8737；https://gitcode.com/cann/ops-transformer/issues/8896
 
 ### INF-2604 `ffn_worker_batching_out_num_zero_drops_all_tokens` FfnWorkerBatching out_num=0 静默丢弃全部 token
 
@@ -9636,9 +9636,78 @@
 - **原因对象**：算子/内核 / tt-metal / gather/nonzero reader
 - **原因行为**：kernel 用 get_tile_size()/get_tile_hw() 推单元素字节数：Bfp8_b 1088/1024=1、Bfp4_b 576/1024=0，随后按元素偏移逐字节拷贝/扫描 block-float 原始字节。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：bfloat8_b gather 2048 个输出中 2038 错，值跨度 1e-20–2.5e36；bfloat16 与 torch.gather 一致；bfloat8_b nonzero 对 4 个非零返回计数 2、坐标 0 和 32；Wormhole/Blackhole 均如此。
+- **影响详情**：bfloat8_b gather/nonzero 索引取样返回乱数据且不报错：gather 2048 个输出 2038 错、值跨度 1e-20–2.5e36；nonzero 对 4 个非零返回计数 2、坐标 0 和 32；bfloat16 正常。
 - **改进措施**：检测 对 bfloat8_b/bfloat4_b TILE 输入分别跑 gather/nonzero，与 bfloat16 同值结果和 torch 参考逐元素比对；用 4 个已知列位置的非零张量检查 nonzero 计数与坐标。；修复 待定（issue open；nonzero 的 validation 只检查 element_size 为 1/2/4 字节，gather 无 block-float 分支）
 - **来源**：https://github.com/tenstorrent/tt-metal/issues/67315
+
+### INF-2618 `splitv_ubsplit_gather_index_uint16_wrap` split_v UB-split gather 索引 16 位回绕致错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：算子/内核 / cann / split_v UB-split 核
+- **原因行为**：SplitVUbSplit 的 DataCopyGatherVf 用 uint16 lane 计算行×pitch+列+n 偏移，单块元素数超过 65536/sizeof(T) 时索引回绕，gather 从错误位置取数。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：Ascend960 单块 B8 超过 65536 元素时，split_v 的 B8/B16 输出整行取自错误偏移，全程无报错；950/910B 因 UB 上限不触发。
+- **改进措施**：检测 构造 size_splits 含 ≤128B 小段、N 足够大使 nUbFactor 跨 16 位，与 golden 逐元素比对，观察整行错值。；修复 待定（issue open，2026-11-27；报告建议对 UB-split 路径套用 same_len 系已有限制）
+- **来源**：https://gitcode.com/cann/ops-math/issues/5340
+
+### INF-2620 `fa3_causal_sliding_window_prefill_hd128_256_wrong` FA3 causal 滑窗 prefill 头维 128/256 错值
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：算子/内核 / vllm / FA3 varlen SWA 核
+- **原因行为**：FA3 在长 query chunk 的 causal sliding-window prefill 中，head dim 128/256 的部分行偏离 fp32 参考；同输入 FA2 正常，窗口 1000 与 1024 结果不同。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：H100 bf16：head dim 128/256、窗口 1000 时 max abs err 0.118/0.188（FA2 0.010/0.009）；vLLM 自测 4 个 bf16 hd256 sliding_window=256 用例失败，最大 0.229/0.336。
+- **改进措施**：检测 同输入分别用 fa_version=3 与 2、并对照 fp32 参考，覆盖 head dim 64/128/256、窗口 300–1500、seq≥1500；hd64 与 decode 作阴性对照。；修复 待定（issue open；报告怀疑上游 Dao-AILab/flash-attention#1366，未核实）
+- **来源**：https://github.com/vllm-project/vllm/issues/70199
+
+### INF-2624 `triton_mla_bf16_lse_dcp_combine_error` TRITON_MLA 解码 LSE 存 bf16 致 DCP 偏差
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：算子/内核 / vllm / TritonMLA decode LSE
+- **原因行为**：forward_mqa 按 q.dtype 分配 decode LSE，stage-2 kernel 把 fp32 lse_val 存进 bf16 张量；DCP 合并按 exp(lse_r-lse) 加权时该误差直接进入权重。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：bf16 模型、decode context parallel 下 LSE 舍入误差约 0.03（bf16 间距 0.0625），每 rank 权重偏差约 3%，合并输出误差最高约 2.5%；不用 DCP 时不触发。
+- **改进措施**：检测 DCP>1 且 bf16 模型时对比 fp32 LSE 版本与现实现的合并输出；或把 lse 张量 dtype 改为 fp32 做 A/B。；修复 待定（issue open；CUTLASS MLA 与 ROCm AITER 已用 fp32 LSE）
+- **来源**：https://github.com/vllm-project/vllm/issues/70420
+
+### INF-2628 `flashinfer_cuda_rmsnorm_row_offset_uint32_wrap` FlashInfer CUDA RMSNorm 行偏移 32 位回绕
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-27
+
+- **原因对象**：算子/内核 / flashinfer / norm.cuh RMSNorm 系列
+- **原因行为**：六个 CUDA JIT norm kernel 用 uint32_t 计算 bx*stride 的行起始偏移，行起点达到 2^32 元素时回绕，读写落到错误行。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：3 行 bf16、行距 2^31 元素时第 3 行返回第 1 行结果（max err 3.52）；连续 fp16 (350000,12288) 从第 349526 行起错，回绕块还改写第 0 行；无报错。
+- **改进措施**：检测 用 as_strided 构造行距 2^31 的 3 行张量，逐行与 fp32 参考比对并检查 y[2]==y[0]；或用 (350000,12288) fp16 全量对拍并检查第 0 行是否被改写。；修复 待定（issue open；CuTe DSL norm 与 CUDA LayerNorm 已改用 64 位偏移）
+- **来源**：https://github.com/flashinfer-ai/flashinfer/issues/9838
+- **关联**：var:INF-2540
+
+### INF-2629 `sglang_lightning_attn_prefix_state_decay_off_by_one` SGLang lightning_attention 前缀核少一步衰减
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-27
+
+- **原因对象**：算子/内核 / sglang / lightning_attn prefill 核
+- **原因行为**：_fwd_none_diag_kernel 用 q_decay=exp(-s*(off_c*CBLOCK+c))，但 KV[i] 存的是块折叠前的状态，query 实为 r+1 步后，历史项整体大 exp(s) 倍。
+- **影响对象**：数值结果；输出内容（静默错误）
+- **影响详情**：linear_backend='minimax' 时新 prompt 0–255 token 正确、≥256 全错；chunked prefill 续非零 kv_history 时每个 token 都错；最终返回状态本身正确。
+- **改进措施**：检测 对同一 prompt 比较 minimax 与 seg_la 后端输出，或用 fp64 闭式递归核对 256 之后及续块 token；最终状态对拍不能发现该问题。；修复 待定（issue open；修复应把块间项改为 exp(-s*(r+1))，未核实是否已有 PR）
+- **来源**：https://github.com/sgl-project/sglang/issues/53616
+- **关联**：var:INF-1391
+
+### INF-2630 `kv_rms_norm_rope_cache_fullload_fp32_square_overflow` KvRmsNormRopeCache FullLoad 平方溢出归零
+
+`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-27
+
+- **原因对象**：算子/内核 / cann / KvRmsNorm FullLoad
+- **原因行为**：FullLoad 路径在 FP32 中先平方再累加，有限 BF16 激活的平方和可超出 float32 范围，除以 inf 后 rstd 归零。
+- **影响对象**：数值结果；KV状态（静默错误）
+- **影响详情**：BF16 分量 2^80、gamma=1、eps=1e-5 时，FP32 平方 2^160 溢出，归一化结果应为 1 却得到 0；可选 RMS 输出与写入 CKV 缓存的值同时被清零。
+- **改进措施**：检测 用 BF16 可表示的大分量（2^80）构造 RMS 段，开可选 RMS 输出，与 FP64 公式交叉检查；普通幅值用例全通过不能证明无此问题。；修复 待定（issue open；建议平方/累加前做缩放或改用防溢出归约）
+- **来源**：https://gitcode.com/cann/ops-transformer/issues/8951
+- **关联**：var:INF-2608
 
 ## 编译器
 
@@ -11713,10 +11782,21 @@
 - **原因对象**：编译器 / triton-ascend / libdevice lowering FTZ
 - **原因行为**：libdevice 与 tl.* 的 exp/sin/sqrt/atan/sinh/tanh/erf 在 lowering 时做 flush-to-zero：exp 的结果落进次正规区间返回 0，其余先把次正规输入冲成 0 再计算。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：exp(-88.0) 返回 0（应 6.0546e-39）、exp(-89.0) 返回 0（应 2.2274e-39）；最小次正规 ±1.4e-45 输入时 sin/atan/sinh/tanh/erf 返回 ±0，sqrt 返回 [0, nan]；正常范围输入正确。
+- **影响详情**：次正规极小值被静默清零（flush-to-zero）且不报错：exp(-88.0)=0（应 6.0546e-39）；±1.4e-45 输入时 sin/atan/sinh/tanh/erf=±0、sqrt=[0,nan]；正常范围正确。
 - **改进措施**：检测 用 torch.nextafter(0,1) 构造最小次正规输入、用 -88/-89 构造次正规结果，分别跑 libdevice.sin/sqrt/exp 等与 torch CPU 对拍；正常量级用例全部通过不能证明无此问题。；修复 待定（两条 issue 均 open；#3322 指出 cosh/sinh 早期溢出报告的上游根因就是 exp 次正规结果被冲零）
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/3322；https://github.com/triton-lang/triton-ascend/issues/3356
 - **关联**：cross:TRN-0821
+
+### INF-2623 `npu_inductor_persistent_masked_softmax_tail_mask` NPU Inductor persistent softmax 丢尾部掩码
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：编译器 / torch_npu / Inductor 持久归约核
+- **原因行为**：动态行长 229 的 FP16 masked softmax 归约块对齐到 232，生成的 r_mask 未参与读取、写回和归约，尾部三个 lane 访问相邻行。
+- **影响对象**：数值结果；输出内容（不可复现）
+- **影响详情**：seq 维动态 [31,229] 的 QK-masked-softmax-V 子图最大绝对误差 0.9386，同一输入重复运行输出波动；softmax 分母混入额外元素。
+- **改进措施**：检测 对动态 seq [31,229] 的 masked softmax 子图用 3 个 seed 各跑 5 次，与 eager 按 1e-3 绝对误差比对，并检查同输入重复运行是否稳定。；修复 待定（issue open；报告者说明需同时补 filter_masks 与 persistent reduction 输入屏蔽）
+- **来源**：https://gitcode.com/Ascend/pytorch/issues/6509
 
 ## 运行时/执行
 
@@ -13295,7 +13375,7 @@
 
 - **原因对象**：运行时/执行 / vllm-ascend / StagedWriteTensor H2D
 - **原因行为**：apply_write 以 non_blocking H2D 拷贝请求元数据后启动 apply-write kernel，但 Ascend 不保证同 stream 保序；kernel 可能读到上一轮的元数据。
-- **影响对象**：输出内容；KV状态（静默错误）
+- **影响对象**：KV状态；输出内容（静默错误）
 - **影响详情**：DeepSeek-V4-Flash-DSpark W4A8 + Ascend KV Pool 下，命中前缀缓存的请求间歇答错（如 secret number 变 1、重复文本），9/9 次 engine 运行至少一次；改阻塞拷贝后 5/5 正确。
 - **改进措施**：检测 对比池命中请求与本地 prefix cache 输出；对 apply_write 前后加同步或阻塞拷贝做差分；修复 待定（issue 给出阻塞 H2D 的止血对照 5/5 正确；open，无修复 PR）
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/22798
@@ -13791,6 +13871,17 @@
 - **影响详情**：16 卡 fp32 256B 的 Reduce 与 AllReduce TwoShot 少核路径部分 rank 结果错误；改为接收方跨卡读后同一场景一次通过，补齐 32B 访存粒度错误计数不变。
 - **改进措施**：检测 16 卡小消息（≤256B）fp32 Reduce/AllReduce 与 CPU/fp64 真值逐元素比对，分别覆盖 Reduce 多核、少核与 AllReduce TwoShot 少核路径。；修复 PR !4058（open，9.2.0 反合 master #3856，原提交 9da39c101）；master 已合入，9.2.0 基线 c0c93df8 此前不含该修复；发布未核实。
 - **来源**：https://gitcode.com/cann/hccl/issues/961；https://gitcode.com/cann/hccl/pull/4058
+
+### INF-2621 `nccl_symm_mem_allreduce_wrong_group` NCCL 对称内存 all-reduce 跨组取错 rank 集
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：集合通信 / vllm / pynccl 对称内存 all-reduce
+- **原因行为**：register_nccl_symmetric_ops 只注册一次并闭包首个注册组的 PyNCCL 通信器（通常是 TP 组），后续任意 ≥4 rank 组调用都归约到 TP 组 rank 集。
+- **影响对象**：数值结果；隐状态（静默错误）
+- **影响详情**：TP8+DCP4、每 rank 填 rank+1 时，DCP 组 [0..3]/[4..7] 应得 10/26，实际得到 TP 组和；不挂起不报错，DCP 解码输出被污染。
+- **改进措施**：检测 构造 TP 与另一组 rank 集不同的进程组，各组填 rank+1 后 all-reduce，核对每组结果是否等于本组成员之和；覆盖 ≥4 rank 且尺寸 ≤16KiB 或 ≥512KiB。；修复 待定（#66304 提议把调用组传入 op；本条 issue open，未核实修复）
+- **来源**：https://github.com/vllm-project/vllm/issues/70287
 
 ## 并行切分
 
@@ -18585,6 +18676,39 @@
 - **改进措施**：检测 固定模型与采样参数，只在 --mamba-ssm-dtype float32/bfloat16/float16 间切换跑长推理评测（MATH-500 thinking、16k 预算），同时统计 finish_reason=stop 与截断数；GSM8K 式短评测会漏检。；修复 待定（issue open；float32 是模型默认，bf16 需显式开启）
 - **来源**：https://github.com/sgl-project/sglang/issues/51531
 
+### INF-2619 `vllm_ascend_mamba_align_prefix_cache_cross_request_reuse` vllm-ascend Mamba 前缀缓存跨请求复用错答
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：KV缓存 / vllm-ascend / Mamba align 模式状态复用
+- **原因行为**：混合 GDN 模型默认 mamba cache mode='align'，前缀缓存按 token 前缀命中复用 mamba/GDN 状态，但发散点不是安全状态边界，状态被跨 prompt 复用。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：3 个共享长前缀、后段不同的并发请求互相返回对方内容；8K 请求退化为 128 个 '!'；串行重放全对，关闭 prefix caching 后 8K/32K 检索 0.0/33.3→100.0。
+- **改进措施**：检测 并发发送共享长前缀、后段各埋不同标记的请求，检查每个响应是否返回自己的标记；串行重放与 --no-enable-prefix-caching 作对照。；修复 规避：--no-enable-prefix-caching（报告者实测完全修复）；根因修复未见，issue open
+- **来源**：https://github.com/vllm-project/vllm-ascend/issues/23545
+
+### INF-2625 `vllm_int4_kv_ignores_chunk_lookback_rswa` vLLM INT4 KV 注意力漏 chunk/R-SWA 掩码
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：KV缓存 / vllm / unified_attention_int4 掩码
+- **原因行为**：INT4_PER_TOKEN_HEAD 分支调 unified_attention_int4 时不传 chunk_lookback/rswa_prefix_lens/rswa_window，kernel 用默认 -1/False。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：启用 --kv-cache-dtype int4_per_token_head 且 TRITON_ATTN 时，chunk_lookback 层把局部注意力算成普通滑窗，R-SWA 层算成整段 causal，无报错无告警。
+- **改进措施**：检测 对含 chunk_lookback / R-SWA 的层，同输入分别用 int4_per_token_head 与 bf16 KV 跑 unified_attention，与按真实掩码构造的逐 token 参考比对。；修复 待定（issue open；建议把三个掩码参数透传到 int4 分支）
+- **来源**：https://github.com/vllm-project/vllm/issues/70419
+
+### INF-2626 `sglang_jet_nemotron_unified_memory_state_not_written` SGLang Jet-Nemotron 统一内存不回写状态
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：KV缓存 / sglang / fla input_guard 丢状态
+- **原因行为**：FusedRecurrentUpdateFunction.forward 被普通 @input_guard 装饰，其对每个张量参数做 .contiguous()；统一内存下状态池是非连续视图，更新落在临时副本并被丢弃。
+- **影响对象**：KV状态；输出内容（静默错误）
+- **影响详情**：开启 --enable-unified-memory 后 Jet-Nemotron/JetVLM 每个请求第二次 forward 起从零状态解码，输出静默错误；非统一内存路径正常。
+- **改进措施**：检测 同一请求多步 decode 对比统一内存开关；检查 state pool 在 forward 后是否变化（副本写不回时保持不变），并与非统一内存 MambaPool 结果比对。；修复 待定（issue open；launcher 已支持 stride_h0_source，需在 input_guard 的 keep_strides 放行状态池）
+- **来源**：https://github.com/sgl-project/sglang/issues/53615
+
 ## 调度/服务
 
 ### INF-0323 `hf_whisper_feature_extractor_single_nan_propagates_full_matrix` WhisperFeatureExtractor 单个 NaN 污染整张特征矩阵
@@ -22274,7 +22398,7 @@
 
 - **原因对象**：解码/采样 / transformers / generation/utils.py 前置判断
 - **原因行为**：用 (decoder_input_ids[:,0] != start_id).all() 决定是否整批前置 start token；批内一条已含就整体跳过，其余请求缺 start token。
-- **影响对象**：输入编码；输出内容；输出分布（静默错误）
+- **影响对象**：输入编码；输出分布；输出内容（静默错误）
 - **影响详情**：bart-base 8 步最大 score 差 1.297；opus-mt-en-de 生成 token 改变、译文错乱，score 差 13.03、raw logit 差 20.64；不抛异常，逐条单独跑正确。
 - **改进措施**：检测 构造两条 decoder 前缀，一条含 decoder_start_token、一条不含，等长且无 pad，batch 生成后与逐条单独生成逐 token 比较。；修复 待定（issue open，transformers 5.24.0.dev0）
 - **来源**：https://github.com/huggingface/transformers/issues/51216
@@ -26554,7 +26678,7 @@
 
 - **原因对象**：模型定义 / transformers / QSA eager 掩码加法
 - **原因行为**：eager QSA 路径的 mask 加法在含左 padding 样本的 batch 中使有效 token 位置产生 NaN logits；同权重同输入 SDPA 有限
-- **影响对象**：输出分布；数值结果（数值异常）
+- **影响对象**：数值结果；输出分布（数值异常）
 - **影响详情**：批内左 padding 样本的有效 token logits 变 NaN（同批未 padding 样本仍有限）；默认不指定后端时选 SDPA 不触发
 - **改进措施**：检测 待定；修复 待定（issue open；当前 main 6b6792ff 相关 mask 加法仍在）
 - **来源**：https://github.com/huggingface/transformers/issues/49888
@@ -26593,6 +26717,17 @@
 - **改进措施**：检测 左 padding 批在 eager fp16 下检查 logits 是否有限；覆盖 pad 数 22–40；与 SDPA/bf16 对照；修复 待定（open；报告者给出两种已验证修复：mask 在 fp32 相加、或将无允许 key 的 query 行 softmax 权重清零；尚无 PR）
 - **来源**：https://github.com/huggingface/transformers/issues/51079
 - **关联**：var:INF-2158
+
+### INF-2627 `transformers_moe_models_drop_position_ids_packed_mask` 三模型漏传 position_ids 破坏 packed 掩码
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：模型定义 / transformers / 三模型 mask_kwargs
+- **原因行为**：三个模型的 mask_kwargs 不含 position_ids，create_causal_mask 无法调用 find_packed_sequence_indices，packed 批不生成块对角掩码。
+- **影响对象**：隐状态；输出内容（静默错误）
+- **影响详情**：padding-free/packed 批下每个文档 attends 到行内所有更早文档；只改第一个文档即可让第二个文档 logits 变化（应恒为 0）；eager/sdpa/flex_attention 均受影响。
+- **改进措施**：检测 用 DataCollatorWithFlattening 打包两文档，只改第一文档，断言第二文档 logits 变化为 0；覆盖 gpt_oss/afmoe/granitemoehybrid，并用 llama 作对照。；修复 待定（issue open，transformers main 2f1bc5e；修复为把 position_ids 放进 mask_kwargs）
+- **来源**：https://github.com/huggingface/transformers/issues/51072
 
 ## 权重/检查点
 
@@ -27869,6 +28004,17 @@
 - **改进措施**：检测 传任一非空专家区间，断言输出与不传时不同；非法区间应返回 161002；修复 待定（open；需补 A2 实现或把资料改为不支持；训练库同机制条目 TRN-0378）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/8343
 - **关联**：cross:TRN-0378
+
+### INF-2622 `vllm_grouped_topk_noncontiguous_scores_wrong_weights` vLLM grouped_topk 非连续 scores 路由权重错
+
+`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：MoE路由 / vllm / grouped_topk CUDA 核
+- **原因行为**：grouped_topk 不校验 scores 连续性、也不使用 stride(0)，对 base[:, :num_experts] 这类隔列视图按连续布局读取，路由权重静默偏离。
+- **影响对象**：数值结果；输出分布（静默错误）
+- **影响详情**：4×16 的 base[:, :16] 视图与连续副本 torch.equal，但 grouped_topk 权重 max_abs_diff=0.0792；不报错，专家选择与加权随之偏离。
+- **改进措施**：检测 把 scores 拷成连续副本与隔列视图分别调用 grouped_topk，比较 weights/indices；视图与副本数值相等是前提条件。；修复 待定（issue open；期望 honor stride 或显式 is_contiguous 检查）
+- **来源**：https://github.com/vllm-project/vllm/issues/70379
 
 ## 重计算/卸载
 
