@@ -4,17 +4,17 @@ slug: triton_topk_sub32_dtype_signedness
 aliases: []
 title: tl.topk 对窄类型静默改 dtype 与符号
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
-  - subsystem: 编译器
+  - subsystem: 算子/内核
     stack: triton
     component: standard.py sort_impl
   behavior: K<N 时 sort_impl 把 <32 位输入提升到 32 位并用有符号比较：uint8→int32、float16/bfloat16→float32；K==N 时保持原 dtype。
 effect:
   objects:
   - 数值结果
-  detail: 16 个 uint8(200)：K=16 时 (~tk)=55 正确，K=8 时 tk 变 -201、(~tk) 得 -201；i8/u16/i16/f16/bf16 同样被改位宽/符号，sm_75..sm_100 与 gfx942 全后端。
+  detail: 16个uint8(200)：K=16时(~tk).to(int32)=55；K=8时tk为有符号int32的200，~tk得-201，输出不再是55；i8/u16/i16/f16/bf16同样被改位宽/符号，sm_75..sm_100与gfx942全后端。
   visibility: 静默错误
 mitigation:
   detect: 对 u8/i8/u16/i16/f16/bf16 的 tl.topk 分别取 K=N 与 K<N，检查返回张量 dtype 与符号；用 uint8(200) 做按位取反可放大符号错误。
@@ -38,3 +38,16 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      subsystem:
+        from: 编译器
+        to: 算子/内核
+    rewritten:
+    - detail

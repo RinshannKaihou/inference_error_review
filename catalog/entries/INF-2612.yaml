@@ -4,15 +4,16 @@ slug: sglang_mamba_ssm_state_bf16_accuracy_loss
 aliases: []
 title: SGLang SSM state 用 bf16 长推理掉 8 分
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: sglang
     component: mamba_ssm_dtype 状态存储
-  behavior: --mamba-ssm-dtype bfloat16 把 GDN 循环状态存 bf16；状态沿 decode 步累加，bf16 尾数不足使误差随步数累积，生成长度变长、更多请求被 16k 预算截断。
+  behavior: 显式将 --mamba-ssm-dtype 设为 bfloat16 后，GDN 循环状态按 bf16 存储；每一步 decode 累加更新时，bf16 的 8 位尾数在长链上累积舍入误差。
 effect:
   objects:
+  - KV状态
   - 输出内容
   detail: Qwen3.5-9B MATH-500 thinking 1000 次生成：float32 0.663 → bf16 0.584（−0.079±0.015），16k 截断 285→370；float16 同 2 字节无损失。
   visibility: 质量退化
@@ -38,3 +39,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: 输出内容
+        to: KV状态
+    rewritten:
+    - behavior

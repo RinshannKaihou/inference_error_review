@@ -4,7 +4,7 @@ slug: flashinfer_min_p_fallback_zero_prob_token
 aliases: []
 title: FlashInfer min_p 回退返回零概率 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 解码/采样
@@ -31,6 +31,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2593
+pattern: PAT-INF-0208
 original:
   mechanism: flashinfer 源码 560d7e296（nightly-v0.6.18，RTX 3090/SM86、Python 3.12.16、torch 2.14.1+cu130、CUDA 13.5）的 MinPSamplingFromProbKernel 计算 pivot = max_val * min_p，并把 x >= pivot 的槽位全部标记为 valid 交给 DeviceSamplingFromProb。默认 min_p=0 时 pivot=0，于是所有零概率槽（被 top-k/top-p 清零的、以及 padded vocab 的槽）都被当作合法候选；逆 CDF 循环在没有任何槽被选中时回退到 last_valid_id，落到 d-1。触发条件是 curand_uniform() 恰好返回 1.0（u==q），或第一遍总和 q 比 tile 总和 S 大几个 FP32 ULP 且 u 落在 (S,q]。生产环境 unpadded_vocab=200058、padded_vocab=201024，约 537k 生成 token 后返回 201023（padded_vocab-1），被服务运行时的域检查拒绝并终止服务；不 padding 时同一路径静默返回一个被 top-k/top-p 排除的 token。最小复现：4×4096 全零 probs、min_p=0，修复前返回 [4095,4095,4095,4095] 且 valid 全 True，修复后返回 [0,0,0,0] 且 valid 全 False。
   source: https://github.com/flashinfer-ai/flashinfer/issues/9887（open，2026-11-23，含最小复现与生产触发计数）
@@ -40,3 +41,17 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-27'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max

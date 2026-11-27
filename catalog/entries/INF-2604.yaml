@@ -4,7 +4,7 @@ slug: ffn_worker_batching_out_num_zero_drops_all_tokens
 aliases: []
 title: FfnWorkerBatching out_num=0 静默丢弃全部 token
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -13,6 +13,7 @@ cause:
   behavior: ScheduleContext.FfnArea.out_num 未在资料参数表定义，kernel 却用 totalLength=outNum*BS*K 决定处理行数；out_num=0 时处理长度为 0，不报错也不校验取值范围。
 effect:
   objects:
+  - 数值结果
   - 输出内容
   - 可用性/进度
   detail: 144 个合法 token、out_num=0：两段 rc=0/0、actualTokenNum=0、Y 保持调用前内容，全部 token 被静默丢弃；out_num=A 对照 actual=144。生产者零初始化结构体或漏填该字段即触发。
@@ -41,3 +42,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      effect:
+        from: 输出内容
+        to: 数值结果

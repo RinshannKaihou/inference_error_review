@@ -3,13 +3,13 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2617 条；状态：active 2525、merged 15、pending_audit 18、retired 59
+共 2617 条；状态：active 2541、merged 15、pending_audit 2、retired 59
 
 | 原因子系统 | 条数 |
 |---|---|
 | 硬件 | 23 |
-| 算子/内核 | 830 |
-| 编译器 | 186 |
+| 算子/内核 | 831 |
+| 编译器 | 185 |
 | 运行时/执行 | 142 |
 | 集合通信 | 44 |
 | 并行切分 | 32 |
@@ -9472,10 +9472,10 @@
 
 ### INF-2587 `cann_flash_attention_score_scale_zero_wrong` FlashAttentionScore scale=0 非对齐 Skv 静默错值
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / aclnnFlashAttentionScore
-- **原因行为**：950PR fp16、scaleValue=0、headNum>=16 且 Skv%128!=0 时，kernel 的 tiling/累加偏离均匀 softmax，输出整块偏离 mean(V)；Skv 是 128 倍数或 fp32 不触发。
+- **原因行为**：Ascend950PR fp16、scaleValue=0、headNum>=16 且 Skv 非128倍数时，输出与公式定义的均匀注意力不符，整块偏离 mean(V)；Skv=128 或 fp32 不复现。
 - **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：Skv=129、Nq=16 fp16 时 max|out-mean(v)|=0.095181，192000/262144 元素偏差>1e-2；Skv=128 对照偏差 0.000000；两段 rc=0。
 - **改进措施**：检测 scale=0 时用 mean(V) 作解析参考；覆盖 Skv=128/129、headNum=8/16、fp16/fp32；修复 待定（open；issue 关联 FIA V5 #6739 但表现不同，未见修复 MR）
@@ -9541,7 +9541,7 @@
 
 ### INF-2602 `recurrent_gated_delta_rule_ub_pad_uninit_state` RecurrentGatedDeltaRule 读 state UB 对齐空隙
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / arch22 CopyInState
 - **原因行为**：CopyInState 用 DataCopyPad 只写每行 alignKState 个元素，dstStride 跳到更大的 alignK_，行内 32B 对齐空隙从未写，随后整行 DataCopy 进入计算。
@@ -9552,22 +9552,22 @@
 
 ### INF-2603 `mc2_x2_noncontiguous_view_contiguous_read` MC2 算子按连续内存读非连续 x2
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / MC2 AIV 分支 x2 stride
 - **原因行为**：AllGatherMatmulV2、MatmulAlltoAllV2、QuantMatmulAlltoAllV2 的 AIV 分支接受 x2 转置/隔列视图，不做 stride 换算，直接按连续行主序读 storage。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：fp16/bf16 四个 shape：两段 rc=0，输出与 AG(x1)@x2ᵀ 差 13.3–29.9，与「把 storage 按 (n,k) 连续读」只差 0.0035–0.031；同一 harness 把转置视图交给 aclnnMatmul 会 161002 拒绝。
+- **影响详情**：x2 非连续视图下四个 shape 两段 rc=0；fp16 8×256×4 与 AG@x2ᵀ maxdiff 13.3、与连续读 storage maxdiff 0.0036，bf16 32×256×16 为 23.2/0.0306；同视图交 aclnnMatmul 报 161002。
 - **改进措施**：检测 用 shape=(n,k)、strides=(1,k) 的合法转置视图构造 x2，与 AG(x1)@x2ᵀ 及「连续读 storage」两套解析式同时对比；后者吻合而前者不吻合即为本条。；修复 待定（三条 issue 均 open；建议不支持非连续输入时首段返回 161002，未核实修复）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/8857；https://gitcode.com/cann/ops-transformer/issues/8841；https://gitcode.com/cann/ops-transformer/issues/8737
 
 ### INF-2604 `ffn_worker_batching_out_num_zero_drops_all_tokens` FfnWorkerBatching out_num=0 静默丢弃全部 token
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / ffn_wb_common.h
 - **原因行为**：ScheduleContext.FfnArea.out_num 未在资料参数表定义，kernel 却用 totalLength=outNum*BS*K 决定处理行数；out_num=0 时处理长度为 0，不报错也不校验取值范围。
-- **影响对象**：输出内容；可用性/进度（静默错误）
+- **影响对象**：数值结果；输出内容；可用性/进度（静默错误）
 - **影响详情**：144 个合法 token、out_num=0：两段 rc=0/0、actualTokenNum=0、Y 保持调用前内容，全部 token 被静默丢弃；out_num=A 对照 actual=144。生产者零初始化结构体或漏填该字段即触发。
 - **改进措施**：检测 回读 actualTokenNum 与输入 token 数比较；用 out_num=A 与 out_num=0 两组对照，检查 Y 是否被写、groupList 是否仍为哨兵值。；修复 待定（issue 建议资料补 out_num 语义/范围/缺省，或实现对 0/>A 显式报错；open，无修复 PR）
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/8846
@@ -9575,7 +9575,7 @@
 
 ### INF-2605 `attention_worker_combine_need_schedule_last_row_zero` AttentionWorkerCombine 清零每核末行
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / cann / attention_worker_combine
 - **原因行为**：needSchedule=1 路径在每核分配 token 数×(K+1)×4 字节超过 outQue 的 UB 容量时，把该核处理区间的最后一行 token 输出整行写成 0，未按 y 的累加定义收尾。
@@ -9586,7 +9586,7 @@
 
 ### INF-2607 `fia_spec_verify_all_nan_finite_inputs` FIA 投机验证批对有限输入输出全 NaN
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / vllm-ascend / FIA v2 verify 批 kernel
 - **原因行为**：同进程同层 ntok=1 decode 正确，ntok=4 的 TND_NTD/sparse_mode=3 verify 批约 50% 步骤输出全 NaN；q/k/mask 均无 NaN，NaN 由 kernel 内部产生，根因未定位。
@@ -9618,9 +9618,20 @@
 - **改进措施**：检测 对 merge_state_in_place 传 fp16/bf16/fp64 的 s 后回读调用方 s 是否被更新；对 v_a/v_b 混 dtype、mask 用 int32 的用例与 fp32/bool 基线比对。；修复 待定（issue open，建议在 cascade 入口显式校验 s/v/mask 的 dtype 并拒绝）
 - **来源**：https://github.com/flashinfer-ai/flashinfer/issues/10073
 
+### INF-2616 `triton_topk_sub32_dtype_signedness` tl.topk 对窄类型静默改 dtype 与符号
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
+
+- **原因对象**：算子/内核 / triton / standard.py sort_impl
+- **原因行为**：K<N 时 sort_impl 把 <32 位输入提升到 32 位并用有符号比较：uint8→int32、float16/bfloat16→float32；K==N 时保持原 dtype。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：16个uint8(200)：K=16时(~tk).to(int32)=55；K=8时tk为有符号int32的200，~tk得-201，输出不再是55；i8/u16/i16/f16/bf16同样被改位宽/符号，sm_75..sm_100与gfx942全后端。
+- **改进措施**：检测 对 u8/i8/u16/i16/f16/bf16 的 tl.topk 分别取 K=N 与 K<N，检查返回张量 dtype 与符号；用 uint8(200) 做按位取反可放大符号错误。；修复 待定（issue open，triton 3.9.0 与 main 458c1a25）
+- **来源**：https://github.com/triton-lang/triton/issues/12861
+
 ### INF-2617 `ttnn_gather_nonzero_blockfloat_element_size` ttnn gather/nonzero 按 1 字节读 block-float
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / tt-metal / gather/nonzero reader
 - **原因行为**：kernel 用 get_tile_size()/get_tile_hw() 推单元素字节数：Bfp8_b 1088/1024=1、Bfp4_b 576/1024=0，随后按元素偏移逐字节拷贝/扫描 block-float 原始字节。
@@ -11674,7 +11685,7 @@
 
 ### INF-2606 `triton_experimental_int64_exempt_too_narrow` triton_experimental int64 截断大整数
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：编译器 / torch_npu / _npu_int64_exempt 降型
 - **原因行为**：豁免名单只覆盖 RNG 类与 aten.div.*_mode；abs 等结果本身需携带大整数的算子不在名单内，指针与 compute type 一并降到 int32，超出范围的值静默截断。
@@ -11685,19 +11696,19 @@
 
 ### INF-2609 `triton_experimental_multidim_scan_dim_fixup_miss` triton_experimental 多维 scan 轴修正漏配
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：编译器 / torch_npu / _apply_linearize fixup
 - **原因行为**：linearize 重锚 tile 槽位后，通用 dim fixup 只改写以 ", <dim>)" 结尾的参数；tl.associative_scan 中间位置参数、dim=-1、tl.full 末槽都没匹配，仍指向旧槽的轴。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：多维 cumsum/cumprod 编译通过但值错：int32 dim=1 的 125 个元素中 100 个错（绝对差 26），fp32 cumprod 相对误差 129.7、77.6% 元素错；一维 smoke 测试测不出。
+- **影响详情**：多维非最内维cumsum/cumprod编译通过但扫错轴：int32 5×5×5 dim=1错100/125、绝对差26；fp32 cumprod相对误差129.74；仅查能否编过的smoke测试完全发现不了。
 - **改进措施**：检测 对 2D 以上张量的每个 dim 做 cumsum/cumprod 与 eager 对拍，整型用例用绝对差、浮点用例用相对误差；只检查能否编译的 smoke 测试无效。；修复 分支 fix-te-scan-dim-fixup（报告者给出，未合并，未核实）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/6461
 - **关联**：var:INF-2544
 
 ### INF-2611 `triton_ascend_libdevice_subnormal_ftz` triton-ascend libdevice 次正规数归零
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：编译器 / triton-ascend / libdevice lowering FTZ
 - **原因行为**：libdevice 与 tl.* 的 exp/sin/sqrt/atan/sinh/tanh/erf 在 lowering 时做 flush-to-zero：exp 的结果落进次正规区间返回 0，其余先把次正规输入冲成 0 再计算。
@@ -11705,17 +11716,7 @@
 - **影响详情**：exp(-88.0) 返回 0（应 6.0546e-39）、exp(-89.0) 返回 0（应 2.2274e-39）；最小次正规 ±1.4e-45 输入时 sin/atan/sinh/tanh/erf 返回 ±0，sqrt 返回 [0, nan]；正常范围输入正确。
 - **改进措施**：检测 用 torch.nextafter(0,1) 构造最小次正规输入、用 -88/-89 构造次正规结果，分别跑 libdevice.sin/sqrt/exp 等与 torch CPU 对拍；正常量级用例全部通过不能证明无此问题。；修复 待定（两条 issue 均 open；#3322 指出 cosh/sinh 早期溢出报告的上游根因就是 exp 次正规结果被冲零）
 - **来源**：https://github.com/triton-lang/triton-ascend/issues/3322；https://github.com/triton-lang/triton-ascend/issues/3356
-
-### INF-2616 `triton_topk_sub32_dtype_signedness` tl.topk 对窄类型静默改 dtype 与符号
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
-
-- **原因对象**：编译器 / triton / standard.py sort_impl
-- **原因行为**：K<N 时 sort_impl 把 <32 位输入提升到 32 位并用有符号比较：uint8→int32、float16/bfloat16→float32；K==N 时保持原 dtype。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：16 个 uint8(200)：K=16 时 (~tk)=55 正确，K=8 时 tk 变 -201、(~tk) 得 -201；i8/u16/i16/f16/bf16 同样被改位宽/符号，sm_75..sm_100 与 gfx942 全后端。
-- **改进措施**：检测 对 u8/i8/u16/i16/f16/bf16 的 tl.topk 分别取 K=N 与 K<N，检查返回张量 dtype 与符号；用 uint8(200) 做按位取反可放大符号错误。；修复 待定（issue open，triton 3.9.0 与 main 458c1a25）
-- **来源**：https://github.com/triton-lang/triton/issues/12861
+- **关联**：cross:TRN-0821
 
 ## 运行时/执行
 
@@ -18575,11 +18576,11 @@
 
 ### INF-2612 `sglang_mamba_ssm_state_bf16_accuracy_loss` SGLang SSM state 用 bf16 长推理掉 8 分
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：KV缓存 / sglang / mamba_ssm_dtype 状态存储
-- **原因行为**：--mamba-ssm-dtype bfloat16 把 GDN 循环状态存 bf16；状态沿 decode 步累加，bf16 尾数不足使误差随步数累积，生成长度变长、更多请求被 16k 预算截断。
-- **影响对象**：输出内容（质量退化）
+- **原因行为**：显式将 --mamba-ssm-dtype 设为 bfloat16 后，GDN 循环状态按 bf16 存储；每一步 decode 累加更新时，bf16 的 8 位尾数在长链上累积舍入误差。
+- **影响对象**：KV状态；输出内容（质量退化）
 - **影响详情**：Qwen3.5-9B MATH-500 thinking 1000 次生成：float32 0.663 → bf16 0.584（−0.079±0.015），16k 截断 285→370；float16 同 2 字节无损失。
 - **改进措施**：检测 固定模型与采样参数，只在 --mamba-ssm-dtype float32/bfloat16/float16 间切换跑长推理评测（MATH-500 thinking、16k 预算），同时统计 finish_reason=stop 与截断数；GSM8K 式短评测会漏检。；修复 待定（issue open；float32 是模型默认，bf16 需显式开启）
 - **来源**：https://github.com/sgl-project/sglang/issues/51531
@@ -22257,7 +22258,7 @@
 
 ### INF-2613 `flashinfer_min_p_fallback_zero_prob_token` FlashInfer min_p 回退返回零概率 token
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：解码/采样 / flashinfer / MinPSampling kernel
 - **原因行为**：pivot=max_val*min_p，min_p=0 时 pivot=0，零概率槽（top-k/top-p 清零槽与 padded vocab）全被标为 valid；逆 CDF 未选中时回退 last_valid_id=d-1。
@@ -22269,11 +22270,11 @@
 
 ### INF-2615 `decoder_start_token_mixed_batch_skips_prepend` 批内混用 decoder start token 静默少加
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：解码/采样 / transformers / generation/utils.py 前置判断
 - **原因行为**：用 (decoder_input_ids[:,0] != start_id).all() 决定是否整批前置 start token；批内一条已含就整体跳过，其余请求缺 start token。
-- **影响对象**：输出内容；输出分布（静默错误）
+- **影响对象**：输入编码；输出内容；输出分布（静默错误）
 - **影响详情**：bart-base 8 步最大 score 差 1.297；opus-mt-en-de 生成 token 改变、译文错乱，score 差 13.03、raw logit 差 20.64；不抛异常，逐条单独跑正确。
 - **改进措施**：检测 构造两条 decoder 前缀，一条含 decoder_start_token、一条不含，等长且无 pad，batch 生成后与逐条单独生成逐 token 比较。；修复 待定（issue open，transformers 5.24.0.dev0）
 - **来源**：https://github.com/huggingface/transformers/issues/51216
@@ -25098,7 +25099,7 @@
 
 ### INF-2601 `matmul_reduce_scatter_v2_950_pertensor_bias_scaled` MC2 量化 matmul 把 bias 乘了 scale
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：量化 / cann / arch35 量化 MC2 kernel
 - **原因行为**：arch35 量化 kernel 让 biasGM_ 直接进 mmv3.Init，bias 在反量化前生效、被 x1Scale*x2Scale 缩放；A2/A3 量化时反而把 bias 排除在 matmul 外。
@@ -25106,18 +25107,19 @@
 - **影响详情**：Ascend950PR pertensor 量化 + 带 bias 的 MC2：x1 全 0、s1=s2=2^-4、bias=8 时资料公式 16.0、实测 0.0625（差 256 倍）；真实 scale≈1/448 时 bias 被衰减到 1e-6 量级，等于静默丢弃 bias。
 - **改进措施**：检测 构造 x1≡0、bias 非零、s1=s2 的 pertensor 量化 MC2 用例，按 (s1*s2)*(x1@x2)+bias 与实测比对；scale=1 与 scale≠1 两组对照可区分 bias 是否被缩放。；修复 issue 建议把 arch35 量化 kernel 的 bias 移到 dequant 之后按 fp32 累加（与 A2/A3 一致）；截至 2026-11-26 issue open，未见修复 PR（未核实）。
 - **来源**：https://gitcode.com/cann/ops-transformer/issues/8877
+- **关联**：cross:TRN-0820
 
 ### INF-2608 `regbase_rmsnorm_quant_large_finite_zero_output` RegBase RMSNorm 系大有限值输出归零
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：量化 / cann / ops-nn RegBase RmsNorm 归约
-- **原因行为**：RegBase 归约在 FP32 中做平方/累加，有限大数使中间溢出、rstd 下溢为 0，量化输出退化为 0 或零点；部分模板每核可达 9 行而 RMS 倒数槽只有 8 个。
+- **原因行为**：RegBase 归一化在 FP32 中做 x² 平方与累加，很大但完全有限的输入可致平方和超 FP32 上限、rstd 下溢为 0；部分路径公共缓冲仅 8 个 FP32 槽却访问第 9 个 RMS 倒数槽。
 - **影响对象**：数值结果（静默错误）
 - **影响详情**：RmsNormDynamicMxQuant 两个 1e20 bf16 → y=[0,0]、rstd=0（修后 [1,1]）；RMSNormQuantV3 交替 ±1e19、gamma=8 → 0 而非 ±8；AddRmsNormQuant 大 epsilon 时 y1 全 0。
 - **改进措施**：检测 用 1e19–1e20 量级有限输入、gamma 取 2^67/8、epsilon 取 FLT_MAX 与常值两组对照，回读 rstd 与 y；同时检查每核 9 行场景下 RMS 倒数槽的申请字节数（应为 96B 而非 24B）。；修复 PR 16328（RmsNormDynamicMxQuant）、16321（RMSNormQuantV3）、16338（AddRmsNormQuant）均见 GitCode，open，合并与发布未核实。
 - **来源**：https://gitcode.com/cann/ops-nn/issues/10335；https://gitcode.com/cann/ops-nn/issues/10332；https://gitcode.com/cann/ops-nn/issues/10337
-- **关联**：cross:TRN-0397
+- **关联**：cross:TRN-0397；cross:TRN-0824
 
 ## 位置编码
 

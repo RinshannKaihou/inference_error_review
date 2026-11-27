@@ -32,6 +32,7 @@ evidence:
 relations:
 - kind: var
   target: INF-2154
+pattern: PAT-INF-0214
 original:
   mechanism: vllm-ascend v0.32.0rc1（fla_npu a5 镜像）、Ascend950DT×2、TP2、--enforce-eager 上跑 Kimi-Linear-48B-A3B-Instruct FP8（hybrid GDN/MLA，MLA 层用 v1 attention 后端 npu_fused_infer_attention_score_v2）。MLA KV 池用 torch.empty 分配，从未写的行残留 NaN；启动 warmup 也会把自己序列长度之外的块写成 NaN。投机验证步 FIA 以 input_layout="TND_NTD"、sparse_mode=3（bottom-right mask）、actual_seq_kvlen=<seq_len> 调用，kernel 按 mask 的 2048 宽跨度做块对齐读，越过 actual_seq_kvlen 读到这些未写行；被 mask 的 NaN 行仍参与 softmax，使整个 verify 输出变 NaN（16 head×4 token×512 维）。报告者逐 verify 步统计 layer 3 的 k_nope 视图：干净步 blkcounts=[0,0,0,0,0,0]，失败步 blkcounts=[79,80,63,45,35,75]、kvl=[26]、attn_nan=32768；q_nope/q_pe/k_pe 在所有用例 0 NaN，mask 无 NaN。首个请求落在 warmup 已写有限的块上所以干净，第二个请求拿到从未写的块就失败；关掉 drafting（0 个 verify 步）同一 workload 完全干净。
   source: https://github.com/vllm-project/vllm-ascend/issues/23399（open，2026-11-26，含进程内探针与逐块 NaN 计数）
@@ -41,3 +42,21 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  updates:
+  - date: '2026-11-27'
+    fields:
+    - pattern
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    issue_unfixed:
+    - detail
+    held:
+    - issue_unfixed

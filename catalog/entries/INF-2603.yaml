@@ -4,7 +4,7 @@ slug: mc2_x2_noncontiguous_view_contiguous_read
 aliases: []
 title: MC2 算子按连续内存读非连续 x2
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: fp16/bf16 四个 shape：两段 rc=0，输出与 AG(x1)@x2ᵀ 差 13.3–29.9，与「把 storage 按 (n,k) 连续读」只差 0.0035–0.031；同一 harness 把转置视图交给 aclnnMatmul 会 161002 拒绝。
+  detail: x2 非连续视图下四个 shape 两段 rc=0；fp16 8×256×4 与 AG@x2ᵀ maxdiff 13.3、与连续读 storage maxdiff 0.0036，bf16 32×256×16 为 23.2/0.0306；同视图交 aclnnMatmul 报 161002。
   visibility: 静默错误
 mitigation:
   detect: 用 shape=(n,k)、strides=(1,k) 的合法转置视图构造 x2，与 AG(x1)@x2ᵀ 及「连续读 storage」两套解析式同时对比；后者吻合而前者不吻合即为本条。
@@ -42,3 +42,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-26'
+  audit:
+    round: daily-audit-2026-11-27
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail
