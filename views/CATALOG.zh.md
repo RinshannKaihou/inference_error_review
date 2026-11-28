@@ -3,7 +3,7 @@
 > 本文件由 `python3 tools/catalog_tool.py build` 从 `catalog/entries/*.yaml` 生成，**不要手改**。
 > 字段说明见 `catalog/SCHEMA.md`，受控词表见 `catalog/vocab.yaml`。
 
-共 2630 条；状态：active 2541、merged 15、pending_audit 15、retired 59
+共 2630 条；状态：active 2556、merged 15、retired 59
 
 | 原因子系统 | 条数 |
 |---|---|
@@ -13,11 +13,11 @@
 | 运行时/执行 | 142 |
 | 集合通信 | 45 |
 | 并行切分 | 32 |
-| KV缓存 | 398 |
+| KV缓存 | 397 |
 | 调度/服务 | 97 |
 | 输出解析 | 70 |
 | 解码/采样 | 162 |
-| 量化 | 252 |
+| 量化 | 253 |
 | 位置编码 | 46 |
 | 分词/模板 | 34 |
 | 模型定义 | 52 |
@@ -9597,22 +9597,22 @@
 
 ### INF-2610 `fia_mla_reads_kv_beyond_actual_seq_kvlen` FIA MLA 读超 actual_seq_kvlen 致 NaN
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-26
+`故障` · `active` · `documented` · `var` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / vllm-ascend / FIA v2 分页 attention
 - **原因行为**：TND_NTD + sparse_mode=3 的 verify 批上，kernel 按 2048 宽 mask 块对齐读，越过 actual_seq_kvlen 读到 KV 池未写行 NaN，被 mask 的行仍经 softmax 传播。
 - **影响对象**：数值结果；KV状态（数值异常）
-- **影响详情**：Kimi-Linear-48B FP8、TP2、ngram k=3：第 2 个请求拿到未写 block（每 128 行 30–90 行 NaN）后 verify 输出 [16,4,512] 全 NaN；首个请求干净，关投机后全清。
+- **影响详情**：Kimi-Linear-48B FP8、TP2、ngram num_speculative_tokens=3：第二个请求拿到未写块后 verify 输出 [16,4,512] 全 NaN；首个请求干净，关投机后恢复。
 - **改进措施**：检测 在 verify 步前读取 block_table 引用块的 k_nope 视图统计 NaN 行数，并与 attention 输出的 NaN 计数对照；把整池预热写满有限值后再跑可复现首个请求干净、后续请求失败。；修复 规避：decode 前把 block_table 引用块中含 NaN 行的块清零（已写行有限、不受影响）；issue open，未核实修复。
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/23399
 - **关联**：var:INF-2154
 
 ### INF-2614 `flashinfer_merge_state_dtype_unchecked` FlashInfer merge_state 不校验 dtype
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-26
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-26
 
 - **原因对象**：算子/内核 / flashinfer / cascade merge_state
-- **原因行为**：只校验 shape/device，不校验 dtype：s 非 fp32 时新 LSE 写进临时副本，v dtype 不一致时按 v_a 重解释位型，mask 非 bool 时按字节读。
+- **原因行为**：只校验 shape/device，不校验 dtype：s 非 fp32 时新 LSE 写进临时副本，v dtype 不一致时按 v_a 重解释位型，mask 不是 bool/uint8 时按字节读。
 - **影响对象**：数值结果；输出分布（静默错误）
 - **影响详情**：3 路链式合并偏差最大 3.9；fp16+bf16 v 偏差 1.4–1.9，bf16+fp16 约 400，fp16+fp32 出 NaN；int32 mask [1,1,0,1] 只合并第 0 行；全部无报错。
 - **改进措施**：检测 对 merge_state_in_place 传 fp16/bf16/fp64 的 s 后回读调用方 s 是否被更新；对 v_a/v_b 混 dtype、mask 用 int32 的用例与 fp32/bool 基线比对。；修复 待定（issue open，建议在 cascade 入口显式校验 s/v/mask 的 dtype 并拒绝）
@@ -9642,18 +9642,18 @@
 
 ### INF-2618 `splitv_ubsplit_gather_index_uint16_wrap` split_v UB-split gather 索引 16 位回绕致错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / cann / split_v UB-split 核
 - **原因行为**：SplitVUbSplit 的 DataCopyGatherVf 用 uint16 lane 计算行×pitch+列+n 偏移，单块元素数超过 65536/sizeof(T) 时索引回绕，gather 从错误位置取数。
 - **影响对象**：数值结果（静默错误）
-- **影响详情**：Ascend960 单块 B8 超过 65536 元素时，split_v 的 B8/B16 输出整行取自错误偏移，全程无报错；950/910B 因 UB 上限不触发。
+- **影响详情**：Ascend960 上 split_v 切分 int8/uint8/bool，当单块 UB 可容纳超 65536 元素、size_splits 含≤128B 小段且 N 足够大使 nUbFactor 跨 16 位时，输出整行错值且无报错；950/910B 因 UB 较小不触发。
 - **改进措施**：检测 构造 size_splits 含 ≤128B 小段、N 足够大使 nUbFactor 跨 16 位，与 golden 逐元素比对，观察整行错值。；修复 待定（issue open，2026-11-27；报告建议对 UB-split 路径套用 same_len 系已有限制）
 - **来源**：https://gitcode.com/cann/ops-math/issues/5340
 
 ### INF-2620 `fa3_causal_sliding_window_prefill_hd128_256_wrong` FA3 causal 滑窗 prefill 头维 128/256 错值
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / vllm / FA3 varlen SWA 核
 - **原因行为**：FA3 在长 query chunk 的 causal sliding-window prefill 中，head dim 128/256 的部分行偏离 fp32 参考；同输入 FA2 正常，窗口 1000 与 1024 结果不同。
@@ -9664,7 +9664,7 @@
 
 ### INF-2624 `triton_mla_bf16_lse_dcp_combine_error` TRITON_MLA 解码 LSE 存 bf16 致 DCP 偏差
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / vllm / TritonMLA decode LSE
 - **原因行为**：forward_mqa 按 q.dtype 分配 decode LSE，stage-2 kernel 把 fp32 lse_val 存进 bf16 张量；DCP 合并按 exp(lse_r-lse) 加权时该误差直接进入权重。
@@ -9675,7 +9675,7 @@
 
 ### INF-2628 `flashinfer_cuda_rmsnorm_row_offset_uint32_wrap` FlashInfer CUDA RMSNorm 行偏移 32 位回绕
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-27
+`故障` · `active` · `documented` · `var` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / flashinfer / norm.cuh RMSNorm 系列
 - **原因行为**：六个 CUDA JIT norm kernel 用 uint32_t 计算 bx*stride 的行起始偏移，行起点达到 2^32 元素时回绕，读写落到错误行。
@@ -9687,7 +9687,7 @@
 
 ### INF-2629 `sglang_lightning_attn_prefix_state_decay_off_by_one` SGLang lightning_attention 前缀核少一步衰减
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-27
+`故障` · `active` · `documented` · `var` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / sglang / lightning_attn prefill 核
 - **原因行为**：_fwd_none_diag_kernel 用 q_decay=exp(-s*(off_c*CBLOCK+c))，但 KV[i] 存的是块折叠前的状态，query 实为 r+1 步后，历史项整体大 exp(s) 倍。
@@ -9699,7 +9699,7 @@
 
 ### INF-2630 `kv_rms_norm_rope_cache_fullload_fp32_square_overflow` KvRmsNormRopeCache FullLoad 平方溢出归零
 
-`故障` · `pending_audit` · `documented` · `var` · 发现 2026-11-27
+`故障` · `active` · `documented` · `var` · 发现 2026-11-27
 
 - **原因对象**：算子/内核 / cann / KvRmsNorm FullLoad
 - **原因行为**：FullLoad 路径在 FP32 中先平方再累加，有限 BF16 激活的平方和可超出 float32 范围，除以 inf 后 rstd 归零。
@@ -11789,11 +11789,11 @@
 
 ### INF-2623 `npu_inductor_persistent_masked_softmax_tail_mask` NPU Inductor persistent softmax 丢尾部掩码
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：编译器 / torch_npu / Inductor 持久归约核
 - **原因行为**：动态行长 229 的 FP16 masked softmax 归约块对齐到 232，生成的 r_mask 未参与读取、写回和归约，尾部三个 lane 访问相邻行。
-- **影响对象**：数值结果；输出内容（不可复现）
+- **影响对象**：数值结果；输出内容（静默错误）
 - **影响详情**：seq 维动态 [31,229] 的 QK-masked-softmax-V 子图最大绝对误差 0.9386，同一输入重复运行输出波动；softmax 分母混入额外元素。
 - **改进措施**：检测 对动态 seq [31,229] 的 masked softmax 子图用 3 个 seed 各跑 5 次，与 eager 按 1e-3 绝对误差比对，并检查同输入重复运行是否稳定。；修复 待定（issue open；报告者说明需同时补 filter_masks 与 persistent reduction 输入屏蔽）
 - **来源**：https://gitcode.com/Ascend/pytorch/issues/6509
@@ -13874,10 +13874,10 @@
 
 ### INF-2621 `nccl_symm_mem_allreduce_wrong_group` NCCL 对称内存 all-reduce 跨组取错 rank 集
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：集合通信 / vllm / pynccl 对称内存 all-reduce
-- **原因行为**：register_nccl_symmetric_ops 只注册一次并闭包首个注册组的 PyNCCL 通信器（通常是 TP 组），后续任意 ≥4 rank 组调用都归约到 TP 组 rank 集。
+- **原因行为**：VLLM_USE_NCCL_SYMM_MEM=1时，对称all-reduce op只注册一次并闭包首个注册组（TP组）；rank≥4、尺寸<16KiB或>512KiB且成员与TP组不同的组，op不接收调用组，按TP组rank集归约。
 - **影响对象**：数值结果；隐状态（静默错误）
 - **影响详情**：TP8+DCP4、每 rank 填 rank+1 时，DCP 组 [0..3]/[4..7] 应得 10/26，实际得到 TP 组和；不挂起不报错，DCP 解码输出被污染。
 - **改进措施**：检测 构造 TP 与另一组 rank 集不同的进程组，各组填 rank+1 后 all-reduce，核对每组结果是否等于本组成员之和；覆盖 ≥4 rank 且尺寸 ≤16KiB 或 ≥512KiB。；修复 待定（#66304 提议把调用组传入 op；本条 issue open，未核实修复）
@@ -18678,32 +18678,21 @@
 
 ### INF-2619 `vllm_ascend_mamba_align_prefix_cache_cross_request_reuse` vllm-ascend Mamba 前缀缓存跨请求复用错答
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：KV缓存 / vllm-ascend / Mamba align 模式状态复用
 - **原因行为**：混合 GDN 模型默认 mamba cache mode='align'，前缀缓存按 token 前缀命中复用 mamba/GDN 状态，但发散点不是安全状态边界，状态被跨 prompt 复用。
-- **影响对象**：KV状态；输出内容（静默错误）
-- **影响详情**：3 个共享长前缀、后段不同的并发请求互相返回对方内容；8K 请求退化为 128 个 '!'；串行重放全对，关闭 prefix caching 后 8K/32K 检索 0.0/33.3→100.0。
+- **影响对象**：跨请求/跨样本数据；KV状态；输出内容（静默错误）
+- **影响详情**：开启默认 prefix caching 时，3个共享长前缀、后段不同的并发请求都返回最先填充共享前缀那条请求的内容，自身信息不出现；不同输入可产生逐字节相同输出；8K请求出现128个'!'。串行重放正确，关闭后8K/32K检索升至100.0。
 - **改进措施**：检测 并发发送共享长前缀、后段各埋不同标记的请求，检查每个响应是否返回自己的标记；串行重放与 --no-enable-prefix-caching 作对照。；修复 规避：--no-enable-prefix-caching（报告者实测完全修复）；根因修复未见，issue open
 - **来源**：https://github.com/vllm-project/vllm-ascend/issues/23545
 
-### INF-2625 `vllm_int4_kv_ignores_chunk_lookback_rswa` vLLM INT4 KV 注意力漏 chunk/R-SWA 掩码
-
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
-
-- **原因对象**：KV缓存 / vllm / unified_attention_int4 掩码
-- **原因行为**：INT4_PER_TOKEN_HEAD 分支调 unified_attention_int4 时不传 chunk_lookback/rswa_prefix_lens/rswa_window，kernel 用默认 -1/False。
-- **影响对象**：数值结果（静默错误）
-- **影响详情**：启用 --kv-cache-dtype int4_per_token_head 且 TRITON_ATTN 时，chunk_lookback 层把局部注意力算成普通滑窗，R-SWA 层算成整段 causal，无报错无告警。
-- **改进措施**：检测 对含 chunk_lookback / R-SWA 的层，同输入分别用 int4_per_token_head 与 bf16 KV 跑 unified_attention，与按真实掩码构造的逐 token 参考比对。；修复 待定（issue open；建议把三个掩码参数透传到 int4 分支）
-- **来源**：https://github.com/vllm-project/vllm/issues/70419
-
 ### INF-2626 `sglang_jet_nemotron_unified_memory_state_not_written` SGLang Jet-Nemotron 统一内存不回写状态
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：KV缓存 / sglang / fla input_guard 丢状态
-- **原因行为**：FusedRecurrentUpdateFunction.forward 被普通 @input_guard 装饰，其对每个张量参数做 .contiguous()；统一内存下状态池是非连续视图，更新落在临时副本并被丢弃。
+- **原因行为**：FusedRecurrentUpdateFunction.forward被普通@input_guard装饰，对不在keep_strides里的每个张量参数调用.contiguous()；统一内存下非连续状态池更新落入临时副本并被丢弃。
 - **影响对象**：KV状态；输出内容（静默错误）
 - **影响详情**：开启 --enable-unified-memory 后 Jet-Nemotron/JetVLM 每个请求第二次 forward 起从零状态解码，输出静默错误；非统一内存路径正常。
 - **改进措施**：检测 同一请求多步 decode 对比统一内存开关；检查 state pool 在 forward 后是否变化（副本写不回时保持不变），并与非统一内存 MambaPool 结果比对。；修复 待定（issue open；launcher 已支持 stride_h0_source，需在 input_guard 的 keep_strides 放行状态池）
@@ -25245,6 +25234,17 @@
 - **来源**：https://gitcode.com/cann/ops-nn/issues/10335；https://gitcode.com/cann/ops-nn/issues/10332；https://gitcode.com/cann/ops-nn/issues/10337
 - **关联**：cross:TRN-0397；cross:TRN-0824
 
+### INF-2625 `vllm_int4_kv_ignores_chunk_lookback_rswa` vLLM INT4 KV 注意力漏 chunk/R-SWA 掩码
+
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
+
+- **原因对象**：量化 / vllm / unified_attention_int4 掩码
+- **原因行为**：INT4_PER_TOKEN_HEAD 分支调 unified_attention_int4 时不传 chunk_lookback/rswa_prefix_lens/rswa_window，kernel 用默认 -1/False。
+- **影响对象**：数值结果（静默错误）
+- **影响详情**：启用 --kv-cache-dtype int4_per_token_head 且 TRITON_ATTN 时，chunk_lookback 层把局部注意力算成普通滑窗，R-SWA 层算成整段 causal，无报错无告警。
+- **改进措施**：检测 对含 chunk_lookback / R-SWA 的层，同输入分别用 int4_per_token_head 与 bf16 KV 跑 unified_attention，与按真实掩码构造的逐 token 参考比对。；修复 待定（issue open；建议把三个掩码参数透传到 int4 分支）
+- **来源**：https://github.com/vllm-project/vllm/issues/70419
+
 ## 位置编码
 
 ### INF-0884 `yarn_attention_scaling_missing` YaRN 遗漏 attention_scaling 温度因子
@@ -26720,11 +26720,11 @@
 
 ### INF-2627 `transformers_moe_models_drop_position_ids_packed_mask` 三模型漏传 position_ids 破坏 packed 掩码
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：模型定义 / transformers / 三模型 mask_kwargs
 - **原因行为**：三个模型的 mask_kwargs 不含 position_ids，create_causal_mask 无法调用 find_packed_sequence_indices，packed 批不生成块对角掩码。
-- **影响对象**：隐状态；输出内容（静默错误）
+- **影响对象**：跨请求/跨样本数据；隐状态；输出内容（静默错误）
 - **影响详情**：padding-free/packed 批下每个文档 attends 到行内所有更早文档；只改第一个文档即可让第二个文档 logits 变化（应恒为 0）；eager/sdpa/flex_attention 均受影响。
 - **改进措施**：检测 用 DataCollatorWithFlattening 打包两文档，只改第一文档，断言第二文档 logits 变化为 0；覆盖 gpt_oss/afmoe/granitemoehybrid，并用 llama 作对照。；修复 待定（issue open，transformers main 2f1bc5e；修复为把 position_ids 放进 mask_kwargs）
 - **来源**：https://github.com/huggingface/transformers/issues/51072
@@ -28007,7 +28007,7 @@
 
 ### INF-2622 `vllm_grouped_topk_noncontiguous_scores_wrong_weights` vLLM grouped_topk 非连续 scores 路由权重错
 
-`故障` · `pending_audit` · `documented` · `NEW` · 发现 2026-11-27
+`故障` · `active` · `documented` · `NEW` · 发现 2026-11-27
 
 - **原因对象**：MoE路由 / vllm / grouped_topk CUDA 核
 - **原因行为**：grouped_topk 不校验 scores 连续性、也不使用 stride(0)，对 base[:, :num_experts] 这类隔列视图按连续布局读取，路由权重静默偏离。

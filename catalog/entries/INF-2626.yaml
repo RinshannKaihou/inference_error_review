@@ -4,13 +4,13 @@ slug: sglang_jet_nemotron_unified_memory_state_not_written
 aliases: []
 title: SGLang Jet-Nemotron 统一内存不回写状态
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
     stack: sglang
     component: fla input_guard 丢状态
-  behavior: FusedRecurrentUpdateFunction.forward 被普通 @input_guard 装饰，其对每个张量参数做 .contiguous()；统一内存下状态池是非连续视图，更新落在临时副本并被丢弃。
+  behavior: FusedRecurrentUpdateFunction.forward被普通@input_guard装饰，对不在keep_strides里的每个张量参数调用.contiguous()；统一内存下非连续状态池更新落入临时副本并被丢弃。
 effect:
   objects:
   - KV状态
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    rewritten:
+    - behavior

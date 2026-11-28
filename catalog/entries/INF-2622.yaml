@@ -4,7 +4,7 @@ slug: vllm_grouped_topk_noncontiguous_scores_wrong_weights
 aliases: []
 title: vLLM grouped_topk 非连续 scores 路由权重错
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: MoE路由
@@ -39,3 +39,15 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    uncertain:
+    - behavior

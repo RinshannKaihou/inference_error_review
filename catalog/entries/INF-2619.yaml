@@ -4,7 +4,7 @@ slug: vllm_ascend_mamba_align_prefix_cache_cross_request_reuse
 aliases: []
 title: vllm-ascend Mamba 前缀缓存跨请求复用错答
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: KV缓存
@@ -13,9 +13,10 @@ cause:
   behavior: 混合 GDN 模型默认 mamba cache mode='align'，前缀缓存按 token 前缀命中复用 mamba/GDN 状态，但发散点不是安全状态边界，状态被跨 prompt 复用。
 effect:
   objects:
+  - 跨请求/跨样本数据
   - KV状态
   - 输出内容
-  detail: 3 个共享长前缀、后段不同的并发请求互相返回对方内容；8K 请求退化为 128 个 '!'；串行重放全对，关闭 prefix caching 后 8K/32K 检索 0.0/33.3→100.0。
+  detail: 开启默认 prefix caching 时，3个共享长前缀、后段不同的并发请求都返回最先填充共享前缀那条请求的内容，自身信息不出现；不同输入可产生逐字节相同输出；8K请求出现128个'!'。串行重放正确，关闭后8K/32K检索升至100.0。
   visibility: 静默错误
 mitigation:
   detect: 并发发送共享长前缀、后段各埋不同标记的请求，检查每个响应是否返回自己的标记；串行重放与 --no-enable-prefix-caching 作对照。
@@ -39,3 +40,19 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel:
+    - kimi-k3.1-pro
+    - glm-5.3
+    - qwen3.8-max
+    corrected:
+      effect:
+        from: KV状态
+        to: 跨请求/跨样本数据
+    rewritten:
+    - detail

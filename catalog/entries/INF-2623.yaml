@@ -4,7 +4,7 @@ slug: npu_inductor_persistent_masked_softmax_tail_mask
 aliases: []
 title: NPU Inductor persistent softmax 丢尾部掩码
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 编译器
@@ -16,7 +16,7 @@ effect:
   - 数值结果
   - 输出内容
   detail: seq 维动态 [31,229] 的 QK-masked-softmax-V 子图最大绝对误差 0.9386，同一输入重复运行输出波动；softmax 分母混入额外元素。
-  visibility: 不可复现
+  visibility: 静默错误
 mitigation:
   detect: 对动态 seq [31,229] 的 masked softmax 子图用 3 个 seed 各跑 5 次，与 eager 按 1e-3 绝对误差比对，并检查同输入重复运行是否稳定。
   fix: 待定（issue open；报告者说明需同时补 filter_masks 与 persistent reduction 输入屏蔽）
@@ -39,3 +39,14 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    corrected:
+      visibility:
+        from: 不可复现
+        to: 静默错误

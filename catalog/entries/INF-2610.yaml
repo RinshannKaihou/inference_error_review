@@ -4,7 +4,7 @@ slug: fia_mla_reads_kv_beyond_actual_seq_kvlen
 aliases: []
 title: FIA MLA 读超 actual_seq_kvlen 致 NaN
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -15,7 +15,7 @@ effect:
   objects:
   - 数值结果
   - KV状态
-  detail: Kimi-Linear-48B FP8、TP2、ngram k=3：第 2 个请求拿到未写 block（每 128 行 30–90 行 NaN）后 verify 输出 [16,4,512] 全 NaN；首个请求干净，关投机后全清。
+  detail: Kimi-Linear-48B FP8、TP2、ngram num_speculative_tokens=3：第二个请求拿到未写块后 verify 输出 [16,4,512] 全 NaN；首个请求干净，关投机后恢复。
   visibility: 数值异常
 mitigation:
   detect: 在 verify 步前读取 block_table 引用块的 k_nope 视图统计 NaN 行数，并与 attention 输出的 NaN 计数对照；把整池预热写满有限值后再跑可复现首个请求干净、后续请求失败。
@@ -47,7 +47,7 @@ migration:
     fields:
     - pattern
   audit:
-    round: daily-audit-2026-11-27
+    round: daily-audit-2026-11-28
     base:
     - glm-5.3-flash
     - deepseek-v4.1-flash
@@ -56,7 +56,7 @@ migration:
     - kimi-k3.1-pro
     - glm-5.3
     - qwen3.8-max
-    issue_unfixed:
+    rewritten:
     - detail
-    held:
-    - issue_unfixed
+    uncertain:
+    - subsystem

@@ -4,7 +4,7 @@ slug: splitv_ubsplit_gather_index_uint16_wrap
 aliases: []
 title: split_v UB-split gather 索引 16 位回绕致错值
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
@@ -14,7 +14,7 @@ cause:
 effect:
   objects:
   - 数值结果
-  detail: Ascend960 单块 B8 超过 65536 元素时，split_v 的 B8/B16 输出整行取自错误偏移，全程无报错；950/910B 因 UB 上限不触发。
+  detail: Ascend960 上 split_v 切分 int8/uint8/bool，当单块 UB 可容纳超 65536 元素、size_splits 含≤128B 小段且 N 足够大使 nUbFactor 跨 16 位时，输出整行错值且无报错；950/910B 因 UB 较小不触发。
   visibility: 静默错误
 mitigation:
   detect: 构造 size_splits 含 ≤128B 小段、N 足够大使 nUbFactor 跨 16 位，与 golden 逐元素比对，观察整行错值。
@@ -38,3 +38,12 @@ original:
 migration:
   method: scan
   scanned: '2026-11-27'
+  audit:
+    round: daily-audit-2026-11-28
+    base:
+    - glm-5.3-flash
+    - deepseek-v4.1-flash
+    - qwen3.8-flash
+    panel: []
+    rewritten:
+    - detail

@@ -4,13 +4,13 @@ slug: flashinfer_merge_state_dtype_unchecked
 aliases: []
 title: FlashInfer merge_state 不校验 dtype
 kind: 故障
-status: pending_audit
+status: active
 cause:
   objects:
   - subsystem: 算子/内核
     stack: flashinfer
     component: cascade merge_state
-  behavior: 只校验 shape/device，不校验 dtype：s 非 fp32 时新 LSE 写进临时副本，v dtype 不一致时按 v_a 重解释位型，mask 非 bool 时按字节读。
+  behavior: 只校验 shape/device，不校验 dtype：s 非 fp32 时新 LSE 写进临时副本，v dtype 不一致时按 v_a 重解释位型，mask 不是 bool/uint8 时按字节读。
 effect:
   objects:
   - 数值结果
@@ -40,13 +40,11 @@ migration:
   method: scan
   scanned: '2026-11-26'
   audit:
-    round: daily-audit-2026-11-27
+    round: daily-audit-2026-11-28
     base:
     - glm-5.3-flash
     - deepseek-v4.1-flash
     - qwen3.8-flash
     panel: []
-    issue_unfixed:
+    rewritten:
     - behavior
-    held:
-    - issue_unfixed
